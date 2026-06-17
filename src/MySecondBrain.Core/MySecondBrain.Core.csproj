@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>MySecondBrain.Core</RootNamespace>
+    <AssemblyName>MySecondBrain.Core</AssemblyName>
+    <Description>Core abstractions, interfaces, DTOs, and enums for MySecondBrain</Description>
+  </PropertyGroup>
+</Project>
