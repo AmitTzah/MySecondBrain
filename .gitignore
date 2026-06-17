@@ -38,3 +38,9 @@ build/
 TestResults/
 *.trx
 *.coverage
+
+# MSIX outputs
+*.msix
+*.msixbundle
+*.appinstaller
+*.appxsym
