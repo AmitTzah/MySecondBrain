@@ -47,9 +47,10 @@ Three-region split layout:
 - Rendered links to other wiki files are clickable (navigates within Wiki Browser)
 - External links open in default browser
 
-**Right — Info Panel (two tabs):**
+**Right — Info Panel (three tabs):**
 1. **Related Sections tab:** Uses local wiki index to find sections in other files sharing keywords. Zero API cost. Shows filename + heading + relevance snippet.
 2. **Backlinks tab:** Shows which other wiki files contain links TO the current file. Detected by scanning for `[text](current-file.md#...)` patterns across the local index.
+3. **File Info tab:** Shows file metadata — word count, character count, creation date, last modified date, estimated reading time, number of headings, number of cross-links in/out. Word count and reading time update in real-time as the file is viewed.
 
 ### N5. Write to Wiki — Core Workflow
 The primary mechanism for creating and updating wiki content.
@@ -58,8 +59,8 @@ The primary mechanism for creating and updating wiki content.
 - "Write to Wiki" button in toolbar OR right-click context menu on chat
 
 **Step 2 — Target Selection Dialog:**
-- "Create new wiki file" (default): Folder picker within wiki directory, filename input
-- "Update existing": Directory tree to select target file
+- "Create new wiki file" (default): Folder picker within wiki directory, filename input. AI suggests which subfolder based on index.md directory tree analysis (N10 step 1).
+- "Update existing": Directory tree to select target file. **Shortcut:** If any wiki files were @ mentioned (N7) in this chat, they appear at the top of the dialog as "Update [filename] (discussed above)" — pre-selected, no directory navigation needed.
 - OK/Cancel
 
 **Step 3 — AI Generation:**
@@ -160,6 +161,25 @@ Automatically maintained at wiki directory root. Regenerated after every wiki ch
 - **Failure — File Locked:** "Cannot save: [filename].md is open in another program. Close it and try again."
 - **Empty State — No Wiki Dir:** Wiki Browser shows: "No wiki directory configured. Go to Settings to select one."
 - **Empty State — Empty Wiki:** "Your wiki is empty. Start a chat and use 'Write to Wiki' to create your first note."
+
+### N12. AI Memory (Cross-Chat User Profile)
+- **Memory File:** A dedicated wiki file `_memory.md` at the wiki root. Plain .md file owned by the user.
+- **"Update Memory" Button:** In Studio chat textbox toolbar or three-dot menu. Triggers N5 Write to Wiki pipeline targeting `_memory.md`.
+- **Pipeline:** AI reads the current chat conversation → extracts facts, preferences, and context about the user → generates updated `_memory.md` content (adds, removes, condenses, reorganizes) → user reviews Diff → approves.
+- **Memory-Aware Toggle:** Per-chat toggle in textbox toolbar: "Memory: On/Off." Default: Off.
+- **When On:** `_memory.md` full content is injected into the system context for every message. Single API call (no extra calls).
+- **Token Cap:** Settings → Wiki → "Max memory tokens." Default: 2000 tokens. If `_memory.md` exceeds this, AI is instructed during updates to condense. If still over limit at send time, memory is truncated with "[Memory truncated to {N} tokens]" notice.
+- **First-Time:** If `_memory.md` doesn't exist, "Update Memory" creates it. If memory-aware chat is started but file doesn't exist, no memory is injected (no error).
+- **Privacy:** Memory file is just another wiki file. Can be viewed/edited/deleted like any other. AI Wiki restrictions (N8) apply.
+
+### N13. Find & Replace Across Wiki
+- **Access:** Wiki Browser toolbar → "Find & Replace" button (or Ctrl+Shift+H)
+- **Scope:** All .md files in the wiki directory
+- **Find:** Text input with regex toggle. Results show in a list: filename, matching line with highlight, line number. Click result opens file scrolled to match.
+- **Replace:** Text input for replacement. "Preview" button shows all changes across all files before applying (side-by-side or unified diff per file).
+- **Apply:** "Replace All" button (with confirmation: "Replace {N} occurrences across {M} files?"). Individual file checkboxes to include/exclude.
+- **Undo:** Since wiki version snapshots (N6) are taken before modification, each changed file gets a snapshot. User can restore via Version History.
+- **Empty Results:** "No matches found for '[query]'"
 
 ## Permissions
 - Single-user app. Wiki directory ownership is the effective permission model.

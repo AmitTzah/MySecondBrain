@@ -40,9 +40,20 @@ Nice-to-Have — can wait indefinitely. Not part of initial release scope.
 - T4: Screenshot capture + multi-modal model support
 - T5: Video generation API + Media Library extension
 
+- **T6. Wiki Graph View:** Interactive visual graph of all wiki files and their cross-links. Nodes represent wiki files; edges represent cross-links between them. The active file is highlighted. Click any node to open that file in the Wiki Browser. Zoom, pan, and filter by link depth. Uses existing cross-link data from N2/N10/N11 — no new data infrastructure needed. Complements (doesn't replace) Obsidian's graph view for users who want in-app visualization.
+
+## Data Architecture Notes
+- T1: Needs macro definitions referencing Text Action chains
+- T2: SourceAppName already captured (P3); needs auto-tagging rules
+- T3: Needs event triggers and autonomous thread creation
+- T4: Screenshot capture + multi-modal model support
+- T5: Video generation API + Media Library extension
+- T6: Uses existing crossLinksIn/crossLinksOut from WikiFile entity. Graph layout rendering only.
+
 ## Interactions
 - T1 extends K1 (Text Actions) and K3 (Tier 1 hotkeys)
 - T2 extends L7 (tags) and P3 (spatial anchoring)
 - T3 extends O1 (ChatThread creation)
 - T4 extends K3/K4 (Tier 1/2) and G (Media Library)
 - T5 extends G (Media Library) and C9 (drag-drop media)
+- T6 extends N4 (Wiki Browser) and uses data from N2/N10/N11

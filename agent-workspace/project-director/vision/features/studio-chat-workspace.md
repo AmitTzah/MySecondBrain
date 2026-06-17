@@ -76,6 +76,15 @@ See [`features/windows-os-integration.md`](features/windows-os-integration.md) P
 - **Other files:** Metadata (filename, type, size) included in prompt context
 - **Drop Indicator:** Visual feedback during drag-over
 
+### C9a. Paste Image from Clipboard (Ctrl+V)
+- When an image is on the clipboard and user presses Ctrl+V in the textbox: the image appears as a thumbnail icon below the textbox (not embedded in the text)
+- Multiple pasted images stack as thumbnails in an attachment row below the textbox
+- Each thumbnail shows a small preview + filename + size. Hover shows full preview.
+- **Click thumbnail:** Opens the image in a new tab in the main content area (full-size viewer with zoom/pan)
+- **Remove:** X button on each thumbnail removes it before sending
+- Images in the attachment row are sent with the next message (for vision-capable models)
+- **Text still editable:** The textbox remains the primary input; images are attachments, not inline
+
 ### C10. Multiple Chat Tabs
 - Tab bar above chat view. Each tab = independent ChatThread.
 - **Reorder:** Drag-and-drop tabs
@@ -120,25 +129,82 @@ See [`features/windows-os-integration.md`](features/windows-os-integration.md) P
 - Auto-hides when at bottom
 
 ### C16. Clear Conversation
-- Accessible from chat header menu or right-click
+- **Access:** Chat header three-dot (⋯) menu → "Clear Conversation"
 - Confirmation dialog: "This will remove all messages from this chat. The chat will remain in your sidebar with its title, tags, and settings."
 - After clearing: chat shows empty state with Persona info
+- **Undo:** Brief toast with "Undo" option (5 second window, Ctrl+Z also works per D9)
+
+### C16a. Chat Header Three-Dot Menu (⋯)
+The chat header contains a three-dot menu with the following items:
+- **Clear Conversation** (C16)
+- **Export Chat** (I1) — Opens export format dialog
+- **Duplicate Chat** (D7) — Creates fork from current point
+- **Chat Tree** (D4) — Opens tree visualization
+- **Edit System Message** (E5) — Opens system message editor
 
 ### C17. Auto-Scroll Behavior
 - **Pause:** When user scrolls up during active generation, auto-scroll pauses. Indicator: "Auto-scroll paused." Click to resume.
 - **Media Loading:** When image/video renders (height change), viewport adjusts smoothly without jarring reading position
 
 ### C18. Message Selection Mode
-- **Enter:** Checkbox on each message OR toolbar "Select Messages" button
-- **Select:** Click checkboxes or click message while in selection mode
-- **Bulk Actions Bar:** Appears at top when messages selected: Copy Selected, Delete Selected, Quote Selected
-- **Deselect:** Click "Done" or exit selection mode
+- **Enter:** "Select Messages" button in chat header three-dot (⋯) menu, OR checkboxes appear on message hover
+- **Checkbox Behavior:** Checkbox appears at the left edge of each message on hover. Click to select/deselect.
+- **Bulk Actions Bar:** Appears as a floating bar at the top of the conversation view when messages are selected: "[N] selected — Copy Selected | Delete Selected | Quote Selected | Cancel"
+- **Deselect:** Click "Cancel" in bulk bar or click outside messages
+- **Visual:** Selected messages have a highlighted border
 
 ### C19. Offline/Network Status Indicator
-- Small dot indicator in status bar/top bar
-- Green = online, Yellow = slow connection (high latency detected), Red = offline
-- When offline: banner "You are offline. AI responses are unavailable until connection is restored."
-- Auto-detects reconnection
+- Small colored dot in the status bar at the very bottom of the Studio window (right side)
+- Green = online, Yellow = slow connection, Red = offline
+- When offline: yellow banner below chat header: "You are offline. AI responses are unavailable until connection is restored."
+- Auto-detects reconnection; banner auto-dismisses
+
+### C24. Dark/Light Mode Quick Toggle
+- Sun/Moon icon button in the chat header bar (right side, near pin toggle)
+- Click toggles between dark mode and light mode (A5)
+- Instant transition with no page reload
+- State remembered across sessions
+
+### C25. Font Size Quick Adjust
+- Two small buttons (A⁻ / A⁺) in the chat header bar, next to the dark mode toggle
+- Click A⁺: increases chat message font size by 1px (up to max 24px)
+- Click A⁻: decreases chat message font size by 1px (down to min 10px)
+- Current font size shown as a small number between the buttons (e.g., "14")
+- Only affects chat messages, not UI chrome
+- Full font customization (family, weight) remains in Settings (A3)
+
+### C26. Model Comparison Button
+- "Compare" button (⚖ icon) in the textbox toolbar (K2)
+- Click opens Model Comparison setup (M2): select 2+ Personas → enter prompt → side-by-side comparison view
+- Accessible from any chat
+
+### C27. Dynamic System Message Editing Access
+- Click the Persona name in the chat header → popover appears showing:
+  - Current system message (editable text area)
+  - "Reset to Persona Default" button
+  - Changes take effect for subsequent messages
+- Also accessible from: Chat Navigation Bar (D6) → system message entry at top, AND three-dot menu → "Edit System Message"
+
+### C28. Duplicate / Fork Chat Access
+- Right-click any message → "Fork from here" (D7)
+- Also in chat header three-dot menu → "Duplicate Chat" (forks from latest message)
+- Creates new ChatThread with messages up to that point
+
+### C29. Chat Header Layout (Complete)
+Top-to-bottom in the main content area:
+1. **Tab Bar:** Tabs + "+" new chat button
+2. **Chat Header Bar (left to right):**
+   - Active Persona name (clickable → system message editor C27)
+   - Context window bar: "12,450 / 128,000 tokens" with colored fill
+   - Cumulative cost: "$0.42 total"
+   - [Source: App — 'Document'] banner + [Apply Latest] (only for Tier 1 elevation, C5a)
+   - Spacer
+   - A⁻ 14 A⁺ (font size, C25)
+   - ☀/🌙 (dark mode toggle, C24)
+   - 📌 (pin window toggle, C23)
+   - ⋯ (three-dot menu, C16a)
+3. **Conversation View** (C1-C8, C14-C15, C17-C18)
+4. **Message Input Area** with toolbar (C21-C22, C26, K2)
 
 ### C20. Close Confirmation with Active Generation
 - Trigger: Close tab or window while AI is generating
@@ -164,8 +230,60 @@ See [`features/windows-os-integration.md`](features/windows-os-integration.md) P
 - State remembered across sessions
 - Visual indicator on header when pinned
 
+### C30. Incognito / Temporary Studio Chat
+- **Toggle:** "Incognito" toggle in chat header three-dot (⋯) menu or right-click chat tab → "Make Temporary"
+- **When Active:** Chat marked IsTransient=true. Subject to 7-day auto-cleanup (O4). Visual indicator: 🕶️ icon on tab + "(Temporary)" label in header
+- **Elevation:** If user sends a reply, same elevation rules as Tier 1/2 (O3) — chat can become permanent
+- **Exception:** Incognito chats that are favorited, tagged, pinned, or contain user branches are auto-elevated (same as O4 exceptions)
+- **Default:** All Studio chats default to permanent (IsTransient=false). Incognito is opt-in per chat
+
+### C31. Locked Chats
+- **Lock:** Right-click chat in sidebar → "Lock Chat" → prompts for password (or uses global default from Settings)
+- **Global Default Password:** Settings → Security → "Default Lock Password." Encrypted via Windows DPAPI
+- **Per-Chat Override:** Each locked chat can use the global password or a custom password set at lock time
+- **Encryption:** Chat content (messages, title, metadata) encrypted at rest using strong encryption (AES-256-GCM or similar). Password is the key derivation source (PBKDF2/Argon2). Without password, data is irrecoverable.
+- **Unlock:** Click locked chat in sidebar → password prompt → if correct, chat unlocks and displays normally for this session. Auto re-locks when app closes or user manually re-locks.
+- **Hide Locked Chats:** Settings → Security → "Hide locked chats from sidebar." When enabled, locked chats are invisible. "Reveal Locked Chats" button (lock icon) appears at bottom of sidebar → prompts for password → shows all locked chats.
+- **Lost Password:** If password is lost, chat content is permanently inaccessible. ⚠️ FLAGGED: Strong encryption with no recovery mechanism — intentional design but user must understand the risk.
+- **Locked Indicator:** 🔒 icon on locked chat entries in sidebar. Title visible but preview hidden (shows "🔒 Locked").
+- **Bulk Lock:** Select multiple chats → right-click → "Lock Selected" → one password for all.
+
+### C32. Chat Summarization
+- **Access:** Chat header three-dot (⋯) menu → "Summarize Chat"
+- **Behavior:** AI reads the full conversation (current branch) and generates a concise summary
+- **Output Options (dialog after generation):**
+  - **[Save as Artifact]:** Creates an artifact (F1) in the side panel with name "Chat Summary — [Chat Title]" — versioned, editable, can be refined
+  - **[Export]:** Opens export dialog (I1) with summary content pre-filled — save as .md or .txt
+  - **[Copy]:** Copies summary to clipboard
+- **Summary Content:** Includes chat title, date range, Persona used, key topics discussed, decisions made, action items identified
+- **Empty Chat:** "Cannot summarize an empty chat."
+
+### C33. Message Favoriting
+- **Star:** Star icon (☆) on each message, next to thumbs up/down (D8). Click to toggle (★).
+- **Visual:** Favorited messages show a filled star ★. Subtle highlight background.
+- **Filter:** "Favorited Messages" filter in Chat Navigation Bar (D6) — shows only starred messages in the current chat
+- **Global Search:** Full-text search (L3) has a "Favorited only" filter — search across all favorited messages in all chats
+- **Persistence:** Favorited state stored with message. Survives chat clearing (C16) — cleared messages lose favorite if deleted, but if chat is cleared (messages removed), favorites are lost with the messages.
+
+### C34. Spell Check in Textbox
+- **Underline:** Misspelled words underlined with red squiggly line (standard spell-check pattern)
+- **Right-Click:** Right-click misspelled word → suggestions dropdown → click to replace
+- **Language:** Uses system language (English). Configurable in Settings → Language.
+- **Toggle:** Enable/disable spell check in Settings → Appearance. Default: enabled.
+- **Ignore:** "Add to Dictionary" option in right-click menu for custom words
+- **Performance:** Local spell-check library. No API calls.
+
+### C35. Cross-Tab Completion Alert
+- **Indicator:** When AI generation completes on an inactive tab (user is viewing a different tab), the inactive tab shows a pulsing green dot or checkmark
+- **Sound:** Plays notification sound (A4) regardless of active tab
+- **Tab Bar:** Tab title briefly changes to "[Title] ✓" for 5 seconds after completion
+- **Configuration:** Settings → Notifications → "Alert when generation completes on inactive tab" toggle. Default: enabled.
+- **Multiple Completions:** If multiple inactive tabs complete, each shows the indicator independently
+
 ## Data
-- [`data/chat-thread.md`](data/chat-thread.md), [`data/message.md`](data/message.md), [`data/usage-record.md`](data/usage-record.md)
+- [`data/chat-thread.md`](data/chat-thread.md) — C30: isTransient flag, C31: encryption metadata
+- [`data/message.md`](data/message.md) — C33: isFavorited field
+- [`data/usage-record.md`](data/usage-record.md)
 
 ## Success/Failure States
 - **Empty State — No Chats:** "No chats yet. Press Ctrl+N to start a new conversation."

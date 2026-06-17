@@ -45,20 +45,34 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **C7. Chat Titling:** Auto-generated from first user message via AI. Manually editable.
 - **C8. Continue Generation:** "Continue" button when last message is from assistant. Sends continuation request.
 - **C9. Drag & Drop Files/Media:** Drag files/images/video/audio into input. Images for vision models. Text files read into prompt. Other files: metadata included.
+- **C9a. Paste Image from Clipboard (Ctrl+V):** Paste image into textbox → appears as thumbnail below input. Click thumbnail opens image in new tab. Send with next message for vision models.
 - **C10. Multiple Chat Tabs:** Open multiple chats in tabs. Reorder by drag-drop. Close, reopen from sidebar.
 - **C11. Token Usage & Context Display:** Per-message token count + cost. Chat header shows context size vs max window and cumulative cost. Local tokenizer for real-time feedback.
 - **C12. Keyboard Shortcuts (Studio):** Ctrl+N (new), Ctrl+W (close tab), Ctrl+Shift+T (reopen), Ctrl+Tab/Shift+Tab (next/prev tab), Ctrl+F (search in chat), Ctrl+Shift+F (global search), Ctrl+S (export). Ctrl+/ for shortcut reference.
 - **C13. Resizable Panels:** Sidebar, artifact panel, chat nav bar all resizable. Min/max enforced. Sizes remembered.
 - **C14. Error Handling & Retry:** Specific error message + Retry button on API failure. Escalating message on consecutive failures.
 - **C15. Scroll-to-Bottom Button:** Floating button when scrolled up during streaming. Smooth scroll to latest.
-- **C16. Clear Conversation:** Clear all messages, preserve chat with title/tags/settings. Confirmation dialog.
+- **C16. Clear Conversation:** Clear all messages, preserve chat. Accessible from chat header three-dot (⋯) menu. Confirmation dialog. Undo via toast or Ctrl+Z.
+- **C16a. Chat Header Three-Dot Menu (⋯):** Clear Conversation, Export Chat (I1), Duplicate Chat (D7), Chat Tree (D4), Edit System Message (E5).
 - **C17. Auto-Scroll Behavior:** Auto-pauses when user scrolls up during generation. Handles media height changes smoothly.
-- **C18. Message Selection Mode:** Checkbox selection for bulk actions: Copy Selected, Delete Selected, Quote Selected.
-- **C19. Offline/Network Status Indicator:** Green/Yellow/Red indicator. Offline banner when disconnected.
+- **C18. Message Selection Mode:** Checkboxes appear on message hover. Bulk actions bar: Copy Selected, Delete Selected, Quote Selected.
+- **C19. Offline/Network Status Indicator:** Green/Yellow/Red dot in status bar. Offline banner below header.
 - **C20. Close Confirmation with Active Generation:** Confirmation dialog when closing tab/window during generation.
 - **C21. Audio Input (Microphone):** Voice dictation via configured STT Provider. Editable transcribed text.
 - **C22. Camera Capture:** Webcam photo capture, immediately attached to message for vision models.
 - **C23. Pin Window / Always on Top:** Toggle in header. Remembered across sessions.
+- **C24. Dark/Light Mode Quick Toggle:** Sun/Moon icon in chat header. Instant toggle between dark and light mode (A5).
+- **C25. Font Size Quick Adjust:** A⁻/A⁺ buttons in chat header. Adjust chat message font size 10–24px. Current size displayed.
+- **C26. Model Comparison Button:** "Compare" button (⚖) in textbox toolbar. Opens side-by-side Persona comparison (M).
+- **C27. Dynamic System Message Editing Access:** Click Persona name in header → popover with editable system message. Also in three-dot menu and Chat Nav bar.
+- **C28. Duplicate / Fork Chat Access:** Right-click message → "Fork from here". Also in three-dot menu → "Duplicate Chat".
+- **C29. Chat Header Layout:** Complete header bar layout: Persona name | context bar | cost | [Source banner] | font size | dark mode | pin | ⋯ menu.
+- **C30. Incognito / Temporary Studio Chat:** Toggle chat as temporary (IsTransient=true). Auto-cleans after 7 days. 🕶️ indicator on tab.
+- **C31. Locked Chats:** Password-protected encryption (AES-256-GCM). Global default + per-chat override. "Hide locked from sidebar" option. Permanent lockout if password lost.
+- **C32. Chat Summarization:** "Summarize Chat" in three-dot menu → AI generates summary → save as artifact or export.
+- **C33. Message Favoriting:** Star individual messages (★). Filter favorited in Chat Nav. Global search filter for favorited.
+- **C34. Spell Check in Textbox:** Red squiggly underline for misspelled words. Right-click suggestions. Toggle in Settings.
+- **C35. Cross-Tab Completion Alert:** Pulsing green dot on inactive tab when generation completes. Sound + brief "✓" in tab title. Configurable in Settings.
 
 ### D. Message Manipulation & Branching
 **Spec:** [`features/message-manipulation-branching.md`](features/message-manipulation-branching.md)
@@ -167,7 +181,7 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **N1. Wiki Directory Configuration:** User selects directory of .md files. File system watcher monitors changes.
 - **N2. Wiki Indexing:** All .md files indexed for full-text search. Stores filenames, heading hierarchy, content. Auto-updates on file change. Powers wiki search, related sections, @ mentions, AI cross-linking.
 - **N3. Wiki Search:** Dedicated search scope for wiki entries. Results with filenames, headings, snippets. Click opens in Wiki Browser.
-- **N4. Wiki Browser:** Three-region split: File Tree (collapsible directory tree), Markdown Viewer (rendered content + "Open in External Editor"), Info Panel (Related Sections tab + Backlinks tab).
+- **N4. Wiki Browser:** Three-region split: File Tree (collapsible directory tree), Markdown Viewer (rendered content + "Open in External Editor"), Info Panel (Related Sections tab + Backlinks tab + File Info tab with word count, reading time, heading count).
 - **N5. Write to Wiki — Core Workflow:** "Discuss then confirm" model. Trigger: toolbar button or context menu. Pipeline: target selection → AI generates polished .md with cross-links → Preview Panel (editable) → Save/Refine in Chat/Append Only/Cancel. For updates: mandatory Diff Viewer.
 - **N6. Automatic Wiki Versioning:** Snapshots before modification. Max 30 per file. Total cap 50MB. Recoverable from Wiki Browser.
 - **N7. @ Mentions for Wiki Files:** Type @ in textbox → quick-search dropdown of wiki files. Injects full content (or summarized excerpt if >8K tokens).
@@ -175,6 +189,8 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **N9. Append-Only Mode:** Toggle in Preview Panel. AI appends under dated heading. Diff shows append only.
 - **N10. AI Cross-Linking (Forward + Backlinks):** Tiered pipeline: AI reads index.md → selects candidates → requests full content → generates draft with suggested links → user reviews/accepts. Backlinks suggested after save.
 - **N11. Auto-Generated index.md:** Maintained at wiki root. Directory tree, all headings with links, cross-links, recently modified, orphan pages. Generated from local index. AI reads for cross-linking.
+- **N12. AI Memory:** `_memory.md` wiki file. "Update Memory" button triggers N5 pipeline. Memory-aware toggle per chat injects full file into context. Optional max token cap. Single API call per message.
+- **N13. Find & Replace Across Wiki:** Search and replace across all wiki files with preview of changes. Wiki snapshots (N6) provide undo. Regex support.
 
 ### O. Data Model & Lifecycle
 **Spec:** [`features/data-model-lifecycle.md`](features/data-model-lifecycle.md)
@@ -232,6 +248,7 @@ Features that are part of the long-term vision but can wait indefinitely. Archit
 - **T3. Passive Autonomous Threads:** Local vision watchdogs proactively spawn threads.
 - **T4. Screenshot/Screen Awareness:** Include screenshot of active window in Tier 1/Tier 2 actions.
 - **T5. Video Generation:** AI generates video clips when future multi-modal models support it.
+- **T6. Wiki Graph View:** Interactive visual graph of wiki file cross-links. Nodes = files, edges = links. Click node to open in Wiki Browser. Uses existing cross-link data (N2/N10/N11).
 
 ## Secondary Features
 
