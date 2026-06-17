@@ -140,7 +140,7 @@ MySecondBrain/
 
 ## 5. Execution Steps
 
-### Step 1: Create Solution File & Solution-Wide Configuration
+### [x] Step 1: Create Solution File & Solution-Wide Configuration
 
 **What:** Create `MySecondBrain.sln`, `global.json` (pins .NET 8.0 SDK), `Directory.Build.props` (common MSBuild properties for all projects), and `.editorconfig` (code style rules).
 
