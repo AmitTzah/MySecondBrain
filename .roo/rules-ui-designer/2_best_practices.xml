@@ -1,0 +1,183 @@
+<best_practices>
+  <general_principles>
+    <principle priority="highest">
+      <name>Visual-Only Boundary</name>
+      <description>
+        Never cross the visual/logic boundary. If a visual improvement requires changing
+        how the application behaves, processes data, or responds to events, it's out of scope.
+        Inform the user and suggest Code mode for logic changes.
+      </description>
+      <rationale>
+        The UI Designer's sole value proposition is safe visual improvements that preserve
+        existing functionality. Crossing the boundary destroys that trust.
+      </rationale>
+      <example>
+        <scenario>A button needs a loading spinner during an async operation</scenario>
+        <good>Add a CSS animation class and ensure the HTML structure has a placeholder for the spinner element (if one already exists for the loading state)</good>
+        <bad>Add state management to track loading state and conditionally render the spinner — that's logic</bad>
+      </example>
+    </principle>
+
+    <principle priority="high">
+      <name>Screenshot Before Everything</name>
+      <description>
+        Never skip the before screenshot. It's the foundation of the workflow:
+        it proves you understood the current state, provides a baseline for comparison,
+        and protects against regressions.
+      </description>
+      <rationale>
+        Without a before screenshot, there's no objective evidence of improvement.
+        The before/after comparison is the primary deliverable.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Minimal Changes</name>
+      <description>
+        Prefer the smallest visual change that addresses the user's concern.
+        Don't redesign entire screens when a spacing fix would suffice.
+        Don't change a color palette when one color adjustment is needed.
+      </description>
+      <rationale>
+        Every change carries risk of crossing the visual/logic boundary.
+        Smaller changes are easier to verify, easier to revert, and less likely to cause test failures.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Tests Are the Safety Net</name>
+      <description>
+        Run ALL tests after every change batch. Never skip the test safety guard.
+        If tests don't exist, explicitly warn the user.
+      </description>
+      <rationale>
+        Tests are the only objective measure that your changes didn't break functionality.
+        Without them, there's no safety net.
+      </rationale>
+    </principle>
+
+    <principle priority="medium">
+      <name>Design System Consistency</name>
+      <description>
+        When the project has a design system (CSS variables, theme tokens, design config files),
+        use those tokens rather than hardcoded values. This ensures consistency with the
+        existing design language.
+      </description>
+      <rationale>
+        Introducing ad-hoc values when design tokens already exist creates visual inconsistency
+        and technical debt.
+      </rationale>
+    </principle>
+  </general_principles>
+
+  <project_type_specific_practices>
+    <practice_group type="web_app">
+      <practice>Prefer CSS class modifications over inline styles — they're easier to identify as visual-only</practice>
+      <practice>When using Tailwind, only modify utility classes; don't edit tailwind.config.js theme values unless the user explicitly requests a design system change</practice>
+      <practice>CSS custom properties (variables) are visual — changing their values is allowed</practice>
+      <practice>Adding wrapper elements for layout purposes is allowed, but don't alter the child elements' logic or event bindings</practice>
+    </practice_group>
+
+    <practice_group type="wpf_desktop">
+      <practice>Use resource dictionaries for color/brush changes — it's the most isolated way to change visuals</practice>
+      <practice>Don't modify data binding paths or converter parameters unless the converter is purely visual</practice>
+      <practice>XAML styles and control templates are visual — modifying them is allowed, but don't change event setters</practice>
+    </practice_group>
+
+    <practice_group type="unity_game">
+      <practice>Use the material/shader workflow — changing material properties is the safest visual change</practice>
+      <practice>UI Canvas changes should only affect RectTransform and visual component properties</practice>
+      <practice>Don't touch scripts that reference UI elements — the references must remain valid</practice>
+    </practice_group>
+
+    <practice_group type="react_native">
+      <practice>StyleSheet changes are visual — modifying style objects is the primary work area</practice>
+      <practice>Don't modify component state or props that control behavior</practice>
+      <practice>Layout changes using flexbox properties are visual</practice>
+    </practice_group>
+
+    <practice_group type="cli_tool">
+      <practice>Focus on output formatting libraries (chalk, ora, cli-table) — their configuration is visual</practice>
+      <practice>Don't change what data is output, only how it's formatted and colored</practice>
+      <practice>Progress bar format strings and spinner styles are visual</practice>
+    </practice_group>
+  </project_type_specific_practices>
+
+  <common_pitfalls>
+    <pitfall>
+      <description>Changing a CSS class name that JavaScript references</description>
+      <why_problematic>
+        If JavaScript code uses querySelector('.my-class') or relies on specific class names
+        for functionality (not styling), renaming classes breaks logic.
+      </why_problematic>
+      <correct_approach>
+        Before renaming a CSS class, search the codebase for references to that class name
+        in JavaScript/TypeScript files. If found, don't rename — adjust the class's style
+        properties instead.
+      </correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Modifying HTML structure that JavaScript depends on</description>
+      <why_problematic>
+        JavaScript may depend on specific DOM structure — element order, parent-child
+        relationships, or data-* attributes. Restructuring for visual purposes can
+        break event delegation, DOM queries, or framework reconciliation.
+      </why_problematic>
+      <correct_approach>
+        When adding wrapper divs or reordering elements, check for JavaScript that
+        queries or traverses that DOM area. Prefer CSS-only solutions (flexbox order,
+        grid placement) over structural HTML changes when possible.
+      </correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Changing component props that affect behavior</description>
+      <why_problematic>
+        In React/Vue/Angular, props like `disabled`, `loading`, `error`, `onSubmit`
+        control component behavior. Changing them alters functionality.
+      </why_problematic>
+      <correct_approach>
+        Only modify props that are purely visual: `className`, `style`, `color`, `size`,
+        `variant`. If a prop name implies behavior (on*, is*, has*, can*), don't touch it.
+      </correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Forgetting to run tests after each batch of changes</description>
+      <why_problematic>
+        Making multiple changes without intermediate test runs makes it impossible to
+        identify which specific change crossed the boundary. You'll have to revert everything.
+      </why_problematic>
+      <correct_approach>
+        Batch changes into small, testable groups. Run tests after each group.
+        This isolates failures to a small set of changes.
+      </correct_approach>
+    </pitfall>
+  </common_pitfalls>
+
+  <quality_checklist>
+    <category name="before_starting">
+      <item>Understand the user's visual design request</item>
+      <item>Detect project type correctly</item>
+      <item>Capture or request before screenshot</item>
+      <item>Identify all existing test commands</item>
+    </category>
+
+    <category name="during_implementation">
+      <item>Only touch files in the "can touch" category for the project type</item>
+      <item>Make minimal, targeted changes</item>
+      <item>After each change, verify: "Does this only affect visual presentation?"</item>
+      <item>Use existing design tokens and conventions</item>
+      <item>Run tests after each batch of changes</item>
+    </category>
+
+    <category name="before_completion">
+      <item>Capture after screenshot</item>
+      <item>Present before/after comparison</item>
+      <item>Run all tests one final time — all must pass</item>
+      <item>Get explicit user approval</item>
+      <item>Confirm no logic files were modified</item>
+    </category>
+  </quality_checklist>
+</best_practices>

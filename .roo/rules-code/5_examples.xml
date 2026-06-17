@@ -1,0 +1,348 @@
+<complete_examples>
+  <overview>
+    End-to-end examples demonstrating the Code mode's quality loop, subtask delegation scenarios,
+    and standard coding workflows.
+  </overview>
+
+  <example name="full_quality_loop_with_qa">
+    <scenario>
+      The Code mode is asked to add a user deletion endpoint. This example demonstrates the complete
+      quality loop: implement → write tests → test → refactor → test → QA review → fix → test → verification gate → user confirms → complete.
+    </scenario>
+
+    <user_request>
+      "Add a DELETE /api/users/:id endpoint. Only admins should be able to delete users.
+      Soft-delete by setting deletedAt — don't actually remove rows."
+    </user_request>
+
+    <workflow>
+      <step number="1">
+        <description>Analyze and implement</description>
+        <approach>
+          Read existing routes and user service to understand patterns. Implement:
+          - Route handler in src/routes/users.ts with auth middleware
+          - Service method deleteUser(id) in src/services/userService.ts with soft-delete
+          - Tests in src/__tests__/users.test.ts covering admin delete, unauthenticated, and missing user
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Run automated tests</description>
+        <approach>
+          Run `npm test`. All 3 new tests pass, plus all existing tests. No regressions.
+        </approach>
+      </step>
+
+      <step number="3">
+        <description>Self-refactor</description>
+        <approach>
+          Re-read the changed files:
+          - Rename `d` variable to `deletedUser` for clarity
+          - Extract the 403/404 response pattern to match existing error helpers
+          - Remove a leftover debugging statement from testing
+          Run tests again — all pass.
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Launch QA subtask</description>
+        <approach>
+          Compile the QA brief:
+          GOAL: Add DELETE /api/users/:id endpoint. Only admins can delete. Soft-delete via deletedAt.
+          FILES: src/routes/users.ts, src/services/userService.ts, src/__tests__/users.test.ts
+          CONSTRAINTS: Soft-delete only. Admin-only. Must return 404 for non-existent users.
+          EXPECTED: Admin gets 204. Non-admin gets 403. Unauthenticated gets 401. Missing ID gets 404.
+
+          Spawn QA subtask via new_task with the qa mode.
+        </approach>
+      </step>
+
+      <step number="5">
+        <description>Evaluate QA report</description>
+        <approach>
+          QA reports:
+          - BUG #1: Missing admin role check in route handler (routes/users.ts:42) — ACCEPT
+          - CONCERN #1: deleteUser() doesn't verify user exists, returns 204 for missing ID — ACCEPT
+          - CONCERN #2: No self-deletion prevention — DISMISS (intentional: admins should be able to delete any account including their own for this use case)
+          - TEST #1: Missing test for non-admin user attempting delete — ACCEPT
+          - NITPICK #1: Variable name `result` could be more descriptive — DISMISS (matches existing pattern in the file)
+        </approach>
+      </step>
+
+      <step number="6">
+        <description>Fix accepted findings</description>
+        <approach>
+          Add admin role check: `if (req.user.role !== 'admin') return res.status(403).json(...)`.
+          Add existence check: verify affected row count, return 404 if 0.
+          Add test for non-admin user attempting delete.
+        </approach>
+      </step>
+
+      <step number="7">
+        <description>Verification gate and complete</description>
+        <approach>
+          Run `npm test` — all tests pass (now 4 new tests). Present to user at verification gate:
+          "Added DELETE /api/users/:id endpoint with admin-only authorization and soft-delete.
+          Please verify: send DELETE to /api/users/1 as admin → 204. As non-admin → 403."
+          User confirms it works. Run final automated tests — all pass. Call attempt_completion.
+          QA findings are internal — the user sees the finished work, not the bug list.
+        </approach>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>The quality loop caught a critical authorization bug before the user saw the code</takeaway>
+      <takeaway>Dismissals are justified — the user can see why certain findings were ignored</takeaway>
+      <takeaway>Self-refactoring caught minor issues (naming, leftover debugging) before QA saw them</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="ui_design_polish_subtask">
+    <scenario>
+      The user has a working login form but is unhappy with how it looks. The quality loop
+      has already run — the code is correct and QA-reviewed.
+    </scenario>
+
+    <user_request>
+      "The login form works fine, but it looks terrible. The spacing is all wrong,
+      the button color doesn't match our brand, and there's no smooth transition
+      when errors appear. Can you make it look better?"
+    </user_request>
+
+    <workflow>
+      <step number="1">
+        <description>Confirm functionality is working</description>
+        <approach>
+          Verify with the user that validation, submission, and error handling all work correctly.
+          The user confirms: "Yes, everything works — it's just ugly."
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Recognize the design-polish trigger and auto-launch UI Designer</description>
+        <approach>
+          The user confirmed functionality works but expressed visual dissatisfaction. Auto-launch
+          a UI Designer subtask (ui-designer mode) — no consent needed. Spawn with: the specific
+          UI elements to polish (login form), the design concerns (spacing, button color, error
+          transition animations), and relevant file paths.
+        </approach>
+        <expected_outcome>UI Designer completes with before/after comparison.</expected_outcome>
+      </step>
+
+      <step number="3">
+        <description>Launch the design-polish subtask and run quality loop on results</description>
+        <approach>
+          Spawn a UI Designer subtask (ui-designer mode) with design-only instructions. When it completes, run the full
+          quality loop on its changes: test → refactor → test → QA → fix → test. Then return to verification gate.
+        </approach>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>Always confirm functionality is working before offering the design-polish subtask</takeaway>
+      <takeaway>The quality loop runs on subtask results too — no code reaches the user unreviewed</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="stuck_resolution_subtask">
+    <scenario>
+      The Code mode has been trying to fix a race condition through 3 full diagnostic→fix→verification
+      cycles without success. Diagnostic output was gathered each cycle but the root cause remains elusive.
+    </scenario>
+
+    <user_request>
+      (After the third verification gate) "This race condition is still happening. Every time
+      I switch tabs quickly, the old data overwrites the new data."
+    </user_request>
+
+    <workflow>
+      <step number="1">
+        <description>Recognize the stuck pattern</description>
+        <approach>
+          3 full cycles completed. Cycle 1: diagnostic output tracing → isLoading guard → QA → verification → still broken.
+          Cycle 2: AbortController approach → QA → verification → still broken.
+          Cycle 3: request ID comparison → QA → verification → still broken.
+          Diagnostic output gathered each cycle. Pattern is not converging.
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Ask about launching a Debug subtask</description>
+        <approach>
+          Use the ask tool to propose a Debug mode subtask with the original problem, all 3 approaches
+          tried, and all diagnostic output from every cycle.
+        </approach>
+        <expected_outcome>User approves.</expected_outcome>
+      </step>
+
+      <step number="3">
+        <description>Launch Debug subtask, apply fix, run quality loop, return to verification gate</description>
+        <approach>
+          Spawn Debug subtask with: original problem + all 3 attempted approaches + all diagnostic output.
+          Debug subtask investigates systematically, finds the root cause (a stale closure in the event handler),
+          reports back. Code mode applies the fix, runs the full quality loop, returns to verification gate.
+        </approach>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>Only offer after 2-3 full diagnostic→fix→verification cycles — one failed attempt is not "stuck"</takeaway>
+      <takeaway>Debug subtask provides investigation-first perspective vs. code mode's fix-first instinct</takeaway>
+      <takeaway>The quality loop runs on the fix — the Debug subtask finds the cause, Code mode applies it safely</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="standard_code_change_no_subtask">
+    <scenario>
+      A straightforward feature request that doesn't trigger user-consent subtasks.
+      The quality loop still runs — QA is automatic.
+    </scenario>
+
+    <user_request>
+      "Add a 'copy to clipboard' button next to each code block in the markdown renderer."
+    </user_request>
+
+    <workflow>
+      <step number="1">
+        <description>Analyze and implement</description>
+        <approach>
+          Read the MarkdownRenderer component, identify insertion point, check for existing
+          clipboard utilities. Add a CopyButton component with navigator.clipboard.writeText()
+          and "Copied!" feedback state.
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Run tests and self-refactor</description>
+        <approach>
+          Run automated tests — all pass. Self-refactor: extract the "Copied!" timeout duration
+          to a named constant. Run tests again — all pass.
+        </approach>
+      </step>
+
+      <step number="3">
+        <description>QA review</description>
+        <approach>
+          Spawn QA subtask with the brief: goal, files (MarkdownRenderer.tsx, CopyButton.tsx,
+          copyButton.test.tsx), constraints. QA finds no bugs. One nitpick about transition duration
+          — accepted and fixed (changed 2000ms to a constant ANIMATION_DURATION = 2000).
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Verification gate and complete</description>
+        <approach>
+          Run tests one final time — all pass. Ask user to verify: "Please check that the copy button appears next to each code block and copies text on click." User confirms it works. Run final automated tests — all pass. Call attempt_completion. QA review is internal — the user sees finished, reviewed work, not the QA process details.
+        </approach>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>Not every request needs user-consent subtasks — direct implementation is the default</takeaway>
+      <takeaway>QA review is automatic even for simple changes — there's no "too small for QA" threshold</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="diagnostic_logging_workflow">
+    <scenario>
+      The Code mode completed a feature (a dashboard export button), ran the full quality loop, and reached the verification gate.
+      The user manually tested the feature and reports it doesn't work — clicking the export button does nothing.
+
+      This example demonstrates the diagnostic-first debugging workflow using a browser-based JavaScript app. The same pattern applies to any environment: use the project's native output mechanism (print(), Log.d(), println!, Console.WriteLine(), etc.) and direct the user to the appropriate output location (server terminal, Logcat, Xcode console, CLI stdout — not always browser DevTools). The [DEBUG] prefix and the 5-step workflow are universal.
+    </scenario>
+
+    <user_request>
+      (After reaching the verification gate) "I tested the export button on the dashboard and nothing happens when I click it. No download, no error message, nothing. The button is there but clicking it does nothing."
+    </user_request>
+
+    <workflow>
+      <step number="1">
+        <description>Add diagnostic output statements</description>
+        <narrow_triviality_check>
+          First, verify this isn't the single-character typo exception. The user's description is vague — "nothing happens" could mean the click handler isn't attached, the export function throws a silent error, the API returns unexpected data, or a conditional is preventing execution. This requires more than one character to fix and there is ambiguity about the root cause — proceed with diagnostic output. (If the user had instead said "the button label says 'Submut'" and the code literally contained the string `'Submut'`, that would be the one-character typo exception — fix directly.)
+        </narrow_triviality_check>
+        <approach>
+          Read the ExportButton component and the export service. This is a browser JavaScript app, so use console.log.
+          Add [DEBUG]-prefixed statements at key points:
+
+          In ExportButton.tsx:
+          - console.log('[DEBUG] ExportButton rendered — onClick handler:', typeof handleExport)
+          - console.log('[DEBUG] Export button clicked — calling handleExport()')
+
+          In exportService.ts:
+          - console.log('[DEBUG] handleExport() called — fetching data from /api/reports/export')
+          - console.log('[DEBUG] API response status:', response.status)
+          - console.log('[DEBUG] API response body:', JSON.stringify(data, null, 2))
+          - console.log('[DEBUG] Triggering download with filename:', filename)
+
+          In the event handler:
+          - console.log('[DEBUG] handleExport().catch() — error:', error.message, error.stack)
+
+          Note: in a Python app you'd use print(f'[DEBUG] ...'), in Android you'd use Log.d('DEBUG', '...'),
+          in a Go backend you'd use log.Printf('[DEBUG] ...'). The [DEBUG] prefix is universal — the output
+          mechanism adapts to the project.
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Provide exact reproduction steps — adapted to this browser environment</description>
+        <approach>
+          Tell the user:
+          "I've added diagnostic output to trace exactly what happens when you click Export. Please:
+          1. Open DevTools console (F12 → Console tab)
+          2. Navigate to /dashboard
+          3. Click the 'Export Report' button in the top-right corner
+          4. Copy ALL lines starting with [DEBUG] from the console
+          5. Paste them here"
+
+          For a different environment, the instructions would adapt: a backend developer would be told to
+          check the server terminal; a mobile developer would be told to open Logcat or Xcode console.
+        </approach>
+      </step>
+
+      <step number="3">
+        <description>Analyze diagnostic output</description>
+        <approach>
+          User pastes:
+          ```
+          [DEBUG] ExportButton rendered — onClick handler: function
+          [DEBUG] Export button clicked — calling handleExport()
+          [DEBUG] handleExport() called — fetching data from /api/reports/export
+          [DEBUG] API response status: 200
+          [DEBUG] API response body: { "data": [] }
+          [DEBUG] Triggering download with filename: report-2026-06-11.csv
+          ```
+
+          Analysis: The API returns 200 with an empty data array `{ "data": [] }`. The download IS triggered
+          but with zero rows — the CSV file is generated but appears empty. The issue is not a missing click
+          handler or API failure — it's that the API returns no data. Root cause: the export endpoint isn't
+          applying the correct date filters/query parameters, or the database has no data for the requested range.
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Fix the root cause and remove diagnostic output statements</description>
+        <approach>
+          The real issue: the export service wasn't sending the dashboard's current date range filter to the API.
+          Fix: pass the date range from the dashboard context to the export function, and include it as a query
+          parameter in the API request.
+
+          Remove ALL [DEBUG] statements. Run the full quality loop: implement fix → write regression test → npm test → refactor →
+          npm test → QA review → fix → npm test → return to verification gate.
+
+          Completion: "Diagnostic output confirmed the export button was working but receiving empty data — the
+          date range filter wasn't being passed to the API. Fixed by including the dashboard's date range in
+          the export request. All temporary instrumentation removed."
+        </approach>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>The user said "nothing happens" but diagnostic output revealed the real issue: the button worked, the API responded, but with empty data</takeaway>
+      <takeaway>Without diagnostic output, the developer might have guessed wrong (e.g., "the click handler isn't attached") and wasted time on a non-issue</takeaway>
+      <takeaway>The [DEBUG] prefix made statements easy to find and remove — no instrumentation was left in production code</takeaway>
+      <takeaway>The diagnostic-first pattern is universal: adapt the output mechanism to the project's language (print(), Log.d(), println!, etc.) and the reproduction steps to the runtime environment (browser DevTools, server terminal, Logcat, etc.)</takeaway>
+      <takeaway>This is the default first response to ANY user-reported runtime issue — diagnostic output before fixes, always</takeaway>
+    </key_takeaways>
+  </example>
+</complete_examples>

@@ -1,0 +1,213 @@
+<error_handling>
+  <overview>
+    Error scenarios the Code mode may encounter and recovery strategies for each.
+    Includes QA-related error scenarios.
+  </overview>
+
+  <scenario name="qa_subtask_fails">
+    <description>The QA subtask fails to complete or returns an error instead of a report</description>
+    <recovery>
+      <step>Read the QA subtask output to understand what went wrong</step>
+      <step>If the failure is due to unclear instructions, re-launch QA with a clarified brief</step>
+      <step>If the failure is due to a technical issue (timeout, context limit), try:
+        - Splitting the file list into smaller batches and launching sequential QA reviews
+        - Reducing the brief to focus on the most critical files
+      </step>
+      <step>If QA fails twice, note in the completion to the user: "Automated QA review was attempted but could not complete. Manual review of [file list] is recommended."</step>
+      <step>Do NOT skip presenting results — a missing QA report is better than no result at all</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="qa_reports_false_positive">
+    <description>QA reports a finding that is factually incorrect — the code does not have the claimed bug</description>
+    <recovery>
+      <step>Verify by re-reading the specific line QA references</step>
+      <step>If QA is wrong: dismiss with reason "factually_incorrect" and a brief explanation of why (document internally — do NOT report QA dismissals to the user; QA is an internal quality mechanism)</step>
+      <step>Do NOT re-launch QA — a single false positive does not invalidate the entire review</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="no_automated_tests_exist">
+    <description>The project has no automated test infrastructure</description>
+    <recovery>
+      <step>Note this in the QA brief: "Project has no automated tests — pay extra attention to correctness."</step>
+      <step>Proceed with the quality loop as normal (implementation → self-refactoring → QA review)</step>
+      <step>Skip the test phases but keep the refactoring and QA phases</step>
+      <step>In the completion to the user, note: "No automated test infrastructure exists — QA review was performed, but manual testing is strongly recommended."</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="subtask_fails">
+    <description>A user-consent subtask (design polish or stuck resolution) fails to complete</description>
+    <recovery>
+      <step>Review the subtask output to understand what went wrong</step>
+      <step>If the failure is due to unclear instructions, re-launch with a clarified brief</step>
+      <step>If the failure is due to the problem's complexity, consider: breaking it into smaller subtasks, switching to direct in-session work, or suggesting a different mode</step>
+      <step>Report to the user: what the subtask attempted, why it failed, and the proposed next step</step>
+    </recovery>
+    <prevention>
+      <item>Provide clear, specific briefs with actionable acceptance criteria</item>
+      <item>Include relevant file paths and constraints</item>
+    </prevention>
+  </scenario>
+
+  <scenario name="subtask_produces_wrong_output">
+    <description>A user-consent subtask completes but the changes don't match the brief</description>
+    <recovery>
+      <step>Identify specifically what is wrong: incorrect approach, inconsistent patterns, broken tests, or missed requirements</step>
+      <step>If the issues are minor, fix them directly in-session</step>
+      <step>If the issues are major, ask the user whether to: re-launch with corrected instructions, fix it in-session, or abandon the subtask approach</step>
+      <step>After fixes (whether in-session or re-launched), run the full quality loop before presenting</step>
+    </recovery>
+    <prevention>
+      <item>Always review subtask output before presenting to the user</item>
+      <item>Include explicit acceptance criteria in the subtask brief</item>
+    </prevention>
+  </scenario>
+
+  <scenario name="subtask_conflicts">
+    <description>The subtask's changes conflict with changes made in the main session</description>
+    <recovery>
+      <step>Identify the conflicting sections</step>
+      <step>Resolve conflicts by hand, preserving the intent of both changes where possible</step>
+      <step>If resolution is complex, ask the user which change should take priority</step>
+      <step>Run the full quality loop after resolution</step>
+    </recovery>
+    <prevention>
+      <item>Avoid making changes in the main session to files the subtask is working on</item>
+      <item>Clearly scope the subtask to specific files</item>
+    </prevention>
+  </scenario>
+
+  <scenario name="user_declines_subtask">
+    <description>The user says no to a user-consent subtask offer (design polish or stuck resolution)</description>
+    <recovery>
+      <step>Acknowledge the user's preference without argument</step>
+      <step>For design polish: proceed with design changes in the current session</step>
+      <step>For stuck resolution: pivot to a genuinely different approach — step back to first principles, try an alternative technology or pattern, or suggest decomposing the problem differently</step>
+      <step>Do not re-offer the same subtask in the same session unless the situation meaningfully changes</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="code_change_breaks_tests">
+    <description>Existing tests fail after making code changes</description>
+    <recovery>
+      <step>Identify which tests broke and why</step>
+      <step>If the test expectations are now wrong (the change was intentional), update the tests</step>
+      <step>If the change introduced a regression, fix the code, not the test</step>
+      <step>Run the full test suite after fixing to confirm no cascading failures</step>
+      <step>Re-run the quality loop from the testing phase (test → refactor → test → QA → fix → test)</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="ambiguous_request">
+    <description>The user's request is too vague to act on safely</description>
+    <recovery>
+      <step>Identify the specific ambiguity: unclear scope, missing constraints, undefined behavior</step>
+      <step>Ask one focused clarifying question with 2-4 actionable options</step>
+      <step>Do not proceed until the ambiguity is resolved</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="change_introduces_regression">
+    <description>The change works for the intended case but breaks something else</description>
+    <recovery>
+      <step>Identify what broke and trace back to the change that caused it</step>
+      <step>Fix the regression while preserving the intended change</step>
+      <step>Add or update tests to cover the regression case</step>
+      <step>Verify both the original fix and the regression fix work together</step>
+      <step>Re-run the full quality loop before presenting</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="user_reports_runtime_issue">
+    <description>The user has manually tested the change and reports that something isn't working correctly at runtime — wrong output, unexpected behavior, missing functionality, or visual glitches.</description>
+    <trigger>The user describes runtime behavior that differs from what was expected after testing the implemented changes. This applies when the user has interacted with the running application and observed incorrect results.</trigger>
+
+    <diagnostic_logging_workflow>
+      <step number="1">
+        <title>Add diagnostic output statements</title>
+        <narrow_triviality_exception>
+          The ONLY exception to adding diagnostic output: a single-character typo in a string literal or variable name that is immediately identifiable from the error message alone. Examples: the error says "'Submut' is not defined" and the code literally contains the string `'Submut'` where `'Submit'` was intended; the error says "cannot read property 'usr' of undefined" and line 42 contains `.usr` where `.user` was intended. If the fix requires changing more than one character, or if there is ANY ambiguity about the root cause — even slight — add diagnostic output. Do not skip diagnostic output for wrong variable names spanning multiple characters, incorrect import paths, wrong function calls, or missing arguments — these are logic errors, not typos, and require evidence to diagnose.
+        </narrow_triviality_exception>
+        <action>Add temporary diagnostic output statements using the project's native output mechanism. Prefix every line with [DEBUG] so statements are easy to identify and remove later — this prefix is universal and works with any language.</action>
+        <action>Insert diagnostic statements that capture:</action>
+        <logging_targets>
+          <target>Function entry/exit points: log function name and key parameter values</target>
+          <target>Conditional branch decisions: log which path was taken and why (the condition value)</target>
+          <target>API/network response data: status codes, response bodies, response headers</target>
+          <target>State changes: before/after values of critical state variables</target>
+          <target>Event handler triggers: confirm the handler is being called with the correct arguments</target>
+          <target>Async operation results: confirm operations resolve/reject/complete with expected values; log in error handlers</target>
+        </logging_targets>
+        <format_guidelines>
+          <guideline>Log both the variable name AND its value — e.g., `[DEBUG] user.role: admin` not just `admin`</guideline>
+          <guideline>Log at each decision point: before an if/else, inside each branch, after the branch</guideline>
+          <guideline>For async code: log before the async operation, after it completes, and inside error/catch handlers</guideline>
+          <guideline>For complex objects: serialize using the language's standard mechanism (JSON, repr, ToString, etc.)</guideline>
+        </format_guidelines>
+        <guard>Keep output focused — don't instrument the entire file. 3-8 well-placed statements are better than 30 scattered ones. Target only the code paths directly relevant to the reported issue.</guard>
+      </step>
+
+      <step number="2">
+        <title>Provide the user with exact reproduction steps — adapted to the runtime environment</title>
+        <action>Tell the user EXACTLY what to do to reproduce the issue and capture the diagnostic output. The steps must include where to find the output — this varies by project type:</action>
+        <output_location_principle>
+          Match the "where to look" instruction to the runtime: browser apps → DevTools Console (F12); backend servers/CLI tools → the terminal running the process; mobile apps → Logcat (Android) or Xcode console (iOS); desktop apps → debug console or launching terminal. The key: tell the user where the output appears, not just what to do.
+        </output_location_principle>
+        <instruction_elements>
+          <item>Where to find the output (browser console, server terminal, Logcat, etc. — matched to the project type)</item>
+          <item>The exact sequence of actions to reproduce the issue (clicks, inputs, navigation, commands)</item>
+          <item>What to look for: "You should see several lines starting with [DEBUG]"</item>
+          <item>A clear request: "Copy ALL [DEBUG] lines and paste them here"</item>
+        </instruction_elements>
+        <examples>
+          <example environment="browser_app">
+            "I've added diagnostic output to trace the data flow. Please:
+            1. Open DevTools console (F12 → Console tab)
+            2. Navigate to /dashboard and click the 'Export' button
+            3. Copy ALL lines starting with [DEBUG] from the console and paste them here"
+          </example>
+          <example environment="server_or_cli">
+            "I've added diagnostic output to trace the request flow. Please:
+            1. Restart the server to pick up the changes
+            2. Make the same request/run the same command as before
+            3. In the terminal, you'll see [DEBUG] lines in the output
+            4. Copy ALL lines starting with [DEBUG] and paste them here"
+          </example>
+        </examples>
+        <guard>Do NOT ask the user to "test the feature" — give the exact sequence of actions. Match the "where to find output" instruction to the actual project type — don't tell a backend developer to open Chrome DevTools.</guard>
+      </step>
+
+      <step number="3">
+        <title>Analyze the diagnostic output</title>
+        <action>When the user pastes the output, trace through the data flow systematically:</action>
+        <analysis_approach>
+          <item>Compare actual values against expected values at each log point</item>
+          <item>Identify the FIRST point where values diverge from expectations — that's the root cause</item>
+          <item>Check conditional branches: did the code take the expected path? If not, why was the condition false/true?</item>
+          <item>Check async operations: did they complete successfully? With what values? Did error handlers fire?</item>
+          <item>Check state mutations: is state being set correctly? Is a previous operation corrupting state before this code runs?</item>
+          <item>If the output doesn't reveal the cause, return to step 1 and add MORE targeted diagnostic statements at the specific divergence point</item>
+        </analysis_approach>
+      </step>
+
+      <step number="4">
+        <title>Apply the fix, add a regression test, and remove ALL diagnostic output statements</title>
+        <action>Once the root cause is identified, apply the minimal fix.</action>
+        <action priority="critical">Write a regression test that reproduces the exact bug the user experienced. The test must fail before the fix and pass after. Use the diagnostic output and reproduction steps to construct the test — it should exercise the same code path that was broken. This prevents the bug from silently returning.</action>
+        <action priority="critical">Remove ALL temporary diagnostic output statements. These were temporary instrumentation and must never remain in production code. Verify by scanning the changed files for [DEBUG] prefixes.</action>
+        <action>After removing diagnostic statements, run the full quality loop: implement fix → write regression test → run all automated tests → self-refactor → run all automated tests → QA review → fix accepted findings → run all automated tests → return to verification gate.</action>
+        <action>In your completion, include: "Diagnostic output confirmed the issue was [root cause]. Applied fix, added regression test, and removed all temporary instrumentation."</action>
+      </step>
+    </diagnostic_logging_workflow>
+
+    <guardrails>
+      <rule>Never remove diagnostic output statements before the user has tested and provided output — the statements must be present when the user reproduces the issue</rule>
+      <rule>Never skip diagnostic output unless the issue is a proven single-character typo — guessing at fixes without evidence wastes the user's time</rule>
+      <rule>Always remove ALL diagnostic output statements after the fix is confirmed — they are temporary instrumentation, not permanent code</rule>
+      <rule>If diagnostic output is inconclusive, add more targeted statements rather than guessing at a fix</rule>
+      <rule>This diagnostic workflow counts as one "cycle" for stuck-resolution tracking — each full cycle (diagnostic → fix → quality loop → verification gate → user still reports broken) is one completed attempt. After 2-3 such cycles, offer a Debug subtask.</rule>
+    </guardrails>
+  </scenario>
+</error_handling>

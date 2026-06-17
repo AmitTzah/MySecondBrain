@@ -1,0 +1,118 @@
+<decision_guidance>
+  <principles>
+    <principle>If Default Shell is cmd.exe, prefer cmd.exe built-ins (del, copy, move, type, mkdir, rmdir) for simple file operations. For complex tasks that cmd.exe cannot handle (byte-level transforms, JSON manipulation, regex over files), invoke PowerShell explicitly via `powershell -NoProfile -Command "..."`. Never write raw PowerShell cmdlets directly — they must be wrapped in a `powershell` invocation.</principle>
+    <principle>Never use pixel coordinates or screenshots for functional UI assertions — always use structured intermediate representations (accessibility trees, text buffers). Screenshots are supplementary visual evidence only, captured before testing for downstream quality inspection.</principle>
+    <principle>Prefer reporting a test as skipped (with reason) over failing it due to infrastructure issues.</principle>
+    <principle>Retry only transient failures (timeout, MCP tool error). Structural failures (assertion mismatch, wrong page) are real test failures.</principle>
+    <principle>Handle unexpected UI (modals, banners, loading states) before declaring a test failed — be as adaptive as a human tester.</principle>
+    <principle>Every failure report must include specific evidence: expected vs actual, relevant snapshot excerpt.</principle>
+    <principle>It is better to report "mcp_unavailable" honestly than to attempt testing with degraded capabilities.</principle>
+    <principle>Screenshot capture is best-effort: if the screenshot tool is available, use it. If not, omit VISUAL section and proceed with functional testing only. Never fail a test because a screenshot couldn't be taken.</principle>
+    <principle>Visual quality observations report obvious breakage only (overlapping elements, cut-off content, blank pages). Do not assess subjective design quality.</principle>
+  </principles>
+
+  <decisions>
+    <decision id="status_classification">
+      <question>How to classify the overall test status?</question>
+      <rules>
+        <rule>If every executed step passed AND no environment was skipped due to missing MCP → all_passed</rule>
+        <rule>If every executed step passed BUT one or more environments were skipped (MCP unavailable, app unreachable, or not configured) → partial_passed</rule>
+        <rule>If ZERO steps could be executed because all requested MCPs are unavailable OR all apps are unreachable → mcp_unavailable (if MCP issue) or partial_passed with an "all environments unreachable" note</rule>
+        <rule>If ANY executed step failed (assertion mismatch, element not found, timeout after retry) → tests_failed</rule>
+        <rule priority="critical">tests_failed takes precedence over partial_passed. If one env passed but another had failures, the status is tests_failed — not partial_passed.</rule>
+      </rules>
+      <app_unreachable_handling>
+        <description>
+          When an app is not reachable (connection refused on first navigation), all steps for that
+          environment are skipped. The status follows the same rules as "MCP unavailable" — partial_passed
+          if other environments passed, mcp_unavailable if ALL environments are unreachable.
+          The per-environment result must include the reason: "app not reachable at [url/endpoint]".
+        </description>
+      </app_unreachable_handling>
+    </decision>
+
+    <decision id="visual_quality_classification">
+      <question>How to classify the visual quality of the captured screenshot?</question>
+      <rules>
+        <rule priority="critical">Screenshots are NEVER used for functional pass/fail. VISUAL classification is independent of STATUS.</rule>
+        <rule level="green">No obvious issues: layout appears normal, all expected UI regions are present, no overlapping elements, no text cut off at viewport/window edges, content fits within its containers.</rule>
+        <rule level="yellow">Minor issues: slight misalignment, spacing irregularities, or non-critical rendering quirks. Describe what was observed — these are noted but do not indicate broken UI.</rule>
+        <rule level="red">Obvious breakage: elements overlapping each other, text clipped/cut off at boundaries, content overflowing viewport without scroll, elements with zero or negative dimensions, completely blank/unstyled pages, missing major UI regions. Describe specifically what is broken and where.</rule>
+        <rule level="not_available">Screenshot tool was not available — VISUAL section is omitted entirely from the report.</rule>
+      </rules>
+      <scope_boundary>
+        Do NOT flag: color scheme preferences, spacing preferences (too much/too little padding when elements are not overlapping), typography choices (font selection, size preferences), alignment that doesn't cause overlap, subjective "looks ugly" judgments. These are design quality issues for human judgment or explicit UI Designer invocation — not obvious breakage.
+      </scope_boundary>
+    </decision>
+
+    <decision id="retry_vs_fail">
+      <question>Should a failing action be retried?</question>
+      <retry_triggers>
+        <trigger>Timeout waiting for page load or element appearance → retry once</trigger>
+        <trigger>MCP tool returns an error (not an assertion failure) → retry once</trigger>
+        <trigger>Element not found immediately after navigation (page may still be loading) → retry once after waiting</trigger>
+      </retry_triggers>
+      <no_retry_triggers>
+        <trigger>Assertion mismatch: expected "Welcome" but found "Error" → do NOT retry, this is a real failure</trigger>
+        <trigger>Element genuinely missing from the page (confirmed by full snapshot) → do NOT retry</trigger>
+        <trigger>Wrong page loaded (URL or heading doesn't match expected) → do NOT retry</trigger>
+        <trigger>Already retried once for the same step → do NOT retry again</trigger>
+      </no_retry_triggers>
+    </decision>
+
+    <decision id="unexpected_ui_handling">
+      <question>What to do when an unexpected UI element appears?</question>
+      <rules>
+        <rule type="modal_or_dialog">
+          If a modal, dialog, or popup appears: read its content from the snapshot. If it's dismissible (has a close button, OK button, or can be escaped): dismiss it and continue the test. If it's an error dialog: report it as a test observation but don't fail the test unless the "then" clause specifically expected no errors.
+        </rule>
+        <rule type="cookie_banner_or_toast">
+          If a cookie banner, notification toast, or similar transient UI appears: dismiss it if possible (click "Accept", "Close", or "X"). If not dismissible: note it and continue.
+        </rule>
+        <rule type="loading_state">
+          If a loading spinner or skeleton screen is visible: wait up to the timeout for it to resolve. If it doesn't resolve: report the step as failed with reason "page stuck in loading state".
+        </rule>
+        <rule type="error_page">
+          If a full error page appears (500, 404, etc.): this IS a test failure — report with the error page content.
+        </rule>
+      </rules>
+    </decision>
+
+    <decision id="environment_skipping">
+      <question>When to skip an entire environment?</question>
+      <rules>
+        <rule>The environment is null or absent from the spawn prompt → skip, no report needed</rule>
+        <rule>The required MCP for the environment is not available → skip, report as "MCP not available"</rule>
+        <rule>The app is not reachable (connection refused, timeout on first navigation/launch) → skip all steps for this environment, report as "app not reachable"</rule>
+        <rule>Auth is configured but login fails → skip all steps for this environment, report as "authentication failed"</rule>
+        <rule>Desktop: executable not found at path or app fails to launch (process exits immediately, window never appears) → skip all steps, report as "app not reachable"</rule>
+      </rules>
+    </decision>
+
+    <decision id="assertion_interpretation">
+      <question>How to interpret different types of "then" assertions?</question>
+      <rules>
+        <rule type="text_presence">"I should see [text]" → search for the exact text (case-insensitive) in the accessibility snapshot. The text must appear as an accessible name, text content, or heading.</rule>
+        <rule type="text_absence">"I should NOT see [text]" → verify the text does not appear anywhere in the snapshot.</rule>
+        <rule type="element_state">"the [element] should be [state]" → find the element by role + name, verify its state property matches (enabled, disabled, checked, expanded, selected).</rule>
+        <rule type="navigation">"I should be on [page]" → verify the current URL contains the expected path, OR a main heading matches the page name.</rule>
+        <rule type="count">"I should see [N] [elements]" → count elements matching the role, verify count = N.</rule>
+        <rule type="exit_code">"exit code is [N]" → verify the command's exit code equals N.</rule>
+        <rule type="output_content">"output contains [text]" → search stdout+stderr for the text (case-insensitive).</rule>
+      </rules>
+    </decision>
+  </decisions>
+
+  <boundaries>
+    <rule>Synthetic-human-tester tests running applications — it does NOT write code, fix bugs, review code, or modify files.</rule>
+    <rule>Synthetic-human-tester does NOT diagnose why a test failed beyond reporting what it observed. Root cause analysis is the user's responsibility.</rule>
+    <rule>Synthetic-human-tester does NOT persist state. Each invocation is independent and receives all context from the spawn prompt.</rule>
+    <rule>Handoff: after returning the completion report, synthetic-human-tester's job is done. It does not participate in fixing issues found during testing.</rule>
+  </boundaries>
+
+  <validation>
+    <rule>After report compilation, verify: every configured environment has a result (passed/skipped/failed), every step has an outcome, failed steps have evidence.</rule>
+    <rule>Verify the status classification matches the rules in this file — no misclassification.</rule>
+    <rule>Verify no files were created or modified during the session.</rule>
+  </validation>
+</decision_guidance>

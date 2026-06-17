@@ -1,0 +1,176 @@
+<complete_examples>
+  <overview>
+    Examples of QA review sessions, from receiving the brief to delivering the final report.
+  </overview>
+
+  <example name="clean_code_no_issues">
+    <scenario>
+      The Code mode has made a small, well-contained change — adding a utility function
+      with proper tests. The QA review finds no problems.
+    </scenario>
+
+    <delegator_brief>
+      Goal: Add a `formatCurrency` utility that formats numbers as USD with proper locale handling.
+      Files: src/utils/formatCurrency.ts, src/utils/__tests__/formatCurrency.test.ts
+      Constraints: Must handle null/undefined inputs gracefully. Follow existing utility patterns.
+    </delegator_brief>
+
+    <qa_workflow>
+      <step number="1">
+        <description>Read the implementation file</description>
+        <approach>
+          Read src/utils/formatCurrency.ts. The function:
+          - Takes (amount: number | null | undefined, locale = 'en-US', currency = 'USD')
+          - Returns '—' for null/undefined, formatted currency string otherwise
+          - Uses Intl.NumberFormat for locale-aware formatting
+          - Follows existing utility patterns (JSDoc comment, named export)
+        </approach>
+      </step>
+      <step number="2">
+        <description>Read the test file</description>
+        <approach>
+          Read src/utils/__tests__/formatCurrency.test.ts. Tests cover:
+          - Normal number formatting
+          - Null input returns '—'
+          - Undefined input returns '—'
+          - Custom locale (de-DE)
+          - Zero value
+          - Negative values
+          All assertions are specific (check exact string output, not just defined).
+        </approach>
+      </step>
+      <step number="3">
+        <description>Compile the report</description>
+        <approach>
+          No issues found across any category. Tests are thorough and follow project conventions.
+          The code properly handles edge cases and uses the platform's built-in Intl API.
+        </approach>
+      </step>
+    </qa_workflow>
+
+    <report>
+Summary: Reviewed 2 files. No bugs, concerns, or test quality issues found. Code is clean and well-tested.
+
+## Bugs & Issues
+No bugs or issues found.
+
+## Concerns & Risks
+No concerns or risks identified.
+
+## Test Quality
+Tests appear adequate — all edge cases covered with specific assertions.
+
+## Nitpicks
+No nitpicks.
+    </report>
+  </example>
+
+  <example name="critical_bug_found">
+    <scenario>
+      The Code mode has added a user deletion endpoint. QA finds a missing authorization
+      check that would allow any authenticated user to delete any other user.
+    </scenario>
+
+    <delegator_brief>
+      Goal: Add a DELETE /api/users/:id endpoint that removes a user from the database.
+      Files: src/routes/users.ts, src/services/userService.ts, src/__tests__/users.test.ts
+      Constraints: Only admins should be able to delete users. Soft-delete (set deletedAt) — don't actually remove rows.
+    </delegator_brief>
+
+    <qa_workflow>
+      <step number="1">
+        <description>Read the route handler</description>
+        <approach>
+          Read src/routes/users.ts. The DELETE handler:
+          - Extracts the :id parameter
+          - Calls userService.deleteUser(id)
+          - Returns 204 on success
+          - Has authentication middleware (checks req.user exists)
+          - But: NO authorization check — any authenticated user can delete any user
+          The brief explicitly states "Only admins should be able to delete users."
+        </approach>
+      </step>
+      <step number="2">
+        <description>Read the service layer</description>
+        <approach>
+          Read src/services/userService.ts. deleteUser(id):
+          - Sets deletedAt = new Date() (correctly implements soft-delete)
+          - But: no check for whether the user exists before updating (UPDATE may silently affect 0 rows)
+          - No check for self-deletion prevention
+        </approach>
+      </step>
+      <step number="3">
+        <description>Read the tests</description>
+        <approach>
+          Read src/__tests__/users.test.ts. Tests:
+          - Test 1: Admin deletes user → 204 ✓
+          - Test 2: Unauthenticated request → 401 ✓
+          - MISSING: Non-admin authenticated user attempting to delete
+          - MISSING: Deleting a non-existent user
+          - MISSING: User attempting to delete themselves
+        </approach>
+      </step>
+    </qa_workflow>
+
+    <report>
+Summary: Reviewed 3 files. Found 1 critical bug and 3 concerns. The implementation is missing the authorization check required by the acceptance criteria.
+
+## Bugs & Issues
+1. **src/routes/users.ts:42** — Missing admin authorization check. The DELETE handler only verifies the user is authenticated (req.user exists) but does not verify req.user.role === 'admin'. Per the brief, only admins should delete users. Any authenticated user can currently delete any user — this is a privilege escalation vulnerability.
+
+## Concerns & Risks
+1. **src/services/userService.ts:28** — deleteUser() does not verify the user exists before setting deletedAt. If the ID doesn't exist, the UPDATE affects 0 rows but returns success (204). Should check affected row count and return 404 if 0.
+2. **src/routes/users.ts** — No self-deletion prevention. An admin could accidentally delete their own account. Consider adding a check: if (req.user.id === id) return 403.
+3. **src/__tests__/users.test.ts** — Missing test coverage: no test for non-admin user attempting delete, no test for non-existent user ID, no test for self-deletion attempt.
+
+## Test Quality
+Tests cover the happy path and unauthenticated case but miss critical authorization scenarios. The test for admin deletion should also verify a non-admin gets 403.
+
+## Nitpicks
+No nitpicks.
+    </report>
+
+    <key_takeaways>
+      <takeaway>The most critical finding was a requirement gap, not a code defect — QA validates against the stated goal</takeaway>
+      <takeaway>Missing authorization is always a bug (security), not a concern</takeaway>
+      <takeaway>When tests miss entire scenarios, that goes in both Concerns and Test Quality</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="mixed_findings">
+    <scenario>
+      The Code mode has refactored a data-fetching hook. QA finds a mix of issues:
+      a stale closure (bug), a potential race condition (concern), a weak test assertion
+      (test quality), and a naming nitpick.
+    </scenario>
+
+    <delegator_brief>
+      Goal: Refactor useUserData hook to support pagination and search filtering.
+      Files: src/hooks/useUserData.ts, src/hooks/__tests__/useUserData.test.ts
+      Constraints: Maintain backward compatibility — existing callers shouldn't break. Debounce search input by 300ms.
+    </delegator_brief>
+
+    <report>
+Summary: Reviewed 2 files. Found 1 bug, 2 concerns, 1 test quality issue, and 1 nitpick.
+
+## Bugs & Issues
+1. **src/hooks/useUserData.ts:34** — Stale closure in search debounce. The `search` value used inside the setTimeout callback is captured from the render cycle when the effect ran, not the current search value. If the user types quickly, the debounced call may use an outdated search term. Use a ref to track the latest search value, or use the functional updater pattern.
+
+## Concerns & Risks
+1. **src/hooks/useUserData.ts:45** — Race condition: if fetchUsers resolves out of order (slow network for request A, fast for request B), request B's results could be overwritten by request A's stale data. Add an abort controller or request ID check.
+2. **src/hooks/useUserData.ts:22** — The pagination `page` state resets to 1 when search changes, but this happens in a separate useEffect. If both search and page change in the same render cycle, there's a brief moment where an incorrect page could be used. Consider resetting page in the same handler that updates search.
+
+## Test Quality
+1. **src/hooks/__tests__/useUserData.test.ts:67** — The test "handles search filter changes" only asserts that fetchUsers was called, not that it was called with the correct search parameter. The test would pass even if the wrong search value was sent. Assert on the actual argument: `expect(fetchUsers).toHaveBeenCalledWith(expect.objectContaining({ search: 'test' }))`.
+
+## Nitpicks
+1. **src/hooks/useUserData.ts:12** — Variable name `d` for debounce timeout ID is unclear. Consider `debounceTimeoutId` or `searchTimeout`.
+    </report>
+
+    <key_takeaways>
+      <takeaway>Stale closures are bugs, not concerns — they produce incorrect behavior</takeaway>
+      <takeaway>Weak test assertions are test quality issues, not nitpicks</takeaway>
+      <takeaway>Each finding is specific, includes the line number, and suggests a concrete fix</takeaway>
+    </key_takeaways>
+  </example>
+</complete_examples>

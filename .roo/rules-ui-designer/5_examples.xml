@@ -1,0 +1,292 @@
+<complete_examples>
+  <overview>
+    Complete workflow examples for the UI Designer mode, demonstrating the screenshot-first
+    self-validation workflow: before capture → changes → after capture → self-validate
+    (loop if needed) → test safety guard → user approval.
+  </overview>
+
+  <example name="web_app_spacing_fix">
+    <scenario>
+      A user reports that the dashboard cards have inconsistent spacing — some are too close
+      together, others have too much gap. Functionality is confirmed correct.
+    </scenario>
+
+    <user_request>
+      "The dashboard cards don't look right — the spacing between them is all over the place.
+      The data is correct though, just the layout needs fixing."
+    </user_request>
+
+    <workflow>
+      <step number="1">
+        <description>Capture before screenshot</description>
+        <approach>
+          Detect project type: package.json shows React + Tailwind → web app.
+          Check MCP tools: Playwright browser tools available.
+          Navigate to the dashboard page and capture a full-page screenshot.
+        </approach>
+        <expected_outcome>Before screenshot showing dashboard card layout with uneven spacing.</expected_outcome>
+      </step>
+
+      <step number="2">
+        <description>Identify target files</description>
+        <approach>
+          Search for dashboard component files. Find Dashboard.tsx with card grid layout.
+          The cards use a Tailwind grid with inconsistent gap utilities.
+        </approach>
+        <analysis>
+          The issue is in the Tailwind utility classes on the grid container and card elements.
+          This is purely visual — spacing classes (gap-*, p-*, m-*) are safe to modify.
+        </analysis>
+      </step>
+
+      <step number="3">
+        <description>Apply visual changes</description>
+        <approach>
+          Normalize the grid gap to a consistent value: gap-6 on the grid container.
+          Standardize card padding to p-6. Remove ad-hoc margin utilities on individual cards.
+          These are all Tailwind utility class changes — no JavaScript touched.
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Capture after screenshot and self-validate</description>
+        <approach>
+          Capture after screenshot via Playwright. Compare against before: are the gaps consistent?
+          Is the padding uniform? No new misalignments? Self-assessment: YES — spacing is now
+          consistent and visually clean. Proceed to tests.
+        </approach>
+      </step>
+
+      <step number="5">
+        <description>Run tests and present for approval</description>
+        <approach>
+          Run `npm test` — all 24 tests pass. Show before/after side by side. Cards have consistent
+          1.5rem gaps and uniform padding. Ask user: "Approved ✅ / Needs adjustments / Revert".
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      Dashboard card spacing standardized using consistent Tailwind gap and padding utilities.
+      All 24 tests pass. No JavaScript or component logic was modified.
+    </completion>
+
+    <key_takeaways>
+      <takeaway>Tailwind utility class changes are safely visual when limited to spacing, color, and typography utilities</takeaway>
+      <takeaway>Always run the full test suite — even seemingly safe changes can have unexpected effects</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="web_app_color_brand_update">
+    <scenario>
+      A user wants to update all primary color references to match new brand guidelines.
+      The application uses CSS custom properties on :root.
+    </scenario>
+
+    <user_request>
+      "Our brand colors changed. The primary blue should be #2563EB instead of #3B82F6,
+      and the secondary should be #7C3AED instead of #8B5CF6. All the functionality is fine."
+    </user_request>
+
+    <workflow>
+      <step number="1">
+        <description>Capture before screenshot</description>
+        <approach>
+          Auto-capture via Playwright MCP. Take screenshots of key pages: homepage, dashboard,
+          settings. These show the current color scheme.
+        </approach>
+        <expected_outcome>Before screenshots showing current brand colors across the application.</expected_outcome>
+      </step>
+
+      <step number="2">
+        <description>Identify color definitions</description>
+        <approach>
+          Search for --primary and --secondary CSS custom properties. Found in
+          src/styles/theme.css on :root. Also check Tailwind config if applicable.
+        </approach>
+        <analysis>
+          The colors are defined as CSS custom properties. Changing their values is purely visual.
+          No JavaScript references these by value — they're only used in CSS.
+        </analysis>
+      </step>
+
+      <step number="3">
+        <description>Update color values</description>
+        <approach>
+          Change --primary: #3B82F6 → #2563EB and --secondary: #8B5CF6 → #7C3AED in theme.css.
+          Also update any hardcoded Tailwind extend colors if they exist.
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Capture after screenshots and self-validate</description>
+        <approach>
+          Capture after screenshots of the same pages. Compare against before: did the brand
+          colors update correctly? Any elements missed? Are contrast ratios still acceptable?
+          Self-assessment: YES — all primary/secondary instances updated, no regressions.
+          Proceed to tests.
+        </approach>
+      </step>
+
+      <step number="5">
+        <description>Run tests and present comparison</description>
+        <approach>
+          Show before/after for each key page. The new brand colors are applied consistently.
+          User approves.
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      Brand colors updated from old palette to new palette across the application via CSS
+      custom property changes. All tests pass. No logic modified.
+    </completion>
+
+    <key_takeaways>
+      <takeaway>CSS custom properties are the ideal abstraction for color changes — change once, apply everywhere</takeaway>
+      <takeaway>Capture screenshots of multiple key pages when changing global styles</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="test_failure_revert">
+    <scenario>
+      A user wants to adjust the layout of a form. During the change, a test fails,
+      indicating the visual change accidentally touched logic.
+    </scenario>
+
+    <user_request>
+      "The signup form inputs are too wide. Can you make them narrower and center the form?"
+    </user_request>
+
+    <workflow>
+      <step number="1">
+        <description>Before screenshot and initial changes</description>
+        <approach>
+          Capture before screenshot. Identify SignupForm.tsx — it uses styled-components.
+          Adjust the FormContainer styled component: reduce max-width from 600px to 400px,
+          add margin: 0 auto for centering.
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Test failure detected</description>
+        <approach>
+          Run `npm test`. A test fails: "Submits form with valid data" —
+          the submit button is now outside the visible viewport in the test environment
+          because the form height changed with the new width, and the test can't find
+          the submit button to click.
+        </approach>
+        <analysis>
+          The test failure is because the narrower form caused content to reflow vertically,
+          pushing the submit button out of the test's viewport. This is a layout consequence,
+          not a logic change — but the test failure must be respected.
+        </analysis>
+      </step>
+
+      <step number="3">
+        <description>Revert and retry with adjusted approach</description>
+        <approach>
+          Revert the max-width change. Run tests — all pass on clean state.
+          Re-apply only the centering (margin: 0 auto) without changing max-width.
+          Run tests — all pass. The form is now centered but maintains its original width.
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Inform user of partial adjustment</description>
+        <approach>
+          Present before/after: form is centered but width unchanged.
+          Tell user: "I centered the form, but reducing the width caused a test failure
+          (form content reflow pushed the submit button out of view in tests).
+          You may want to use Code mode if you want to adjust both width and the test."
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      Form centered successfully. Width reduction reverted due to test failure.
+      User informed and may escalate to Code mode for the full change.
+    </completion>
+
+    <key_takeaways>
+      <takeaway>Respect test failures absolutely — even layout changes can affect test assumptions</takeaway>
+      <takeaway>When a visual change can't be made without breaking tests, offer a partial improvement and suggest Code mode</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="no_mcp_screenshot_fallback">
+    <scenario>
+      The user wants to improve the visual design of a WPF desktop application.
+      No MCP screenshot tools are available for desktop capture.
+    </scenario>
+
+    <user_request>
+      "The settings window looks dated. Can you modernize the colors and spacing?"
+    </user_request>
+
+    <workflow>
+      <step number="1">
+        <description>Request screenshots from user</description>
+        <approach>
+          No Windows MCP tools detected. Ask user: "Send me screenshots of the screens you
+          want changed. I need to see the current state before I can improve it."
+          User provides screenshots of the settings window.
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Detect project type and identify files</description>
+        <approach>
+          Project contains .xaml and .xaml.cs files → WPF desktop.
+          Find SettingsWindow.xaml with Grid layout, TextBlock elements, and Button styles.
+          Colors are defined inline rather than in resource dictionaries.
+        </approach>
+      </step>
+
+      <step number="3">
+        <description>Apply visual changes</description>
+        <approach>
+          Update XAML visual properties only:
+          - Window Background to a modern light gray
+          - TextBlock FontFamily to Segoe UI, increase FontSize
+          - Button Style Setter for Background, Foreground, BorderBrush
+          - Adjust Margin and Padding for better spacing
+          No .xaml.cs files touched. No data bindings modified.
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Request after screenshot and self-validate</description>
+        <approach>
+          Ask user for after screenshot. Compare against before: is the button properly sized
+          now? Does the text fit? Self-assessment: YES — button resized, text fits. Proceed.
+        </approach>
+      </step>
+
+      <step number="5">
+        <description>Run tests and present comparison</description>
+          Ask user: "I've updated the settings window styling. Can you send me a screenshot
+          of the updated window?" Run project tests — all pass.
+        </approach>
+      </step>
+
+      <step number="5">
+        <description>Present comparison</description>
+        <approach>
+          Show user's before screenshot alongside user's after screenshot.
+          Summarize changes. User approves.
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      Settings window modernized with updated colors, typography, and spacing.
+      All tests pass. Only XAML files modified — no code-behind touched.
+    </completion>
+
+    <key_takeaways>
+      <takeaway>When MCP screenshot tools are unavailable, the user provides both before and after screenshots</takeaway>
+      <takeaway>WPF visual changes should stay in XAML files — .xaml.cs is strictly off-limits</takeaway>
+    </key_takeaways>
+  </example>
+</complete_examples>

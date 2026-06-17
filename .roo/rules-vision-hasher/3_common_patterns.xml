@@ -1,0 +1,411 @@
+<common_patterns>
+  <overview>
+    Reusable question patterns, interview structures, and the interactive mock HTML
+    generation system. The CSS component library and tooltip system are defined here
+    as canonical templates — VH copies them verbatim into every screen HTML file.
+
+    CRITICAL DEFAULT: Always prefer offering suggested responses (2-4 concrete options)
+    over open-ended questions. The user picks, combines, or rejects options — this is
+    faster and less fatiguing than "what do you want?" Only fall back to open-ended
+    questions when the user's direction is truly novel.
+  </overview>
+
+  <!-- ============================================================ -->
+  <!-- QUESTION PATTERNS (unchanged from original — still valid)     -->
+  <!-- ============================================================ -->
+  <suggested_responses_pattern>
+    <name>Default Questioning: Suggested Responses</name>
+    <description>
+      This is the PRIMARY questioning technique. Use it for every decision where standard
+      patterns exist. Offer 2-4 concrete options with brief tradeoffs.
+    </description>
+    <template>
+      "For [decision], here are the common approaches:
+      1. [Option A] — [1-line tradeoff/benefit]
+      2. [Option B] — [1-line tradeoff/benefit]
+      3. [Option C] — [1-line tradeoff/benefit]
+      Which fits your vision? Or do you have something different in mind?"
+    </template>
+    <rules>
+      <rule>Always provide at least 2 options. Never say "what do you want?" without options to react to.</rule>
+      <rule>Options should be meaningfully different, not variations of the same idea.</rule>
+      <rule>Include tradeoffs (not just descriptions) so the user understands implications.</rule>
+      <rule>If the user picks an option, drill into specifics using the detailed question patterns below.</rule>
+      <rule>If the user rejects all options, switch to open-ended mode — they have a genuinely novel vision.</rule>
+    </rules>
+  </suggested_responses_pattern>
+
+  <question_patterns>
+    <pattern name="screen_decomposition">
+      <description>For describing any UI screen in exhaustive detail. Use during Phase 2 screen interviews.</description>
+      <questions>
+        <question order="1">What is the purpose of this screen? What does the user accomplish here?</question>
+        <question order="2">What is the layout? (single panel, split panel, tabs, cards, list+detail, etc.)</question>
+        <question order="3">What are the major UI regions? (header, sidebar, main content, footer, etc.)</question>
+        <question order="4">For each region: what elements does it contain? Buttons, inputs, tables, charts, etc.?</question>
+        <question order="5">What data is displayed in each element? Where does it come from conceptually?</question>
+        <question order="6">What actions can the user take from this screen? Navigation, CRUD, export, etc.?
+          FOR EACH ACTION: "What exactly happens when the user does this?" Capture the full behavioral
+          description — this will become the tooltip text in the interactive mock.</question>
+        <question order="7">What is the empty state? (first visit, no data, nothing selected)</question>
+        <question order="8">What is the loading state? (spinners, skeletons, progress bars)</question>
+        <question order="9">What is the error state? (failed to load, permission denied, network error)</question>
+        <question order="10">How does the user get to this screen? From where? How do they leave?
+          FOR EACH NAVIGATION TARGET: "Which screen does this go to?" If it's a new screen not yet
+          designed, add it to state.json planned.screens.</question>
+      </questions>
+    </pattern>
+
+    <pattern name="feature_specification">
+      <description>For describing any feature completely. Use during Phase 1 feature-inventory interview.</description>
+      <questions>
+        <question order="1">What is the user trying to accomplish with this feature?</question>
+        <question order="2">What triggers this feature? (button click, navigation, automatic, scheduled)</question>
+        <question order="3">Step by step, what happens from trigger to completion?</question>
+        <question order="4">What data goes in? What data comes out?</question>
+        <question order="5">What validations or constraints exist?</question>
+        <question order="6">What happens when it succeeds? What does the user see?</question>
+        <question order="7">What happens when it fails? What error messages? Recovery path?</question>
+        <question order="8">What permissions or roles can access this feature?</question>
+        <question order="9">Does this feature interact with other features? How?</question>
+      </questions>
+    </pattern>
+
+    <pattern name="user_flow">
+      <description>For describing an end-to-end user journey. Use during Phase 3 flow interviews.</description>
+      <questions>
+        <question order="1">Who is the user? (persona, role, context)</question>
+        <question order="2">What is their goal? What are they trying to achieve?</question>
+        <question order="3">Where do they start? What screen?</question>
+        <question order="4">What steps do they take? Screens visited, actions performed, decisions made.</question>
+        <question order="5">What decisions or branching points exist? (if X then Y, else Z)</question>
+        <question order="6">What is the happy path from start to goal?</question>
+        <question order="7">What are the alternative paths? (different choices, edge cases)</question>
+        <question order="8">What can go wrong at each step? How is it handled?</question>
+        <question order="9">Where does the user end up? What do they see upon completion?</question>
+      </questions>
+    </pattern>
+
+    <pattern name="data_concept">
+      <description>For describing a conceptual data entity (not database schema — what data exists).
+        Use during Phase 1 data/ interviews.</description>
+      <questions>
+        <question order="1">What is this thing called? (e.g., "Task," "Project," "Invoice")</question>
+        <question order="2">What information describes it? List every attribute. (e.g., name, status, due date, assignee)</question>
+        <question order="3">For each attribute: is it required or optional? What format? Any constraints?</question>
+        <question order="4">How is it created? By whom? From where?</question>
+        <question order="5">How is it updated? By whom? From where?</question>
+        <question order="6">How is it deleted? Soft delete or hard delete? Consequences?</question>
+        <question order="7">How does it relate to other data concepts? (belongs to, has many, references)</question>
+        <question order="8">Where does it appear in the UI? Which screens show it?</question>
+      </questions>
+    </pattern>
+  </question_patterns>
+
+  <consistency_callout>
+    <description>
+      When the user describes something that matches a pattern already established,
+      call it out to maintain consistency.
+    </description>
+    <template>
+      "This sounds similar to [previously documented pattern] in [file]. Should this
+      follow the same pattern, or is it intentionally different?"
+    </template>
+  </consistency_callout>
+
+  <!-- ============================================================ -->
+  <!-- INTERACTIVE MOCK HTML GENERATION SYSTEM                       -->
+  <!-- ============================================================ -->
+  <interactive_mock_system>
+    <name>Interactive Mock HTML Generation</name>
+    <description>
+      For every UI screen, generate BOTH a canonical .md spec AND an interactive .html mock.
+      The HTML uses a pre-built CSS component library and a deliberate wireframe aesthetic.
+      The user opens the HTML in a browser to see the layout, click around, read tooltips,
+      and navigate between screens.
+
+      CRITICAL: The HTML is assembled from pre-built components. VH writes semantic HTML
+      with class names. The CSS is the canonical library below — copy it verbatim into
+      every screen HTML file. Do NOT write raw CSS. Do NOT adjust the component library
+      per screen. If a layout pattern isn't covered, use the closest available pattern.
+
+      The HTML opens via file:// — no server, no build step, no external dependencies.
+    </description>
+
+    <!-- WIREFRAME CSS GUIDANCE — see 2_best_practices.xml for aesthetic rules -->
+    <css_guidance>
+      <description>
+        Screen HTML files must include inline CSS following the wireframe aesthetic rules
+        defined in 2_best_practices.xml. Generate clean, consistent CSS for each screen
+        using the layout conventions below. The CSS should cover: reset/base, wireframe
+        banner, layout systems (sidebar, topbar, split, list-detail), card grid, tables,
+        forms, buttons, badges, empty states, loading skeletons, modal, tabs, tooltip
+        system, section headers, and utility classes.
+
+        Key aesthetic constraints (from 2_best_practices.xml):
+        - Dashed borders (2px dashed) on all structural elements
+        - Grayscale palette (#333, #666, #999, #bbb, #ddd, #eee, #f5f5f5, #f0f0f0, #fff)
+        - Single accent color: #2563eb (blue) for primary actions and active states
+        - Tooltip text: #ffd700 (gold) on #333 (dark) background
+        - System-ui sans-serif font, no external fonts
+        - Wireframe banner as first body element on every page
+        - No shadows on cards, no animations (except skeleton loading)
+      </description>
+    </css_guidance>
+
+    <!-- TOOLTIP JAVASCRIPT — copy verbatim into every screen HTML -->
+    <tooltip_javascript>
+      <description>
+        Minimal JavaScript for click-activated tooltips on non-navigation buttons.
+        Navigation links use standard <a href> — no JS needed.
+        Hover tooltips use CSS-only (.tooltip-trigger:hover).
+        Click tooltips show a toast at the bottom of the screen.
+        Copy this script into every screen HTML just before </body>.
+      </description>
+      <code><![CDATA[
+<script>
+  // Click-activated tooltips for non-navigation interactive elements
+  document.addEventListener('DOMContentLoaded', function() {
+    var toast = document.getElementById('tooltip-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'tooltip-toast';
+      toast.className = 'tooltip-toast';
+      document.body.appendChild(toast);
+    }
+
+    // All elements with data-tooltip attribute that are NOT links
+    var triggers = document.querySelectorAll('[data-tooltip]:not(a)');
+    triggers.forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var text = this.getAttribute('data-tooltip');
+        toast.textContent = text;
+        toast.style.display = 'block';
+        clearTimeout(toast._timeout);
+        toast._timeout = setTimeout(function() {
+          toast.style.display = 'none';
+        }, 4000);
+      });
+    });
+
+    // Hide toast on click anywhere else
+    document.addEventListener('click', function() {
+      toast.style.display = 'none';
+    });
+  });
+</script>
+]]></code>
+    </tooltip_javascript>
+
+    <!-- SCREEN HTML TEMPLATE -->
+    <screen_html_template>
+      <description>
+        The canonical HTML structure for every screen mock. Copy this template and fill
+        in the body content using the CSS component library classes. The <style> block
+        is the full CSS component library above — include it verbatim in every file.
+      </description>
+      <code><![CDATA[
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screen: [SCREEN NAME] — Vision Wireframe</title>
+  <style>
+    /* === INSERT FULL CSS COMPONENT LIBRARY HERE === */
+  </style>
+</head>
+<body>
+  <div class="wireframe-banner">
+    ⚠️ VISION WIREFRAME — NOT FINAL DESIGN — Interactive mock for product discovery only
+  </div>
+
+  <!-- SCREEN CONTENT GOES HERE -->
+  <!-- Use only classes from the CSS component library -->
+  <!-- Navigation: <a href="../screens/target.html" class="..."> -->
+  <!-- Actions: <button class="btn btn-primary" data-tooltip="Would..."> -->
+  <!-- Hover tooltips: wrap in <span class="tooltip-trigger"> -->
+
+  <!-- === INSERT TOOLTIP JAVASCRIPT HERE === -->
+</body>
+</html>
+]]></code>
+    </screen_html_template>
+
+    <!-- PLACEHOLDER PAGE TEMPLATE -->
+    <placeholder_page_template>
+      <description>
+        When a screen is referenced (as a navigation target) but hasn't been interviewed yet,
+        generate a placeholder page immediately. This ensures navigation links never 404.
+        The placeholder signals "this screen exists in the plan but hasn't been designed."
+      </description>
+      <code><![CDATA[
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>[SCREEN NAME] — Placeholder</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: #f0f0f0;
+      color: #666;
+    }
+    .placeholder {
+      text-align: center;
+      padding: 48px;
+      border: 2px dashed #999;
+      border-radius: 8px;
+      background: #fff;
+      max-width: 500px;
+    }
+    .placeholder-icon { font-size: 64px; margin-bottom: 16px; }
+    .placeholder-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    .placeholder-text { font-size: 14px; color: #999; margin-bottom: 24px; }
+    .placeholder-link { color: #2563eb; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="placeholder">
+    <div class="placeholder-icon">📋</div>
+    <h1 class="placeholder-title">[SCREEN NAME]</h1>
+    <p class="placeholder-text">
+      This screen has been referenced in the vision but hasn't been interviewed yet.
+      It will be designed in an upcoming session.
+    </p>
+    <a href="javascript:history.back()" class="placeholder-link">← Go back</a>
+  </div>
+</body>
+</html>
+]]></code>
+    </placeholder_page_template>
+
+    <!-- LAYOUT CONVENTIONS -->
+    <layout_conventions>
+      <description>How to structure screen content using the CSS component library classes:</description>
+      <convention name="sidebar_layout">
+        <usage>Most common layout. Sidebar navigation + main content area.</usage>
+        <code><![CDATA[
+<div class="layout-sidebar">
+  <nav class="sidebar">
+    <div class="sidebar-title">Navigation</div>
+    <a href="../screens/dashboard.html" class="nav-item active">Dashboard</a>
+    <a href="../screens/projects.html" class="nav-item">Projects</a>
+    ...
+  </nav>
+  <main class="main-content">
+    <!-- page content -->
+  </main>
+</div>
+        ]]></code>
+      </convention>
+
+      <convention name="topbar_layout">
+        <usage>Top navigation bar + content below. For apps with global search/actions.</usage>
+        <code><![CDATA[
+<div class="layout-topbar">
+  <header class="top-bar">
+    <span class="page-title">[App Name]</span>
+    <input class="form-input" style="max-width:300px" placeholder="Search...">
+    <span style="flex:1"></span>
+    <a href="../screens/settings.html" class="btn btn-sm">Settings</a>
+  </header>
+  <div class="content-panel">
+    <!-- page content -->
+  </div>
+</div>
+        ]]></code>
+      </convention>
+
+      <convention name="list_detail_layout">
+        <usage>Master-detail: list on left, detail on right.</usage>
+        <code><![CDATA[
+<div class="list-detail">
+  <div class="list-panel">
+    <!-- list items -->
+  </div>
+  <div class="detail-panel">
+    <!-- detail view -->
+  </div>
+</div>
+        ]]></code>
+      </convention>
+
+      <convention name="card_grid">
+        <usage>Dashboard-style grid of cards.</usage>
+        <code><![CDATA[
+<div class="card-grid">
+  <div class="card">
+    <h3 class="card-title">[Title]</h3>
+    <p class="card-body">[Description]</p>
+    <div class="card-actions">
+      <button class="btn btn-primary btn-sm" data-tooltip="Would open [target]">Open</button>
+    </div>
+  </div>
+</div>
+        ]]></code>
+      </convention>
+
+      <convention name="modal">
+        <usage>Overlay dialog. Show/hide with inline style display:none/block.</usage>
+        <code><![CDATA[
+<div class="modal-overlay" style="display:none" id="[modal-id]">
+  <div class="modal">
+    <h2 class="modal-title">[Modal Title]</h2>
+    <div class="modal-body">
+      <!-- form or content -->
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" data-tooltip="Would [action]">Confirm</button>
+      <button class="btn" onclick="document.getElementById('[modal-id]').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
+        ]]></code>
+      </convention>
+    </layout_conventions>
+
+    <wireframe_aesthetic_rules>
+      <rule priority="critical">Every screen HTML MUST include the wireframe-banner div as the first element inside <body>.</rule>
+      <rule priority="critical">All borders use dashed style (2px dashed #bbb / #999 / #333 depending on element).</rule>
+      <rule priority="critical">Color palette: grayscale (#333, #666, #999, #bbb, #ddd, #eee, #f5f5f5, #f0f0f0, #fff) + one accent (#2563eb blue).</rule>
+      <rule priority="critical">Tooltip text color is gold (#ffd700) on dark background (#333) — visually distinct from content.</rule>
+      <rule priority="critical">Font is system-ui sans-serif. No custom fonts. No Google Fonts. No CDN links.</rule>
+      <rule priority="high">All interactive elements (buttons, inputs, links) must be clearly distinguishable.</rule>
+      <rule priority="high">Placeholder data should be realistic: "Website Redesign" not "Item 1", "test@example.com" not "xxx".</rule>
+      <rule priority="high">Modal overlays should be position:fixed to appear above page content.</rule>
+      <rule priority="medium">No animations except the skeleton loading shimmer (CSS-only).</rule>
+      <rule priority="medium">No shadows on cards or elements (except tooltip bubble and modal overlay).</rule>
+    </wireframe_aesthetic_rules>
+
+    <tooltip_content_rules>
+      <description>Every interactive element must have a behavioral description via tooltip.</description>
+      <rule priority="critical">Navigation links (<a href>): NO tooltip needed — the link itself communicates the action. But if the navigation has side effects, add a hover tooltip.</rule>
+      <rule priority="critical">Action buttons (<button>): MUST have data-tooltip attribute describing what WOULD happen. Format: "Would [action description]. [Result/next state]."</rule>
+      <rule priority="critical">Form submit buttons: data-tooltip describes validation rules and success/failure behavior. Format: "Would validate: [rules]. On success: [result]. On failure: [error handling]."</rule>
+      <rule priority="high">Tooltip text should be 1-3 sentences. Concise but complete.</rule>
+      <rule priority="high">Tooltip text must match the behavioral description in the .md spec.</rule>
+      <rule priority="medium">Hover tooltips (via .tooltip-trigger > .tooltip-bubble) for elements where the behavior needs explanation before clicking.</rule>
+      <rule priority="medium">Click tooltips (via data-tooltip attribute + JS) for buttons where the action is the primary interaction.</rule>
+    </tooltip_content_rules>
+
+    <mock_generation_workflow>
+      <step>1. Interview the screen using screen_decomposition pattern.</step>
+      <step>2. Draft the .md spec first — this is the canonical specification.</step>
+      <step>3. Generate the .html mock with inline CSS following the wireframe aesthetic rules in 2_best_practices.xml. Use semantic class names for the layout conventions below.</step>
+      <step>4. For every action described in the .md spec, add the corresponding data-tooltip to the HTML element.</step>
+      <step>5. For every navigation target, add an <a href> link. If target screen doesn't exist yet, generate a placeholder.</step>
+      <step>6. Include the tooltip JavaScript just before </body> (verbatim from the template above).</step>
+      <step>7. Present to user: "Open screens/[name].html in your browser."</step>
+      <step>8. On user feedback: regenerate the FULL HTML (do not patch individual elements).</step>
+      <step>9. On user confirmation: mark confirmed in state.json, generate placeholders for new navigation targets discovered.</step>
+    </mock_generation_workflow>
+  </interactive_mock_system>
+</common_patterns>

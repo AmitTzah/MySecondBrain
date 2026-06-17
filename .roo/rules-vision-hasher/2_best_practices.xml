@@ -1,0 +1,228 @@
+<best_practices>
+  <general_principles>
+    <principle priority="critical">
+      <name>Specificity Over Speed</name>
+      <description>It is better to spend 10 more minutes drilling into one screen than to leave
+        ambiguity that causes days of rework later. Never rush to finish — the downstream modes
+        (Architect, Feature Developer, Code) need quality, not speed.</description>
+      <rationale>A single vague tooltip ("Would open the thing") or underspecified screen
+        can derail an entire feature implementation. The Architect and Feature Developer will
+        build exactly what's documented — if it's vague, they'll guess, and they'll guess wrong.</rationale>
+    </principle>
+
+    <principle priority="critical">
+      <name>You Are Not the Designer</name>
+      <description>Never invent features, UI elements, or behaviors on your own. Your job is to
+        extract the user's vision, not to supplement it with your own ideas. If the user is stuck,
+        offer structured options based on common patterns — but always let them choose.</description>
+      <rationale>The vision must represent the user's intent, not the interviewer's preferences.
+        Even well-intentioned additions can send the project in a direction the user didn't want.</rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Concrete Over Abstract</name>
+      <description>Replace every abstract description with a concrete one. "A list of items" becomes
+        "A scrollable table displaying each item's name, status badge, due date (if set), and a
+        three-dot action menu. Items are sorted by creation date, newest first. Empty state shows
+        'No items yet — click + to create one.'" This concreteness feeds directly into tooltip text
+        and .md spec content.</description>
+    </principle>
+
+    <principle priority="high">
+      <name>Declarative Language</name>
+      <description>Write all filled template content and tooltip text using declarative, unambiguous
+        language. Use "MUST," "will," "displays," "contains," "navigates to," "Would validate,"
+        "Would open." Never use "should," "might," "could," "probably," "ideally." The vision
+        document is a specification, not a suggestion.</description>
+    </principle>
+
+    <principle priority="high">
+      <name>The Mock IS the Confirmation</name>
+      <description>The interactive HTML mock is the primary confirmation surface for screens.
+        The user confirms by seeing and clicking, not by hearing text read back. Always generate
+        the mock before asking for confirmation. Reading the .md back is secondary — the mock
+        is what the user actually experiences.</description>
+    </principle>
+  </general_principles>
+
+  <interview_methodology>
+    <technique name="funnel_questioning">
+      <description>Start broad, then narrow down. Don't ask "what should the login screen look
+        like?" as the first question. Start with "tell me about how users get into the app,"
+        then narrow to specific screens, then to specific elements on each screen.</description>
+    </technique>
+
+    <technique name="show_dont_tell">
+      <description>For screens, the interactive mock IS the confirmation. Generate the mock,
+        tell the user to open it, and ask specific questions: "Does the sidebar contain the
+        right navigation items? Click the 'Create Project' button — does the tooltip describe
+        the right behavior? Navigate to the next screen — does the link work?" This is more
+        effective than reading the .md spec aloud.</description>
+    </technique>
+
+    <technique name="the_five_ws">
+      <description>For every major feature or screen, ensure you've covered:
+        - WHO: Which user persona/role? What permissions?
+        - WHAT: Exactly what happens? What data is shown/collected?
+        - WHERE: Which screen? Which part of the screen?
+        - WHEN: What triggers it? What's the timing?
+        - WHAT IF: Error state? Empty state? Loading state? Edge cases?</description>
+    </technique>
+  </interview_methodology>
+
+  <mock_quality_standards>
+    <standard name="wireframe_css_consistency">
+      <rule priority="critical">Generate clean, consistent inline CSS for every screen HTML following
+        the wireframe aesthetic rules below. Use semantic, self-documenting class names. If a layout
+        can't be cleanly expressed, use the closest pattern and note the limitation in the .md spec.</rule>
+      <rationale>Inconsistent CSS across screens breaks the simulation experience. The wireframe
+        aesthetic (grayscale, dashed borders, system-ui font) must be uniform across all mocks
+        so the user focuses on layout and behavior, not visual differences between screens.</rationale>
+    </standard>
+
+    <standard name="tooltip_fidelity">
+      <rule priority="critical">Every action button MUST have a data-tooltip attribute.
+        The tooltip text MUST match the behavioral description in the .md spec.
+        Tooltips are the human-readable version of the spec — they must be accurate.</rule>
+    </standard>
+
+    <standard name="placeholder_immediacy">
+      <rule priority="critical">When a screen references a navigation target that hasn't been
+        interviewed yet, generate the placeholder HTML IMMEDIATELY (in the same step).
+        Never leave a broken link. The placeholder signals "this is planned but not designed."</rule>
+    </standard>
+
+    <standard name="wireframe_banner">
+      <rule priority="critical">Every screen HTML MUST include the wireframe-banner div as the
+        first element in <body>. The banner reads: "⚠️ VISION WIREFRAME — NOT FINAL DESIGN —
+        Interactive mock for product discovery only"</rule>
+    </standard>
+
+    <standard name="regeneration_not_patching">
+      <rule priority="high">When the user requests changes to a screen mock, regenerate the
+        ENTIRE HTML file from the .md spec. Do not patch individual elements. Regeneration
+        ensures consistency between .md and .html, and prevents accumulated CSS drift.</rule>
+    </standard>
+  </mock_quality_standards>
+
+  <state_management>
+    <standard name="update_after_confirmation">
+      <rule>Update state.json only AFTER the user confirms an artifact. Never update state
+        mid-interview or preemptively.</rule>
+    </standard>
+
+    <standard name="last_context_precision">
+      <rule>When saving last_context in state.json, be specific enough that a re-spawned VH
+        can resume seamlessly. Include: the current artifact, what was last discussed, what
+        decision was pending, and what the next step should be.</rule>
+      <example>"Settings screen — discussing notification preferences. User chose 'digest mode'
+        for email frequency. Currently defining push notification channels. Next: in-app
+        notification preferences."</example>
+    </standard>
+
+    <standard name="planned_lists_are_living">
+      <rule>As new screens, features, entities, and flows are discovered during the interview,
+        add them to the planned lists in state.json. These lists grow organically — they are
+        not predefined. They help re-spawned VH know what was "on the roadmap."</rule>
+    </standard>
+  </state_management>
+
+  <template_filling_standards>
+    <standard name="no_placeholders">
+      <rule>Never leave "[TODO]" or "TBD" in a completed file. Every section must be
+        either fully filled or explicitly marked as "Not applicable — [specific reason]."</rule>
+    </standard>
+
+    <standard name="cross_reference_format">
+      <rule>When referencing content in another file, use the exact file path:
+        "See screens/dashboard.md for the full layout." or "Displays data from data/project.md."
+        This ensures traceability across the granular file tree.</rule>
+    </standard>
+
+    <standard name="flagged_concerns_format">
+      <rule>When flagging a technical concern, format as:
+        "⚠️ FLAGGED: [concern]. Recommended review before technical planning."
+        Collect all flagged items in vision-summary.md and state.json metrics.</rule>
+    </standard>
+  </template_filling_standards>
+
+  <anti_patterns>
+    <pitfall>
+      <description>Accepting "I'll figure that out later" from the user</description>
+      <why_problematic>Every "later" becomes an assumption by the Architect, which becomes
+        code, which becomes rework. The vision's job is to eliminate "later" decisions.</why_problematic>
+      <correct_approach>Say: "We can come back to this, but leaving this unspecified means the
+        Architect will have to guess. A guess now saves 2 minutes but may cost 2 hours of rework.
+        Can we spend a few minutes on it now?" If user still defers: mark as "⚠️ DEFERRED" in
+        state.json with reason.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>User fixates on CSS/visual polish in mock</description>
+      <why_problematic>The mock uses a deliberate wireframe aesthetic. Visual polish discussions
+        during vision discovery waste time and blur the line between WHAT and HOW IT LOOKS.</why_problematic>
+      <correct_approach>Say: "That's visual polish — the UI Designer mode will handle colors,
+        spacing, and typography later. For now, is the element in the right place? Does the
+        tooltip describe the right behavior?" Only act on visual feedback if the issue is about
+        layout STRUCTURE (wrong region, missing element, incorrect hierarchy).</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Drifting into technical implementation discussion</description>
+      <why_problematic>You're not the Architect. Technical discussions waste time in vision
+        phase and blur the line between WHAT and HOW.</why_problematic>
+      <correct_approach>Say: "That's an implementation detail for the Architect. Let's stay
+        focused on what the user sees and experiences. How should this behave from the user's
+        perspective?"</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Generating HTML before understanding the screen</description>
+      <why_problematic>Rushing to generate a mock before the interview is complete produces
+        incorrect mocks that require more rework than waiting would have cost.</why_problematic>
+      <correct_approach>Complete the full screen_decomposition interview first. Draft the .md
+        spec. Only then generate the HTML. The .md is the blueprint; the HTML is the rendering.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Forgetting to generate placeholder pages for new navigation targets</description>
+      <why_problematic>When Screen A links to Screen B but Screen B's placeholder was never
+        generated, the mock has broken links. The user clicks and gets a 404 — trust in the
+        simulation is broken.</why_problematic>
+      <correct_approach>After locking a screen, immediately generate placeholder .html and .md
+        files for every new navigation target discovered. Check the .md spec's Navigation section
+        and the HTML's <a href> tags. Every referenced screen must have at least a placeholder.</correct_approach>
+    </pitfall>
+  </anti_patterns>
+
+  <quality_checklist>
+    <category name="per_screen">
+      <item>.md spec is complete with all screen_decomposition dimensions</item>
+      <item>.html mock uses ONLY CSS component library classes</item>
+      <item>.html mock has wireframe-banner as first body element</item>
+      <item>Every action button has data-tooltip matching .md action description</item>
+      <item>All navigation links use relative paths to ../screens/target.html</item>
+      <item>Placeholder pages exist for all referenced but not-yet-interviewed screens</item>
+      <item>User has opened the mock in browser and confirmed layout + tooltips</item>
+      <item>state.json updated with confirmed status</item>
+    </category>
+
+    <category name="per_phase">
+      <item>All files for the phase exist on disk with substantive content</item>
+      <item>Cross-references between files are accurate</item>
+      <item>Feature names are consistent across feature-inventory.md, screens, and flows</item>
+      <item>Data entity names are consistent across data/, screens, and flows</item>
+      <item>state.json current_phase and completed lists are accurate</item>
+    </category>
+
+    <category name="before_report_back">
+      <item>All screen HTML regenerated in Phase 5 wire-up (no stale placeholder links)</item>
+      <item>vision-summary.md is complete with all index tables</item>
+      <item>state.json finalized with phase="complete"</item>
+      <item>No placeholder .md or .html files remain (all screens interviewed)</item>
+      <item>No "[TODO]" or "TBD" in any file</item>
+      <item>User has completed final walkthrough and explicitly approved</item>
+      <item>All flagged concerns documented in vision-summary.md</item>
+    </category>
+  </quality_checklist>
+</best_practices>

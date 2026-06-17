@@ -1,0 +1,266 @@
+<complete_examples>
+  <overview>
+    Worked examples demonstrating the redesigned vision discovery process with interactive
+    mock generation, state.json progress tracking, and multi-spawn resume. These show the
+    interview rhythm — how to question, when to generate mocks, how to handle CSS fixation,
+    and how resume works across spawns.
+
+    File paths shown are relative to the vision/ output directory.
+  </overview>
+
+  <example name="task_management_app_full_discovery">
+    <scenario>
+      An orchestrator spawns a Vision Hasher subtask: "Hash out the vision for a task
+      management app. The user wants something like Trello but with built-in time tracking.
+      Templates are at agent-workspace/project-director/vision/."
+    </scenario>
+
+    <workflow>
+      <step number="1">
+        <description>Phase 0: Fresh Start Verification</description>
+        <approach>
+          VH checks: vision/state.json does not exist → fresh start.
+          Reads templates: app-overview.md, personas.md, feature-inventory.md,
+          data/ directory (empty — entities discovered during interview),
+          screens/ directory (empty — screens discovered during interview),
+          flows/ directory (empty), edge-cases.md.
+          Parses brief: "like Trello but with time tracking."
+          Creates state.json with current_phase="foundation", spawn_count=1.
+          Presents plan: "5 phases — Foundation, Screens (with interactive mocks),
+          Flows, Edge Cases, Wire-Up. Ready?"
+          User confirms → Phase 1 begins.
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Phase 1: Foundation — Feature Inventory</description>
+        <approach>
+          VH interviews through app-overview → personas → feature-inventory.
+          On feature-inventory: user describes 28 features across Core, Secondary,
+          and Nice-to-Have tiers. Each feature gets a paragraph description in
+          feature-inventory.md. Feature names are added to state.json planned.features.
+
+          VH: "For each core feature, I'll create a detailed spec file in features/.
+          Let's drill into Time Tracking first..."
+
+          Uses feature_specification question pattern. Fills features/time-tracking.md
+          with: goal, trigger, step-by-step behavior, data in/out, validation,
+          success/failure states, permissions, interactions with other features.
+
+          Repeats for all core features. Secondary and Nice-to-Have features get
+          inventory entries only (detailed specs deferred — marked in state.json).
+
+          Data entities discovered during feature interviews: User, Project, Task,
+          TimeEntry, Report, Notification, Team. VH creates data/*.md for each
+          using data_concept question pattern.
+        </approach>
+        <filled_section_example>
+          features/time-tracking.md excerpt:
+          ---
+          The Time Tracking feature MUST allow users to record time spent on tasks.
+
+          Trigger: User clicks the ▶️ Play button on a task card (screens/task-card.html)
+          or opens the task detail view and clicks "Start Timer."
+
+          Happy Path:
+          1. User clicks ▶️ Play → timer starts counting up on the task card.
+          2. Play button transforms to ⏹️ Stop button.
+          3. Timer displays elapsed time in HH:MM:SS format.
+          4. User clicks ⏹️ Stop → timer stops. Time entry is saved.
+          5. Time entry appears in the task's time log.
+
+          What if the user closes the browser while timer is running?
+          Timer MUST continue running server-side. When user returns, timer displays
+          accumulated elapsed time.
+
+          What if the timer runs for more than 8 hours?
+          System MUST auto-stop the timer at 8 hours and display a notification:
+          "Timer auto-stopped after 8 hours. Was this intentional?"
+          ---
+        </filled_section_example>
+      </step>
+
+      <step number="3">
+        <description>Phase 2: Screens — First Interactive Mock</description>
+        <approach>
+          Phase 1 complete. State.json updated: current_phase="screens".
+
+          VH delivers user priming script: "I'm going to generate interactive mock HTML
+          files. These use a deliberate wireframe style — dashed borders, grayscale colors,
+          'NOT FINAL DESIGN' banner. Focus on layout structure and behavior, not visual polish."
+
+          VH: "Let's design the Dashboard — this is the first screen users see."
+          Interviews using screen_decomposition pattern:
+          - Layout: sidebar + main content
+          - Sidebar: nav links (Dashboard, Projects, Tasks, Reports, Settings)
+          - Main: card grid of projects, time tracking widget, recent activity
+          - Actions: Create Project (modal), Start Timer (on task cards),
+            Search (top bar), View All Projects
+          - Navigation targets discovered: Projects, Tasks, Reports, Settings,
+            Create Project modal, Task Detail
+
+          VH generates screens/dashboard.md (canonical spec) and screens/dashboard.html
+          (interactive mock). HTML uses sidebar_layout convention from CSS library.
+          Every button has data-tooltip. Navigation links use relative paths.
+
+          For navigation targets not yet interviewed (Projects, Tasks, Reports, Settings,
+          Task Detail), VH generates placeholder .html files immediately.
+
+          VH: "Open screens/dashboard.html in your browser."
+          User opens it, clicks around.
+          User: "The sidebar should be on the left — it's on the right."
+          VH: "That's a layout structure issue — I'll fix it." Regenerates HTML with
+          sidebar on left (swaps to correct .layout-sidebar structure).
+          User: "The 'Create Project' button tooltip says 'Would open a modal.' What's in it?"
+          VH: "Let's define the Create Project modal now..." Interviews, updates .md spec,
+          regenerates HTML with modal structure and detailed tooltip.
+          User confirms → screen locked in state.json.
+
+          VH generates placeholders for all new navigation targets. State.json
+          planned.screens now includes: dashboard, projects, tasks, reports, settings,
+          task-detail, create-project-modal.
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Phase 2: Screens — CSS Fixation Redirect</description>
+        <approach>
+          VH interviews the Login screen. Generates screens/login.html.
+          User opens it: "The blue is too bright. Can we use a softer blue? And the
+          button corners should be more rounded. And the spacing between fields feels tight."
+
+          VH (redirecting): "Those are visual polish details — the UI Designer mode handles
+          colors, corner radius, and exact spacing later. For now: is the email field above
+          the password field? Is the 'Log In' button below the password field? Does the
+          'Forgot Password?' link point to the right screen? Does the tooltip on 'Log In'
+          correctly describe what would happen?"
+
+          User: "Yes — the layout structure is right. The tooltips are correct."
+          VH: "Great — Login screen locked. Moving to Projects screen."
+        </approach>
+      </step>
+
+      <step number="5">
+        <description>Phase 5: Wire-Up and vision-summary.md</description>
+        <approach>
+          All 14 screens designed and locked. 6 user flows documented. Edge cases covered.
+
+          Phase 5 Wire-Up:
+          - VH regenerates all 14 screen HTML files from their .md specs
+          - Placeholder links → real links (all screens now exist)
+          - Cross-reference check: all features appear in screens, all entities appear in UI
+          - Generates vision-summary.md with comprehensive index tables:
+
+          vision-summary.md Screen Index excerpt:
+          | Screen | Purpose | Mock | Key Features |
+          |--------|---------|------|--------------|
+          | Dashboard | Project overview, time tracking widget, activity feed | screens/dashboard.html | Time Tracking, Project Management, Search |
+          | Login | Email/password authentication | screens/login.html | Authentication |
+          | Projects | Project list with create/edit/delete | screens/projects.html | Project Management |
+          ...
+
+          User does final walkthrough: clicks through every screen in browser,
+          confirms all tooltips and navigation. Approves complete vision.
+
+          VH reports back with: 28 features, 14 screens with interactive mocks,
+          7 data entities, 6 user flows, 3 flagged concerns.
+        </approach>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>Phase 0 state verification ensures deterministic behavior on every spawn.</takeaway>
+      <takeaway>The interactive mock IS the confirmation surface — user confirms by clicking, not by hearing text.</takeaway>
+      <takeaway>CSS fixation is the #1 derailment risk — redirect firmly but politely to layout/behavior.</takeaway>
+      <takeaway>Placeholder pages must be generated immediately to prevent broken navigation links.</takeaway>
+      <takeaway>Feature-inventory + per-feature detailed specs avoid the monolithic file problem.</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="multi_spawn_resume">
+    <scenario>
+      The user completed Phase 1 (Foundation) and Phase 2 (3 screens: Dashboard, Login, Settings)
+      in the first spawn. The context window filled up. VH saved state.json with precise
+      last_context and used attempt_completion. The orchestrator re-spawns VH to continue.
+    </scenario>
+
+    <workflow>
+      <step number="1">
+        <description>Phase 0: Resume Verification</description>
+        <approach>
+          VH reads vision/state.json:
+          - current_phase: "screens"
+          - phase_status: "in_progress"
+          - completed.screens: dashboard (confirmed), login (confirmed), settings (in_progress)
+          - planned.screens: [dashboard, login, settings, projects, tasks, reports, admin]
+          - last_context: "Settings screen — discussing notification preferences section.
+            User chose digest mode for email frequency. Next: push notification channels."
+          - spawn_count: 1
+
+          VH cross-references: all completed files exist on disk. No discrepancies.
+          Increments spawn_count to 2.
+
+          VH presents: "Resuming vision discovery. Phase 2 (Screens).
+          Completed: Dashboard, Login. In progress: Settings (notification preferences).
+          Planned: Projects, Tasks, Reports, Admin.
+          Last topic: Settings — push notification channels.
+          Resume from Settings screen?"
+
+          User confirms → VH continues Settings screen interview from push notifications.
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Continuing from Precise last_context</description>
+        <approach>
+          VH: "We were discussing notification channels for the Settings screen.
+          You chose digest mode for email. Now: should the app also send push
+          notifications? If so, what events trigger them?"
+
+          Because last_context was specific ("push notification channels"), VH
+          resumes exactly where it left off — no re-interviewing completed sections.
+          Completes Settings screen, generates mock, user confirms → locked.
+        </approach>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>state.json + precise last_context = seamless resume across spawns.</takeaway>
+      <takeaway>The Phase 0 cross-reference catches disk/state drift before any work begins.</takeaway>
+      <takeaway>The user doesn't need to remember where they were — state.json remembers.</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="handling_a_stuck_user">
+    <scenario>
+      The user can't decide how permissions should work. "I don't know, maybe admins
+      can do everything and regular users can only see their own stuff?"
+    </scenario>
+
+    <workflow>
+      <step number="1">
+        <description>Offer structured options</description>
+        <approach>
+          VH: "Common permission models for task management apps:
+          1. Role-based: Admin (full access), Member (create/edit own tasks, view all
+             tasks in their projects), Viewer (read-only)
+          2. Project-level: permissions set per project — you're an admin on Project A
+             but a viewer on Project B
+          3. Simple: one workspace, everyone sees everything, no restrictions
+          Which model feels right for your app?"
+
+          User: "Role-based, but I want a fourth role: Project Manager who can manage
+            their project but not system settings."
+
+          VH: "Let's define exactly what each role can do..." Documents in personas.md
+          and adds role-based permissions to every feature spec and screen spec.
+        </approach>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>Never leave the user hanging with "what do you want?" — offer concrete options.</takeaway>
+      <takeaway>The options often spark new ideas the user hadn't considered.</takeaway>
+    </key_takeaways>
+  </example>
+</complete_examples>

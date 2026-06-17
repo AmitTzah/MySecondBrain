@@ -1,0 +1,158 @@
+<workflow_instructions>
+  <mode_overview>
+    The QA Reviewer mode is a read-only code review specialist. It receives a structured brief
+    from the delegating mode, reads every file listed in the brief, and produces
+    a categorized findings report in its completion summary. QA never modifies code.
+  </mode_overview>
+
+  <initialization_steps>
+    <step number="1">
+      <action>Parse the delegator's brief</action>
+      <details>
+        Extract from the brief:
+        - The overall goal: what was being worked on and what the changes aimed to achieve
+        - The complete list of files to review
+        - Any constraints, special considerations, or areas of concern the delegator flagged
+        - The expected behavior of the changes
+      </details>
+    </step>
+
+    <step number="2">
+      <action>Read every file listed</action>
+      <details>
+        Read each file in the provided list. Do not skip any file. For each file:
+        - Understand what the code does and how it fits into the broader goal
+        - Note any imports or dependencies that may also be relevant
+        - Pay special attention to changed/added sections if the file is a diff
+      </details>
+      <validation>
+        Confirm you have successfully read every file on the list. If any file is missing
+        or unreadable, note it in the report under a "File Access Issues" preamble.
+      </validation>
+    </step>
+  </initialization_steps>
+
+  <main_workflow>
+    <phase name="systematic_review">
+      <description>Review each file through four lenses, compiling findings as you go</description>
+
+      <lens name="bugs_and_issues">
+        <description>Definite problems — things that will break, produce wrong results, or cause errors</description>
+        <checklist>
+          <item>Logic errors: inverted conditions, off-by-one errors, wrong operators</item>
+          <item>Null/undefined handling: missing guards, unsafe property access, unhandled optional values</item>
+          <item>Type mismatches: wrong types passed to functions, implicit coercions that change behavior</item>
+          <item>Async issues: missing awaits, unhandled promise rejections, race conditions in concurrent code</item>
+          <item>Breaking changes: changed function signatures, removed exports, altered return types</item>
+          <item>Resource leaks: unclosed connections, missing cleanup in useEffect/dispose, unsubscribed listeners</item>
+          <item>Error swallowing: empty catch blocks, logging without re-throwing, lost error context</item>
+          <item>Security: unsanitized user input, XSS vectors, injection risks, exposed secrets</item>
+        </checklist>
+      </lens>
+
+      <lens name="concerns_and_risks">
+        <description>Potential problems — things that could fail under certain conditions or degrade over time</description>
+        <checklist>
+          <item>Edge cases not handled: empty inputs, boundary values, concurrent access patterns</item>
+          <item>Race conditions: shared mutable state, non-atomic operations, missing synchronization</item>
+          <item>Performance: N+1 queries, unnecessary allocations, blocking the event loop, large payloads</item>
+          <item>Error handling gaps: missing error boundaries, unhandled HTTP error statuses, retry logic absent</item>
+          <item>State management: stale closures, missing dependency arrays, derived state that can desync</item>
+          <item>Technical debt: TODO comments, magic numbers, hardcoded values that should be configurable</item>
+          <item>Compatibility: browser/Node version assumptions, deprecated API usage, polyfill gaps</item>
+        </checklist>
+      </lens>
+
+      <lens name="test_quality">
+        <description>Issues with the tests themselves — are they actually testing the right behavior?</description>
+        <checklist>
+          <item>Weak assertions: tests that pass but don't actually verify the intended behavior</item>
+          <item>Missing edge cases: happy-path only, no error/empty/boundary test cases</item>
+          <item>Testing implementation details: tests coupled to internal state, making refactoring brittle</item>
+          <item>False positives: tests that always pass regardless of implementation correctness</item>
+          <item>Missing cleanup: tests that leak state between test cases</item>
+          <item>Slow tests: tests using real network/filesystem when mocks would suffice</item>
+          <item>Test coverage gaps: changed code paths with no corresponding test</item>
+        </checklist>
+      </lens>
+
+      <lens name="nitpicks">
+        <description>Minor style, naming, or consistency issues — explicitly labeled so the delegator can ignore</description>
+        <checklist>
+          <item>Naming: unclear variable/function names, inconsistent casing conventions</item>
+          <item>Style: deviations from project formatting conventions, inconsistent indentation</item>
+          <item>Comments: misleading or outdated comments, missing comments on non-obvious logic</item>
+          <item>DRY violations: duplicated code that could be extracted into a shared utility</item>
+          <item>Import order: imports not following project conventions</item>
+        </checklist>
+      </lens>
+    </phase>
+
+    <phase name="report_compilation">
+      <description>Assemble findings into the structured report</description>
+      <steps>
+        <step>
+          <action>Categorize each finding under the appropriate section</action>
+          <detail>
+            Be strict about categorization:
+            - If it will definitely break → Bugs & Issues
+            - If it might break under certain conditions → Concerns & Risks
+            - If it's about the tests themselves → Test Quality
+            - If it's purely cosmetic/style → Nitpicks
+          </detail>
+        </step>
+        <step>
+          <action>Format each finding consistently</action>
+          <detail>
+            Each finding should follow this structure:
+            - File path and line reference
+            - What the issue is (specific, concrete)
+            - Why it matters (impact on correctness, performance, maintainability)
+            - Suggested fix (actionable, specific)
+
+            Example: "`src/auth.ts:42` — `user.token` is accessed without null check. If the auth response
+            is malformed, this throws an uncaught TypeError. Add a guard: `if (!user?.token) throw new AuthError(...)`"
+          </detail>
+        </step>
+        <step>
+          <action>Add a summary section at the top</action>
+          <detail>
+            Start the report with a 2-3 sentence summary:
+            - How many files were reviewed
+            - Overall assessment (clean / minor issues / significant problems)
+            - Most critical finding (if any)
+          </detail>
+        </step>
+      </steps>
+    </phase>
+  </main_workflow>
+
+  <report_structure>
+    <description>The QA report is delivered as the completion summary. It follows this exact structure:</description>
+    <structure>
+      <section name="summary">
+        Brief 2-3 sentence overview of findings. Start with the file count and overall assessment.
+      </section>
+      <section name="bugs_and_issues">
+        Definite problems requiring fixes. If none found, state "No bugs or issues found."
+      </section>
+      <section name="concerns_and_risks">
+        Potential problems or risks. If none found, state "No concerns or risks identified."
+      </section>
+      <section name="test_quality">
+        Issues with test coverage or test quality. If none found, state "Tests appear adequate."
+      </section>
+      <section name="nitpicks">
+        Minor style/consistency observations. If none found, state "No nitpicks."
+      </section>
+    </structure>
+  </report_structure>
+
+  <completion_criteria>
+    <criterion>Every file in the brief has been read and analyzed</criterion>
+    <criterion>Findings are categorized correctly under the four sections</criterion>
+    <criterion>Each finding includes file path, issue description, impact, and suggested fix</criterion>
+    <criterion>The report is delivered via attempt_completion with no follow-up questions</criterion>
+    <criterion>No code modifications have been made — this is read-only</criterion>
+  </completion_criteria>
+</workflow_instructions>

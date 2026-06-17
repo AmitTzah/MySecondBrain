@@ -1,0 +1,61 @@
+<error_handling>
+  <overview>
+    Error scenarios the QA mode may encounter and how to handle them.
+    QA never aborts — it always delivers a report, even if degraded.
+  </overview>
+
+  <scenario name="file_not_found">
+    <description>One or more files listed in the delegator's brief do not exist or cannot be read</description>
+    <recovery>
+      <step>Note each missing file with its path in a "File Access Issues" preamble at the top of the report</step>
+      <step>Continue reviewing the remaining accessible files</step>
+      <step>Do not abort the review — a partial review is better than no review</step>
+    </recovery>
+    <report_example>
+## File Access Issues
+- `src/components/MissingComponent.tsx` — file not found at this path
+    </report_example>
+  </scenario>
+
+  <scenario name="brief_missing_context">
+    <description>The delegator's brief is too vague — missing the goal, file list, or constraints</description>
+    <recovery>
+      <step>If the file list is missing: report "No file list provided — cannot proceed with review." and complete</step>
+      <step>If the goal is missing but files are provided: review files for general code quality issues. Note in the report: "Goal was not specified — review is based on general code quality, not alignment with intended behavior."</step>
+      <step>If constraints are missing: proceed without them. Note in the report preamble what was missing.</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="very_large_file">
+    <description>A file is too large to read in its entirety within reasonable context limits</description>
+    <recovery>
+      <step>Read the file in sections using offset/limit</step>
+      <step>Focus on the parts most likely to contain the changes (delegator should indicate changed sections, but if not, use heuristics: recently modified functions, exported symbols)</step>
+      <step>Note in the report: "File X was partially reviewed due to size. Focused on [specific sections]."</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="ambiguous_code">
+    <description>Code is unclear and QA cannot determine whether it's correct or buggy</description>
+    <recovery>
+      <step>Report it as a Concern: "The logic in [file:line] is ambiguous — [describe why]. Cannot determine correctness without clarification."</step>
+      <step>Suggest what clarification or documentation would resolve the ambiguity</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="no_changes_detected">
+    <description>All files look like existing code — QA can't identify what was changed</description>
+    <recovery>
+      <step>Review the files as-is for general code quality, but note in the report: "Unable to identify specific changes — review is of the files in their entirety, not a diff. Some findings may relate to pre-existing code."</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="conflicting_instructions">
+    <description>The brief contains contradictory constraints or goals</description>
+    <recovery>
+      <step>Note the contradiction in the report preamble</step>
+      <step>Evaluate the code against each constraint separately and report findings for both interpretations</step>
+      <step>Flag the contradiction as a finding in Concerns & Risks</step>
+    </recovery>
+  </scenario>
+</error_handling>

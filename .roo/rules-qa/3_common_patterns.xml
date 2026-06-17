@@ -1,0 +1,98 @@
+<common_patterns>
+  <overview>
+    Common bug patterns and review heuristics to scan for during code review. These are
+    recurring patterns that frequently indicate problems.
+  </overview>
+
+  <pattern name="null_undefined_handling">
+    <description>Missing guards against null or undefined values</description>
+    <signals>
+      <signal>Property access on a value that could be null/undefined without optional chaining (?.)</signal>
+      <signal>Function parameters used without default values or guards when callers may omit them</signal>
+      <signal>API response destructuring without checking the response shape</signal>
+      <signal>Array methods (.map, .filter, .find) called on potentially undefined variables</signal>
+    </signals>
+    <severity>bugs_and_issues</severity>
+  </pattern>
+
+  <pattern name="async_race_conditions">
+    <description>Concurrent async operations that can interfere with each other</description>
+    <signals>
+      <signal>Shared mutable state accessed from multiple async functions without synchronization</signal>
+      <signal>useEffect with async operations that don't clean up (missing abort controller, missing cancelled flag)</signal>
+      <signal>Multiple setState calls that depend on previous state without using the functional updater form</signal>
+      <signal>Promise.all on independent operations where one failure aborts others unnecessarily</signal>
+      <signal>await inside a loop that could be parallelized (or vice versa — parallel when sequential is needed)</signal>
+    </signals>
+    <severity>concerns_and_risks</severity>
+  </pattern>
+
+  <pattern name="error_swallowing">
+    <description>Errors caught but not properly handled or reported</description>
+    <signals>
+      <signal>Empty catch blocks: `catch (e) { }` or `catch { }`</signal>
+      <signal>catch blocks that only log without re-throwing or handling the error state</signal>
+      <signal>`.catch(() => {})` on promises without any handling</signal>
+      <signal>try/finally without catch — cleanup runs but errors propagate silently in some contexts</signal>
+    </signals>
+    <severity>bugs_and_issues</severity>
+  </pattern>
+
+  <pattern name="state_stale_closure">
+    <description>Stale closures capturing outdated state in React hooks or callbacks</description>
+    <signals>
+      <signal>useCallback or useEffect referencing state/props without including them in the dependency array</signal>
+      <signal>setTimeout/setInterval referencing state that may have changed by the time they fire</signal>
+      <signal>Event listeners attached in useEffect that capture initial state and never update</signal>
+      <signal>useRef used to work around stale closures without a comment explaining why</signal>
+    </signals>
+    <severity>concerns_and_risks</severity>
+  </pattern>
+
+  <pattern name="resource_leaks">
+    <description>Resources that are acquired but never released</description>
+    <signals>
+      <signal>setInterval without clearInterval in a cleanup function</signal>
+      <signal>Event listeners added without corresponding removeEventListener</signal>
+      <signal>Database connections or file handles opened but not closed</signal>
+      <signal>WebSocket or SSE connections without close/disconnect in cleanup</signal>
+      <signal>Observable subscriptions without unsubscribe</signal>
+    </signals>
+    <severity>bugs_and_issues</severity>
+  </pattern>
+
+  <pattern name="test_assertion_quality">
+    <description>Tests that appear to test something but don't actually verify behavior</description>
+    <signals>
+      <signal>`expect(true).toBe(true)` or other tautological assertions</signal>
+      <signal>Tests with no assertions at all (only setup code)</signal>
+      <signal>Assertions that only check for existence (`expect(result).toBeDefined()`) without verifying values</signal>
+      <signal>Mock functions that are set up but never asserted against</signal>
+      <signal>Tests that only test mock behavior, not actual integration</signal>
+    </signals>
+    <severity>test_quality</severity>
+  </pattern>
+
+  <pattern name="hardcoded_values">
+    <description>Values that should be configurable or derived but are hardcoded</description>
+    <signals>
+      <signal>API URLs, keys, or secrets hardcoded in source files</signal>
+      <signal>Magic numbers without named constants or explanatory comments</signal>
+      <signal>Timeout values, retry counts, or thresholds duplicated across files</signal>
+      <signal>Environment-specific values that should come from env vars or config</signal>
+    </signals>
+    <severity>nitpicks</severity>
+  </pattern>
+
+  <pattern name="missing_edge_cases">
+    <description>Code that handles the happy path but not edge cases</description>
+    <signals>
+      <signal>Functions that don't handle empty arrays, empty strings, zero, or negative numbers</signal>
+      <signal>User input handling without trimming, validation, or sanitization</signal>
+      <signal>API calls that don't handle 4xx/5xx responses or network failures</signal>
+      <signal>Pagination or list rendering without handling the empty state</signal>
+      <signal>File operations without handling permission errors or missing files</signal>
+    </signals>
+    <severity>concerns_and_risks</severity>
+  </pattern>
+</common_patterns>

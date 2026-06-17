@@ -1,0 +1,417 @@
+<common_patterns>
+  <overview>
+    This file contains the REQUIRED TEMPLATE FOR ARCHITECT and REQUIRED TEMPLATE FOR REFERENCE
+    that must be provided every time the Feature Developer spawns an Architect subtask to create
+    or revise a plan. It also contains the standard subtask prompt pattern, knowledge base
+    update pattern, and Critic prompt pattern.
+
+    The Feature Developer's single source of truth for state is agent-workspace/feature/state.json.
+  </overview>
+
+  <required_template_for_architect>
+    <usage>
+      <p>
+        Whenever you ask the Architect mode to create a plan, you MUST provide them with
+        the following template in your prompt. Copy the entire template block below and
+        paste it at the end of your message to the Architect.
+      </p>
+    </usage>
+
+    <critical_rules_for_architect>
+      <rule number="1">
+        One step = ONE subtask = ONE git commit = ONE visible change.
+        Every single step must produce exactly ONE noticeable, testable change
+        in the UI or app behavior that a human can verify via a Live Smoke Test.
+        Do NOT pack multiple logical changes into one step. Do NOT create invisible/untestable steps.
+      </rule>
+      <rule number="2">
+        Every step must have a concrete Live Smoke Test.
+        If a step is backend-focused (like a DB schema or an API endpoint),
+        the Live Smoke Test MUST provide a concrete way for the human to test it
+        (e.g., a specific cURL command, a Postman test, or a SQL query script).
+        Steps like "Setup folder structure" or "Refactor variables" are forbidden
+        unless the Live Smoke Test proves a visible change.
+      </rule>
+    </critical_rules_for_architect>
+
+    <template>
+      <content>
+# Feature Implementation Plan: [Feature Name]
+
+## 1. Overall Project Context
+*Provide a brief 1-2 paragraph summary of the overall project, the tech stack, and the core purpose of the application.*
+
+## 2. Feature-Specific Context
+*Explain what this specific feature is, why it is being built, and how it fits into the broader application.*
+
+## 3. Architecture and Extensibility
+*CRITICAL: Explain the design patterns used for this feature. How is the code decoupled? If building a service (e.g., an LLM provider, a payment gateway), explain how you have used interfaces/abstractions so that adding a second provider in the future requires minimal changes. Do NOT design monolithic functions.*
+
+## 4. Final Expected Project Structure
+*Below is what the project will look like once all implementation steps are complete.*
+- `src/`
+  - `interfaces/`
+    - `[NEW] IProvider.ts`
+  - `services/`
+    - `[MODIFIED] App.tsx`
+
+---
+
+## 5. Execution Steps
+
+### [ ] Step 1: [Name of Step]
+- **Goal:** [What should be achieved in this step]
+- **Actions:**
+  - [Action 1]
+  - [Action 2]
+- **Automated Testing:** [Specify which tests must be run, e.g., `npm test`, and what new unit tests need to be written. Unit tests MUST be placed in `tests/unit/` directory with the naming convention `tests/unit/{feature-name}.test.{ext}`.]
+- **Live Smoke Test (Mandatory):** [Explain EXACTLY what the developer needs to do to verify this step. Choose the format that matches the target environment:
+  *Web UI:* "Navigate to /dashboard, click 'Add', ensure modal opens."
+  *CLI:* "Run `my-tool --validate` and verify exit code 0 and output contains 'Valid'."
+  *Desktop:* "Launch the app, click File → Save, verify the status bar shows 'Saved successfully'."
+  *Backend/API:* "Run `curl http://localhost:3000/api/users` and ensure it returns a 200 JSON response."]
+- **Suggested Commit Message:** `feat: [descriptive message]`
+
+*(Continue for as many steps as needed)*
+
+---
+
+## 6. Shared Technical Context
+*(Append-only log managed by the Feature Developer. Stores API endpoints, JSON payloads, state shapes, and abstractions created in earlier steps that later steps might need to read).*
+- [Initial State]: No shared context yet.
+      </content>
+    </template>
+  </required_template_for_architect>
+
+  <required_template_for_reference>
+    <usage>
+      <p>
+        Whenever spawning an Architect subtask, you MUST also provide them with
+        the following reference template. Copy the entire template block below and
+        paste it alongside the implementation plan template.
+      </p>
+    </usage>
+
+    <template>
+      <content>
+# Feature Reference: [Feature Name]
+
+## Global & Shared Documentation
+*(Libraries, types, or API clients used across multiple steps. E.g., Prisma client, Zod schemas. If none, write "None")*
+
+---
+
+## Step-Specific Documentation
+*(You MUST create an H3 heading for every single step in your feature-plan.md, ensuring the step numbers match exactly. If a step does not need external docs, write "No specific external reference needed.")*
+
+### Step 1: [Exact Name of Step from Plan]
+- **Library:**
+- **Import:**
+- **Snippet:**
+
+*(Duplicate this format for as many steps as you created in the implementation plan).*
+      </content>
+    </template>
+  </required_template_for_reference>
+
+  <subtask_prompt_pattern>
+    <name>Standard Subtask Prompt Structure</name>
+    <description>
+      Use this pattern every time you spawn a code subtask for a step.
+    </description>
+    <structure>
+      <section name="context">
+        <p>Include the following from the plan:</p>
+        <item>1. Overall Project Context (verbatim)</item>
+        <item>2. Feature-Specific Context (verbatim)</item>
+        <item>6. Shared Technical Context (relevant entries only)</item>
+      </section>
+
+      <section name="reference_materials">
+        <p>Include this instruction for the subtask:</p>
+        <quote>
+"Before writing code, check if `agent-workspace/feature/reference.md` exists. If it does, use your tools to read it. Pay special attention to the 'Global' section and the specific section for your current step. It contains exact documentation you MUST use."
+        </quote>
+      </section>
+
+      <section name="step_details">
+        <p>Include the step's specific content:</p>
+        <item>Goal</item>
+        <item>Actions</item>
+        <item>Automated Testing instructions</item>
+        <item>Live Smoke Test instructions</item>
+        <item>Suggested Commit Message</item>
+      </section>
+
+      <section name="critical_instructions">
+        <p>Always include the instructions_1_to_4 block verbatim. Instruction 4 below varies by git_automation_enabled in state.json. Instruction 5 varies by git-tools availability in mcp-config.json (the Feature Developer reads both before constructing the prompt):</p>
+
+        <instructions_1_to_4>
+          <quote>
+"CRITICAL RULE: You must NEVER read, edit, or modify agent-workspace/feature/state.json. That file is strictly managed by the Orchestrator.
+
+Follow your standard quality workflow for implementation (write code, write tests, run all automated tests, self-refactor, run automated tests, QA review, fix issues, run automated tests). After your internal quality loop completes and all automated tests pass:
+
+First, review what you built against the Actions listed in your assigned task. If the changes you made go significantly beyond those Actions — touching files or systems not listed, introducing abstractions not requested, or altering behavior not described — adapt the Live Smoke Test to cover the additional changes you made. Then proceed to the smoke test as normal. In your completion summary, declare 'SCOPE DRIFT DETECTED' and detail: (a) which Actions you performed as instructed, (b) what additional changes you made beyond the Actions, (c) why each was necessary, and (d) how you adapted the Live Smoke Test.
+
+Second, verify the changes against a running application. If smoke_test_automation is enabled in your prompt, follow your verification_gate's automated smoke test path (spawn synthetic-human-tester) instead of asking the user. If smoke_test_automation is disabled or absent, you MUST ask the user to perform the 'Live Smoke Test' detailed above using the `ask_followup_question` tool with ONLY ONE Suggested Response: 'Smoke test passed ✅'. Also include this text in your message: 'If the test failed, please paste the error or explain what went wrong below.' You MUST NOT include the `attempt_completion` tool in the same response block as the `ask_followup_question` tool. You must fire the followup question, stop your generation, and wait for the user's next turn before ever calling `attempt_completion`."
+          </quote>
+        </instructions_1_to_4>
+
+        <instruction_4>
+          <variant name="git_automation_enabled">
+            <condition>git_automation_enabled is true in state.json</condition>
+            <quote>
+"If during the Smoke Test the user requests a massive architectural pivot (e.g., 'I hate this UI, let us do a full page instead' or 'This API approach will not work'), DO NOT attempt to rewrite the entire feature yourself. Acknowledge the pivot, run `git add .` and `git commit -m '<Suggested Commit Message>'`, and immediately use `attempt_completion`. In your completion summary, declare 'SCOPE DRIFT DETECTED' and detail the user's new architectural direction.
+
+Otherwise, if the smoke test passes normally: Fifth, once the user explicitly confirms the UI/App works, run `git add .` and `git commit -m '<Suggested Commit Message>'`. ONLY THEN use `attempt_completion`. In your completion summary, you MUST explicitly detail any new API endpoints, JSON payloads, state shapes, database schemas, or modular abstractions you created so the next step can use them."
+            </quote>
+          </variant>
+          <variant name="git_automation_disabled">
+            <condition>git_automation_enabled is false in state.json</condition>
+            <quote>
+"If during the Smoke Test the user requests a massive architectural pivot (e.g., 'I hate this UI, let us do a full page instead' or 'This API approach will not work'), DO NOT attempt to rewrite the entire feature yourself. Acknowledge the pivot and immediately use `attempt_completion`. In your completion summary, declare 'SCOPE DRIFT DETECTED' and detail the user's new architectural direction.
+
+Otherwise, if the smoke test passes normally: Fifth, once the user explicitly confirms the UI/App works, do NOT run any git commands. Simply tell the user: 'Code is ready. Please make your manual git commit if desired.' ONLY THEN use `attempt_completion`. In your completion summary, you MUST explicitly detail any new API endpoints, JSON payloads, state shapes, database schemas, or modular abstractions you created so the next step can use them."
+            </quote>
+          </variant>
+        </instruction_4>
+
+        <instruction_5>
+          <p>DYNAMIC based on the value of <code>"git-tools"</code> in <code>agent-workspace/mcp-config.json</code>. Before constructing the subtask prompt, read mcp-config.json to determine which variant to use.</p>
+
+          <variant name="git_tools_available">
+            <condition>git-tools is "available" in mcp-config.json</condition>
+            <quote>
+"For all git operations (git add, git commit, git diff, git status, etc.), use the available MCP Git Tools server instead of shell git commands. MCP git tools provide structured JSON output that is more reliable and parseable than raw shell output. Prefer the MCP git tools for: staging files, committing with messages, checking diffs, and viewing status.
+
+If any MCP git tool fails, returns an error, or is unavailable at runtime: fall back to shell git commands as a secondary option. The MCP approach is preferred but shell git commands are an acceptable fallback."
+            </quote>
+          </variant>
+          <variant name="git_tools_disabled">
+            <condition>git-tools is "disabled" or absent from mcp-config.json</condition>
+            <quote>
+"Use shell git commands (git add, git commit, git diff, git status, etc.) for all git operations. MCP git tools are not available — shell commands are the only git interface."
+            </quote>
+          </variant>
+        </instruction_5>
+      </section>
+    </structure>
+  </subtask_prompt_pattern>
+
+  <standard_architect_prompt>
+    <name>Standard Architect Prompt</name>
+    <description>
+      This is the canonical prompt block to use when spawning an Architect subtask
+      to fill out or revise a feature implementation plan.
+    </description>
+    <usage>
+      <p>
+        When spawning an Architect subtask (e.g., in Phase 1 Step 3 or during a
+        Phase 4 pivot), include the following instructions verbatim in your message
+        to the Architect.
+      </p>
+    </usage>
+
+    <instructions>
+      <item number="preamble">
+        <title>CRITICAL: Step Granularity Rules (Non-Negotiable)</title>
+        These rules govern every step you write. Violating them causes re-work.
+        <rule number="1" priority="critical">
+          One step = ONE subtask = ONE git commit = ONE visible change. Every single step must produce exactly ONE noticeable, testable change in the UI or app behavior that a human can verify via a Live Smoke Test. Do NOT pack multiple logical changes into one step. Do NOT create invisible/untestable steps.
+        </rule>
+        <rule number="2" priority="critical">
+          Every step must have a concrete Live Smoke Test. The test must describe exactly what the human does and what they see. Steps like "Setup folder structure" or "Refactor variables" are forbidden unless the Live Smoke Test proves a visible change (e.g., "Run `npm test` and verify 23 tests pass").
+        </rule>
+        <rule number="3" priority="critical">
+          Backend/Invisible work: If a step is backend-focused (DB schema, API endpoint, service), the Live Smoke Test MUST provide a concrete way to test it (cURL command, Postman test, SQL query script, etc.). Do NOT create untestable steps.
+        </rule>
+      </item>
+
+      <item number="0">
+        <title>Incorporate Provided Project Context (If Available)</title>
+        If your prompt includes overall project context and feature specifications, use them as the authoritative source for the plan. This context may include: the project vision, user personas, success metrics, the specific feature description and acceptance criteria, the feature's position in the roadmap (e.g., "Feature 3 of 8"), and context about previously built features. Use this for sections 1 (Overall Project Context) and 2 (Feature-Specific Context) of the plan template. Do NOT re-discover or re-ask for information already provided in your prompt — fill the plan sections from the provided context directly.
+      </item>
+
+      <item number="1">
+        <title>Read Partitioned Knowledge Base (If Available)</title>
+        Check if the `agent-workspace/knowledge/` directory exists. If it does, ONLY read the specific partitioned `.md` files that are strictly relevant to the feature you are planning, to prevent context bloat. The four available files are:
+        - `architecture.md` — system-level design decisions and patterns
+        - `database.md` — schemas, models, migrations, data-layer patterns
+        - `api-routes.md` — endpoints, route definitions, middleware patterns
+        - `frontend-ui.md` — components, state management, styling conventions
+
+        If the `knowledge/` directory does not exist or is empty, skip this step — this is normal for brand-new projects. The orchestrator-provided context is your primary source in that case.
+      </item>
+
+      <item number="2">
+        <title>Read Both Templates</title>
+        "I have initialized two empty templates for you: agent-workspace/feature/plan.md and agent-workspace/feature/reference.md. You must fill out both."
+      </item>
+
+      <item number="3">
+        <title>Search Existing Codebase</title>
+        Use your tools to search and read the existing codebase files relevant to this feature to ensure your plan aligns with the current architecture.
+      </item>
+
+      <item number="4">
+        <title>Discuss the Feature with the User</title>
+        Discuss the feature scope, requirements, and design decisions with the user before writing the plan. If the feature involves a desktop application (WPF, WinForms, WinUI, etc.), confirm the test environment: executable path, expected window title, and any launch arguments needed for smoke testing.
+      </item>
+
+      <item number="5">
+        <title>Research External Dependencies — Tiered Documentation Retrieval Protocol</title>
+        <p>
+          When the feature plan requires third-party API documentation or external library references,
+          you MUST follow this protocol in strict order:
+        </p>
+
+        <research_protocol>
+          <step letter="A">
+            <name>Check Local External Docs FIRST</name>
+            <action>Before any external fetch, check if `agent-workspace/external-docs/<library-name>.md` exists.</action>
+            <action>If the local saved documentation exists, read it directly — it contains previously saved documentation.</action>
+            <action>Skip to filling the reference template (Step 6) using the saved docs.</action>
+          </step>
+
+          <step letter="B">
+            <name>Option A: Context7 MCP (Preferred)</name>
+            <condition>If the saved docs do NOT exist:</condition>
+            <action>Use your available MCP tools (if any) to query documentation servers for up-to-date documentation.</action>
+            <action>This is the preferred path when MCP documentation tools are available.</action>
+          </step>
+
+          <step letter="C">
+            <name>Option B: Generic Search</name>
+            <condition>If Context7 MCP is unavailable or returns no results:</condition>
+            <action>Use your available browser or web search tools to fetch documentation.</action>
+          </step>
+
+          <step letter="D">
+            <name>Option C: Human-in-the-Loop</name>
+            <condition>If no search tools exist or all search attempts fail:</condition>
+            <action>STOP and ask the user to fetch the documentation for you via another AI (e.g., ChatGPT or Claude).</action>
+            <action>Provide the user with a ready-to-copy prompt they can paste into the other AI.</action>
+            <action>Wait for the user to reply with the documentation before proceeding.</action>
+          </step>
+
+          <step letter="E">
+            <name>Option D: Internal Memory (Last Resort)</name>
+            <condition>If the user declines to fetch external docs:</condition>
+            <action>Fall back to your internal memory/knowledge.</action>
+            <action>CRITICAL: At the top of the feature-reference.md file, add a prominent note: "⚠️ WARNING: The following documentation was sourced from internal memory and may be outdated or inaccurate. Verify before production use."</action>
+          </step>
+        </research_protocol>
+      </item>
+
+      <item number="6">
+        <title>Save to External Docs and Fill Templates</title>
+        <action>After successfully retrieving documentation:</action>
+        <sub_action number="1">
+          Save the full fetched documentation permanently to `agent-workspace/external-docs/<library-name>.md` for future reuse.
+        </sub_action>
+        <sub_action number="2">
+          Copy the relevant snippets (imports, types, API signatures) into `agent-workspace/feature/reference.md`, ensuring H3 headings exactly match the step names in the implementation plan.
+        </sub_action>
+      </item>
+
+      <item number="7">
+        <title>Fill Out the Implementation Plan</title>
+        Fill out the `agent-workspace/feature/plan.md` file. You MUST preserve the exact section headers, checkboxes, and structure of the template exactly as provided. You MUST NEVER attempt to read or edit state.json yourself.
+      </item>
+
+      <item number="8">
+        <title>Review Gate — Complete Your Task</title>
+        <action priority="critical">
+          After filling out both the Plan and Reference files, you MUST STOP and ask the user to review them. Use the `ask_followup_question` tool and provide ONLY ONE Suggested Response: "Approved, proceed". Also include this text in your message: "If you require changes, please type your feedback in the chat."
+        </action>
+        <action priority="critical">
+          You MUST NOT include the `attempt_completion` tool in the same response block as the `ask_followup_question` tool. You must fire the followup question, stop your generation, and wait for the user's next turn before ever calling `attempt_completion`.
+        </action>
+        <action priority="critical">
+          When the user clicks "Approved, proceed": use `attempt_completion` to report your results. Your completion summary MUST include: (a) which files you modified (plan.md, reference.md, external-docs/), (b) total step count in the plan, and (c) a brief summary of your key design decisions.
+        </action>
+        <anti_patterns priority="critical">
+          <anti_pattern>Do NOT offer to switch to Code mode, spawn subtasks, begin implementation, create branches, or run git commands. You are a planner — your job is to produce the plan and reference files. Implementation is a separate concern handled elsewhere.</anti_pattern>
+          <anti_pattern>Do NOT provide suggested responses like "Switch to Code mode", "Begin implementation", or "Start Step 1". The ONLY permitted suggested response is "Approved, proceed".</anti_pattern>
+          <anti_pattern>Do NOT use `new_task`, `switch_mode`, or any tool that delegates work to other modes. Your sole job is to produce the plan and reference files, then complete your task.</anti_pattern>
+        </anti_patterns>
+      </item>
+    </instructions>
+  </standard_architect_prompt>
+
+  <knowledge_base_update_pattern>
+    <name>Phase 5 Partitioned Knowledge Base Update Prompt</name>
+    <description>
+      Use this exact prompt when spawning the Architect subtask to update the
+      partitioned knowledge base during Phase 5.
+    </description>
+    <prompt>
+      "Review agent-workspace/feature/plan.md AND agent-workspace/feature/reference.md. Intelligently append new architectural patterns, core data structures, or endpoints to the *specific* partitioned files in agent-workspace/knowledge/:
+      - New architectural patterns, design decisions, or system-level concerns → agent-workspace/knowledge/architecture.md
+      - New database schemas, models, migrations, or data-layer patterns → agent-workspace/knowledge/database.md
+      - New API endpoints, route definitions, middleware patterns, or protocol-level details → agent-workspace/knowledge/api-routes.md
+      - New UI components, frontend patterns, state management structures, or styling conventions → agent-workspace/knowledge/frontend-ui.md
+
+      Keep each file clean and structured. Do not include minor feature details, only global knowledge that future features will benefit from. If a file doesn't exist yet, create it."
+    </prompt>
+  </knowledge_base_update_pattern>
+
+  <knowledge_base_generation_prompt>
+    <name>Phase 0 Knowledge Base Generation Prompt</name>
+    <description>
+      Use this prompt when spawning an Architect subtask to generate the 4 core
+      knowledge files from scratch by analyzing the existing codebase (Phase 0).
+    </description>
+    <usage>
+      <p>
+        When the user selects "Yes, generate the knowledge files" in Phase 0,
+        spawn an Architect subtask with this prompt.
+      </p>
+    </usage>
+    <prompt>
+      "Analyze this codebase comprehensively and create the 4 partitioned knowledge files. These files will serve as the global knowledge base for all future feature development on this project.
+
+      Create the following files at agent-workspace/knowledge/:
+
+      1. architecture.md — Document system-level design decisions: the overall architectural pattern (MVC, microservices, monolith, etc.), key design patterns used, directory/module structure conventions, cross-cutting concerns (auth, logging, error handling), and any established conventions for extensibility (interfaces, plugins, etc.).
+
+      2. database.md — Document all database schemas, models, migrations, ORM configurations, seed data patterns, and data-layer abstractions. Include table/collection names, key fields, relationships, and indexing strategies you discover.
+
+      3. api-routes.md — Document all API endpoints, route definitions, middleware patterns, request/response formats, authentication requirements, and protocol-level details. Group by resource or domain.
+
+      4. frontend-ui.md — Document the UI component hierarchy, state management approach, routing structure, styling conventions, and any design system or component library in use.
+
+      For each file: be thorough but concise. Only include patterns and structures that actually exist in the codebase — do not invent or assume. If a domain has no existing code (e.g., no database yet), create the file with a note: 'No database implementation exists yet.'"
+    </prompt>
+  </knowledge_base_generation_prompt>
+
+  <critic_subtask_prompt>
+    <name>Critic Subtask Prompt for Plan Review</name>
+    <description>
+      Canonical prompt to use when spawning an Architect-mode Critic subtask in Phase 2 to review
+      and polish the implementation plan and reference files.
+    </description>
+    <usage>
+      Spawn via new_task in architect mode. Insert any syntax errors found in Phase 2 Step 1
+      into the prompt where indicated.
+    </usage>
+    <template>
+      "CRITICAL RULE: You must NEVER read, edit, or modify agent-workspace/feature/state.json. That file is strictly managed by the Orchestrator.
+
+You are a strict Principal Engineer acting as a Design Critic. Review and polish two files: `agent-workspace/feature/plan.md` and `agent-workspace/feature/reference.md`.
+
+First, fix these specific formatting/syntax errors found by the system: [Insert syntax errors from Phase 2 Step 1, or state 'None found'].
+
+Second, perform a strict logic review:
+1. Are there any invisible/untestable steps?
+2. Are the Live Smoke Tests actually actionable?
+3. Do the code snippets in the Reference file logically match the steps in the Plan?
+4. Are there any obvious architectural flaws, missing error handling, or missing dependencies?
+
+Edit the files to fix any logic or formatting flaws you find.
+
+CRITICAL: If you found ZERO logic or syntax flaws and made ZERO changes, use attempt_completion immediately. HOWEVER, if you made ANY changes, use ask_followup_question with exactly 2 Suggested Responses: 'Approved, proceed' and 'Revert changes'. Include: 'If you want manual adjustments, please type your feedback in the chat.' Do NOT use attempt_completion until the user explicitly approves or reverts. If user clicks 'Approved, proceed', use attempt_completion with a success summary. If user clicks 'Revert changes', undo your edits and use attempt_completion with the message 'CHANGES REVERTED BY USER'."
+    </template>
+  </critic_subtask_prompt>
+</common_patterns>

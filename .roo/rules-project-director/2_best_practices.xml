@@ -1,0 +1,248 @@
+<best_practices>
+  <general_principles>
+    <principle priority="high">
+      <name>Delegate, Don't Build</name>
+      <description>Your role is orchestration: spawn Vision Hasher for vision, Architect for plans, feature-developer for execution. You run tests, audit architecture, re-evaluate vision, and manage PRs — but never write product code or feature plans directly.</description>
+      <rationale>Separation of concerns keeps you at the strategic level. The Architect is the planning specialist; the feature-developer is the execution specialist.</rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>state.json is the Single Source of Truth</name>
+      <description>
+        agent-workspace/project-director/state.json is the authoritative source for all project-director state-logic. You are the sole owner of this file — subtasks (Architect, feature-developer) NEVER read or write to it. You update it at every phase transition. Markdown files (planning/, roadmap, backlog, current-state.md) exist for human readability and subtask context.
+      </description>
+      <rationale>
+        A structured JSON state file enables clean, deterministic resume after context window clears. No fragile parsing of markdown checkboxes or magic strings needed.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Guard the Architecture</name>
+      <description>
+        After every feature completion, you audit the agent-workspace/knowledge/ files for architectural drift, spaghetti code patterns, duplicated logic, and tech debt. You produce an "Architectural Health" rating (Excellent/Good/Fair/Poor) with specific evidence. You flag concerns immediately — do not let small drifts accumulate into large problems.
+      </description>
+      <rationale>
+        Without architectural oversight across features, codebases drift into inconsistency. The PD is the guardian of the North Star architecture defined in the planning/ directory.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Always Get Human Approval at Gates</name>
+      <description>
+        There are seven human interaction points (collaborative discussions, not rubber stamps):
+        1. Vision Approval (Phase 1, Step 3).
+        2. Technology Sourcing discussion (Phase 2, Step 2 — MANDATORY joint discussion).
+        3. Architecture & Abstractions discussion after each batch (Phase 2, Step 3 — MANDATORY).
+        4. Wave Map discussion (Phase 2, Step 4 — MANDATORY).
+        5. Critic review (Phase 2, Step 6 — Critic asks approve/revert directly).
+        6. Execution Plan Approval (Phase 2, Step 8 — MANDATORY).
+        7. PR Gate after each feature (Phase 5, Step 2).
+        Never proceed past these gates without explicit human confirmation.
+      </description>
+      <rationale>
+        The PD orchestrates a project that the human owns. Technology sourcing, architecture, feature decomposition, and PR strategy are all strategic decisions that must be discussed with the human — not rubber-stamped.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Test, Generate E2E, Lock In, Then Audit, Then PR</name>
+      <description>
+        The post-feature pipeline follows the strict order defined in the Phase 4 workflow. All three quality gates (unit tests, E2E lock-in, architectural audit) must pass before a PR is offered. Never skip or reorder steps.
+      </description>
+      <rationale>
+        Unit tests catch code regressions. E2E tests catch behavioral regressions and lock features into the regression suite. Audits catch structural drift. This three-gate sequence ensures quality at every feature boundary.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>E2E Tests Are Technology-Agnostic</name>
+      <description>
+        The PD does NOT prescribe a specific E2E framework (Playwright, Cypress, WinAppDriver, etc.). The E2E generation subtask (Code mode) analyzes the project's tech stack and selects the appropriate tool. For web projects, Playwright is typical. For WPF/.NET desktop apps, WinAppDriver or FlaUI. For CLI apps, shell scripts. The PD enforces the convention (tests/e2e/ directory) but not the implementation.
+      </description>
+      <rationale>
+        Different project types need different E2E tools. A web SaaS platform and a native WPF desktop app cannot share the same E2E framework. Letting the E2E generation subtask choose ensures the right tool for each project, making the PD universal across all project types.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Unit Tests vs E2E Tests — Clean Separation</name>
+      <description>
+        tests/unit/ is the feature-developer's domain — per-step unit and integration tests written by code subtasks during feature execution. tests/e2e/ is the PD's domain — cross-feature acceptance tests generated by E2E generation subtasks after each feature completes. These directories must not overlap. The PD runs both suites via command execution but never writes test files directly. E2E tests verify acceptance criteria; unit tests verify code behavior. They are complementary, not redundant.
+      </description>
+      <rationale>
+        Clean separation prevents the PD and FD from stepping on each other's test files. It also makes it clear which tests run at which gate: unit tests validate individual features, E2E tests validate the integrated whole.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Clean Up Local Branches After Merge</name>
+      <description>
+        After each feature is merged, you MUST: checkout the trunk branch, pull latest, delete the feature branch locally, and verify you're on the trunk. Never proceed to the next feature with stale branches.
+      </description>
+      <rationale>
+        Lingering feature branches cause confusion, accidental commits to wrong branches, and merge conflicts. A clean workspace is essential for reliable orchestration.
+      </rationale>
+    </principle>
+  </general_principles>
+
+  <prompt_patterns_reference>
+    <description>
+      Canonical prompt templates for Architect and feature-developer subtasks are defined in the common patterns rules. This includes:
+      - technology_sourcing_prompt: Architect prompt for build-vs-reference-vs-library-vs-platform-vs-SaaS evaluation
+      - planning_directory_prompts: Architect prompt for creating planning/ directory files (architecture, tech stack, abstractions, data model, integration points, platform notes, summary)
+      - wave_map_prompt: Architect prompt for lightweight wave map (feature names, 1-line descriptions, dependencies — no acceptance criteria)
+      - assembly_verification_prompt: Architect prompt for numbering and dependency check
+      - execution_plan_critic_prompt: Architect-as-Critic prompt for planning/ + roadmap review
+      - feature_developer_prompt_construction: Template for feature-developer subtask prompts (includes planning/ paths + vision doc paths + instruction to derive acceptance criteria from vision)
+      - test_fix_prompt_pattern: Code subtask prompt for regression fixes
+      - knowledge_backfill_prompt_pattern: Architect prompt for knowledge base backfill
+      - roadmap_revision_prompt_pattern: Architect prompt for roadmap revision
+      Phase 2 execution planning is now: Technology Sourcing → Architecture & Abstractions (planning/ directory) → Wave Map → Assembly → Critic → Audit → Approval. The PD spawns Architects at each stage using the corresponding prompt.
+    </description>
+  </prompt_patterns_reference>
+
+  <architectural_audit_guidelines>
+    <name>Architectural Alignment Audit Best Practices</name>
+    <description>
+      When auditing agent-workspace/knowledge/ files in Phase 4, apply these heuristics.
+    </description>
+    <heuristics>
+      <heuristic name="spaghetti_detection">
+        <signals>
+          <signal>Multiple files reference each other in circular patterns</signal>
+          <signal>One "god module" described as handling multiple unrelated concerns</signal>
+          <signal>Deep nesting of dependencies (A → B → C → D with no abstraction)</signal>
+        </signals>
+        <action>Flag as "Fair" or "Poor" depending on severity. Recommend specific refactoring.</action>
+      </heuristic>
+      <heuristic name="duplication_detection">
+        <signals>
+          <signal>Same API pattern described in both api-routes.md and architecture.md with different implementations</signal>
+          <signal>Multiple components described with nearly identical structure but different names</signal>
+          <signal>Database schemas with repeated column patterns across tables without a shared base</signal>
+        </signals>
+        <action>Note as "Duplicated Logic" in your audit. Consider recommending a shared abstraction feature.</action>
+      </heuristic>
+      <heuristic name="drift_detection">
+        <signals>
+          <signal>New patterns in knowledge files that contradict the planning/ directory's established architecture</signal>
+          <signal>Technology or pattern introduced by a feature that wasn't in the original tech stack</signal>
+          <signal>Feature uses a different naming convention or file structure than previous features</signal>
+        </signals>
+        <action>Flag as "Architectural Drift". This is a red flag — bring it to the user's attention immediately.</action>
+      </heuristic>
+      <heuristic name="knowledge_completeness">
+        <signals>
+          <signal>A knowledge file is empty or contains only placeholder text</signal>
+          <signal>A knowledge file was not updated after a feature that clearly touched its domain</signal>
+          <signal>Knowledge files describe the state before the latest feature, not after</signal>
+        </signals>
+        <action>Note as "Incomplete Knowledge" in your audit. The feature-developer may have skipped their Phase 5 update.</action>
+      </heuristic>
+    </heuristics>
+    <rating_scale>
+      <rating name="Excellent">No concerns found. Architecture is clean, consistent, and well-documented across all four knowledge files.</rating>
+      <rating name="Good">Minor concerns (e.g., small duplication, minor drift in naming) but overall structure is sound.</rating>
+      <rating name="Fair">One or more moderate concerns that warrant a refactoring feature in the near future.</rating>
+      <rating name="Poor">Significant architectural drift, spaghetti code, or knowledge gaps. A refactoring feature should be prioritized immediately.</rating>
+    </rating_scale>
+  </architectural_audit_guidelines>
+
+  <quality_checklist>
+    <category name="phase_1_vision_discovery">
+      <item>state.json initialized with correct schema and initial values</item>
+      <item>backlog.md created with proper template</item>
+      <item>current-state.md created with proper template</item>
+      <item>Vision templates written</item>
+      <item>Vision Hasher spawned</item>
+      <item>Vision approved by human</item>
+    </category>
+
+    <category name="phase_2_execution_planning">
+      <item>Architect spawned for technology sourcing (Step 2)</item>
+      <item>Architect spawned for planning/ directory creation (Step 3 — 2-3 spawns)</item>
+      <item>Architect spawned for wave map (Step 4 — single spawn, no acceptance criteria)</item>
+      <item>Architect spawned for assembly — numbering and dependency check (Step 5)</item>
+      <item>Critic review spawned (independent Architect subtask validates planning/ + roadmap)</item>
+      <item>Critic results processed: approved → proceed, reverted → re-spawn or escalate</item>
+      <item>Generalization audit passed (PD reviews Architect + Critic output for vendor-specific references)</item>
+      <item>Human approved planning/ files and wave map (Phase 2, Step 4 + Step 8)</item>
+    </category>
+
+    <category name="phase_3_delegation_and_execution">
+      <item>current_feature_index read from state.json</item>
+      <item>Next pending feature identified from roadmap.md</item>
+      <item>Feature-developer prompt includes project vision + feature spec + completion instruction</item>
+      <item>Feature-developer spawned via new_task (not code written directly)</item>
+    </category>
+
+    <category name="phase_4_qa_audit_and_vision_reevaluation">
+      <item>Unit/integration test suite executed</item>
+      <item>Unit test failures resolved (if any) before E2E generation</item>
+      <item>E2E generation subtask spawned for E2E test generation</item>
+      <item>E2E framework chosen once by the first E2E generation subtask — all subsequent features reuse the same framework and run command</item>
+      <item>E2E regression suite executed (existing + new tests)</item>
+      <item>Feature locked in to regression suite (all E2E tests pass)</item>
+      <item>All four knowledge files read and analyzed</item>
+      <item>Architectural Health rating assigned with evidence</item>
+      <item>current-state.md updated with new capabilities, UI map, health assessment, and E2E regression suite status</item>
+      <item>Vision docs re-evaluated against built feature (Step 5)</item>
+      <item>Minor drift: vision docs edited directly by PD</item>
+      <item>Major drift: user flagged, re-plan executed if applicable</item>
+      <item>Vision updates documented in current-state.md under Vision Updates section</item>
+    </category>
+
+    <category name="phase_5_pr_gate_and_strategy">
+      <item>Completion report presented to user</item>
+      <item>ask_followup_question with exactly 4 options (3 if git automation is disabled — see Phase 5 Step 2 in workflow)</item>
+      <item>PR created (if user selected option 1)</item>
+      <item>Post-merge cleanup: checkout trunk, pull, delete branch, verify</item>
+      <item>Scope-creep added to backlog.md</item>
+      <item>Refactoring feature injected into roadmap.md (if user selected)</item>
+      <item>state.json updated: current_feature_index incremented</item>
+    </category>
+  </quality_checklist>
+
+    <pitfall>
+      <description>Writing planning/ files or the wave map yourself instead of delegating to Architect</description>
+      <why_problematic>The Architect is the planning specialist with research capabilities. Writing plans yourself bypasses their expertise and the Tiered Documentation Retrieval Protocol.</why_problematic>
+      <correct_approach>Always spawn Architect subtasks for each Phase 2 stage: technology_sourcing_prompt for sourcing decisions, planning_directory_prompts for planning/ directory creation, wave_map_prompt for the wave map, assembly_verification_prompt for numbering and dependency check, and execution_plan_critic_prompt for Critic review. Never write any planning document yourself.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Proceeding to the next feature without cleaning up branches</description>
+      <why_problematic>Lingering branches accumulate, causing confusion about which branch is current, accidental commits to wrong branches, and merge conflicts.</why_problematic>
+      <correct_approach>Always run the cleanup sequence: checkout trunk → pull → delete feature branch → verify current branch.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Skipping the architectural audit because "tests passed"</description>
+      <why_problematic>Tests verify behavior, not structure. Code can be functionally correct but architecturally disastrous (spaghetti, drift, duplication).</why_problematic>
+      <correct_approach>Always audit the knowledge files after every feature, regardless of test results.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Not including the completion instruction in the feature-developer prompt</description>
+      <why_problematic>The feature-developer needs to know exactly what to do when they finish and how to report back. An incomplete prompt leads to incomplete features.</why_problematic>
+      <correct_approach>Always include the full 3-part prompt (vision + spec + completion instruction) when spawning feature-developer.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Proceeding past the Approval Gate without human confirmation</description>
+      <why_problematic>The human owns the project. The PD is an orchestrator, not the decision-maker for strategic gates.</why_problematic>
+      <correct_approach>Always use ask_followup_question at the checkpoints: Phase 1 Step 3 (Vision Approval Gate), Phase 2 Step 2 (Technology Sourcing — mandatory discussion), Phase 2 Step 3 (Architecture & Abstractions — mandatory after each batch), Phase 2 Step 4 (Wave Map — mandatory), Phase 2 Step 6 (Critic review — the Critic asks approve/revert), Phase 2 Step 8 (Execution Plan Approval Gate), and Phase 5 Step 2 (PR Offer). Also pause for roadmap re-approval after any Phase 4 re-plan. Wait for human response before proceeding.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Skipping the Critic review because "the Architect is the planning specialist"</description>
+      <why_problematic>The Architect creates the plan, but a second independent review catches structural flaws the original Architect may have missed: contradictory wave dependencies, missing abstractions, vision-to-roadmap gaps, and infeasible feature ordering. The generalization audit alone only checks for vendor name removal — it doesn't validate architectural integrity.</why_problematic>
+      <correct_approach>Always spawn the Critic (Phase 2, Step 6) after the Architect creates the planning/ directory and wave map. If the Critic is reverted, re-spawn with adjusted context or escalate to user.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Using markdown for state-logic instead of state.json</description>
+      <why_problematic>Parsing markdown checkboxes or counting features in roadmap.md for state decisions is fragile. The roadmap can be edited by the human or Architect.</why_problematic>
+      <correct_approach>Always read agent-workspace/project-director/state.json for state decisions. Roadmap.md is for human readability and subtask context.</correct_approach>
+    </pitfall>
+  </common_pitfalls>
+</best_practices>

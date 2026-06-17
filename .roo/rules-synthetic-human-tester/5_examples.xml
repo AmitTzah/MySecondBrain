@@ -1,0 +1,292 @@
+<complete_examples>
+  <overview>
+    Complete end-to-end examples of synthetic-human-tester invocations. Each example shows
+    the spawn prompt received from the user and the expected completion report.
+  </overview>
+
+  <example name="web_smoke_test_all_pass">
+    <scenario>
+      The user has built a user registration feature. The dev server is running at
+      localhost:3000. The user spawns synthetic-human-tester to verify the signup flow.
+    </scenario>
+
+    <spawn_prompt>
+environments:
+  web:
+    base_url: http://localhost:3000
+
+test_plan:
+  - environment: web
+    given: I am on the home page
+    when: I click the "Sign Up" link
+    then: I should see a heading "Create Your Account"
+
+  - environment: web
+    given: I am on the signup page
+    when: I type "test@example.com" into the "Email" field and type "password123" into the "Password" field and click the "Create Account" button
+    then: I should see the text "Check your email for a confirmation link"
+    </spawn_prompt>
+
+    <execution>
+      <step>Capability detection: found browser_navigate, browser_click, browser_snapshot, browser_type → web testing available via Playwright MCP.</step>
+      <step>Step 1: browser_navigate to http://localhost:3000 → snapshot shows link "Sign Up" → browser_click on link "Sign Up" → snapshot shows heading "Create Your Account" → PASS.</step>
+      <step>Step 2: Already on signup page → browser_type into "Email" field → browser_type into "Password" field → browser_click on button "Create Account" → snapshot shows text "Check your email for a confirmation link" → PASS.</step>
+    </execution>
+
+    <completion_report>
+STATUS: all_passed
+
+VISUAL: 🟢 No obvious issues
+
+WEB: 2/2 passed ✅
+  Step 1: "Sign Up link navigates to signup page" — PASS
+  Step 2: "Signup form submission shows confirmation" — PASS
+
+SUMMARY: 2 passed, 0 failed, 0 skipped
+    </completion_report>
+  </example>
+
+  <example name="cli_smoke_test_with_web_fallback">
+    <scenario>
+      A CLI tool has been updated. The test plan includes CLI verification steps.
+      Web environment is also configured but not needed for these steps.
+    </scenario>
+
+    <spawn_prompt>
+environments:
+  cli:
+    binary: my-deploy-tool
+    working_dir: /app
+  web:
+    base_url: http://localhost:3000
+
+test_plan:
+  - environment: cli
+    when: I run "my-deploy-tool --version"
+    then: exit code is 0 and output contains "v2.1"
+
+  - environment: cli
+    when: I run "my-deploy-tool validate --config ./deploy.yaml"
+    then: exit code is 0 and output contains "Configuration valid"
+    </spawn_prompt>
+
+    <execution>
+      <step>Capability detection: CLI always available via command group. Web: browser_* tools found → available.</step>
+      <step>Step 1: execute "my-deploy-tool --version" → exit code 0, stdout "my-deploy-tool v2.1.0" → contains "v2.1" → PASS.</step>
+      <step>Step 2: execute "my-deploy-tool validate --config ./deploy.yaml" → exit code 0, stdout "Configuration valid. 12 checks passed." → contains "Configuration valid" → PASS.</step>
+    </execution>
+
+    <completion_report>
+STATUS: all_passed
+
+CLI: 2/2 passed ✅
+  Step 1: "version check" — PASS
+  Step 2: "config validation" — PASS
+
+WEB: not tested (no web steps in plan)
+
+SUMMARY: 2 passed, 0 failed, 0 skipped
+    </completion_report>
+  </example>
+
+  <example name="mcp_unavailable">
+    <scenario>
+      The user requests web smoke tests, but Playwright MCP is not configured.
+      Synthetic-human-tester detects this and reports mcp_unavailable.
+    </scenario>
+
+    <spawn_prompt>
+environments:
+  web:
+    base_url: http://localhost:3000
+    auth:
+      method: login_form
+      login_url: /login
+      credentials:
+        email: admin@test.com
+        password: admin123
+
+test_plan:
+  - environment: web
+    given: I am logged in
+    when: I navigate to /dashboard
+    then: I should see a heading "Dashboard"
+    </spawn_prompt>
+
+    <execution>
+      <step>Capability detection: scanning for browser_* tools... none found.</step>
+      <step>Web environment cannot be tested. No other environments configured.</step>
+    </execution>
+
+    <completion_report>
+STATUS: mcp_unavailable
+
+WEB: ⏭️ 0/1 skipped
+  Reason: No browser automation MCP available. Install a browser automation
+          MCP (e.g., Playwright MCP) and add it to your MCP configuration.
+
+SUMMARY: 0 passed, 0 failed, 1 skipped
+    </completion_report>
+  </example>
+
+  <example name="test_failure_with_evidence">
+    <scenario>
+      A dashboard feature is supposedly working. Synthetic-human-tester tests it
+      and finds that the stats widget is missing.
+    </scenario>
+
+    <spawn_prompt>
+environments:
+  web:
+    base_url: http://localhost:3000
+    auth:
+      method: login_form
+      login_url: /login
+      credentials:
+        email: admin@test.com
+        password: admin123
+
+test_plan:
+  - environment: web
+    given: I am logged in
+    when: I navigate to /dashboard
+    then: I should see a heading "Dashboard"
+
+  - environment: web
+    when: I look at the stats section
+    then: I should see a "Total Users" stat card
+    </spawn_prompt>
+
+    <execution>
+      <step>Login: browser_navigate /login → type credentials → click "Login" → snapshot confirms logged in.</step>
+      <step>Step 1: browser_navigate /dashboard → snapshot shows heading "Dashboard" → PASS.</step>
+      <step>Step 2: Looking at snapshot... found section "Stats", but no element with accessible name "Total Users". Full snapshot of stats area shows:
+        - heading "Stats"
+        - text "Loading..."
+        - No stat cards visible
+        → FAIL: Expected "Total Users" stat card, but stats section shows "Loading..." with no cards rendered.</step>
+    </execution>
+
+    <completion_report>
+STATUS: tests_failed
+
+WEB: 1/2 passed ❌
+  Step 1: "Dashboard heading visible" — PASS
+  Step 2: "Total Users stat card present" — FAIL
+    Expected: stat card with accessible name "Total Users"
+    Actual: stats section shows "Loading..." text, no stat cards rendered
+    Snapshot excerpt:
+      region "Stats"
+        heading "Stats" [level=2]
+        text "Loading..."
+
+SUMMARY: 1 passed, 1 failed, 0 skipped
+    </completion_report>
+  </example>
+
+  <example name="desktop_smoke_test_all_pass">
+    <scenario>
+      A Windows desktop app has been updated. The user configures a desktop environment
+      with Windows-MCP available and wants to verify the save functionality.
+    </scenario>
+
+    <spawn_prompt>
+environments:
+  desktop:
+    executable_path: "C:/Program Files/MyApp/app.exe"
+    window_title: "My Application"
+
+test_plan:
+  - environment: desktop
+    given: I have opened the application
+    when: I click the "File" menu and click "New"
+    then: I should see a blank document window
+
+  - environment: desktop
+    when: I type "Hello World" into the document and click the "Save" button
+    then: I should see the text "Document saved successfully"
+    </spawn_prompt>
+
+    <execution>
+      <step>Capability detection: found Screenshot, Snapshot, Click, Type → desktop testing available via Windows-MCP.</step>
+      <step>Visual: Screenshot captured → VISUAL: 🟢 No obvious issues.</step>
+      <step>Launch app: app.exe started, window "My Application" appeared.</step>
+      <step>Step 1: Snapshot → Click on "File" menu → Click on "New" → Snapshot shows blank document area → PASS.</step>
+      <step>Step 2: Type "Hello World" → Click "Save" button → Snapshot shows text "Document saved successfully" → PASS.</step>
+    </execution>
+
+    <completion_report>
+STATUS: all_passed
+
+VISUAL: 🟢 No obvious issues
+
+DESKTOP: 2/2 passed ✅
+  Step 1: "New document creation" — PASS
+  Step 2: "Save document confirmation" — PASS
+
+SUMMARY: 2 passed, 0 failed, 0 skipped
+    </completion_report>
+  </example>
+
+  <example name="web_tests_pass_but_ui_visually_broken">
+    <scenario>
+      A dashboard feature functionally works — all buttons are clickable, all text is in the
+      accessibility tree — but the UI is visually broken: the sidebar overlaps the main content
+      and the footer text is cut off. Synthetic-human-tester captures this in the VISUAL section
+      while still reporting functional all_passed.
+    </scenario>
+
+    <spawn_prompt>
+environments:
+  web:
+    base_url: http://localhost:3000
+    auth:
+      method: login_form
+      login_url: /login
+      credentials:
+        email: admin@test.com
+        password: admin123
+
+test_plan:
+  - environment: web
+    given: I am logged in
+    when: I navigate to /dashboard
+    then: I should see a heading "Dashboard"
+
+  - environment: web
+    when: I click the "Reports" link in the sidebar
+    then: I should see a heading "Reports"
+    </spawn_prompt>
+
+    <execution>
+      <step>Capability detection: browser_* tools found → web testing available.</step>
+      <step>Login: browser_navigate /login → type credentials → click "Login" → snapshot confirms logged in.</step>
+      <step>Visual: browser_take_screenshot captured. Visual analysis:
+        - Sidebar is rendered OVER the main content area, obscuring the left portion of the dashboard
+        - Footer text "© 2026" is cut off at the bottom of the viewport
+        → VISUAL: 🔴 Obvious breakage detected.</step>
+      <step>Step 1: browser_navigate /dashboard → snapshot shows heading "Dashboard" → PASS.</step>
+      <step>Step 2: browser_click on link "Reports" → snapshot shows heading "Reports" → PASS.</step>
+    </execution>
+
+    <completion_report>
+STATUS: all_passed
+
+VISUAL: 🔴 Obvious breakage detected
+  - Sidebar overlaps main content area (left ~200px of dashboard is obscured)
+  - Footer text cut off at bottom of viewport
+
+WEB: 2/2 passed ✅
+  Step 1: "Dashboard heading visible" — PASS
+  Step 2: "Reports navigation" — PASS
+
+SUMMARY: 2 passed, 0 failed, 0 skipped
+    </completion_report>
+
+    <note>
+      Even though STATUS is all_passed, the VISUAL section flags obvious UI breakage.
+      The downstream mode (Code mode) can detect the 🔴 VISUAL status and auto-launch
+      a UI Designer subtask without requiring human intervention.
+    </note>
+  </example>
+</complete_examples>

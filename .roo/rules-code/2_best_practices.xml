@@ -1,0 +1,183 @@
+<best_practices>
+  <general_principles>
+    <principle priority="high">
+      <name>Minimal Change Principle</name>
+      <description>Prefer the smallest, most targeted change that satisfies the request. Avoid rewriting entire files when a surgical edit suffices. Use precise diffs rather than full-file replacements.</description>
+      <rationale>Minimal changes reduce regression risk, make reviews easier, and keep the codebase history clean.</rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Pattern Consistency</name>
+      <description>Follow existing code patterns, conventions, and abstractions in the codebase. Do not introduce new patterns unless the existing ones are insufficient and the change is explicitly justified.</description>
+      <rationale>Consistency makes code predictable, maintainable, and easier for the team to understand.</rationale>
+      <example>
+        <good>Match the existing error-handling pattern, naming conventions, and file structure.</good>
+        <bad>Introduce a new state management library when the project already uses one consistently.</bad>
+      </example>
+    </principle>
+
+    <principle priority="high">
+      <name>Test-Aware Development</name>
+      <description>
+        Always consider tests when making changes. Run ALL automated tests (CLI-runnable checks: unit, integration, linters, type-checkers, static analysis) at every checkpoint defined in the quality loop. Interactive tests (E2E with browser, visual regression, manual steps) are deferred to the verification gate. If adding new logic, add test coverage following existing patterns.
+      </description>
+      <rationale>Tests are the safety net that prevents regressions and documents expected behavior. Running all automated checks at multiple checkpoints catches issues early. Interactive tests are deferred because they require human judgment and would block the automated loop.</rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Quality Loop Discipline</name>
+      <description>Follow the quality loop as defined in the main workflow (1_workflow.xml): implement → write tests → run all automated tests → refactor → run all automated tests → QA review → fix accepted findings → run all automated tests → verification gate. Do not skip steps. Do not present results before QA review completes. Do not launch QA before tests pass.</description>
+      <rationale>The quality loop catches issues before they reach the user.</rationale>
+    </principle>
+
+    <principle priority="medium">
+      <name>Single Responsibility</name>
+      <description>Each change should address one concern. When a request spans multiple independent concerns, address them in sequence rather than in a single sprawling change.</description>
+      <rationale>Focused changes are easier to review, revert if needed, and reason about.</rationale>
+    </principle>
+  </general_principles>
+
+  <subtask_delegation_principles>
+    <principle priority="high">
+      <name>QA Review is Automatic</name>
+      <description>The QA review subtask is a mandatory, automatic part of the quality loop. Launch it after tests pass and self-refactoring is complete. Never ask for user consent — this is not optional.</description>
+      <rationale>QA review is part of the standard development workflow, not a special delegation. The user expects quality code without needing to approve each quality step.</rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Provide Complete Context to QA</name>
+      <description>The QA brief must include: the goal, the complete file list, constraints, and expected behavior. A vague brief produces a useless review. QA can only review what it knows to look for.</description>
+      <rationale>QA has no context beyond what you provide. A well-briefed QA catches real issues; a poorly-briefed QA catches nothing or reports false positives.</rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Dismiss QA Findings Only With Justification</name>
+      <description>Every dismissed QA finding must include a specific reason: intentional behavior, pre-existing issue out of scope, factually incorrect analysis, or not applicable. Never silently ignore a QA finding.</description>
+      <rationale>Unjustified dismissals defeat the purpose of QA review. If you disagree with QA, articulate why — the reasoning itself is valuable.</rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Auto-Launch vs User-Consent Subtasks</name>
+      <description>
+        Three subtask types, two consent models:
+        - **Auto-launch (no consent needed):** QA review (mandatory quality gate), synthetic-human-tester smoke test (when smoke_test_automation is enabled — replaces manual verification), UI Designer (when SHT reports VISUAL: 🔴 obvious breakage, or when user explicitly expresses visual dissatisfaction with working functionality).
+        - **User consent required:** Debug subtask for stuck resolution (after 2-3 failed diagnostic→fix→verification cycles). Always use the ask tool to propose — never launch without explicit user approval.
+      </description>
+      <rationale>QA, SHT, and SHT-triggered UI Designer are quality gates that don't need permission. Debug subtasks are optional workflow enhancements — the user decides whether a fresh investigation is warranted.</rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Preserve Context in Subtask Instructions</name>
+      <description>When launching any subtask (QA, design polish via UI Designer, or stuck resolution via Debug), provide: the exact problem statement, relevant file paths, what has already been tried (for stuck-resolution — include all diagnostic output from every cycle), design constraints (for UI polish), and clear acceptance criteria.</description>
+      <rationale>A well-briefed subtask completes faster and produces better results.</rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Review Before Integrating</name>
+      <description>After any subtask completes, review its output before presenting to the user. For QA: evaluate each finding. For design polish: verify visual changes don't break functionality. For stuck resolution: confirm the fix actually works.</description>
+      <rationale>The delegating agent is responsible for quality — subtask output is not blindly trusted.</rationale>
+    </principle>
+
+    <principle priority="medium">
+      <name>One Subtask at a Time</name>
+      <description>Launch one subtask and wait for its completion before launching another. The QA subtask runs alone — do not launch parallel design-polish or stuck-resolution subtasks during QA review.</description>
+      <rationale>Sequential subtasks avoid merge conflicts and ensure each change builds on a clean state.</rationale>
+    </principle>
+  </subtask_delegation_principles>
+
+  <code_conventions>
+    <convention category="editing">
+      <rule>Use targeted diffs (search/replace blocks) for existing files. Only use full-file writes for new files or intentional rewrites.</rule>
+    </convention>
+
+    <convention category="naming">
+      <rule>Match the naming conventions already present in the file or project.</rule>
+    </convention>
+
+    <convention category="structure">
+      <rule>Preserve the existing file and directory structure. New files go where similar files already live.</rule>
+    </convention>
+
+    <convention category="comments">
+      <rule>Add comments only for non-obvious logic. Do not restate what the code already says.</rule>
+    </convention>
+  </code_conventions>
+
+  <common_pitfalls>
+    <pitfall>
+      <description>Skipping the QA review because the change "seems trivial"</description>
+      <why_problematic>Even trivial changes can have subtle bugs. The QA review catches things the implementer is blind to after writing the code.</why_problematic>
+      <correct_approach>Always run the full quality loop. The QA review is fast for small changes.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Presenting results to the user before QA review completes</description>
+      <why_problematic>The user becomes the QA — they find bugs that should have been caught automatically. This erodes trust.</why_problematic>
+      <correct_approach>Complete the entire quality loop before attempting completion. The user should only see finished, reviewed work.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Dismissing QA findings without reading them carefully</description>
+      <why_problematic>QA may catch real issues that the implementer is too close to the code to see. Automatic dismissal defeats the purpose.</why_problematic>
+      <correct_approach>Read every QA finding. Evaluate each on its merits. If dismissing, provide a specific reason.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Providing an incomplete QA brief (missing files, vague goal)</description>
+      <why_problematic>QA cannot review what it doesn't know about. Missing files mean unreviewed code. Vague goals mean QA can't validate against intent.</why_problematic>
+      <correct_approach>List every changed file. State the goal clearly. Include constraints and expected behavior.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Launching a subtask without asking first (for user-consent subtasks)</description>
+      <why_problematic>The user loses control over their session. Subtasks consume resources and may not be desired.</why_problematic>
+      <correct_approach>Always use the ask tool to propose user-consent subtasks. QA is the only automatic subtask.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Offering a subtask too early (after only 1-2 attempts)</description>
+      <why_problematic>The user may feel the agent is giving up too easily or avoiding hard problems.</why_problematic>
+      <correct_approach>Attempt 2-3 full diagnostic→fix→quality-loop→verification cycles with genuinely different approaches before offering the Debug subtask. One failed cycle is not "stuck" — methodical debugging may need multiple rounds.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Offering a design-polish subtask when the issue is functional</description>
+      <why_problematic>Design subtasks should only be offered when functionality is confirmed working. Mixing functional and visual changes in a subtask defeats the purpose.</why_problematic>
+      <correct_approach>First confirm the functionality works, then offer the design-polish subtask.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Rewriting entire files for small changes</description>
+      <why_problematic>Makes diffs hard to review, increases merge conflict risk, and can introduce unintended changes.</why_problematic>
+      <correct_approach>Use targeted search/replace diffs for surgical edits.</correct_approach>
+    </pitfall>
+  </common_pitfalls>
+
+  <quality_checklist>
+    <category name="before_starting">
+      <item>Understand the request fully — ask clarifying questions only when critical ambiguity remains</item>
+      <item>Read relevant existing files to understand current patterns</item>
+      <item>Identify tests related to the area of change and available test commands</item>
+    </category>
+    <category name="during_implementation">
+      <item>Follow existing code conventions and patterns</item>
+      <item>Use minimal, targeted edits (not full rewrites unless intentional)</item>
+      <item>Update or add tests that verify the change</item>
+    </category>
+    <category name="before_qa_review">
+      <item>All automated tests pass</item>
+      <item>Self-refactoring complete (naming, duplication, clarity)</item>
+      <item>QA brief prepared: goal, complete file list, constraints, expected behavior</item>
+    </category>
+    <category name="before_completion">
+      <item>QA review completed and all Bugs & Issues fixed</item>
+      <item>All dismissed findings have specific justifications (internal — not reported to user)</item>
+      <item>All automated tests pass (including final verification run after user confirms)</item>
+      <item>User has confirmed manual verification passes</item>
+      <item>No code changes made after user confirmation — only tests were run</item>
+      <item>Review all changes for correctness</item>
+      <item>Check for edge cases and error scenarios</item>
+      <item>Confirm no regressions in adjacent functionality</item>
+    </category>
+  </quality_checklist>
+</best_practices>

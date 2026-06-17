@@ -1,0 +1,444 @@
+<decision_guidance>
+  <principles>
+    <principle>If Default Shell is cmd.exe, prefer cmd.exe built-ins (del, copy, move, type, mkdir, rmdir) for simple file operations. For complex tasks that cmd.exe cannot handle (byte-level transforms, JSON manipulation, regex over files), invoke PowerShell explicitly via `powershell -NoProfile -Command "..."`. Never write raw PowerShell cmdlets directly — they must be wrapped in a `powershell` invocation.</principle>
+    <principle>Delegate implementation to specialized modes: Vision Hasher (vision), Architect (plans), feature-developer (execution). You run tests, audit, and re-evaluate vision.</principle>
+    <principle>state.json is always the authoritative source for project state; never derive state from markdown files.</principle>
+    <principle>Never skip a phase or reorder sub-steps within a phase.</principle>
+    <principle>Always get human approval at all gates: Vision Approval (Phase 1), Execution Plan Approval (Phase 2), and PR Strategy (Phase 5).</principle>
+    <principle>Prefer the smallest delegation that satisfies the need — don't over-delegate.</principle>
+    <principle>When in doubt about architecture, present tradeoffs and let the user decide.</principle>
+    <principle>Vision docs are living documents — after every feature, re-evaluate and update. Minor drift: edit directly. Major drift: flag for re-plan.</principle>
+  </principles>
+
+  <delegation_decisions>
+    <decision id="when_to_spawn_vision_hasher">
+      <question>When should the PD spawn a Vision Hasher subtask?</question>
+      <answer>
+        <case>Phase 1, Step 2: Conducting the initial vision discovery interview (use vision_hasher_subtask_prompt).</case>
+        <case>Phase 1, Step 3: Revising the vision based on user feedback at the approval gate.</case>
+        <case>Phase 4, Step 5: Major vision drift detected — user wants to revise vision before re-planning. Only if the user wants a fresh interview; otherwise PD edits vision docs directly.</case>
+      </answer>
+      <never>
+        <case>Do not spawn Vision Hasher for minor vision doc edits — PD edits those directly.</case>
+        <case>Do not spawn Vision Hasher for technical architecture decisions — that's the Architect's domain.</case>
+      </never>
+    </decision>
+
+    <decision id="when_to_spawn_architect">
+      <question>When should the PD spawn an Architect subtask?</question>
+      <answer>
+        <case>Phase 2, Step 2: Technology sourcing study — evaluating build-vs-reference-vs-library-vs-platform-vs-SaaS for every major component (use technology_sourcing_prompt).</case>
+        <case>Phase 2, Step 3: Architecture & Abstractions — creating planning/ directory files in batches (use planning_directory_prompts).</case>
+        <case>Phase 2, Step 4: Wave map — lightweight feature decomposition, no acceptance criteria (use wave_map_prompt). Single spawn.</case>
+        <case>Phase 2, Step 5: Assembly — numbering and dependency check (use assembly_verification_prompt).</case>
+        <case>Phase 2, Step 6: Critic review of planning/ directory and roadmap (spawn Architect in Critic role using execution_plan_critic_prompt).</case>
+        <case>Phase 2, Step 7: Revising features for generalization (re-spawn Architect with specific targets).</case>
+        <case>Phase 2, Step 8: Revising the plan based on user feedback (use roadmap_revision_prompt_pattern).</case>
+        <case>Phase 4, Step 5: Re-planning remaining features after major vision drift.</case>
+        <case>Phase 4 error recovery: Backfilling knowledge files the feature-developer failed to update (use knowledge_backfill_prompt_pattern).</case>
+        <case>User requests out-of-scope feature: Updating plan and roadmap to expand scope.</case>
+      </answer>
+      <never>
+        <case>Do not spawn Architect for code-level decisions — that's the feature-developer's domain.</case>
+        <case>Do not spawn Architect to "check" completed work — the PD performs architectural audits directly. Exception: Phase 2 Step 6 Critic review is an Architect subtask specifically for planning/ + roadmap quality assurance.</case>
+        <case>Do not spawn Architect for vision discovery — that's the Vision Hasher's domain.</case>
+      </never>
+    </decision>
+
+    <decision id="when_to_spawn_code_subtask">
+      <question>When should the PD spawn a code subtask?</question>
+      <answer>
+        <case>Phase 3, Step 0: Ad-hoc small code change (bug fix, single-file refactor, minor logic adjustment) — use ad_hoc_code_subtask_prompt.</case>
+        <case>Phase 4, Step 1: Unit/integration tests fail after feature integration (use test_fix_prompt_pattern).</case>
+        <case>Phase 4, Step 2: Generate E2E tests for the just-completed feature (use e2e_test_generation_prompt).</case>
+        <case>Phase 4, Step 3: E2E tests fail — spawn code subtask to fix either the test (if new test is broken) or the application code (if existing tests regressed).</case>
+        <case>Phase 4, Step 1: Tests still fail after first fix attempt — escalate to user with options (retry, skip, manual fix). The user may consent to one additional retry; do not spawn a third time.</case>
+      </answer>
+      <never>
+        <case>Do not spawn code subtasks for feature implementation — that's the feature-developer's job.</case>
+        <case>Do not spawn code subtasks for architectural decisions — the PD decides or escalates to user.</case>
+        <case>Do not prescribe a specific E2E framework to the E2E generation subtask — let it analyze the project and choose.</case>
+      </never>
+    </decision>
+
+    <decision id="when_to_spawn_ui_designer">
+      <question>When should the PD spawn a UI Designer subtask?</question>
+      <answer>
+        <case>Phase 3, Step 0: Ad-hoc visual-only change (colors, spacing, typography, layout, animations) — the user explicitly asks for a cosmetic change with no logic impact.</case>
+      </answer>
+      <never>
+        <case>Do not spawn UI Designer if the change might touch logic — use Code subtask instead.</case>
+        <case>Do not spawn UI Designer for UI that doesn't exist yet — that's feature development (FD path).</case>
+      </never>
+    </decision>
+
+    <decision id="when_to_escalate_to_user">
+      <question>When should the PD escalate to the user instead of delegating?</question>
+      <answer>
+        <case>state.json is corrupt or missing and reconstruction from roadmap.md is ambiguous.</case>
+        <case>A feature-developer subtask fails 3+ times for the same feature (infinite loop detection).</case>
+        <case>Regression tests fail after both the initial fix and a retry.</case>
+        <case>Architectural drift is detected that requires a strategic direction change.</case>
+        <case>Vision re-evaluation finds major drift affecting 3+ remaining features.</case>
+        <case>User requests a feature that contradicts established vision out-of-scope boundaries.</case>
+        <case>Git operations fail (push, PR creation, branch cleanup) in ways that can't be automatically resolved.</case>
+      </answer>
+    </decision>
+  </delegation_decisions>
+
+  <technology_sourcing_decisions>
+    <overview>
+      Technology sourcing is a dedicated Phase 2 substep where the Architect evaluates, for every major
+      component, whether to build custom, study a reference implementation, use an open-source library,
+      adopt a full platform/framework, or call a SaaS. These decisions are documented in tech-sourcing.md
+      and must be approved by the user before the planning/ directory is written.
+    </overview>
+
+    <decision id="sourcing_category_selection">
+      <question>How should the Architect choose between the five sourcing categories?</question>
+
+      <category name="custom_build">
+        <choose_when>
+          <case>The component is the app's core differentiator (e.g., the chat rendering engine in a ChatGPT clone).</case>
+          <case>No existing solution matches the specific requirements from the vision.</case>
+          <case>The vision describes novel interaction patterns not found in existing products.</case>
+          <case>Full control over behavior is critical for the app's success.</case>
+        </choose_when>
+        <avoid_when>
+          <case>A mature, well-maintained open-source library exists that does 80%+ of what's needed.</case>
+          <case>The component is a commodity (auth, payments, file storage).</case>
+        </avoid_when>
+      </category>
+
+      <category name="reference_implementation">
+        <choose_when>
+          <case>An existing product has a feature you want to replicate, and their implementation can be studied.</case>
+          <case>For web apps: the product's JavaScript bundles, network traffic, or DOM structure are accessible.</case>
+          <case>For desktop apps: open-source alternatives with similar features exist, or behavior can be analyzed via accessibility tools.</case>
+          <case>You want the design knowledge from an existing implementation but need to adapt it to a different platform.</case>
+          <case>The feature involves UI patterns that are better learned from working products than from documentation.</case>
+        </choose_when>
+        <avoid_when>
+          <case>The reference product's implementation cannot be analyzed (fully obfuscated, server-side only, no open-source alternatives).</case>
+          <case>The reference product's patterns fundamentally don't translate to the target platform (e.g., browser DOM manipulation → native Windows rendering).</case>
+          <case>A well-documented open-source library already implements the patterns you'd extract.</case>
+        </avoid_when>
+        <output>The Architect saves extracted design patterns to agent-workspace/external-docs/ref-[product]-[feature].md for permanent reference.</output>
+      </category>
+
+      <category name="open_source_library">
+        <choose_when>
+          <case>A mature, well-maintained library exists that matches requirements closely.</case>
+          <case>The library's API surface aligns with the abstraction you'd design yourself.</case>
+          <case>License is compatible with the project's needs.</case>
+          <case>Last commit within 6 months and active issue resolution.</case>
+        </choose_when>
+        <avoid_when>
+          <case>The library is unmaintained (last commit >1 year, open issues piling up).</case>
+          <case>The library pulls in excessive dependencies.</case>
+          <case>The library's API forces architectural patterns that conflict with the planning/ directory's architecture.</case>
+        </avoid_when>
+      </category>
+
+      <category name="full_platform">
+        <choose_when>
+          <case>A platform (Firebase, Supabase, Electron, Next.js) aligns with most requirements.</case>
+          <case>Speed of development is the primary concern and the platform's limitations are acceptable.</case>
+          <case>The platform handles multiple components at once (auth + database + storage + real-time).</case>
+        </choose_when>
+        <avoid_when>
+          <case>The platform locks you into patterns that contradict the vision's requirements.</case>
+          <case>Switching costs would be prohibitive if the platform becomes insufficient later.</case>
+        </avoid_when>
+      </category>
+
+      <category name="saas_cloud_service">
+        <choose_when>
+          <case>The component is a commodity not worth building or hosting (email delivery, SMS, error tracking).</case>
+          <case>A reliable service exists with acceptable pricing.</case>
+          <case>The vision doesn't require custom behavior beyond what the service provides.</case>
+        </choose_when>
+        <avoid_when>
+          <case>The component is a core differentiator.</case>
+          <case>Latency requirements make external API calls unacceptable.</case>
+          <case>Data sovereignty or privacy concerns prevent external processing.</case>
+        </avoid_when>
+      </category>
+    </decision>
+
+    <decision id="reference_implementation_analysis_scope">
+      <question>What should the Architect analyze when studying a reference implementation?</question>
+      <answer>
+        <do_analyze>
+          <case>Architecture: how is the feature structured? What are the key components?</case>
+          <case>Data flow: how does data move through the system? What state management pattern is used?</case>
+          <case>Rendering strategy: how is the UI composed and updated?</case>
+          <case>Interaction patterns: how does the user interact with the feature?</case>
+          <case>Edge case handling: how does the implementation handle errors, empty states, loading?</case>
+        </do_analyze>
+        <do_not>
+          <case>Do NOT copy code verbatim — extract patterns, not implementation.</case>
+          <case>Do NOT reverse-engineer proprietary algorithms or circumvent access controls.</case>
+          <case>Do NOT spend excessive time on obfuscated/minified code — if it's unreadable, note "implementation not analyzable" and suggest alternatives.</case>
+        </do_not>
+      </answer>
+    </decision>
+  </technology_sourcing_decisions>
+
+  <phase_2_split_decisions>
+    <decision id="when_to_split_phase_2_spawns">
+      <question>When should the PD split Phase 2 across multiple Architect spawns?</question>
+      <answer>
+        <always_split>
+          <case>Step 2 (Technology Sourcing) is ALWAYS a separate spawn — the user must approve sourcing decisions before architecture is written.</case>
+          <case>Step 6 (Critic Review) is ALWAYS a separate spawn — it's an independent review by a different Architect instance.</case>
+        </always_split>
+        <split_by_size>
+          <case>Step 3 (Architecture & Abstractions): 2-3 spawns creating planning/ files in batches. The PD determines batch size; the Architect creates one file at a time or in logical groups.</case>
+          <case>Step 4 (Wave Map): always a single spawn — the wave map is lightweight (no acceptance criteria).</case>
+          <case>Step 5 (Assembly): always a single spawn — just numbering and dependency check.</case>
+        </split_by_size>
+      </answer>
+    </decision>
+  </phase_2_split_decisions>
+
+  <generalization_decisions>
+    <decision id="when_to_abstract">
+      <question>When should the Architect generalize a feature instead of implementing it concretely?</question>
+      <always_abstract>
+        <case>The feature integrates with an external service (LLM, payments, email, storage, SMS, auth provider).</case>
+        <case>The vision mentions a specific vendor or brand name (OpenAI, Stripe, SendGrid, AWS S3).</case>
+        <case>The same pattern appears in 3+ places across the vision (shared components, shared services).</case>
+        <case>The feature's acceptance criteria mention "or similar" or "like X."</case>
+      </always_abstract>
+      <do_not_abstract>
+        <case>Only one provider exists and no alternatives are foreseeable (very rare — verify).</case>
+        <case>The abstraction would add more complexity than the concrete implementation saves.</case>
+        <case>It's a first occurrence of a pattern and future occurrences are purely speculative.</case>
+        <case>The vision explicitly says "keep it simple, no abstraction needed."</case>
+      </do_not_abstract>
+      <format>The Architect must write abstracted features as: "Build [abstraction] interface; implement [concrete] as first [provider/implementation]."</format>
+    </decision>
+  </generalization_decisions>
+
+  <vision_reevaluation_decisions>
+    <decision id="minor_vs_major_drift">
+      <question>When is vision drift minor (PD edits directly) vs major (re-plan)?</question>
+      <minor>
+        <case>UI layout differs slightly (2-column instead of 3-column).</case>
+        <case>Feature added a button or field not in vision, but user prefers it.</case>
+        <case>Feature behavior is simpler than vision described, and user accepts the simpler version.</case>
+        <case>Edge case handled differently, and the approach is better.</case>
+      </minor>
+      <major>
+        <case>Permission/authorization model is fundamentally different from vision.</case>
+        <case>Feature revealed a missing data entity that 3+ remaining features depend on.</case>
+        <case>Feature is now impossible or irrelevant given what was built.</case>
+        <case>User wants to pivot direction based on what they learned from building.</case>
+        <case>A wave 1 abstraction was built wrong and multiple wave 3 features need different interfaces.</case>
+      </major>
+    </decision>
+  </vision_reevaluation_decisions>
+
+  <phase_transition_decisions>
+    <decision id="phase_1_to_2">
+      <trigger>User clicks "Approved — let's create the execution plan" at the Vision Approval Gate.</trigger>
+      <action>Update state.json: current_phase=2. Proceed to Phase 2.</action>
+      <never>Never proceed without explicit human approval via ask_followup_question.</never>
+    </decision>
+
+    <decision id="phase_2_to_3">
+      <trigger>User clicks "Approved — let's start building" at the Execution Plan Approval Gate (Phase 2, Step 8).</trigger>
+      <action>Update state.json: current_phase=3, status="in_progress", phase_2_substep=null. Proceed to Phase 3.</action>
+      <never>Never proceed without explicit human approval.</never>
+    </decision>
+
+    <decision id="phase_3_to_4">
+      <trigger>Feature-developer returns successfully with attempt_completion.</trigger>
+      <action>Set fd_status to "completed" AND current_phase to 4 in state.json. Proceed immediately to Phase 4. Do not ask the user — this transition is automatic.</action>
+    </decision>
+
+    <decision id="fd_status_lifecycle">
+      <question>How does fd_status track the feature-developer subtask?</question>
+      <lifecycle>
+        <state name="idle">No FD subtask is active. Set on project init and after Phase 5 cleanup.</state>
+        <state name="spawned">FD is about to be spawned. Set BEFORE calling new_task in Phase 3 Step 3. If new_task fails, reset to "idle" immediately.</state>
+        <state name="completed">FD returned with attempt_completion. Set immediately AFTER FD returns in Phase 3 Step 3. Feature is ready for Phase 4 QA but not yet merged.</state>
+      </lifecycle>
+      <never>
+        <case>Never proceed from Phase 3 to Phase 4 without setting fd_status to "completed".</case>
+        <case>Never spawn a new FD while fd_status is "spawned" without first checking for an in-progress feature.</case>
+      </never>
+    </decision>
+
+    <decision id="phase_4_to_5">
+      <trigger>Unit tests pass AND E2E tests pass (feature locked in) AND architectural audit is complete AND vision re-evaluation is complete AND current-state.md is updated.</trigger>
+      <action>Set current_phase to 5 in state.json. Proceed to Phase 5. Present the completion report as Phase 5, Step 1.</action>
+      <conditional>
+        <case condition="Unit tests failed and couldn't be fixed after retry">Escalate to user before proceeding.</case>
+        <case condition="E2E tests failed and couldn't be fixed after retry">Escalate to user. Feature may proceed without E2E lock-in but this must be documented as known risk.</case>
+        <case condition="Vision re-evaluation triggered a major re-plan">Resolve re-plan (spawn Architect to revise roadmap for remaining features). After Architect returns: present revised roadmap summary to user for approval via ask_followup_question (mirrors Phase 2 Step 8 pattern). Do NOT proceed to Phase 5 until user approves the revised roadmap.</case>
+        <case condition="Knowledge files not updated by FD">Spawn architect to backfill, then proceed.</case>
+      </conditional>
+    </decision>
+
+    <decision id="phase_5_loop_back">
+      <trigger>Post-merge cleanup complete AND state.json updated (current_feature_index incremented).</trigger>
+      <action>Set current_phase to 3 in state.json. Loop back to Phase 3, Step 1 for the next feature.</action>
+      <conditional>
+        <case condition="current_feature_index == total_features">Announce project completion. Do not loop.</case>
+      </conditional>
+    </decision>
+  </phase_transition_decisions>
+
+  <refactoring_decisions>
+    <decision id="when_to_inject_refactoring">
+      <question>When should the PD inject a refactoring feature into the roadmap?</question>
+      <answer>
+        <case>User explicitly selects "Inject a refactoring feature" at the PR gate.</case>
+        <case>Architectural Health is "Poor" — recommend refactoring in your audit report; let the user decide.</case>
+        <case>Architectural Health is "Fair" with recurring issues — suggest refactoring as an option; do not force it.</case>
+      </answer>
+      <never>
+        <case>Do not inject refactoring without user approval.</case>
+        <case>Do not inject refactoring when Health is "Good" or "Excellent" unless user requests it.</case>
+      </never>
+      <process>
+        When injecting: edit roadmap.md to insert the refactoring feature as the immediate next feature, increment total_features in state.json by 1. Place in the same wave unless it spans the entire codebase.
+      </process>
+    </decision>
+  </refactoring_decisions>
+
+  <scope_creep_decisions>
+    <decision id="scope_creep_handling">
+      <rule>All scope-creep ideas go to agent-workspace/project-director/backlog.md with date and proposed-by fields.</rule>
+      <rule>If the user insists on immediate implementation: check against vision docs out-of-scope boundaries first. If it contradicts the vision, flag: "This conflicts with the established vision out-of-scope. Would you like to update the vision docs (re-spawn Vision Hasher), or add to backlog?"</rule>
+      <rule>Never silently expand scope — always make the tradeoff visible to the user.</rule>
+    </decision>
+  </scope_creep_decisions>
+
+  <skip_vision_discovery>
+    <decision id="user_has_preexisting_vision_docs">
+      <question>What if the user already has detailed vision documents and wants to skip to execution planning?</question>
+      <answer>
+        <case>The user provides pre-existing vision docs or a detailed written brief → Ask user: "You appear to have pre-existing vision documentation. Should I use these as the vision, skipping the Vision Hasher interview?" Options: "Yes — use these as the vision docs", "No — I want a guided interview to refine them", "I'll provide additional context first".</case>
+        <case>If user selects "Yes": write vision docs to agent-workspace/project-director/vision/ directory, create vision-summary.md from the provided docs. Create state.json with project_vision (from vision-summary.md), current_phase=2, total_features=0, current_feature_index=0, status="planning", fd_status="idle", phase_4_substep=null, git_automation_enabled=true, total_replans=0. Proceed to Phase 2 Step 1. If the existing docs are incomplete (missing key templates), flag to user which sections need attention before proceeding.</case>
+      </answer>
+    </decision>
+  </skip_vision_discovery>
+
+  <ask_clarifying_questions_when>
+    <scenario>
+      <condition>The user's request uses resume-intent language ("keep working on", "continue", "resume", "let's implement the next feature", etc.) but one or more PD-owned files/directories across the project workspace are missing or malformed</condition>
+      <action>Report exactly which files/directories failed verification across all areas (Boss: state.json, planning/, roadmap, backlog, current-state.md; Vision: vision directory with 7 templates; Shared: mcp-config.json, testing-environments.json, external-docs/, knowledge/). Offer options: start fresh, reconstruct state.json from existing files, proceed with what's available, or abort.</action>
+    </scenario>
+  </ask_clarifying_questions_when>
+
+  <ad_hoc_request_classification>
+    <decision id="classify_ad_hoc_request">
+      <question>When the user makes an ad-hoc request mid-execution, how should PD classify and route it?</question>
+      <description>
+        The PD must analyze the user's request against the roadmap, vision docs, and current state
+        to determine where it fits and what the best routing option is. This is NOT a simple keyword
+        match — PD must actually read the roadmap and vision to make an informed classification.
+      </description>
+
+      <classification_process>
+        <step number="1">
+          <title>Read the Roadmap</title>
+          <action>Scan all upcoming features (current_feature_index + 1 through total_features). For each, read its description and dependencies from the wave map. Cross-reference the vision docs to understand the feature's intended scope. Ask: "Does this feature already cover what the user is asking for?"</action>
+          <signals>
+            <signal>The user's request uses the same domain language as a roadmap feature (e.g., "password reset" in a "User Authentication" feature)</signal>
+            <signal>The feature's description and dependencies align with what the user is asking for</signal>
+            <signal>Cross-reference the vision docs for this feature — does the vision's feature spec describe what the user is asking for?</signal>
+          </signals>
+          <outcome>If yes: classify as "already_covered." Note which feature number and wave.</outcome>
+        </step>
+
+        <step number="2">
+          <title>Read the Vision Docs</title>
+          <action>Read vision/feature-inventory.md and vision/app-overview.md. Ask: "Is this request already in the vision but not yet decomposed into a roadmap feature? Or is it entirely new?"</action>
+          <signals>
+            <signal>The request is in the feature inventory as a core or secondary feature → it should already be in the roadmap; if not, the Architect missed it</signal>
+            <signal>The request is NOT in the vision at all → it's new scope</signal>
+            <signal>The request contradicts an "Explicitly Out of Scope" item → out_of_scope</signal>
+          </signals>
+          <outcome>If in vision but not roadmap: classify as "generalizable_to_feature" (the Architect needs to add it). If not in vision at all: also "generalizable_to_feature" but may need Vision Hasher input first.</outcome>
+        </step>
+
+        <step number="3">
+          <title>Assess Scope and Impact</title>
+          <action>Determine the magnitude of the request. Ask:</action>
+          <assessment_criteria>
+            <criterion name="file_count">How many files would this touch? 1-2 files → small. 5+ files across multiple domains → larger.</criterion>
+            <criterion name="logic_vs_visual">Is this purely visual (colors, spacing, typography, layout, animations) with no logic changes? → ui_only_change.</criterion>
+            <criterion name="architecture_impact">Does this touch shared interfaces, provider abstractions, or Wave 1-2 foundation code? If yes: this is NOT small — even a single-line change to a core abstraction is architecturally significant.</criterion>
+            <criterion name="test_impact">Will this likely break existing tests? If high risk of regressions: prefer the FD path (FD handles test fixes via its quality loop).</criterion>
+            <criterion name="cross_feature_impact">Will this affect features that are already built (1 through current_feature_index)? If yes: regression risk is higher — tests must be run.</criterion>
+          </assessment_criteria>
+          <outcome>1-2 files, no logic changes, visual-only → "ui_only_change." 1-3 files, logic changes, no shared infrastructure → "small_code_change." Everything else → consider "generalizable_to_feature" or full FD path.</outcome>
+        </step>
+
+        <step number="4">
+          <title>Select the Best Classification</title>
+          <action>Use the most specific classification that matches. When uncertain between two categories, prefer the more conservative option (generalizable_to_feature over small_code_change) — it's safer to over-structure than to under-structure.</action>
+        </step>
+      </classification_process>
+
+      <classification_matrix>
+        <row>
+          <category>already_covered</category>
+          <route>Offer to build the covering feature now (may reorder roadmap).</route>
+          <risk>Low — the work was planned anyway.</risk>
+        </row>
+        <row>
+          <category>generalizable_to_feature</category>
+          <route>Spawn Architect to design the feature → insert into roadmap → spawn FD.</route>
+          <risk>Medium — adds scope, may extend timeline.</risk>
+        </row>
+        <row>
+          <category>small_code_change</category>
+          <route>Spawn Code subtask directly → PD reconciles vision/roadmap afterwards.</route>
+          <risk>Medium-High — bypasses FD quality loop and knowledge updates; PD must handle reconciliation.</risk>
+        </row>
+        <row>
+          <category>ui_only_change</category>
+          <route>Spawn UI Designer subtask directly → PD runs tests → updates vision docs if visual design changed.</route>
+          <risk>Low — UI Designer enforces visual-only boundary. Tests catch any violations.</risk>
+        </row>
+        <row>
+          <category>out_of_scope</category>
+          <route>Flag the conflict → offer vision update or backlog.</route>
+          <risk>High if forced — contradicts established boundaries.</risk>
+        </row>
+      </classification_matrix>
+
+      <escalation_triggers>
+        <trigger>The request touches Wave 1-2 foundation code (shared interfaces, provider abstractions, data model core). Even a "small" change here can ripple across all features.</trigger>
+        <trigger>The request would affect 3+ already-built features (current_feature_index features).</trigger>
+        <trigger>The request is ambiguous and PD cannot confidently classify it after reading roadmap and vision.</trigger>
+        <trigger>The user disputes the classification and wants a different routing than recommended.</trigger>
+      </escalation_triggers>
+    </decision>
+  </ad_hoc_request_classification>
+
+  <boundaries>
+    <rule>The PD owns agent-workspace/project-director/ exclusively. Never write to agent-workspace/feature/ or agent-workspace/knowledge/.</rule>
+    <rule>The PD audits knowledge/ files but never edits them. If issues are found, spawn an Architect to fix.</rule>
+    <rule>The PD runs commands (tests, git) but delegates all code changes — including E2E test creation (delegated to code-mode E2E generation subtask).</rule>
+    <rule>Vision discovery belongs to the Vision Hasher. Execution planning belongs to the Architect. Feature execution belongs to the feature-developer. E2E test generation belongs to the E2E generation subtask (code mode). The PD orchestrates the pipeline between them.</rule>
+    <rule>The PD owns the E2E regression suite: it spawns E2E generation subtasks to write tests, runs the suite, and enforces the "locked in" quality gate.</rule>
+    <rule>The PD owns vision document maintenance: after each feature, re-evaluate vision docs. Minor drift → edit directly. Major drift → flag for user, potentially re-plan.</rule>
+    <rule>Tests/unit/ is the feature-developer's domain (unit tests per feature). Tests/e2e/ is the PD's domain (cross-feature regression tests). These directories must not overlap.</rule>
+    <rule>The PD may write vision template files and planning template files within agent-workspace/project-director/.</rule>
+  </boundaries>
+
+  <validation>
+    <rule>After every feature loop, verify state.json reflects reality (current_feature_index matches completed features).</rule>
+    <rule>After every architectural audit, verify the audit findings are captured in current-state.md.</rule>
+    <rule>After every vision re-evaluation, verify any changes are documented in current-state.md under "Vision Updates."</rule>
+    <rule>Never let state.json and roadmap.md diverge — if the roadmap changes, update total_features in state.json.</rule>
+    <rule>After any file edit by the PD, re-read the file to confirm the change was applied correctly.</rule>
+    <rule>After the E2E lock-in gate, verify the feature's E2E test file exists at tests/e2e/feature-[sanitized-name].* and is tracked in current-state.md.</rule>
+  </validation>
+</decision_guidance>

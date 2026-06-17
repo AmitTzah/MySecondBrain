@@ -1,0 +1,328 @@
+<error_handling>
+  <overview>
+    Error scenarios the Project Director may encounter and the prescribed recovery strategy for each. Always prefer consulting the user before making irreversible changes. The PD's north star for recovery is agent-workspace/project-director/state.json — protect it.
+  </overview>
+
+  <error_scenarios>
+    <scenario name="state_json_corruption_or_missing" priority="critical">
+      <trigger>agent-workspace/project-director/state.json is missing, unparseable, or has invalid values</trigger>
+      <recovery>
+        <step>Attempt to read agent-workspace/project-director/state.json. If the file is present but unparseable (malformed JSON), report the specific parse error to the user.</step>
+        <step priority="critical">Check if agent-workspace/project-director/roadmap.md exists.</step>
+        <decision_tree>
+          <branch condition="roadmap.md EXISTS">
+            <action>Reconstruct state.json from the roadmap and vision docs:</action>
+            <sub_action>1. Read agent-workspace/project-director/roadmap.md and count the total number of features.</sub_action>
+            <sub_action>1a. Check agent-workspace/feature/archive/ for state-*.json files. For each archived state file, extract feature_name, branch_name, plan_status, and completion evidence. Count archived features with plan_status="archived" as a more reliable current_feature_index estimate. If archive count differs from roadmap checkbox count, use the archive count and flag the discrepancy to the user.</sub_action>
+            <sub_action>2. If the roadmap has checkboxes, count how many are checked to estimate current_feature_index.</sub_action>
+            <sub_action>3. If roadmap has no checkboxes, set current_feature_index to 0.</sub_action>
+            <sub_action>4. Read agent-workspace/project-director/vision/vision-summary.md (if it exists) to extract the project_vision.</sub_action>
+            <sub_action>5. Check if vision docs exist in agent-workspace/project-director/vision/.</sub_action>
+            <sub_action>6. Determine current_phase: if vision docs incomplete → phase 1. If vision complete but no roadmap → phase 2. If roadmap with features but none built → phase 3. If mid-execution → phase 3.</sub_action>
+            <action priority="critical">Use ask_followup_question to confirm reconstructed state with user before proceeding.</action>
+          </branch>
+          <branch condition="roadmap.md does NOT exist">
+            <action>Without roadmap.md, full reconstruction is not possible. Check if vision docs exist in agent-workspace/project-director/vision/.</action>
+            <decision_tree>
+              <branch condition="vision docs EXIST (vision-summary.md found)">
+                <action>Inform the user: "state.json is missing and there is no roadmap to reconstruct from. However, vision docs exist — Phase 1 is complete. Would you like to resume from Phase 2 (execution planning) using the existing vision docs?"</action>
+                <action>Use ask_followup_question with options: "Resume from Phase 2 with existing vision docs", "Restart from Phase 1 (re-do vision discovery)", "I will manually specify the state".</action>
+                <action>If user selects Phase 2: reconstruct state.json with current_phase=2, total_features=0, status="planning". Proceed to Phase 2 Step 1.</action>
+              </branch>
+              <branch condition="no vision docs exist">
+                <action>Inform the user: "state.json is missing and there is no roadmap or vision docs to reconstruct from. The project state is lost. Restart from Phase 1."</action>
+                <action>Proceed to Phase 1, Step 1 as a fresh project.</action>
+              </branch>
+            </decision_tree>
+          </branch>
+        </decision_tree>
+      </recovery>
+    </scenario>
+
+    <scenario name="vision_hasher_returns_incomplete" priority="high">
+      <trigger>Vision Hasher returns with incomplete templates, missing sections, or no vision-summary.md</trigger>
+      <recovery>
+        <step>Read the Vision Hasher's completion summary to understand what was completed vs missing.</step>
+        <step>If fewer than 50% of template sections are complete: flag to user — "Vision Hasher was unable to make significant progress ([N]/[M] sections complete). Consider providing a more detailed vision brief or competitor references before retrying." Offer options: "Retry with more context", "Provide written vision brief instead", "Proceed with what we have".</step>
+        <step>If specific sections are marked "⚠️ INCOMPLETE": re-spawn Vision Hasher with instructions to complete only those sections.</step>
+        <step>If the user was unable to provide detail for certain areas: flag these in vision-summary.md as "⚠️ Deferred by user — Architect will need to propose approach."</step>
+        <step>Do NOT proceed to Phase 1 approval gate with incomplete templates unless the user explicitly accepts the gaps.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="vision_hasher_no_templates" priority="critical">
+      <trigger>Vision Hasher reports back: "No templates provided"</trigger>
+      <recovery>
+        <step>Check if agent-workspace/project-director/vision/ contains template files (at minimum: app-overview.md, personas.md, feature-inventory.md, edge-cases.md, and subdirectories features/, data/, screens/, flows/).</step>
+        <step>If templates are missing: the PD must write them. Use the vision_templates pattern from common patterns to write default templates directly to the vision/ directory.</step>
+        <step>Re-spawn Vision Hasher with the now-available template paths.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="architect_subtask_fails_during_phase_2" priority="high">
+      <trigger>Any Architect subtask in Phase 2 fails or returns without producing the expected output. This covers: technology sourcing (Step 2), planning/ directory creation (Step 3), wave map (Step 4), assembly (Step 5), and Critic review (Step 6).</trigger>
+      <recovery>
+        <step>Check the Architect's completion message for error details. Identify which substep failed from phase_2_substep in state.json.</step>
+        <step>If the Architect couldn't complete due to missing information in vision docs: flag specific vision gaps and ask user to clarify. Potentially re-spawn Vision Hasher for those sections, then re-spawn the Architect at the same substep.</step>
+        <step>If the Architect encountered a context limit (stopped mid-output): for Step 3 (planning/ directory), re-spawn with the remaining files. For Step 4 (wave map), the wave map is lightweight — re-spawn with adjusted instructions. For other steps, re-spawn with adjusted instructions (split the work if it was too large for one context).</step>
+        <step>If the Architect returned an empty or near-empty output: flag to user. Options: "Re-spawn Architect with more context", "I'll provide manual guidance", "Skip this substep (not recommended)".</step>
+        <step>Do NOT attempt to write the planning/ files, roadmap, or tech-sourcing.md yourself. Always re-spawn the Architect.</step>
+        <step>If the Architect fails 3 times at the same substep: escalate to user. Present the substep's goal, what the Architect has produced so far, and options: "I will manually provide this content", "Restart Phase 2 from scratch", "Proceed with what we have (risk note)".</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="critic_subtask_fails">
+      <trigger>The Critic subtask in Phase 2, Step 6 fails, returns "CHANGES REVERTED BY USER", or cannot complete the review</trigger>
+      <recovery>
+        <step>Read the Critic's completion summary to understand what happened.</step>
+        <decision_tree>
+          <branch condition="Critic returned CHANGES REVERTED BY USER">
+            <action>Use ask_followup_question: "The Critic's changes were reverted. How should I proceed?" Options: "Re-spawn Critic" (loop to Phase 2 Step 6), "Re-spawn Architect for rewrite" (returns to Step 3 — Architecture & Abstractions), "Proceed without Critic changes" (proceed to Step 7 — Generalization Audit).</action>
+          </branch>
+          <branch condition="Critic couldn't complete due to file access issues">
+            <action>Check if planning/ directory files and roadmap.md exist and are readable. If missing, first address the missing files (see architect_subtask_fails_during_phase_2), then re-spawn Critic.</action>
+          </branch>
+          <branch condition="Critic returned with errors but didn't follow the approve/revert protocol">
+            <action>If the Critic made changes but didn't use ask_followup_question: read the changes yourself. Use ask_followup_question: "The Critic made changes but didn't ask for approval. Review and decide: [summarize changes]." Options: "Approved, proceed", "Revert changes". If reverted: same as CHANGES REVERTED BY USER above.</action>
+          </branch>
+        </decision_tree>
+        <step>Do NOT skip the Critic review silently — if the Critic cannot function, flag to user: "The Critic review could not be completed. Would you like to proceed without it, or address the underlying issue?" Options: "Proceed without Critic review", "Fix the issue and re-spawn Critic".</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="generalization_audit_fails">
+      <trigger>Phase 2, Step 7: The Architect's roadmap contains over-specific features that name vendors directly</trigger>
+      <recovery>
+        <step>Identify each over-specific feature: "Feature [N]: Integrate [vendor]" should be "Build [abstraction] interface; implement [vendor] as first provider."</step>
+        <step>Re-spawn Architect with specific targets: "Revise Features [list] to use the generalization pattern. Each must define an abstraction interface before the concrete implementation."</step>
+        <step>If the Architect fails again: the PD constructs the revision prompt with explicit before/after examples and re-spawns once more.</step>
+        <step>If still failing after second attempt: escalate to user. Present the over-specific features with a documented risk note and let the user choose: "Accept with risk note", "I will provide manual guidance to the Architect", or "Restart execution planning from scratch".</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="feature_developer_subtask_fails">
+      <trigger>The feature-developer subtask returns with an error or incomplete feature</trigger>
+      <recovery>
+        <step>Read the feature-developer's completion summary to understand what went wrong.</step>
+        <step>If the feature-developer encountered a roadblock they couldn't resolve: review the specific issue.</step>
+        <step>Decision tree:
+          - If the issue is minor and can be resolved with more context: re-spawn the feature-developer with additional guidance.
+          - If the issue requires a roadmap change (e.g., feature is infeasible): bring to the user for a strategic decision.
+          - If the issue is that the feature-developer's subtasks failed: ask the user whether to retry, skip the feature, or revise the roadmap.
+        </step>
+        <step>Do NOT increment current_feature_index in state.json until the feature is successfully completed through Phase 4.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="unit_tests_fail">
+      <trigger>The unit/integration test suite fails after a feature integration in Phase 4, Step 1</trigger>
+      <recovery>
+        <step>Read the test output to understand which tests are failing.</step>
+        <step>Spawn a code subtask to fix the regressions. Include: the failing test output, the feature that was just completed, and an instruction to not modify feature code unless it directly causes test failures.</step>
+        <step>Wait for the code subtask to complete.</step>
+        <step>Re-run the test suite.</step>
+        <decision_tree>
+          <branch condition="Tests now pass">
+            <action>Proceed to Phase 4, Step 2 (Generate E2E Tests).</action>
+          </branch>
+          <branch condition="Tests still fail">
+            <action>Present the failure details to the user with options: "Retry the fix", "Skip unit tests (not recommended)", "I'll fix manually".</action>
+            <action>If user skips: note in current-state.md under "⚠️ Known Issues".</action>
+          </branch>
+        </decision_tree>
+      </recovery>
+    </scenario>
+
+    <scenario name="e2e_generation_subtask_fails">
+      <trigger>The E2E generation subtask fails to generate E2E tests in Phase 4, Step 2</trigger>
+      <recovery>
+        <step>Read the E2E generation subtask's completion summary for error details.</step>
+        <step>If the E2E generation subtask couldn't determine the project type: provide more context and re-spawn.</step>
+        <step>If the E2E generation subtask couldn't set up the E2E framework: ask the user whether to retry, skip E2E, or handle setup manually.</step>
+        <step>If the E2E generation subtask created a broken test: note in current-state.md. Feature can proceed without E2E lock-in.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="e2e_tests_fail">
+      <trigger>The E2E regression suite fails in Phase 4, Step 3</trigger>
+      <recovery>
+        <step>Determine: is it the NEW test that fails, or an EXISTING test?</step>
+        <decision_tree>
+          <branch condition="New E2E test fails">Re-spawn E2E generation subtask to fix the test. Do NOT modify application code.</branch>
+          <branch condition="Existing E2E test fails">Spawn code subtask: true regression — fix application code. Do NOT modify the E2E test.</branch>
+          <branch condition="Both fail">Fix application code first, then re-spawn E2E generation subtask if needed.</branch>
+        </decision_tree>
+        <step>Wait for fix, re-run suite.</step>
+        <decision_tree>
+          <branch condition="Now pass">Feature locked in. Proceed to Step 4.</branch>
+          <branch condition="Still fail">Escalate to user: "Retry", "Skip E2E lock-in", "I'll fix manually".</branch>
+        </decision_tree>
+      </recovery>
+    </scenario>
+
+    <scenario name="vision_reevaluation_detects_major_drift" priority="high">
+      <trigger>Phase 4, Step 5: Vision re-evaluation finds that the built feature fundamentally contradicts the vision, affecting remaining roadmap features</trigger>
+      <recovery>
+        <step>Document the specific divergence: what the vision said, what was built, which remaining features are affected.</step>
+        <step>Present to user with options: "Re-plan remaining features", "Accept divergence — update vision only", "I'll manually update".</step>
+        <decision_tree>
+          <branch condition="Re-plan">Spawn Architect with updated vision + list of completed features. Architect revises roadmap for remaining features only. Update total_features in state.json if count changed.</branch>
+          <branch condition="Accept divergence">PD edits vision docs to match reality. Document gap in current-state.md.</branch>
+          <branch condition="Manual edits">Wait for user. Re-read vision + roadmap after edits. Update state.json if needed.</branch>
+        </decision_tree>
+      </recovery>
+    </scenario>
+
+    <scenario name="replan_loop_detection" priority="high">
+      <trigger>
+        Two independent triggers (either one fires the detector):
+        (A) 3+ consecutive re-plans without any feature reaching Phase 4 completion. Tracked conceptually: each time a re-plan is triggered in Phase 4 Step 5, check whether a feature has completed Phase 4 since the last re-plan. If 3 re-plans occur with no intervening Phase 4 completion, the detector fires.
+        (B) total_replans in state.json reaches 5+. This is a lifetime counter — if 5 total re-plans have occurred regardless of completions between them, the detector fires as a safety catch-all.
+      </trigger>
+      <recovery>
+        <step>Stop the loop. Do NOT spawn another Architect for re-planning.</step>
+        <step>Read vision docs and roadmap to understand why features keep needing re-planning.</step>
+        <step>Present to user: "The execution plan for Features [N]-[M] has been revised [X] times without reaching completion. This suggests the vision may need fundamental revision, or the feature decomposition doesn't match the vision."</step>
+        <step>Options: "Restart from Phase 1 (re-vision with Vision Hasher)", "Accept current plan and proceed regardless", "I'll manually resolve the contradiction".</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="pr_creation_fails">
+      <trigger>git push or gh pr create fails in Phase 5, Step 3</trigger>
+      <recovery>
+        <step>Report the specific error to the user. Ask how to proceed: "Retry push", "I'll push manually", etc.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="branch_cleanup_fails">
+      <trigger>git checkout, git pull, or git branch -D fails in Phase 5, Step 4</trigger>
+      <recovery>
+        <step>Read the error message. Try alternative trunk names. If still failing, report to user.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="roadmap_file_corruption">
+      <trigger>roadmap.md is accidentally modified or corrupted</trigger>
+      <recovery>
+        <step>If git available: restore from git history.</step>
+        <step>If no git: inform user to use IDE local history, or re-spawn Architect to recreate from vision docs.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="knowledge_files_not_updated_by_fd">
+      <trigger>Phase 4 architectural audit: knowledge files appear not updated by feature-developer</trigger>
+      <recovery>
+        <step>Note in audit as "Incomplete Knowledge". Sanitize branch name. Spawn Architect to backfill from archived plan/reference.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="knowledge_files_do_not_exist">
+      <trigger>Phase 4 audit: knowledge files don't exist at all</trigger>
+      <recovery>
+        <step>Note as "Missing Knowledge Files". Check archive for plan/ref. If exists: spawn Architect to backfill. If not: spawn Architect to analyze codebase and create knowledge files from scratch.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="project_directory_missing">
+      <trigger>agent-workspace/project-director/ directory doesn't exist</trigger>
+      <recovery>
+        <step>Do NOT create the directory silently. Use ask_followup_question: "The agent-workspace/project-director/ directory is missing. Is this a fresh project, or was the directory accidentally deleted?" Options: "Fresh project — create the directory", "The directory was deleted — I need to restore it", "I will restore from backup/git and get back to you."</step>
+        <step>If user confirms fresh project: create directory, proceed to Phase 1 Step 1 as fresh.</step>
+        <step>If user says directory was deleted: wait for restoration. Do not proceed until the user confirms the directory is restored.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="critical_files_missing_during_resume" priority="high">
+      <trigger>state.json is valid but one or more critical files referenced by the current phase are missing on disk</trigger>
+      <diagnosis>The project directory may have been partially corrupted, files may have been accidentally deleted, or the repository was cloned without the agent-workspace/ directory.</diagnosis>
+      <recovery>
+        <step>Identify which files are missing by cross-referencing state.json with the expected files for the current phase:</step>
+        <decision_tree>
+          <branch condition="current_phase=2 or 3, roadmap.md is missing">
+            <action>Use ask_followup_question: "state.json references [total_features] features but roadmap.md is missing. How proceed?" Options: "Restore roadmap.md from git", "Re-spawn Architect to recreate from vision docs", "I will manually provide the roadmap."</action>
+          </branch>
+          <branch condition="vision/ directory or vision-summary.md is missing">
+            <action>Use ask_followup_question: "Vision documents referenced in state.json are missing from agent-workspace/project-director/vision/. How proceed?" Options: "Restore vision docs from git/backup", "Re-spawn Vision Hasher to redo discovery", "I will manually restore them."</action>
+          </branch>
+          <branch condition="current-state.md is missing">
+            <action>Recreate current-state.md from the template in Phase 1 Step 2 (fresh project path). The dashboard content will be repopulated during the next Phase 4 Step 6 update.</action>
+          </branch>
+          <branch condition="planning/ directory is missing but roadmap.md exists">
+            <action>Re-spawn Architect to recreate planning/ directory from roadmap.md and vision docs.</action>
+          </branch>
+        </decision_tree>
+        <step>Do NOT proceed with execution until critical files are restored or the user explicitly accepts the gaps.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="user_requests_out_of_scope_feature">
+      <trigger>User requests feature that contradicts vision out-of-scope boundaries</trigger>
+      <recovery>
+        <step>Flag the conflict with specific vision boundary reference. Options: "Add to backlog.md", "Update vision docs (re-spawn Vision Hasher)", "Proceed anyway — I accept the risk".</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="infinite_feature_loop_detection">
+      <trigger>Same feature executes repeatedly without progress (3+ FD spawns without reaching Phase 4 audit)</trigger>
+      <recovery>
+        <step>Stop the loop. Present situation to user. Options: "Revise or split this feature", "Skip this feature", "I'll provide manual guidance".</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="fd_completion_malformed" priority="high">
+      <trigger>Feature-developer returns but its completion summary is missing required fields (feature name, branch name, total steps, archive location, or per-file knowledge summary)</trigger>
+      <recovery>
+        <step>Read the FD's completion summary. Identify which required fields are missing or malformed.</step>
+        <step>Check agent-workspace/feature/archive/ for the archived state.json — it contains feature_name, branch_name, and total_steps.</step>
+        <step>Check agent-workspace/feature/archive/ for the archived plan to count total_steps.</step>
+        <step>If the FD archived successfully but the completion message was malformed: reconstruct the missing information from the archive and proceed normally.</step>
+        <step>If the FD did not archive (no archive files found): before setting fd_status="idle", attempt reconstruction. Read the FD's completion summary for feature_name, branch_name, total_steps, and per-file knowledge summary. Check the git log for recent commits on the reported branch. If the completion summary AND git log indicate completion: reconstruct missing archive information, note "Archives reconstructed from completion summary and git history" in current-state.md, and proceed to Phase 4 normally. If reconstruction is inconclusive (no git history, ambiguous completion): set fd_status="idle" and present to user: "FD returned but the completion summary was incomplete and no archive was found. The feature may not be complete." Options: "Re-spawn FD to verify/complete", "I'll manually verify feature status", "Skip this feature."</step>
+      </recovery>
+    </scenario>
+  </error_scenarios>
+
+  <scenario name="ad_hoc_code_subtask_fails" priority="high">
+      <trigger>Phase 3, Step 0: A Code subtask spawned for an ad-hoc change returns with errors or fails to complete</trigger>
+      <recovery>
+        <step>Read the Code subtask's completion summary. Identify the failure reason.</step>
+        <decision_tree>
+          <branch condition="Tests fail (pre-existing or caused by the change)">
+            <action>Re-spawn Code subtask with the test failure output and instruction to fix only failures caused by the ad-hoc change.</action>
+            <action>If still failing: escalate to user — "Retry with more context", "I'll fix manually", "Abandon this change and continue with next feature."</action>
+          </branch>
+          <branch condition="Code subtask reports 'ARCHITECTURAL IMPACT' in its completion summary (touched shared interfaces, provider abstractions, or Wave 1-2 foundation code)">
+            <action>The subtask succeeded but flagged architectural impact. This is distinct from test failure — the code works, but it touched shared infrastructure that other features depend on. Present to user: "This change had architectural impact — it touched [details from completion summary]. I recommend treating this as a proper feature via Feature Developer to ensure full regression testing and architectural audit coverage." Options: "Spawn FD for this as a feature", "Continue with Code subtask result despite architectural impact (PD will reconcile vision/roadmap)", "Revert the change and abandon." If user chooses FD path: reclassify as generalizable_to_feature — spawn Architect to design the feature, insert into roadmap, then spawn FD.</action>
+          </branch>
+          <branch condition="The change is larger than expected (touches shared infrastructure, many files — but no explicit ARCHITECTURAL IMPACT flag)">
+            <action>Reclassify: this is NOT a small change. Recommend to user: "This change is more involved than anticipated — it touches [N] files including shared infrastructure. I recommend treating this as a proper feature via Feature Developer." Options: "Spawn FD for this as a feature", "Continue with Code subtask despite the scope", "Abandon."</action>
+          </branch>
+          <branch condition="Code subtask cannot complete (ambiguous request, missing context)">
+            <action>Re-spawn with more specific instructions. If still failing: escalate to user.</action>
+          </branch>
+        </decision_tree>
+      </recovery>
+    </scenario>
+
+    <scenario name="ad_hoc_change_causes_regression" priority="high">
+      <trigger>After an ad-hoc Code or UI Designer subtask completes, unit tests fail with pre-existing tests</trigger>
+      <recovery>
+        <step>Spawn a Code subtask to fix the regressions (use test_fix_prompt_pattern). Include the ad-hoc change context.</step>
+        <step>If the fix cannot be done without reverting the ad-hoc change: escalate to user. Options: "Revert the ad-hoc change", "Keep the change and accept test breakage (document as known issue)", "I'll fix manually."</step>
+      </recovery>
+    </scenario>
+
+  <general_recovery_principles>
+    <principle>Never proceed past a failed gate without user confirmation.</principle>
+    <principle>agent-workspace/project-director/state.json is the single source of truth for project state. Protect it.</principle>
+    <principle>The roadmap (agent-workspace/project-director/roadmap.md) is the fallback reconstruction source if state.json is lost.</principle>
+    <principle>When in doubt about architectural decisions, present the tradeoffs and let the user decide.</principle>
+    <principle>Failed subtasks should be retried with additional context, not blindly repeated.</principle>
+    <principle>Never skip the architectural audit — it is the PD's primary value-add after each feature.</principle>
+    <principle>Vision docs are living documents. After each feature, re-evaluate. Minor drift → edit directly. Major drift → flag for user.</principle>
+    <principle>If a feature is fundamentally broken, a roadmap revision (via Architect) is better than repeated failed attempts.</principle>
+    <principle>If the same features are re-planned 3+ times, restart from vision discovery — the vision itself may be the problem.</principle>
+    <principle>Scope creep goes to backlog.md — keep the main roadmap clean and achievable.</principle>
+    <principle>E2E lock-in is a quality gate, not a blocker. If E2E tests cannot pass after reasonable attempts, escalate to the user.</principle>
+    <principle>The E2E generation subtask selects the E2E framework — the PD never prescribes one.</principle>
+  </general_recovery_principles>
+</error_handling>

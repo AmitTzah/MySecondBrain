@@ -1,0 +1,204 @@
+<common_patterns>
+  <overview>
+    Reusable patterns for synthetic-human-tester workflows. These patterns are referenced
+    by the main workflow and provide concrete implementation guidance.
+  </overview>
+
+  <pattern name="capability_detection">
+    <description>How to detect available MCP servers for each environment type.</description>
+    <approach>
+      Scan the available MCP tools for name prefixes. Do not hardcode specific server names —
+      any MCP server that provides tools matching the expected patterns can be used.
+    </approach>
+    <detection_table>
+      <row environment="web" pattern="browser_*">
+        <examples>Playwright MCP: browser_navigate, browser_click, browser_snapshot, browser_type, browser_take_screenshot</examples>
+        <matches>Any MCP with browser_navigate or browser_snapshot</matches>
+      </row>
+      <row environment="cli" pattern="terminal_* or command group">
+        <examples>Terminal MCP: terminal_spawn, terminal_send, terminal_read. Command group: always available.</examples>
+        <matches>Prefer Terminal MCP if terminal_spawn exists; fall back to command group</matches>
+      </row>
+      <row environment="native" pattern="appium_* or accessibility_*">
+        <examples>Appium MCP: appium_find_element, appium_click, appium_type, appium_get_page_source</examples>
+        <matches>Any MCP with appium_find_element or appium_get_page_source</matches>
+      </row>
+      <row environment="desktop" pattern="exact tool names: Snapshot, Click, Type, Screenshot">
+        <examples>Windows-MCP: Snapshot, Click, Type, Screenshot, Scroll, Move, Shortcut, Wait, WaitFor, Launch</examples>
+        <matches>Any MCP with Snapshot AND Click (exact names, no prefix). Type is strongly recommended for text input. Screenshot is separately checked for visual capture — both are optional enhancements.</matches>
+      </row>
+    </detection_table>
+  </pattern>
+
+  <pattern name="web_test_execution">
+    <description>Complete flow for executing a single web test step.</description>
+    <flow>
+      <step number="1">
+        <title>Navigate to Starting State</title>
+        <action>If the "given" clause implies a specific page: use browser_navigate to go to the URL. If "given" implies authenticated state and we haven't logged in yet: perform login flow first.</action>
+      </step>
+      <step number="2">
+        <title>Pre-Action Snapshot</title>
+        <action>Call browser_snapshot to get the current accessibility tree. Verify the target element from the "when" clause exists and is actionable.</action>
+      </step>
+      <step number="3">
+        <title>Perform Action</title>
+        <action>
+          Based on the "when" clause:
+          - Click: browser_click with the element's role + accessible name
+          - Type: browser_type with the target field and text
+          - Navigate: browser_navigate to the specified URL
+          - Select: browser_select_option for dropdown selections
+        </action>
+      </step>
+      <step number="4">
+        <title>Wait for Update</title>
+        <action>Allow time for navigation, animation, or async data loading. If the page hasn't updated after the timeout, take a snapshot to see what state we're in.</action>
+      </step>
+      <step number="5">
+        <title>Post-Action Snapshot</title>
+        <action>Call browser_snapshot to get the updated accessibility tree.</action>
+      </step>
+      <step number="6">
+        <title>Verify Assertion</title>
+        <action>
+          Compare the post-action snapshot against the "then" clause:
+          - "I should see [text]": search for the text in the snapshot
+          - "I should see [element]": search for the element by role + name
+          - "the [element] should be [state]": verify the element's state (enabled, disabled, checked)
+          - "I should be on [page]": verify the current URL or a heading matches
+        </action>
+      </step>
+    </flow>
+  </pattern>
+
+  <pattern name="cli_test_execution">
+    <description>Complete flow for executing a single CLI test step.</description>
+    <flow>
+      <step number="1">
+        <title>Execute Command</title>
+        <action>Parse the "when" clause to extract the command. Execute it with appropriate working directory and environment.</action>
+      </step>
+      <step number="2">
+        <title>Capture Results</title>
+        <action>Record exit code, stdout, and stderr separately.</action>
+      </step>
+      <step number="3">
+        <title>Verify Assertion</title>
+        <action>
+          Compare results against the "then" clause:
+          - "exit code is [N]": verify exit code matches
+          - "output contains [text]": search stdout+stderr for the text
+          - "output does not contain [text]": verify text is absent
+          - "output matches [pattern]": verify stdout matches the described pattern
+        </action>
+      </step>
+    </flow>
+    <interactive_variant>
+      <description>For interactive CLI programs (prompts, TUI). Requires Terminal MCP.</description>
+      <step>terminal_spawn to start the program in a PTY</step>
+      <step>terminal_read to capture the prompt</step>
+      <step>terminal_send to respond to the prompt</step>
+      <step>terminal_read to capture the result</step>
+      <step>Verify exit or output state</step>
+    </interactive_variant>
+  </pattern>
+
+  <pattern name="desktop_test_execution">
+    <description>Complete flow for executing a single desktop test step via Windows-MCP or equivalent.</description>
+    <flow>
+      <step number="1">
+        <title>Launch Application</title>
+        <action>Launch the app using the executable_path from environment config. If launch_args are provided, include them. Wait for the window to appear.</action>
+      </step>
+      <step number="2">
+        <title>Pre-Action Snapshot</title>
+        <action>Call Snapshot to get the current accessibility tree of the desktop window. Verify the target element from the "when" clause exists and is actionable.</action>
+      </step>
+      <step number="3">
+        <title>Perform Action</title>
+        <action>
+          Based on the "when" clause:
+          - Click: Click on the element by role + accessible name
+          - Type: Type text into the target field
+          - Select: Select an item from a dropdown or list
+        </action>
+      </step>
+      <step number="4">
+        <title>Wait for Update</title>
+        <action>Allow time for window transitions, dialog appearance, or UI updates. Desktop apps may animate or load content asynchronously.</action>
+      </step>
+      <step number="5">
+        <title>Post-Action Snapshot</title>
+        <action>Call Snapshot to get the updated accessibility tree.</action>
+      </step>
+      <step number="6">
+        <title>Verify Assertion</title>
+        <action>
+          Compare the post-action Snapshot against the "then" clause using the same assertion
+          interpretation as web testing (text_presence, element_state, etc.).
+        </action>
+      </step>
+    </flow>
+  </pattern>
+
+  <pattern name="visual_snapshot_capture">
+    <description>Best-effort visual baseline capture before functional testing. Supplementary only — never used for pass/fail decisions.</description>
+    <flow>
+      <step number="1">
+        <title>Check Screenshot Tool Availability</title>
+        <action>Web: check if browser_take_screenshot exists in the detected browser_* tools. Desktop: check if Screenshot exists in the detected desktop tools.</action>
+      </step>
+      <step number="2">
+        <title>Capture Visual Baseline</title>
+        <action>Web (after auth): call browser_take_screenshot. Desktop (after app launch): call Screenshot. Capture the initial state before any test actions.</action>
+      </step>
+      <step number="3">
+        <title>Visual Sanity Check</title>
+        <action>If your model can process images: inspect the screenshot for OBVIOUS visual issues only — overlapping elements, text cut off at boundaries, content overflowing viewport, blank/unstyled pages, zero-dimension elements. Do NOT assess subjective design quality.</action>
+      </step>
+      <step number="4">
+        <title>Classify Visual Quality</title>
+        <action>Assign one of: 🟢 no obvious issues, 🟡 minor issues noted (describe), 🔴 obvious breakage (describe specifically).</action>
+      </step>
+    </flow>
+  </pattern>
+
+  <pattern name="report_compilation">
+    <description>How to compile the final structured report for the completion summary.</description>
+    <template>
+STATUS: [all_passed|partial_passed|mcp_unavailable|tests_failed]
+
+VISUAL: [🟢 No obvious issues / 🟡 Minor issues: ... / 🔴 Obvious breakage: ...]
+  [Omitted if no screenshot tool was available]
+
+WEB:    [N]/[M] passed [✅/❌/⏭️]
+  [If failed: step description, expected, actual, snapshot excerpt]
+CLI:    [N]/[M] passed [✅/❌/⏭️]
+  [If failed: step description, expected, actual, command output excerpt]
+NATIVE: [N]/[M] passed [✅/❌/⏭️]
+  [If failed: step description, expected, actual, accessibility tree excerpt]
+DESKTOP: [N]/[M] passed [✅/❌/⏭️]
+  [If failed: step description, expected, actual, Snapshot excerpt]
+
+SUMMARY: [N] passed, [F] failed, [S] skipped
+    </template>
+  </pattern>
+
+  <pattern name="element_matching">
+    <description>Strategy for finding UI elements in accessibility snapshots.</description>
+    <priority_order>
+      <level>1. Exact accessible name match (case-sensitive): button "Submit"</level>
+      <level>2. Case-insensitive accessible name match: button "submit" matches "Submit"</level>
+      <level>3. Accessible name contains target text: button "Submit Form" contains "Submit"</level>
+      <level>4. Role match with nearby text: a button near the text "Submit"</level>
+      <level>5. Role match only (last resort, ambiguous): first enabled button</level>
+    </priority_order>
+    <disambiguation>
+      If multiple elements match at the same priority level, prefer:
+      1. The element that is visible and enabled
+      2. The element that appears first in reading order
+      3. If still ambiguous: report the ambiguity and list all matches
+    </disambiguation>
+  </pattern>
+</common_patterns>

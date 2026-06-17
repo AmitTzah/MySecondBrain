@@ -1,0 +1,157 @@
+<error_handling>
+  <overview>
+    Error scenarios the Feature Developer may encounter and the prescribed recovery strategy
+    for each. Always prefer consulting the user before making irreversible changes.
+  </overview>
+
+  <error_scenarios>
+    <scenario name="git_branch_creation_fails">
+      <trigger>git checkout -b fails (e.g., branch already exists, not in a git repo)</trigger>
+      <recovery>
+        <step>Read the error message from the command output.</step>
+        <step>If the error indicates the branch already exists: ask the user whether to use the existing branch or choose a different name.</step>
+        <step>If the error indicates "not a git repository": Use the `ask_followup_question` tool. Question: "This directory is not a Git repository. Shall I initialize Git, generate a `.gitignore` based on your intended tech stack, and make an initial commit so we can create your branch?" Provide exactly 2 Suggested Responses: "Yes, initialize Git" and "No, skip Git Automation".</step>
+        <step>If user clicks "Yes, initialize Git":
+          1. Infer the tech stack from the user's initial request.
+          2. Use `write_to_file` to create a standard `.gitignore`.
+          3. Initialize a new git repository, stage all existing files, and create an initial commit with a descriptive message (e.g., "chore: initial project commit").
+          4. Create the feature branch and proceed with Phase 1.
+        </step>
+        <step>If user clicks "No, skip Git Automation": Note that Git Automation is Disabled. Return to Phase 1, Step 1 to create `agent-workspace/feature/state.json` (with `"branch_name": null` and `"git_automation_enabled": false`), then proceed to Phase 1, Step 2.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="architect_subtask_fails">
+      <trigger>The Architect subtask returns without filling out the pre-initialized agent-workspace/feature/plan.md and agent-workspace/feature/reference.md templates</trigger>
+      <recovery>
+        <step>Check the Architect's completion message for error details.</step>
+        <step>Ask the user: "The Architect was unable to fill out the plan and reference templates. Should I retry with adjusted instructions, or would you like to provide more context?"</step>
+        <step>If retrying, include the Architect's error feedback in the new prompt.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="critic_subtask_fails">
+      <trigger>The Critic subtask in Phase 2 fails or returns without fixing the files</trigger>
+      <recovery>
+        <step>Check the Critic's completion message for error details.</step>
+        <step>If the Critic found issues but was blocked by user approval: re-spawn with adjusted instructions.</step>
+        <step>If the Critic could not complete: present the state to the user and ask whether to re-spawn the Critic or proceed with the files as-is.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="subtask_reports_failure">
+      <trigger>A code subtask reports that it could not complete the step</trigger>
+      <recovery>
+        <step>Read the subtask's explanation of the failure.</step>
+        <step>If the failure is due to a code issue: ask the user how to proceed (retry, skip, revise plan).</step>
+        <step>If the failure reveals a plan flaw: spawn Architect to revise remaining steps.</step>
+        <step>Do not mark the step as complete until the issue is resolved.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="live_smoke_test_fails">
+      <trigger>The user reports that the Live Smoke Test did not pass</trigger>
+      <recovery>
+        <step>Ask the user to describe what went wrong.</step>
+        <step>Re-spawn the same subtask with the user's feedback included.</step>
+        <step>Instruct the subtask to fix the issue before re-requesting the Live Smoke Test.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="plan_file_becomes_corrupted">
+      <trigger>agent-workspace/feature/plan.md is accidentally modified or corrupted</trigger>
+      <recovery>
+        <step>Read `"git_automation_enabled"` from `agent-workspace/feature/state.json`.</step>
+        <step>If Enabled: restore from git history using `git log` and `git checkout` to recover the file.</step>
+        <step>If Disabled: inform the user they must rely on their IDE's local file history (e.g., VS Code Timeline) to recover the file, or restart the phase.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="state_json_corruption_or_missing" priority="critical">
+      <trigger>`agent-workspace/feature/state.json` is missing, unparseable, or has invalid values</trigger>
+      <recovery>
+        <step>Attempt to read `agent-workspace/feature/state.json`. If the file is present but unparseable (malformed JSON), report the specific parse error to the user.</step>
+        <step priority="critical">Check if `agent-workspace/feature/plan.md` exists.</step>
+        <decision_tree>
+          <branch condition="plan.md EXISTS">
+            <action>Reconstruct state.json from the markdown plan to the best of your ability:</action>
+            <sub_action>1. Read `agent-workspace/feature/plan.md` and extract the feature name from the title (line 1: "# Feature Implementation Plan: [Feature Name]").</sub_action>
+            <sub_action>2. Count the number of steps in Section 5 to determine `"total_steps"`.</sub_action>
+            <sub_action>3. Count how many steps are checked `[x]` in Section 5 to estimate `"current_step"`.</sub_action>
+            <sub_action>4. If Section 5 has unchecked steps and some checked steps, infer `"plan_status"` as `"validated"` and `"current_phase"` as `3` (mid-execution).</sub_action>
+            <sub_action>5. If all steps are checked `[x]`, infer `"plan_status"` as `"validated"` and `"current_phase"` as `5` (execution complete).</sub_action>
+            <sub_action>6. If no steps are checked, infer `"plan_status"` as `"draft"` and `"current_phase"` as `1`. CRITICAL: If you infer Phase 1, you MUST forcefully set `"total_steps"` to `0` regardless of how many steps you counted in sub-action 2. This ensures the Smart Resume logic safely respawns the Architect to finish (or verify) the draft rather than incorrectly routing an incomplete plan to the Critic in Phase 2.</sub_action>
+            <sub_action>7. For `"git_automation_enabled"` and `"branch_name"`, you MUST ask the user: "I reconstructed state.json from agent-workspace/feature/plan.md. I detected [N] total steps, [M] completed. Is this correct? Also, was Git automation enabled for this feature, and what was the branch name (if any)?"</sub_action>
+            <sub_action number="8">Check plan.md Section 5 for a MIX of [x] checked and [ ] unchecked steps. If some steps are checked AND some unchecked AND total_steps > 0 was inferred from the count: this may indicate a mid-pivot state. Set pivot_in_progress=true tentatively. When presenting reconstructed state to user, specifically ask: "I detected [M] completed steps and [N] pending steps. Was the plan being re-drafted (pivot) when state was lost?"</sub_action>
+            <action>Additional recovery for fields not inferable from plan.md:
+              - smoke_test_automation: if agent-workspace/testing-environments.json exists, read and use its config. Otherwise default to { enabled: false, environments: { web: null, cli: null, native: null, desktop: null }, missing_prerequisites: [] }.
+              - phase_5_substep: if all steps are checked [x], check agent-workspace/knowledge/ files for recent updates matching this feature. If knowledge files appear updated: set phase_5_substep="knowledge_updated". If plan.md is already archived (in archive/): set phase_5_substep="state_finalized". If all steps are checked but knowledge files show NO recent updates AND plan.md is NOT archived: the feature completed execution but Phase 5 may not have started. Set phase_5_substep=null — Phase 5 Step 1 will handle the knowledge update normally.
+              - git_automation_enabled and branch_name: ask the user (as in sub-action 7).
+            </action>
+            <action priority="critical">You MUST use the `ask_followup_question` tool to confirm the reconstructed state with the user before proceeding. Provide Suggested Responses like: "Yes, resume from current state", "No, let me specify the correct state", and "Restart the feature from scratch".</action>
+            <action>Once the user confirms, use `write_to_file` to create the corrected `agent-workspace/feature/state.json`, then resume the workflow based on the reconstructed `"current_phase"`.</action>
+          </branch>
+          <branch condition="plan.md does NOT exist">
+            <action>Without agent-workspace/feature/plan.md, reconstruction is not possible.</action>
+            <action>Inform the user: "state.json is missing and there is no feature plan to reconstruct from. The feature state is lost. You will need to restart the feature from Phase 1."</action>
+            <action>Proceed to Phase 1, Step 1 as a fresh feature.</action>
+          </branch>
+        </decision_tree>
+      </recovery>
+    </scenario>
+
+    <scenario name="archive_directory_missing">
+      <trigger>agent-workspace/feature/archive/ does not exist during Phase 5</trigger>
+      <recovery>
+        <step>Create the directory using OS-appropriate commands (e.g., `New-Item -ItemType Directory -Force agent-workspace/feature/archive` or `mkdir agent-workspace\feature\archive` on Windows, `mkdir -p agent-workspace/feature/archive` on Mac/Linux).</step>
+        <step>Proceed with archiving the plan.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="knowledge_base_update_fails">
+      <trigger>The Architect subtask for updating the partitioned knowledge base (agent-workspace/knowledge/) fails or returns incomplete</trigger>
+      <recovery>
+        <step>Review the Architect's output.</step>
+        <step>If partially complete: proceed with archiving but note the incomplete update to the user.</step>
+        <step>If completely failed: ask the user whether to retry or skip the knowledge base update.</step>
+        <step>Never block Phase 5 completion on a failed knowledge base update.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="critic_architect_validation_loop">
+      <trigger>The Critic and Architect are stuck in a validation/revision loop during Phase 2 (the Critic repeatedly finds issues, the Architect revises, and the loop continues without resolution)</trigger>
+      <recovery>
+        <step>Detect the loop: if you have spawned the Architect → Critic → Architect cycle 3 or more times for the same feature plan without reaching a validated state, you are in a validation loop.</step>
+        <step>Stop the loop. Do NOT spawn another Critic or Architect subtask.</step>
+        <step>Read the current state of both `agent-workspace/feature/plan.md` and `agent-workspace/feature/reference.md` to understand the unresolved issues.</step>
+        <step priority="critical">Use the `ask_followup_question` tool to present the situation to the user. Include in your message: (a) a summary of the issues the Critic keeps flagging, (b) the current state of the plan, and (c) the options below.</step>
+        <step>Provide exactly 3 Suggested Responses:
+          1. "Accept plan as-is and proceed to execution"
+          2. "I will provide manual guidance to break the deadlock"
+          3. "Restart the feature planning from scratch"
+        </step>
+        <step>Wait for the user's reply before proceeding.</step>
+        <decision_tree>
+          <branch condition="User chooses 'Accept plan as-is'">
+            <action>Proceed directly to Phase 2 Step 3: update state.json (plan_status: "validated", current_phase: 3) and continue to Phase 3 execution.</action>
+          </branch>
+          <branch condition="User chooses 'I will provide manual guidance'">
+            <action>Wait for the user to provide specific instructions, then spawn an Architect subtask with those instructions to revise the plan. After the Architect completes, re-spawn the Critic for one final review pass.</action>
+          </branch>
+          <branch condition="User chooses 'Restart the feature planning from scratch'">
+            <action>Delete `agent-workspace/feature/plan.md` and `agent-workspace/feature/reference.md`. Update state.json: set "plan_status" to "draft", "total_steps" to 0. Route back to Phase 1 Step 3 to spawn a fresh Architect.</action>
+          </branch>
+        </decision_tree>
+      </recovery>
+    </scenario>
+  </error_scenarios>
+
+  <general_recovery_principles>
+    <principle>Never proceed past a failed step without user confirmation.</principle>
+    <principle>agent-workspace/feature/state.json is the single source of truth for orchestrator state. Protect it.</principle>
+    <principle>The markdown plan (agent-workspace/feature/plan.md) is the fallback reconstruction source if state.json is lost.</principle>
+    <principle>When in doubt, spawn an Architect to reassess rather than guessing.</principle>
+    <principle>Failed subtasks should be retried with additional context, not blindly repeated.</principle>
+    <principle>If the validation and critic cycle gets completely stuck, present the state to the user and ask for manual intervention.</principle>
+  </general_recovery_principles>
+</error_handling>

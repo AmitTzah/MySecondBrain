@@ -1,0 +1,315 @@
+<complete_examples>
+  <overview>
+    Canonical examples of the Feature Developer workflow in action, demonstrating
+    the complete lifecycle from feature request to Pull Request readiness. All state
+    tracking uses `agent-workspace/feature/state.json` — markdown files are strictly for
+    human readability and subtask execution context.
+  </overview>
+
+  <example name="adding_user_authentication">
+    <scenario>
+      A developer wants to add user authentication (login, registration, JWT sessions)
+      to an existing Express.js + React application. The project already has
+      a populated agent-workspace/knowledge/ directory.
+    </scenario>
+
+    <user_request>
+      "I want to build a user authentication feature with login, registration, and JWT-based sessions."
+    </user_request>
+
+    <workflow>
+      <step number="0">
+        <description>Phase 0: Knowledge Base Check</description>
+        <approach>
+          Check if agent-workspace/knowledge/ directory exists with all 4 core files.
+          It does — architecture.md, database.md, api-routes.md, and frontend-ui.md are present.
+          Proceed to Phase 1.
+        </approach>
+        <expected_outcome>Proceed directly to Phase 1.</expected_outcome>
+      </step>
+
+      <step number="1">
+        <description>Phase 1: Initialization — Smart Resume & Branch Creation</description>
+        <approach>
+          Check for agent-workspace/feature/state.json. None exists — fresh feature.
+          Feature Developer uses ask_followup_question with Suggested Responses. User clicks "feature/user-auth".
+          Run: git checkout -b feature/user-auth. Success.
+          Feature Developer immediately creates agent-workspace/feature/state.json:
+          {
+            "feature_name": "User Authentication",
+            "branch_name": "feature/user-auth",
+            "git_automation_enabled": true,
+            "smoke_test_automation": {
+              "enabled": false,
+              "environments": { "web": null, "cli": null, "native": null, "desktop": null },
+              "missing_prerequisites": []
+            },
+            "current_phase": 1,
+            "plan_status": "draft",
+            "total_steps": 0,
+            "current_step": 0,
+            "pivot_in_progress": false,
+            "phase_5_substep": null
+          }
+          Feature Developer initializes TWO empty template files on disk using write_to_file:
+          agent-workspace/feature/plan.md (populated with the 6-section Plan template) and
+          agent-workspace/feature/reference.md (populated with the Reference template).
+          Spawn Architect subtask with both templates and the Tiered Documentation Retrieval Protocol.
+          Architect discusses feature with user, researches dependencies (e.g., bcrypt, JWT libraries),
+          saves docs to agent-workspace/external-docs/, fills out both template files with the 6-section template,
+          then stops for user approval. User approves.
+          Feature Developer reads agent-workspace/feature/plan.md, counts 5 steps in Section 5
+          (counting EVERY heading that starts with `### [ ] Step`), updates state.json:
+          "total_steps": 5.
+        </approach>
+        <expected_outcome>Branch created. state.json initialized with current_phase: 1, total_steps: 5.
+          agent-workspace/feature/plan.md has 5 steps: Step 1: User model and DB schema,
+          Step 2: Registration endpoint, Step 3: Login endpoint, Step 4: JWT middleware,
+          Step 5: React login/register forms.
+          agent-workspace/feature/reference.md populated with bcrypt and JWT snippets per step.
+          agent-workspace/external-docs/bcrypt.md and external-docs/jsonwebtoken.md saved.</expected_outcome>
+      </step>
+
+      <step number="2">
+        <description>Phase 2: Syntax Validation & Critic Review</description>
+        <approach>
+          Feature Developer reads both files. Syntax check passes (all 6 plan sections present,
+          every step has a Live Smoke Test, H3 headings match).
+          Spawns Critic subtask (architect mode) with the "strict Principal Engineer" prompt.
+          Critic reviews for invisible steps, actionable smoke tests, code-snippet alignment,
+          and architectural flaws. Critic makes minor polish edits, then stops for user approval.
+          User approves. Feature Developer updates agent-workspace/feature/state.json:
+          "plan_status": "validated", "current_phase": 3.
+          Reads git_automation_enabled from state.json (true). Runs:
+          git add agent-workspace/ && git commit -m "docs: finalize validated plan, reference, and external docs"
+        </approach>
+        <expected_outcome>state.json now has plan_status: "validated", current_phase: 3.
+          Both files committed. Proceed to Phase 3.</expected_outcome>
+      </step>
+
+      <step number="3">
+        <description>Phase 3 & 4: Execution Loop (Step 1)</description>
+        <approach>
+          Feature Developer reads state.json: current_step is 0, so starts with Step 1.
+          Reads "Step 1: User Model and DB Schema" from agent-workspace/feature/plan.md Section 5.
+          Standard task → spawn code mode.
+          Reads git_automation_enabled from state.json (true) → uses Instruction 4 variant with git commands.
+          Prompt includes: project context, feature context, step details, the reference_materials
+          instruction (to read agent-workspace/feature/reference.md for bcrypt snippets), and critical instructions.
+          Subtask completes: creates user model, migration, tests pass, live smoke test confirmed
+          (user runs SQL query to verify table), git commit made.
+          Subtask reports: "Created User model with fields: id, email, password_hash, created_at.
+          Database table: users. Password hashing uses bcrypt."
+        </approach>
+        <expected_outcome>
+          Feature Developer marks Step 1 [x] in markdown (human readability).
+          Updates Shared Technical Context (Section 6) in agent-workspace/feature/plan.md with:
+          "- User model: id, email, password_hash (bcrypt), created_at. Table: users."
+          Increments current_step in state.json to 1.
+          Commits plan+state changes: git add && git commit -m "docs: update feature implementation plan state"
+          current_step (1) &lt; total_steps (5), so loops back to Phase 3 for Step 2.
+        </expected_outcome>
+      </step>
+
+      <step number="4">
+        <description>Phase 3 & 4: Execution Loop (Steps 2-5)</description>
+        <approach>
+          Continue the loop for Steps 2-5. Each step:
+          - Read current_step from state.json, locate the corresponding step in the markdown plan
+          - Read git_automation_enabled from state.json to select Instruction 4 variant
+          - Spawn appropriate mode (code for all, as each is well-defined)
+          - Include accumulated Shared Technical Context from Section 6
+          - Include the reference_materials instruction to read agent-workspace/feature/reference.md
+          - After completion: extract new context, append to Section 6 of agent-workspace/feature/plan.md,
+            mark step [x] in markdown, increment current_step in state.json
+        </approach>
+        <expected_outcome>
+          After all 5 steps: current_step is 5, total_steps is 5.
+          Since current_step == total_steps, the Feature Developer proceeds to Phase 5.
+          Shared Technical Context now includes:
+          - POST /api/auth/register body: { email, password } -> { token, user }
+          - POST /api/auth/login body: { email, password } -> { token, user }
+          - JWT middleware: Authorization: Bearer <token>
+          - AuthContext (React): { user, token, login(), register(), logout() }
+        </expected_outcome>
+      </step>
+
+      <step number="5">
+        <description>Phase 5: Feature Completion</description>
+        <approach>
+          Spawns Architect to update the partitioned knowledge base:
+          - User model schema → agent-workspace/knowledge/database.md
+          - Auth API endpoints → agent-workspace/knowledge/api-routes.md
+          - JWT auth pattern → agent-workspace/knowledge/architecture.md
+          - AuthContext + login/register forms → agent-workspace/knowledge/frontend-ui.md
+          Finalizes state.json in-place: current_phase = 5, plan_status = "archived".
+          Archives plan as agent-workspace/feature/archive/plan-feature-user-auth.md.
+          Archives reference as agent-workspace/feature/archive/ref-feature-user-auth.md.
+          Archives state.json as agent-workspace/feature/archive/state-feature-user-auth.json.
+          agent-workspace/external-docs/ is explicitly preserved (never moved or deleted).
+          agent-workspace/knowledge/ is explicitly preserved (never moved or deleted).
+          Reads git_automation_enabled from archived state.json (true) → runs final git commit.
+          Announces completion.
+        </approach>
+        <expected_outcome>
+          Partitioned knowledge base updated with new auth patterns across all relevant files.
+          state.json finalized in-place first, then all three files (plan, reference, state.json) archived together.
+          agent-workspace/external-docs/ and agent-workspace/knowledge/ directories preserved for future features.
+          User notified: "Feature branch feature/user-auth is complete and ready for a Pull Request!"
+        </expected_outcome>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>state.json drives all loop/progress logic; markdown checkboxes are only for humans</takeaway>
+      <takeaway>Every step produces a testable outcome with a Live Smoke Test</takeaway>
+      <takeaway>Shared Technical Context (Section 6) grows organically as each step completes</takeaway>
+      <takeaway>The Feature Developer never writes code, only orchestrates and tracks state</takeaway>
+      <takeaway>Clean Code Refactor is enforced at every step, preventing technical debt</takeaway>
+      <takeaway>The partitioned knowledge base separates architectural, database, API, and UI concerns</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="smart_resume_from_state_json">
+    <scenario>
+      The user was in the middle of executing a feature when their session was interrupted.
+      On reconnect, the Feature Developer must resume exactly where it left off using state.json.
+    </scenario>
+
+    <workflow>
+      <step number="1">
+        <description>Resume Detection</description>
+        <approach>
+          Feature Developer checks for agent-workspace/feature/state.json. It exists.
+          Reads state.json:
+          {
+            "feature_name": "Shopping Cart",
+            "branch_name": "feature/shopping-cart",
+            "git_automation_enabled": true,
+            "current_phase": 3,
+            "plan_status": "validated",
+            "total_steps": 4,
+            "current_step": 2,
+            "pivot_in_progress": false
+          }
+          Interpretation: current_phase is 3, plan_status is "validated", current_step (2) <= total_steps (4).
+          This means the plan is approved and Steps 1-2 are complete, Step 3 is next.
+        </approach>
+        <expected_outcome>
+          Feature Developer proceeds directly to Phase 3, reads Step 3 from agent-workspace/feature/plan.md,
+          and spawns the next code subtask. No re-validation, no re-planning.
+        </expected_outcome>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>state.json enables clean, deterministic resume without fragile markdown parsing</takeaway>
+      <takeaway>The combination of current_phase, plan_status, and current_step uniquely identifies the resume point</takeaway>
+      <takeaway>No magic strings like [ARCHITECT_DRAFT_COMPLETE] are needed</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="handling_major_pivot">
+    <scenario>
+      During Step 3 (Login endpoint), the subtask reports a MAJOR PIVOT REQUESTED: the user
+      wants to switch from JWT to OAuth 2.0.
+    </scenario>
+
+    <workflow>
+      <step number="1">
+        <description>Pivot Detection & state.json Update</description>
+        <approach>
+          Subtask returns with "MAJOR PIVOT REQUESTED".
+          Feature Developer updates agent-workspace/feature/state.json:
+          - "plan_status": "draft"
+          - "current_phase": 1
+          - "total_steps": 0 (CRITICAL: must be 0 so resume logic knows Architect is drafting).
+          (Leave current_step as 2, since Steps 1 and 2 are done).
+        </approach>
+        <expected_outcome>
+          Feature Developer spawns Architect with pivot context. It explicitly instructs the Architect to preserve the completed [x] steps and only rewrite the pending [ ] steps for OAuth 2.0.
+        </expected_outcome>
+      </step>
+
+      <step number="2">
+        <description>Re-planning and Re-validation</description>
+        <approach>
+          Architect rewrites the remaining steps.
+          Feature Developer re-counts total steps using the TOTAL count logic (counting EVERY heading
+          that starts with `### [ ] Step` OR `### [x] Step` — e.g., now 6). Updates state.json: "total_steps": 6.
+          Routes back through Phase 2 (Syntax check → Critic review). Critic validates the revised plan. User approves.
+          Feature Developer updates state.json: "plan_status": "validated", "current_phase": 3.
+          Resumes execution Phase 3. Reads current_step (2), so it starts working on Step 3.
+        </approach>
+        <expected_outcome>
+          Plan adapted cleanly. Execution continues seamlessly from where it left off.
+        </expected_outcome>
+      </step>
+    </workflow>
+  </example>
+
+  <example name="handling_roadblock">
+    <scenario>
+      During Step 3 (Login endpoint), the subtask discovers the existing user service
+      uses a different password hashing approach than what was designed in Step 1.
+    </scenario>
+
+    <workflow>
+      <step number="1">
+        <description>Roadblock Detection</description>
+        <approach>
+          Subtask reports: "The existing user service uses argon2, but Step 1 implemented
+          bcrypt. I need guidance on which approach to use."
+        </approach>
+        <expected_outcome>
+          Feature Developer asks the user: "The subtask found a conflict between the new
+          bcrypt implementation and the existing argon2 usage. Should we:
+          1) Standardize on argon2 (update Step 1's implementation)
+          2) Keep bcrypt for the new auth flow
+          3) Let the Architect decide?"
+        </expected_outcome>
+      </step>
+      <step number="2">
+        <description>Plan Revision — Follows Pivot Protocol</description>
+        <approach>
+          User chooses option 1. Feature Developer updates agent-workspace/feature/state.json:
+          sets "plan_status" to "draft", "current_phase" to 1, and "total_steps" to 0
+          (CRITICAL: must be 0 so the Smart Resume logic knows the Architect is still
+          actively drafting). Preserves "current_step" as-is — already-completed steps
+          are valid and the Architect will only rewrite pending steps.
+          Feature Developer spawns Architect to revise the plan: preserve completed [x] steps
+          (Step 1 and Step 2) and rewrite/update pending steps to use argon2 instead of bcrypt.
+          Architect revises the plan, potentially adding a Step 1b.
+          Feature Developer reads the revised plan, re-counts TOTAL steps (counting EVERY
+          heading that starts with `### [ ] Step` OR `### [x] Step`), and updates state.json
+          with the new "total_steps".
+        </approach>
+        <expected_outcome>
+          Plan now includes Step 1b. state.json has total_steps reset to 0 then re-counted
+          after Architect finishes. Feature Developer routes the revised plan through
+          Phase 2 (Critic review) to validate the new architecture before execution.
+        </expected_outcome>
+      </step>
+      <step number="3">
+        <description>Critic Validation and Execution</description>
+        <approach>
+          Critic reviews the revised plan for consistency with the new argon2 approach.
+          User approves. Feature Developer updates state.json: plan_status = "validated",
+          current_phase = 3. Resumes execution: spawns code mode for Step 1b, then
+          continues with Step 3.
+        </approach>
+        <expected_outcome>
+          Plan validated after revision. Execution continues with corrected implementation.
+        </expected_outcome>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>Roadblocks trigger user consultation, not autonomous decisions</takeaway>
+      <takeaway>The plan is a living document that adapts as new information emerges</takeaway>
+      <takeaway>Architect can be re-invoked to revise completed steps if needed</takeaway>
+      <takeaway>When new steps are added, update total_steps in state.json</takeaway>
+      <takeaway>All plan revisions — even minor ones — should route through Phase 2 Critic review before execution</takeaway>
+    </key_takeaways>
+  </example>
+</complete_examples>

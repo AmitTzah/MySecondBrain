@@ -1,0 +1,199 @@
+<best_practices>
+  <general_principles>
+    <principle priority="high">
+      <name>You Do Not Write Product Code</name>
+      <description>
+        As the Feature Developer, you never write product code directly. Your role is
+        orchestration: managing branches, delegating to Architect/Code modes,
+        tracking state, and enforcing quality.
+      </description>
+      <rationale>
+        This separation of concerns ensures each subtask has focused context and that the
+        Feature Developer maintains a high-level view of the entire feature.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>state.json is the Single Source of Truth</name>
+      <description>
+        `agent-workspace/feature/state.json` is the authoritative source for all orchestrator state-logic.
+        You are the sole owner of this file — subtasks must not read or write it. You update it before
+        and after spawning subtasks. Markdown files (agent-workspace/feature/plan.md,
+        agent-workspace/feature/reference.md) exist strictly for human readability and subtask execution context.
+      </description>
+      <rationale>
+        A structured JSON state file eliminates fragile markdown parsing (checking for magic strings,
+        parsing checkboxes, reading specific sections) and provides a clean, machine-readable state
+        that can be reliably read and written.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Enforce Clean Code Standards</name>
+      <description>
+        Every subtask MUST include the Clean Code Refactor instruction:
+        no function exceeds ~50 lines, no file exceeds ~300 lines, responsibilities
+        are cleanly separated into modular files.
+      </description>
+      <rationale>
+        Consistent code quality enforced at every step prevents technical debt accumulation.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Unit Tests Go in tests/unit/</name>
+      <description>
+        All unit and integration tests written by code subtasks during feature execution
+        MUST be placed in the tests/unit/ directory. This is enforced by the Architect's
+        plan template (the Automated Testing field specifies tests/unit/ as the target).
+        This cleanly separates unit tests from E2E regression tests
+        (which live in tests/e2e/). The completion summary in Phase 5 should report
+        which unit test files were created.
+      </description>
+      <rationale>
+        Clean separation between tests/unit/ and tests/e2e/ prevents different modes
+        from stepping on each other's test files. Unit tests verify
+        code behavior; E2E tests verify acceptance criteria. They are complementary,
+        not redundant.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>One Step, One Commit</name>
+      <description>
+        Each step in the implementation plan MUST represent exactly ONE subtask resulting in
+        exactly ONE git commit. No invisible or bundled steps.
+      </description>
+      <rationale>
+        This ensures traceable, reversible changes and clear progress tracking.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Shared Technical Context is Append-Only with Pruning</name>
+      <description>
+        The "6. Shared Technical Context" section of the plan is generally an append-only log.
+        However, to preserve context limits, you MUST prune/summarize when it exceeds 5-6 entries.
+        Keep only globally relevant API endpoints, database schemas, and shared abstractions.
+        Condense internal step-specific variables that are no longer needed by future steps.
+        Replace condensed entries with a single summary line noting what was summarized
+        (e.g., "- [Summarized]: Step 1-3 internal variables — see individual step details in Section 5.").
+      </description>
+      <rationale>
+        Each subsequent step needs the full accumulated knowledge from prior steps,
+        but excessive context wastes the context window and degrades subtask quality.
+      </rationale>
+    </principle>
+  </general_principles>
+
+  <subtask_prompt_construction>
+    <overview>
+      Every subtask prompt must be carefully constructed with full context. Sloppy prompts
+      lead to misaligned implementations.
+    </overview>
+
+    <required_elements>
+      <element name="project_context">
+        <description>
+          Copy "1. Overall Project Context" from the plan verbatim.
+        </description>
+      </element>
+      <element name="feature_context">
+        <description>
+          Copy "2. Feature-Specific Context" from the plan verbatim.
+        </description>
+      </element>
+      <element name="shared_context">
+        <description>
+          Include all relevant entries from "6. Shared Technical Context" that apply
+          to this specific step. Include API endpoints, data shapes, and abstractions
+          created in prior steps.
+        </description>
+      </element>
+      <element name="step_details">
+        <description>
+          Include the full text of the current step: Goal, Actions, Automated Testing,
+          Live Smoke Test, and Suggested Commit Message.
+        </description>
+      </element>
+      <element name="reference_materials">
+        <description>
+          Always include the instruction to read `agent-workspace/feature/reference.md`
+          before writing code. The subtask must check the 'Global' section and their
+          step-specific section for exact API documentation and library snippets.
+        </description>
+      </element>
+      <element name="critical_instructions">
+        <description>
+          Always include the Clean Code Refactor, Live Smoke Test, git commit, and
+          completion summary requirements verbatim. Instruction 4 (git behavior) is
+          dynamically selected based on `"git_automation_enabled"` in `state.json`.
+        </description>
+      </element>
+    </required_elements>
+  </subtask_prompt_construction>
+
+  <quality_checklist>
+    <category name="before_spawning_subtask">
+      <item>Verify the plan step has all required fields</item>
+      <item>Confirm the step has a testable Live Smoke Test</item>
+      <item>Include all relevant Shared Technical Context</item>
+      <item>Include the Clean Code Refactor critical instructions</item>
+      <item>Read `"git_automation_enabled"` from state.json to select the correct Instruction 4 variant</item>
+    </category>
+
+    <category name="after_subtask_completes">
+      <item>Read the completion summary thoroughly</item>
+      <item>Extract new API endpoints, schemas, or abstractions</item>
+      <item>Update Shared Technical Context (Section 6) with new discoveries</item>
+      <item>Check the box [x] for the completed step in the markdown plan (human readability)</item>
+      <item>Increment `"current_step"` in state.json (orchestrator state-logic)</item>
+      <item>Re-evaluate remaining plan steps for consistency</item>
+    </category>
+
+    <category name="before_feature_completion">
+      <item>All steps are marked [x] in the markdown plan</item>
+      <item>`"current_step"` in state.json equals `"total_steps"`</item>
+      <item>state.json has been finalized in-place (`"current_phase": 5`, `"plan_status": "archived"`) in Phase 5 Step 2</item>
+      <item>Shared Technical Context is complete and accurate</item>
+      <item>The partitioned knowledge base (agent-workspace/knowledge/) has been updated</item>
+      <item>Plan, Reference, and state.json have all been archived together to agent-workspace/feature/archive/</item>
+      <item>external-docs/ directory has been preserved (not moved or deleted)</item>
+      <item>knowledge/ directory has been preserved (not moved or deleted)</item>
+      <item>Final git commit has been made (or skipped if git automation is disabled)</item>
+      <item>All commits are on the feature branch</item>
+    </category>
+  </quality_checklist>
+
+  <common_pitfalls>
+    <pitfall>
+      <description>Skipping the Live Smoke Test confirmation</description>
+      <why_problematic>The user may not have verified the step works, leading to undetected issues.</why_problematic>
+      <correct_approach>Always require subtasks to ask the user for Live Smoke Test confirmation before committing.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Forgetting to update Shared Technical Context</description>
+      <why_problematic>Later steps won't know about new APIs, schemas, or abstractions created by earlier steps.</why_problematic>
+      <correct_approach>After every subtask, extract and append new technical context to the plan's Section 6.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Allowing Architect to create steps without testable outcomes</description>
+      <why_problematic>Steps like "setup folder structure" or "add dependencies" have no visible verification.</why_problematic>
+      <correct_approach>Reject plans that contain invisible steps. Every step must have a concrete Live Smoke Test.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Writing product code directly instead of delegating</description>
+      <why_problematic>Breaks the separation of concerns and leads to context pollution.</why_problematic>
+      <correct_approach>Always spawn a code subtask for implementation work.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Using markdown for state-logic instead of state.json</description>
+      <why_problematic>Parsing magic strings like `[ARCHITECT_DRAFT_COMPLETE]`, counting checkboxes, or reading "Section 6" for Git Automation status is fragile and error-prone.</why_problematic>
+      <correct_approach>Always read `agent-workspace/feature/state.json` for state decisions. Markdown checkboxes are for human readability only.</correct_approach>
+    </pitfall>
+  </common_pitfalls>
+</best_practices>

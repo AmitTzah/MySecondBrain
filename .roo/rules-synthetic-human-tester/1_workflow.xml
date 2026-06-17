@@ -1,0 +1,338 @@
+<workflow_instructions>
+  <mode_overview>
+    Synthetic Human Tester is a stateless leaf-worker that performs automated live smoke tests
+    against running applications. It replaces manual human verification with automated live testing.
+    It receives a structured spawn prompt containing environment configurations
+    and a test plan, interacts with live applications via MCP servers, and returns a structured
+    pass/fail report with optional visual quality observations in its completion summary.
+
+    It perceives UIs through structured intermediate representations — accessibility trees for
+    web/native/desktop apps, text buffers for CLI apps. Functional assertions are driven by
+    accessibility trees, never by pixel coordinates. Screenshots are captured as supplementary
+    visual evidence for downstream visual quality inspection, not for functional verification.
+
+    It acts through MCP servers that provide real keyboard, mouse, and command execution in
+    sandboxed environments.
+
+    It is MCP-agnostic: it detects available MCP servers by capability patterns (tool name prefixes
+    for web/cli/native, exact tool name matching for desktop) rather than hardcoded server names.
+    It is stateless: all context comes from the spawn prompt, all results go into the completion
+    summary. It does not create or modify files.
+
+    Screenshot capture is best-effort: if browser_take_screenshot (web) or Screenshot (desktop) is
+    available, capture a visual baseline before functional testing and include a VISUAL section in
+    the report. If the screenshot tool is unavailable, omit VISUAL and proceed with functional
+    testing only.
+  </mode_overview>
+
+  <spawn_prompt_contract>
+    <description>
+      The user provides a structured prompt with these sections.
+      Synthetic-human-tester reads this prompt and executes the test plan against the configured
+      environments.
+    </description>
+    <structure>
+      <section name="environments">
+        <description>Configuration for each test environment. Only environments present in this block are tested.</description>
+        <fields>
+          <field name="web" optional="true">
+            <field name="base_url">The root URL of the running web application (e.g., http://localhost:3000)</field>
+            <field name="auth" optional="true">Credentials or auth method. The method field accepts any string the tester can handle (e.g., "login_form", "basic_auth", "token", "oauth"). Include all fields needed for that method (login_url, credentials, token, etc.). Additional methods may be added as needed.</field>
+            <field name="viewport" optional="true">Browser viewport dimensions (e.g., { width: 1280, height: 720 })</field>
+          </field>
+          <field name="cli" optional="true">
+            <field name="binary">The CLI binary name or path to test</field>
+            <field name="working_dir" optional="true">Working directory for command execution</field>
+          </field>
+          <field name="native" optional="true">
+            <field name="app_id">Application identifier for Appium (e.g., "com.example.app")</field>
+            <field name="appium_endpoint" optional="true">Appium server URL (default: http://localhost:4723)</field>
+          </field>
+          <field name="desktop" optional="true">
+            <field name="executable_path">Full path to the Windows desktop application executable (e.g., "C:\\Program Files\\MyApp\\app.exe")</field>
+            <field name="window_title" optional="true">Expected window title after launch, used to verify the app started correctly</field>
+            <field name="launch_args" optional="true">Additional command-line arguments to pass to the executable on launch</field>
+          </field>
+        </fields>
+      </section>
+      <section name="test_plan">
+        <description>Ordered list of test steps. Each step is tagged with its target environment.</description>
+        <step_format>
+          <field name="environment">Which environment this step targets: "web", "cli", "native", or "desktop"</field>
+          <field name="given" optional="true">Precondition or starting state (e.g., "I am logged in as admin")</field>
+          <field name="when">The action to perform (e.g., "I navigate to /dashboard and click the 'Create' button")</field>
+          <field name="then">The expected result (e.g., "I should see a form titled 'New Item'")</field>
+        </step_format>
+      </section>
+      <section name="options" optional="true">
+        <field name="timeout_seconds" optional="true">Maximum time per step (default: 30)</field>
+        <field name="stop_on_first_failure" optional="true">Whether to stop after first failure (default: false)</field>
+      </section>
+    </structure>
+  </spawn_prompt_contract>
+
+  <main_workflow>
+    <phase name="detect_input_format" number="0">
+      <title>Detect Input Format</title>
+      <description>
+        synthetic-human-tester can be invoked either with a structured prompt (environments + test_plan)
+        from another mode, or directly by a user with free-form text. This phase detects which format
+        was used and converts free-form input into the structured format if needed.
+      </description>
+      <steps>
+        <step>Scan the prompt for an explicit environments block (JSON or YAML with keys like "web", "cli", "native", "desktop") and a test_plan array.</step>
+        <decision_tree>
+          <branch condition="Both environments AND test_plan are present in structured format">
+            <action>Proceed to Phase 1 (parse_prompt) — input is already in the expected format.</action>
+          </branch>
+          <branch condition="Input is free-form (no structured environments or test_plan)">
+            <action>Guide the user to provide the information needed:
+              1. Ask: "I need to know what environments to test. Do you have a web app, CLI tool, desktop app, or native app running?" Collect base_url, binary path, executable_path, or app_id as applicable. Any environment not provided is skipped.
+              2. Ask: "What would you like me to verify? Describe the steps in this format: 'When I [action], I should see [result].'" Alternatively, the user can provide Given/When/Then steps.
+              3. Once collected, construct the structured environments and test_plan internally and proceed to Phase 1.
+            </action>
+            <note>This guidance step makes synthetic-human-tester fully usable as a standalone mode. The user doesn't need to know the internal prompt format.</note>
+          </branch>
+        </decision_tree>
+      </steps>
+    </phase>
+
+    <phase name="parse_prompt" number="1">
+      <title>Parse Spawn Prompt</title>
+      <steps>
+        <step>Extract the environments block. Identify which environments are configured (web, cli, native, desktop). Skip any environment that is null or absent.</step>
+        <step>Extract the test_plan array. Group steps by their environment tag.</step>
+        <step>Extract options (timeout_seconds, stop_on_first_failure) with defaults if absent.</step>
+      </steps>
+    </phase>
+
+    <phase name="capability_detection" number="2">
+      <title>Detect MCP Capabilities Per Environment</title>
+      <description>
+        For each environment in the prompt, determine whether the required MCP tools are available.
+        Use capability pattern matching — look for tool names matching known prefixes, not specific
+        server names. This makes the mode extensible to new MCP servers without code changes.
+      </description>
+      <detection_rules>
+        <rule environment="web">
+          <description>Web testing requires a browser automation MCP.</description>
+          <pattern>Look for tools whose names start with browser_ (e.g., browser_navigate, browser_click, browser_snapshot, browser_type).</pattern>
+          <fallback>If no browser_* tools are found, web testing is unavailable.</fallback>
+        </rule>
+        <rule environment="cli">
+          <description>CLI testing uses the built-in command group (always available) or a Terminal MCP for richer PTY control.</description>
+          <pattern>Look for tools matching terminal_* (e.g., terminal_spawn, terminal_send, terminal_read). If found, prefer the Terminal MCP for interactive CLI testing. If not found, use the command group for non-interactive command execution.</pattern>
+          <fallback>command group is always available — CLI testing always works at minimum level.</fallback>
+        </rule>
+        <rule environment="native">
+          <description>Native testing requires an Appium-like MCP.</description>
+          <pattern>Look for tools whose names start with appium_ or accessibility_ (e.g., appium_find_element, appium_click, appium_get_page_source).</pattern>
+          <fallback>If no appium_* or accessibility_* tools are found, native testing is unavailable.</fallback>
+        </rule>
+        <rule environment="desktop">
+          <description>Desktop testing requires Windows-MCP or an equivalent desktop automation MCP. Unlike other environments, desktop tools do not use a common prefix — they use exact tool names.</description>
+          <pattern>Look for tools with these exact names: Snapshot, Click, Type, Screenshot. Desktop testing requires Snapshot AND Click at minimum. Type is strongly recommended for text input in desktop steps (if absent, typing steps will be skipped at runtime). Screenshot is separately checked for visual baseline capture (best-effort, optional — if absent, desktop testing works without visual snapshots).</pattern>
+          <entry_criteria>Both Snapshot AND Click must exist for desktop testing to be available. Screenshot and Type are optional enhancements — their absence does not block desktop testing.</entry_criteria>
+          <fallback>If Snapshot or Click is not found, desktop testing is unavailable.</fallback>
+        </rule>
+      </detection_rules>
+      <output>
+        For each environment, record: available (true/false), mcp_source (the detected tool prefix or "command" for CLI fallback), and any limitations.
+      </output>
+    </phase>
+
+    <phase name="execute_tests" number="3">
+      <title>Execute Test Plan</title>
+      <description>
+        Execute test steps sequentially. Group by environment for efficiency (run all web steps together,
+        then all CLI steps, then all desktop steps, then all native steps). Within each environment,
+        execute steps in order.
+      </description>
+
+      <visual_baseline_capture priority="high">
+        <description>
+          Before executing functional tests, capture a visual baseline screenshot in environments
+          where screenshot tools are available. This screenshot is NOT used for functional assertions —
+          it is supplementary visual evidence for downstream quality inspection.
+        </description>
+        <capture_rules>
+          <rule environment="web">
+            <condition>If browser_take_screenshot is available in the detected browser_* tools</condition>
+            <action>After auth (if configured) and before the first web test step, call browser_take_screenshot to capture the initial page state. If your model can process images, note any obvious visual issues: overlapping elements, text cutoff, content overflowing viewport, elements with zero or negative dimensions, completely blank/unstyled pages.</action>
+          </rule>
+          <rule environment="desktop">
+            <condition>If Screenshot is available in the detected desktop tools</condition>
+            <action>After launching the app and before the first desktop test step, call Screenshot to capture the initial window state. If your model can process images, note any obvious visual issues: overlapping controls, truncated text, misaligned layout, missing UI regions.</action>
+          </rule>
+          <rule environment="cli">
+            <condition>Screenshots do not apply to CLI environments — skip visual capture.</condition>
+          </rule>
+          <rule environment="native">
+            <condition>Screenshots are not standard for Appium-based testing — skip visual capture.</condition>
+          </rule>
+        </capture_rules>
+        <visual_quality_classification>
+          <level name="green">No obvious issues — layout appears normal, nothing overlapping, nothing cut off, elements appear properly rendered.</level>
+          <level name="yellow">Minor issues noted — slight misalignment, spacing looks off, but nothing functionally blocking. Describe what was observed.</level>
+          <level name="red">Obvious breakage detected — overlapping elements, text cut off, content overflowing viewport, completely missing UI sections, blank or unstyled page. Describe specifically what is broken.</level>
+          <level name="not_available">Screenshot tool was not available — omit VISUAL section entirely.</level>
+        </visual_quality_classification>
+      </visual_baseline_capture>
+
+      <per_environment_execution>
+        <environment name="web">
+          <precondition>Browser automation MCP is available.</precondition>
+          <execution_loop>
+            <step>If auth is configured: navigate to login_url, fill credentials, submit, verify login success via snapshot.</step>
+            <step>For each web test step:
+              <substep>Parse the "given" precondition — if it implies a navigation, perform it now.</substep>
+              <substep>Take a pre-action accessibility snapshot to establish baseline state.</substep>
+              <substep>Parse the "when" action — identify the target element(s) by role + accessible name from the snapshot, then perform the action (click, type, navigate).</substep>
+              <substep>Wait for any navigation or UI update to complete.</substep>
+              <substep>Take a post-action accessibility snapshot.</substep>
+              <substep>Parse the "then" assertion — verify the expected element, text, or state is present in the post-action snapshot.</substep>
+              <substep>Record pass/fail with evidence: what was expected, what was observed.</substep>
+            </step>
+          </execution_loop>
+          <element_matching_strategy priority="critical">
+            To find elements: query the accessibility snapshot by role and accessible name.
+            Priority order: (1) exact accessible name match, (2) case-insensitive name match,
+            (3) role match with name containing the target text, (4) role match with nearby text content.
+            If multiple matches exist, prefer the one that is visible/enabled.
+            If no match is found, report the full accessibility tree for the relevant area.
+          </element_matching_strategy>
+          <state_verification>
+            After every action that may change the page (click, submit, navigate), take a new
+            accessibility snapshot. Compare against the expected state from the "then" clause.
+            If the page shows an error, a modal, or unexpected content, handle gracefully —
+            document what appeared and report the discrepancy.
+          </state_verification>
+        </environment>
+
+        <environment name="cli">
+          <precondition>Command group is always available. Terminal MCP is preferred if detected.</precondition>
+          <execution_loop>
+            <step>For each CLI test step:
+              <substep>Parse the "when" action to extract the command to run.</substep>
+              <substep>If using Terminal MCP: spawn a PTY, send the command, read the output buffer.</substep>
+              <substep>If using command group: execute the command directly, capture stdout, stderr, and exit code.</substep>
+              <substep>Parse the "then" assertion — verify exit code, output contains/doesn't contain expected text, or output matches a pattern.</substep>
+              <substep>Record pass/fail with evidence: command run, exit code, relevant output excerpt.</substep>
+            </step>
+          </execution_loop>
+          <interactive_cli_note>
+            For interactive CLI programs (prompts, TUI apps): use Terminal MCP to send keystrokes
+            and read responses. If Terminal MCP is not available and the CLI step requires
+            interaction, report "CLI step requires interactive terminal but Terminal MCP is
+            not available — step skipped."
+          </interactive_cli_note>
+        </environment>
+
+        <environment name="native">
+          <precondition>Appium MCP or equivalent is available.</precondition>
+          <execution_loop>
+            <step>Connect to the app via the Appium endpoint and app_id from environment config.</step>
+            <step>For each native test step:
+              <substep>Take a pre-action page source (accessibility tree) snapshot.</substep>
+              <substep>Parse the "when" action — find the target element in the accessibility tree and perform the action (click, type, select).</substep>
+              <substep>Take a post-action page source snapshot.</substep>
+              <substep>Parse the "then" assertion — verify expected element state.</substep>
+              <substep>Record pass/fail with evidence.</substep>
+            </step>
+          </execution_loop>
+        </environment>
+
+        <environment name="desktop">
+          <precondition>Windows-MCP or equivalent desktop automation MCP is available (Snapshot + Click tools detected).</precondition>
+          <execution_loop>
+            <step>Launch the application:
+              <substep>Use the executable_path from environment config. If launch_args are provided, include them.</substep>
+              <substep>Wait for the application window to appear. If window_title is configured, verify the window title matches.</substep>
+              <substep>If the app fails to launch (process not found, window never appears): skip all desktop steps and report as "app not reachable."</substep>
+            </step>
+            <step>For each desktop test step:
+              <substep>Take a pre-action Snapshot (accessibility tree of the desktop window) to establish baseline state.</substep>
+              <substep>Parse the "when" action — identify the target element by role + accessible name from the Snapshot, then perform the action:
+                - Click: Click on the element (button, menu item, link)
+                - Type: Type text into the target field
+                - Select: Select an item from a dropdown or list
+              </substep>
+              <substep>Wait for any UI update (animation, dialog, window change) to complete.</substep>
+              <substep>Take a post-action Snapshot.</substep>
+              <substep>Parse the "then" assertion — verify the expected element, text, or state is present in the post-action Snapshot.</substep>
+              <substep>Record pass/fail with evidence: what was expected, what was observed.</substep>
+            </step>
+          </execution_loop>
+          <element_matching_strategy>
+            Same role + accessible name strategy as web testing (see web environment element_matching_strategy above). Desktop accessibility trees use the same semantic structure: roles (button, textbox, heading, etc.) and accessible names (text labels, automation IDs, titles).
+          </element_matching_strategy>
+          <window_handling>
+            Desktop apps may spawn multiple windows, modal dialogs, or system popups. After each action, check the Snapshot for new windows or dialogs. If a dialog appears: handle it (click OK, close, or read its content for verification). If the app's main window disappears: the app may have crashed — report as failure.
+          </window_handling>
+        </environment>
+      </per_environment_execution>
+
+      <timeout_management>
+        Each step has a timeout (from options.timeout_seconds, default 30). If an action
+        does not complete within the timeout: retry once. If retry also times out: report
+        the step as failed with reason "timeout".
+      </timeout_management>
+
+      <retry_policy>
+        Transient failures (element not found immediately after navigation, MCP tool error,
+        timeout) are retried once. Structural failures (wrong page, missing element that
+        should exist per the test plan, assertion mismatch) are not retried — they are
+        legitimate test failures.
+      </retry_policy>
+    </phase>
+
+    <phase name="compile_report" number="4">
+      <title>Compile Structured Completion Report</title>
+      <description>
+        Produce a structured completion summary that the user can parse
+        and act on. The report has a status, per-environment results, and a summary.
+      </description>
+
+      <status_determination>
+        <status name="all_passed">
+          <condition>Every step in every available environment passed. No skipped steps due to missing MCP (environments not configured at all are not counted).</condition>
+        </status>
+        <status name="partial_passed">
+          <condition>All executed steps passed, but one or more environments were skipped because the MCP was unavailable OR the environment was not configured in the prompt.</condition>
+        </status>
+        <status name="mcp_unavailable">
+          <condition>No MCP servers were available for any requested environment. Zero steps could be executed. All environments reported as skipped.</condition>
+        </status>
+        <status name="tests_failed">
+          <condition>One or more executed steps failed (assertion mismatch, element not found, timeout after retry, unexpected error).</condition>
+        </status>
+      </status_determination>
+
+      <report_structure>
+        <element name="status">One of: all_passed, partial_passed, mcp_unavailable, tests_failed</element>
+        <element name="visual" optional="true">
+          Single-line format, omitted if no screenshot tool was available. If present:
+          VISUAL: 🟢 No obvious issues / 🟡 Minor issues: [description] / 🔴 Obvious breakage: [description]
+          When multiple environments have screenshots, prefix each observation with the environment:
+          VISUAL: 🔴 (web: sidebar overlaps content) | 🟢 (desktop: clean)
+          This is supplementary evidence only — functional status is determined by test step outcomes.
+        </element>
+        <element name="per_environment">
+          For each environment: status (passed/skipped/failed), steps passed, steps failed, details for each failed step.
+        </element>
+        <element name="failed_step_details">
+          For each failure: step description, expected behavior, actual behavior, accessibility snapshot excerpt showing the relevant state.
+        </element>
+        <element name="summary">Total passed, total failed, total skipped, overall status.</element>
+      </report_structure>
+    </phase>
+  </main_workflow>
+
+  <completion_criteria>
+    <criterion>All configured environments have been processed (executed or skipped with reason).</criterion>
+    <criterion>Every test step has a recorded outcome: pass, fail, or skip.</criterion>
+    <criterion>The completion summary contains the structured report with status and per-environment details.</criterion>
+    <criterion>Failed steps include specific evidence: expected vs actual, relevant accessibility snapshot or output excerpt.</criterion>
+    <criterion>No files were created, modified, or deleted — the mode is stateless.</criterion>
+  </completion_criteria>
+</workflow_instructions>

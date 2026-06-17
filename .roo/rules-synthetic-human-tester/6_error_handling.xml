@@ -1,0 +1,209 @@
+<error_handling>
+  <overview>
+    Error scenarios and recovery strategies for synthetic-human-tester. Errors are classified
+    as infrastructure errors (MCP unavailable, app not running), environmental errors (timeout,
+    network), or test failures (assertion mismatch, element not found). Infrastructure and
+    environmental errors are reported but do not fail the test — they cause the environment
+    to be skipped. Test failures are reported as failed steps.
+  </overview>
+
+  <scenario name="mcp_not_available">
+    <trigger>Capability detection finds zero matching MCP tools for a requested environment.</trigger>
+    <classification>Infrastructure error — not a test failure.</classification>
+    <action>
+      <step>Record the environment as skipped with reason: "MCP not available."</step>
+      <step>If this is the only requested environment: set overall status to mcp_unavailable.</step>
+      <step>If other environments are available: continue with those environments, set overall status to partial_passed (if all executed steps pass) or tests_failed (if any executed step fails).</step>
+    </action>
+    <user_guidance priority="high">
+      <description>
+        When reporting MCP unavailability, provide actionable setup instructions so the user
+        can resolve the issue themselves. Synthetic-human-tester is self-sufficient: it guides
+        the user through fixing configuration problems.
+      </description>
+      <guidance environment="web">
+        Web testing requires a browser automation MCP server. To set it up:
+        1. Install a browser automation MCP (e.g., Playwright MCP)
+        2. Add the MCP server to your Roo Code MCP configuration
+        3. The MCP must expose tools matching the browser_* pattern (browser_navigate, browser_click, browser_snapshot, browser_type)
+        4. Once configured, re-run the smoke tests
+      </guidance>
+      <guidance environment="cli">
+        CLI testing uses the built-in command group (always available). For interactive terminal programs
+        (TUI apps, REPLs), install a Terminal MCP that exposes tools matching terminal_* (terminal_spawn,
+        terminal_send, terminal_read). Without a Terminal MCP, interactive CLI steps will be skipped.
+      </guidance>
+      <guidance environment="native">
+        Native app testing requires an Appium MCP or equivalent that exposes tools matching appium_*
+        or accessibility_* (appium_find_element, appium_click, appium_get_page_source). Set up an
+        Appium server, connect it to your target app, and add the MCP to your Roo Code configuration.
+      </guidance>
+      <guidance environment="desktop">
+        Desktop app testing requires Windows-MCP or an equivalent desktop automation MCP. To set it up:
+        1. Install Windows-MCP from GitHub: https://github.com/CursorTouch/Windows-MCP
+        2. Prerequisites: Python 3.13+, then `pip install uv && uvx windows-mcp serve`
+        3. Add to your Roo Code MCP configuration: `{ "mcpServers": { "windows-mcp": { "command": "uvx", "args": ["windows-mcp", "serve"] } } }`
+        4. The MCP must expose tools named: Snapshot, Click, Type (exact names, no prefix)
+        5. Screenshot is optional but recommended for visual baseline capture
+        6. Once configured, re-run the smoke tests
+      </guidance>
+    </user_guidance>
+    <recovery>None. The user should verify manually, or install the required MCP and retry.</recovery>
+  </scenario>
+
+  <scenario name="app_not_reachable">
+    <trigger>First navigation or connection attempt to an environment fails (connection refused, DNS error, timeout).</trigger>
+    <classification>Infrastructure error — not a test failure.</classification>
+    <action>
+      <step>Retry the connection once after a short wait (5 seconds).</step>
+      <step>If still unreachable: skip all steps for this environment. Record as skipped with reason: "Application not reachable at [url/endpoint]. Verify the app is running."</step>
+    </action>
+    <user_guidance priority="high">
+      <description>
+        When an app is unreachable, help the user troubleshoot. Common causes and fixes:
+      </description>
+      <guidance environment="web">
+        The web app is not responding at the configured base_url. Troubleshooting:
+        1. Verify the dev server is running (check terminal for the dev server process)
+        2. Confirm the base_url is correct (e.g., http://localhost:3000, not https or wrong port)
+        3. Check for port conflicts or firewall blocking
+        4. If using a different port than configured, update the base_url in your test plan
+      </guidance>
+      <guidance environment="cli">
+        The CLI binary is not found or not executable. Troubleshooting:
+        1. Verify the binary is installed (run 'which [binary]' or check your PATH)
+        2. Confirm the working_dir is correct and the binary exists there
+        3. Check that the binary has execute permissions
+      </guidance>
+      <guidance environment="native">
+        The native app is not reachable via Appium. Troubleshooting:
+        1. Verify the Appium server is running (check the Appium endpoint)
+        2. Confirm the app is installed and launchable on the target device/emulator
+        3. Check the app_id matches the installed application
+      </guidance>
+      <guidance environment="desktop">
+        The desktop app could not be launched or is not responding. Troubleshooting:
+        1. Verify the executable_path is correct (use forward slashes)
+        2. Confirm the application is installed and can be launched manually
+        3. Check if the app requires admin privileges or specific launch arguments
+        4. If launch_args are needed, add them to the desktop environment config
+      </guidance>
+    </user_guidance>
+    <recovery>None at this level. The user should verify the app is running at the configured URL and retry.</recovery>
+  </scenario>
+
+  <scenario name="authentication_failed">
+    <trigger>Login form submission does not result in an authenticated state (still on login page, error message appears).</trigger>
+    <classification>Environmental error — could be wrong credentials or app issue.</classification>
+    <action>
+      <step>Check the post-login snapshot for error messages.</step>
+      <step>If an error message is found: record as skipped with reason "Authentication failed: [error message]".</step>
+      <step>If no error message but still on login page: record as skipped with reason "Authentication failed: login did not redirect away from login page."</step>
+      <step>Skip all remaining steps for this environment.</step>
+    </action>
+    <recovery>None. The user should verify the credentials are correct and the auth flow is working.</recovery>
+  </scenario>
+
+  <scenario name="element_not_found">
+    <trigger>A target element from the "when" or "then" clause cannot be found in the accessibility snapshot.</trigger>
+    <classification>Test failure if the element should exist per the test plan. May be transient if the page is still loading.</classification>
+    <action>
+      <step>Wait and retake the snapshot once (page may still be loading).</step>
+      <step>If element still not found: record as failed step with evidence — include the full accessibility snapshot for the relevant area of the page.</step>
+      <step>If stop_on_first_failure is true: stop execution. Otherwise: continue to next step.</step>
+    </action>
+    <evidence_required>
+      Include: (1) the element that was searched for (role + accessible name), (2) the matching strategy used, (3) the relevant portion of the accessibility snapshot showing what IS present.
+    </evidence_required>
+  </scenario>
+
+  <scenario name="assertion_mismatch">
+    <trigger>The post-action snapshot does not match the expected state from the "then" clause.</trigger>
+    <classification>Test failure — the application is not behaving as expected.</classification>
+    <action>
+      <step>Record as failed step with specific evidence: expected state, actual state, relevant snapshot excerpt.</step>
+      <step>If stop_on_first_failure is true: stop execution. Otherwise: continue to next step.</step>
+    </action>
+    <evidence_required>
+      Include: (1) the "then" clause verbatim, (2) what was observed that contradicts it, (3) the accessibility snapshot excerpt showing the discrepancy.
+    </evidence_required>
+  </scenario>
+
+  <scenario name="mcp_tool_timeout">
+    <trigger>An MCP tool call does not return within the configured timeout (default 30 seconds).</trigger>
+    <classification>Transient infrastructure error — retry once.</classification>
+    <action>
+      <step>Retry the same tool call once.</step>
+      <step>If retry also times out: record the step as failed with reason "MCP tool timed out after 2 attempts."</step>
+      <step>If this is a browser_navigate or initial connection: treat as app_not_reachable for the environment.</step>
+    </action>
+  </scenario>
+
+  <scenario name="mcp_tool_error">
+    <trigger>An MCP tool returns an error response (not a timeout).</trigger>
+    <classification>Transient infrastructure error — retry once.</classification>
+    <action>
+      <step>Retry the same tool call once.</step>
+      <step>If retry also errors: record the step as failed with reason "MCP tool error: [error message]."</step>
+    </action>
+  </scenario>
+
+  <scenario name="unexpected_page_state">
+    <trigger>The page shows an error (500, 404), a blocking modal, or content that doesn't match any expected state.</trigger>
+    <classification>Depends on the severity — may be a test failure or an environmental issue.</classification>
+    <action>
+      <step>If error page (500, 404, etc.): record as failed step with the error page content.</step>
+      <step>If blocking modal that can be dismissed: dismiss it and continue.</step>
+      <step>If unexpected but non-blocking content: note it but continue with the test. If it prevents the assertion from being verified, record as failed.</step>
+    </action>
+  </scenario>
+
+  <scenario name="desktop_app_not_found">
+    <trigger>Desktop executable_path does not exist, or the app process fails to start, or the window never appears.</trigger>
+    <classification>Infrastructure error — not a test failure.</classification>
+    <action>
+      <step>Verify the executable_path exists at the configured location.</step>
+      <step>Attempt to launch the app. If the process fails immediately or the window doesn't appear within the timeout: skip all desktop steps with reason "Application not reachable at [executable_path]. Verify the path is correct and the app can be launched."</step>
+    </action>
+    <user_guidance priority="high">
+      <guidance>
+        The desktop application could not be launched. Troubleshooting:
+        1. Verify the executable_path is correct (use forward slashes: C:/Program Files/MyApp/app.exe)
+        2. Confirm the application is installed and can be launched manually
+        3. Check if the app requires admin privileges or specific launch arguments
+        4. If launch_args are needed, add them to the desktop environment config
+      </guidance>
+    </user_guidance>
+    <recovery>None. The user should verify the app path and retry.</recovery>
+  </scenario>
+
+  <scenario name="desktop_window_not_responding">
+    <trigger>Desktop app launched but the window is not responding, or Snapshot returns empty/incomplete accessibility tree.</trigger>
+    <classification>Environmental error — the app may be hung or not exposing accessibility data.</classification>
+    <action>
+      <step>Wait and retry Snapshot once (app may still be initializing).</step>
+      <step>If Snapshot still returns empty or incomplete data: skip all desktop steps with reason "Desktop window not responding or not exposing accessibility data."</step>
+    </action>
+    <recovery>None. The user should verify the app is functioning and exposes UI Automation data.</recovery>
+  </scenario>
+
+  <scenario name="screenshot_capture_failed">
+    <trigger>browser_take_screenshot or Screenshot tool is available but returns an error or times out.</trigger>
+    <classification>Best-effort failure — does not affect functional testing.</classification>
+    <action>
+      <step>Retry the screenshot call once.</step>
+      <step>If retry also fails: note "Screenshot capture failed — VISUAL section omitted" but continue with functional testing. This is not a test failure.</step>
+    </action>
+    <recovery>None. Proceed with functional testing only.</recovery>
+  </scenario>
+
+  <scenario name="no_actionable_test_environments">
+    <trigger>After capability detection, ZERO environments have available MCPs.</trigger>
+    <classification>The spawn prompt requested environments but none can be tested.</classification>
+    <action>
+      <step>Set overall status to mcp_unavailable.</step>
+      <step>Report each requested environment as skipped with the specific reason (MCP not found).</step>
+      <step>Include guidance on what MCPs to install for each environment type.</step>
+    </action>
+  </scenario>
+</error_handling>

@@ -1,0 +1,788 @@
+<common_patterns>
+  <overview>
+    Reusable prompt templates and construction patterns that the Project Director uses when delegating to subtask modes. These are the canonical blueprints — use them verbatim or adapt minimally for context.
+  </overview>
+
+  <vision_templates>
+    <!-- NOTE: Bracket-wrapped text like [What is this app?] are PROMPT PLACEHOLDERS for the Vision Hasher to fill. They are NOT incomplete sections (do not confuse with [TODO]). -->
+    <name>Default Vision Templates for Vision Hasher</name>
+    <description>
+      When the PD needs to provide vision templates to the Vision Hasher (Phase 1, Step 3), write these
+      template files directly to agent-workspace/project-director/vision/. Each template contains
+      section headers and placeholder prompts that the Vision Hasher fills during the guided interview.
+
+      Templates ARE the vision docs once filled — no separate templates/ directory. The Vision Hasher
+      fills them in-place and generates additional per-artifact files (screens/*.md + .html, data/*.md,
+      flows/*.md, features/*.md) as artifacts are discovered during the interview.
+
+      The PD creates atomic template files. The VH creates per-artifact subdirectory files during
+      the interview (Phase 2 screens, Phase 3 flows, and per-feature specs during Phase 1).
+    </description>
+
+    <templates>
+      <!-- ATOMIC FILES: PD creates these directly in vision/ -->
+      <template name="app-overview.md">
+        <location>vision/app-overview.md</location>
+        <content><![CDATA[
+# App Overview
+
+## Core Purpose
+[What is this app? One sentence. What problem does it solve? Who is it for?]
+
+## Elevator Pitch
+[Describe the app to a stranger in 3 sentences. They should understand exactly what it does.]
+
+## Key Differentiators
+[What makes this app different from existing solutions? List 3-5 unique aspects.]
+
+## Platform
+[Web app? Mobile app? Desktop app? CLI tool? Multiple platforms?]
+
+## Success Metrics
+[How will we know this app is successful? User count? Revenue? Task completion rate?]
+]]></content>
+      </template>
+
+      <template name="personas.md">
+        <location>vision/personas.md</location>
+        <content><![CDATA[
+# User Personas
+
+## Primary Persona
+[Who is the main user? What is their job/role? What are their goals? What frustrates them about current solutions?]
+
+## Secondary Personas
+[Other user types. For each: role, goals, how they differ from the primary persona.]
+
+## Non-Users
+[Who explicitly should NOT use this app? Why?]
+]]></content>
+      </template>
+
+      <template name="feature-inventory.md">
+        <location>vision/feature-inventory.md</location>
+        <description>
+          This is an INDEX file. Each feature gets a brief entry with name, user accomplishment,
+          and priority tier. Detailed behavioral specs go in features/[feature-name].md files
+          created by the VH during the interview.
+        </description>
+        <content><![CDATA[
+# Feature Inventory
+
+## Core Features
+[Features without which the app has no reason to exist. List every one. For each: name, what the user accomplishes, priority. Detailed spec: features/[feature-name].md]
+
+## Secondary Features
+[Features that add significant value but aren't critical for v1.]
+
+## Nice-to-Have Features
+[Features that would be nice but can wait indefinitely.]
+
+## Explicitly Out of Scope
+[Features we are consciously NOT building. This prevents scope creep.]
+]]></content>
+      </template>
+
+      <template name="edge-cases.md">
+        <location>vision/edge-cases.md</location>
+        <content><![CDATA[
+# Edge Cases & Error Handling
+
+## Global Edge Cases
+[Scenarios that apply across the entire app.]
+
+- **First-Time User Experience:** [What happens when a brand new user opens the app?]
+- **Empty States:** [Global approach to empty states — what's the pattern?]
+- **Network Errors:** [How does the app behave when offline or on slow connections?]
+- **Permission Errors:** [What happens when a user tries to access something they shouldn't?]
+- **Data Limits:** [Maximum items, file sizes, input lengths — any hard limits?]
+
+## Feature-Specific Edge Cases
+[For each feature from the feature inventory, list edge cases.]
+
+### [Feature Name]
+- [Edge case 1]
+- [Edge case 2]
+]]></content>
+      </template>
+
+      <!-- SUBDIRECTORIES: PD creates empty directories; VH fills with per-artifact files -->
+      <template name="features/">
+        <location>vision/features/</location>
+        <type>directory</type>
+        <description>Per-feature detailed behavioral specs. Created as empty directory by PD.
+          VH creates features/[feature-name].md for each core feature during Phase 1 interview.</description>
+      </template>
+
+      <template name="data/">
+        <location>vision/data/</location>
+        <type>directory</type>
+        <description>Per-entity data concepts. Created as empty directory by PD.
+          VH creates data/[entity-name].md as entities are discovered during Phase 1 interview.</description>
+        <per_file_template><![CDATA[
+# [Entity Name]
+
+- **Description:** [What is this thing?]
+- **Attributes:** [List every piece of information. For each: name, type (text/number/date/etc.), required/optional, constraints]
+- **Lifecycle:** [How is it created? Updated? Deleted? By whom?]
+- **Relationships:** [How does it relate to other entities? Belongs to? Has many? References?]
+- **UI Visibility:** [Which screens show this data?]
+]]></per_file_template>
+      </template>
+
+      <template name="screens/">
+        <location>vision/screens/</location>
+        <type>directory</type>
+        <description>Per-screen canonical .md specs + interactive .html mocks. Created as empty
+          directory by PD. VH creates screens/[screen-name].md and screens/[screen-name].html
+          for each screen during Phase 2 interview.</description>
+        <per_file_template_md><![CDATA[
+# [Screen Name]
+
+- **Purpose:** [What does the user accomplish on this screen?]
+- **Layout:** [Single panel? Split panel? Tabs? Cards? List+detail?]
+- **Regions:**
+  - [Region 1 name]: [What's here? Every button, input, table, chart.]
+  - [Region 2 name]: [What's here?]
+- **Data Displayed:** [What information is shown? Where does it come from conceptually?]
+- **Actions:** [What can the user do from here? Every button, link, interaction. For each: describe exactly what happens — this becomes the tooltip text in the interactive mock.]
+- **Empty State:** [What does the user see on first visit / when there's no data?]
+- **Loading State:** [What does the user see while data is loading?]
+- **Error State:** [What does the user see when something goes wrong?]
+- **Navigation:** [How did the user get here? Where can they go from here? List every navigation target.]
+]]></per_file_template_md>
+        <note>The VH generates companion screens/[screen-name].html interactive mock files
+          using a pre-built CSS component library and wireframe aesthetic. The HTML mocks
+          are NOT created by PD — they are generated by VH during Phase 2.</note>
+      </template>
+
+      <template name="flows/">
+        <location>vision/flows/</location>
+        <type>directory</type>
+        <description>Per-flow user journey specs. Created as empty directory by PD.
+          VH creates flows/[flow-name].md during Phase 3 interview.</description>
+        <per_file_template><![CDATA[
+# [Flow Name]
+
+- **Persona:** [Which user type?]
+- **Goal:** [What are they trying to achieve?]
+- **Starting Point:** [Which screen do they start on? What state is the app in?]
+- **Happy Path:**
+  1. [Step 1 — screen, action, what happens]
+  2. [Step 2 — screen, action, what happens]
+  ...
+  N. [Completion — what do they see?]
+- **Alternative Paths:** [Different choices the user might make, and where they lead.]
+- **Failure Points:** [What can go wrong at each step? How is it handled?]
+- **Edge Cases:** [Unusual situations — first-time user, returning after long absence, etc.]
+]]></per_file_template>
+      </template>
+    </templates>
+  </vision_templates>
+
+  <vision_hasher_subtask_prompt>
+    <name>Vision Hasher Subtask Prompt</name>
+    <description>
+      Canonical prompt to use when spawning a Vision Hasher subtask in Phase 1, Step 2.
+      The Vision Hasher conducts a guided interview to produce a complete interactive
+      simulation of the application's end state.
+    </description>
+    <template>
+      Hash out the complete vision for this application. Vision templates are at agent-workspace/project-director/vision/. Fill every template completely.
+
+      The user's initial vision: [USER'S VISION BRIEF]
+
+      Additional context and constraints: [ANY PD CONSTRAINTS]
+      Git automation: [git_automation_enabled from state.json]. If false, skip all git commits — save progress to disk only.
+
+      This is a screen-based application. Your output will include:
+      - Atomic .md files: app-overview.md, personas.md, feature-inventory.md, edge-cases.md
+      - Per-artifact directories: features/, data/, screens/, flows/
+      - For each screen: a canonical .md spec AND an interactive .html mock (screens/[name].md + screens/[name].html)
+      - vision-summary.md: comprehensive index with tables linking every artifact
+      - vision/state.json: progress tracker for multi-spawn resume
+
+      Your job:
+      1. Phase 0 — State Verification: Check for existing state.json. If found, cross-reference with disk and offer resume. If not found, initialize fresh state.
+      2. Phase 1 — Foundation: Fill app-overview.md, personas.md, feature-inventory.md. Create data/[entity].md and features/[feature].md as entities and features are discovered.
+      3. Phase 2 — Screens: For each screen, interview using screen_decomposition pattern, generate screens/[name].md (canonical spec) AND screens/[name].html (interactive mock with pre-built CSS component library, wireframe aesthetic, tooltips on all actions). Generate placeholder HTML pages immediately for any navigation targets not yet interviewed.
+      4. Phase 3 — Flows: Document end-to-end user journeys in flows/[flow-name].md, referencing actual screen files.
+      5. Phase 4 — Edge Cases: Fill edge-cases.md with global and per-feature edge cases.
+      6. Phase 5 — Wire-Up: Regenerate all screen HTML (placeholder links → real links), cross-reference all files for consistency, generate vision-summary.md with comprehensive index tables.
+      7. Use attempt_completion to return to me. Include: file manifest, feature/screen/entity/flow counts, flagged concerns, and path to vision-summary.md as the primary entry point.
+
+      Maintain vision/state.json throughout — update after every confirmed artifact. This enables seamless resume across multiple spawns.
+
+      The interactive HTML mocks use a deliberate wireframe aesthetic (dashed borders, grayscale, "NOT FINAL DESIGN" banner). If the user fixates on CSS/visual polish, redirect: "That's UI Designer territory — for now, is the element in the right place with the right behavior?"
+
+      Do NOT make technical decisions (no tech stack, no architecture). Flag any concerns for orchestrator review.
+    </template>
+  </vision_hasher_subtask_prompt>
+
+  <technology_sourcing_prompt>
+    <name>Technology Sourcing Study Prompt (Phase 2 Step 2)</name>
+    <description>
+      Canonical prompt for the Architect to evaluate technology sourcing decisions for every major component before writing the planning/ directory. This is where "lego piece" sizing happens: for each component, the Architect evaluates whether to build custom, study a reference implementation, use an open-source library, adopt a full platform/framework, or call a SaaS.
+    </description>
+    <instructions>
+      <item number="1">
+        <title>Read All Vision Documents</title>
+        Read every file in agent-workspace/project-director/vision/ (except .html wireframes). Identify every major component, integration point, and domain that requires a technology decision.
+      </item>
+      <item number="2">
+        <title>For Each Major Component, Evaluate Sourcing Options</title>
+        For every major component identified, evaluate the following sourcing categories. Present the tradeoffs for each viable option, then recommend one with justification.
+
+        <sourcing_categories>
+          <category name="Custom Build">
+            <description>Build from scratch. Maximum control, maximum effort. Best when: the component is the app's core differentiator, no existing solution fits, or the requirements are highly specific.</description>
+            <tradeoff>Full control over behavior, no dependency risk, but highest development and maintenance cost.</tradeoff>
+          </category>
+
+          <category name="Reference Implementation">
+            <description>Study how an existing product implements the feature, extract design patterns, and adapt them to your platform. Medium-high control, medium effort.</description>
+            <analysis_methods>
+              <method platform="web">Analyze the JavaScript bundles, network traffic, and DOM structure of the reference product. Identify design patterns (not copy code). Document: component architecture, data flow, state management approach, rendering strategy.</method>
+              <method platform="desktop">Analyze behavior patterns via accessibility trees or UI automation. Look for open-source alternatives that implement similar features. Document: UI composition pattern, event handling, data binding approach.</method>
+              <method platform="mobile">Analyze via accessibility inspectors or open-source alternatives. Document: screen composition, navigation patterns, state management.</method>
+              <method platform="cli">Analyze command structure, output formatting, and interaction patterns of reference CLIs.</method>
+            </analysis_methods>
+            <output>For each reference implementation analyzed: save design pattern documentation to agent-workspace/external-docs/ref-[product]-[feature].md. Describe the extracted patterns, how they map to your target platform, and what adaptations are needed.</output>
+            <example>For a ChatGPT clone as a native Windows desktop app: analyze how claude.ai implements "artifacts" by studying the browser-side code. Extract the content block registry pattern, the incremental rendering strategy, the sandboxed execution model. Document these patterns in external-docs/ref-claude-artifacts.md. Adapt the patterns to WPF/WinUI: content blocks become UserControls, sandboxed execution becomes AppDomain isolation or WebView2.</example>
+          </category>
+
+          <category name="Open-Source Library">
+            <description>Integrate via API. Medium control (constrained by library API), lower effort. Best when: a mature, well-maintained library exists that matches requirements closely.</description>
+            <evaluation_criteria>
+              <criterion>Maintenance activity: last commit within 6 months? Active issue resolution?</criterion>
+              <criterion>License compatibility: does the license allow commercial use if needed?</criterion>
+              <criterion>API surface: does the library's API match the abstraction you'd design yourself?</criterion>
+              <criterion>Bundle/dependency cost: how much does it pull in?</criterion>
+              <criterion>Platform compatibility: does it work on the target platform?</criterion>
+            </evaluation_criteria>
+          </category>
+
+          <category name="Full Platform / Framework">
+            <description>Large "lego piece" that provides many capabilities at once (e.g., Firebase, Supabase, Electron, Next.js). Lowest control among self-hosted options, lowest effort. Best when: the platform aligns with most requirements and you're willing to adapt to its patterns.</description>
+            <tradeoff>Fastest development, but you inherit the platform's limitations, update cadence, and architectural patterns. Switching costs are very high.</tradeoff>
+          </category>
+
+          <category name="SaaS / Cloud Service">
+            <description>API call to external service. Lowest control, lowest effort, but ongoing cost and vendor lock-in. Best when: the component is not a core differentiator and a reliable service exists.</description>
+            <tradeoff>Zero maintenance, but monthly cost, latency dependency, and vendor risk (price changes, API deprecation, shutdown).</tradeoff>
+          </category>
+        </sourcing_categories>
+      </item>
+
+      <item number="3">
+        <title>Write the Technology Sourcing Document</title>
+        Write agent-workspace/project-director/tech-sourcing.md. Structure:
+
+        # Technology Sourcing Decisions
+
+        ## Platform
+        [Target platform from vision: web/desktop/mobile/CLI. Primary OS, form factor.]
+
+        ## Component-by-Component Analysis
+        [For EACH major component/domain:]
+
+        ### [Component Name]
+        - **Vision Requirement:** [What the vision says this component must do.]
+        - **Sourcing Recommendation:** [custom / reference-impl / open-source / platform / saas]
+        - **Recommended Approach:** [Specific technology or reference product name.]
+        - **Rationale:** [Why this category and this specific choice?]
+        - **Alternatives Considered:** [What else was evaluated and why rejected?]
+        - **Tradeoffs:** [What do we gain? What do we lose? Control vs. effort assessment.]
+        - **Risk Level:** [Low/Medium/High — with reasoning.]
+
+        ## Reference Implementation Analyses
+        [For each reference implementation studied:]
+        - **Product:** [Name and version/date analyzed.]
+        - **Feature Analyzed:** [Which feature?]
+        - **Key Patterns Extracted:** [Summary. Full analysis in external-docs/ref-[product]-[feature].md.]
+        - **Adaptation Notes:** [How patterns translate to target platform.]
+
+        ## Sourcing Summary
+        [Table: Component | Category | Recommendation | Risk Level]
+      </item>
+
+      <item number="4">
+        <title>Save Reference Analyses to external-docs/</title>
+        For each reference implementation analyzed, write a detailed analysis to agent-workspace/external-docs/ref-[product]-[feature].md. Include: architecture overview, key design patterns, data flow, component structure, and platform adaptation notes. These are permanent reference materials for the feature developers.
+      </item>
+
+      <item number="5">
+        <title>Completion</title>
+        When tech-sourcing.md is written and all reference analyses are saved, use attempt_completion immediately. Do not ask for user approval — the PD handles the review gate. Do NOT write the planning/ directory or roadmap.
+      </item>
+    </instructions>
+  </technology_sourcing_prompt>
+
+  <planning_directory_prompts>
+    <name>Architect Prompts for Planning/ Directory (Phase 2 Step 3)</name>
+    <description>
+      The PD spawns the Architect 2-3 times to create the planning/ directory files. The Architect
+      reads vision docs and tech-sourcing.md, then creates focused topic files one at a time or in
+      batches. This replaces the old monolithic prd_architecture_prompt.
+    </description>
+    <instructions>
+      <item number="1">
+        <title>Read Vision Documents, Technology Sourcing, and Existing Planning Files</title>
+        Read every file in agent-workspace/project-director/vision/ (except .html wireframes). Read agent-workspace/project-director/tech-sourcing.md. Read any existing files in agent-workspace/project-director/planning/ (if resuming).
+      </item>
+      <item number="2">
+        <title>Create the Planning/ Directory Files</title>
+        Write to agent-workspace/project-director/planning/. Create files in this order, one at a time or in logical batches:
+
+        <file name="architecture.md">
+          <description>High-level system design: component diagram (conceptual — describe major components and their relationships), data flow between components, architectural patterns (MVVM, Repository, Provider, etc.), deployment model. Reference the sourcing decisions from tech-sourcing.md for each component.</description>
+        </file>
+
+        <file name="tech-stack.md">
+          <description>Per-component technology stack with sourcing justifications. For each component: the specific technology chosen, the version (if knowable), why it was chosen (referencing vision requirements and tech-sourcing.md decisions), and any constraints it imposes.</description>
+        </file>
+
+        <file name="abstractions.md">
+          <description>Every provider interface and contract. For each integration point: interface name, key methods, what it abstracts, and the first concrete implementation (e.g., ILLMProvider → OpenAI implementation). These interfaces are what Wave 1 builds and Wave 3 features extend. Derive from tech-sourcing.md's sourcing decisions — every SaaS/open-source/library choice needs an abstraction.</description>
+          <generalization_rules>
+            <rule>Every external service integration must have a defined abstraction interface.</rule>
+            <rule>Write abstractions as: "Build [abstraction] interface; implement [concrete] as first [provider/implementation]."</rule>
+            <example bad="Feature: Integrate OpenAI for task suggestions" good="Build ILLMProvider interface with GenerateAsync(); implement OpenAiProvider as first provider"/>
+          </generalization_rules>
+        </file>
+
+        <file name="data-model.md">
+          <description>Entities and their relationships, derived from vision/data/ files. For each entity: name, attributes, relationships to other entities, and which features consume it. Include an entity-relationship summary (conceptual diagram or list).</description>
+        </file>
+
+        <file name="integration-points.md">
+          <description>Every external integration point: the service, the abstraction that wraps it (reference abstractions.md), the fallback strategy, and any configuration needed. Include both SaaS integrations and platform-specific integrations (e.g., Windows registry, file system, OS notifications).</description>
+        </file>
+
+        <file name="platform-notes.md">
+          <description>Platform-specific patterns, constraints, and conventions. For WPF: MVVM pattern, XAML bindings, dependency injection patterns. For web: routing strategy, state management, SSR vs CSR. For CLI: argument parsing, output formatting. For desktop: installer requirements, auto-update mechanism, OS integration points.</description>
+        </file>
+
+        <file name="planning-summary.md">
+          <description>Index file that ties the planning/ directory together. List each file with a one-sentence summary. Include a "Quick Reference" section: tech stack summary table, key abstractions list, data entities list, external integrations list. This is what the FD Architect reads first to understand the architecture.</description>
+        </file>
+      </item>
+      <item number="3">
+        <title>Completion</title>
+        When the assigned planning/ files are written, use attempt_completion immediately. Do not ask for approval — the PD handles the review gate. List which files were created in your completion summary.
+      </item>
+    </instructions>
+  </planning_directory_prompts>
+
+  <wave_map_prompt>
+    <name>Architect Prompt for Wave Map (Phase 2 Step 4)</name>
+    <description>
+      Canonical prompt for the Architect to write a lightweight wave map to roadmap.md. Features are
+      grouped by architectural wave with ONLY: feature name, 1-line description, and dependencies.
+      NO acceptance criteria — the FD Architect derives those from vision docs.
+      This replaces the old feature_specs_prompt and feature_specs_continuation_prompt (which are now deprecated).
+    </description>
+    <instructions>
+      <item number="1">
+        <title>Read All Input Materials</title>
+        Read every file in agent-workspace/project-director/vision/ (except .html wireframes). Read all files in agent-workspace/project-director/planning/ (especially architecture.md, abstractions.md, data-model.md). Read agent-workspace/project-director/tech-sourcing.md for sourcing decisions.
+      </item>
+      <item number="2">
+        <title>Create the Wave Map</title>
+        Write agent-workspace/project-director/roadmap.md. Group features into architectural Waves (NOT thematic milestones).
+
+        <wave name="Wave 1: Foundation">
+          <description>Infrastructure that everything else depends on. These features build the core abstractions, data model, and project scaffolding.</description>
+          <includes>All data entities (from vision data concepts), core abstraction interfaces (providers from planning/abstractions.md), database migrations, project setup, CI/CD pipeline.</includes>
+        </wave>
+
+        <wave name="Wave 2: Skeleton">
+          <description>App shell, navigation, and empty screens. These features create the structural frame that Wave 3 fills in.</description>
+          <includes>App shell with routing, all screens as empty shells with placeholder content, navigation structure, authentication framework (login/logout, no roles yet).</includes>
+        </wave>
+
+        <wave name="Wave 3: Vertical Slices">
+          <description>End-to-end features. Each feature is a complete vertical slice through the stack (DB → API → UI). Features ADD new code to pre-built infrastructure — they do NOT modify Wave 1-2 code.</description>
+          <includes>Every user-facing feature from vision feature-inventory.md. Order by dependency (e.g., Task CRUD before Task Assignment). Each feature references which Wave 1 abstraction it extends.</includes>
+        </wave>
+
+        <wave name="Wave 4: Cross-Cutting">
+          <description>Features that span across all vertical slices. These enhance the entire app uniformly.</description>
+          <includes>Permissions/authorization, search/filtering, reporting/analytics, accessibility, i18n, performance optimization, end-to-end testing.</includes>
+        </wave>
+
+        <format_rules>
+          <rule>Format: "- Feature N: [Name] — [1-line description]. Depends on: [list or none]."</rule>
+          <rule>Testing and DevOps MUST be explicit features within appropriate waves.</rule>
+          <rule>Each feature in Wave 3 must note: "Extends [Wave 1 abstraction]" or "Uses [Wave 1 entity]" so it's clear what pre-built infrastructure supports it.</rule>
+          <rule>For features sourced via reference implementation: note "Reference pattern: external-docs/ref-[product]-[feature].md" in the feature description.</rule>
+          <rule>DO NOT write acceptance criteria. The FD Architect derives acceptance criteria from vision docs.</rule>
+          <rule>DO NOT number features yet — numbering happens in the assembly step.</rule>
+        </format_rules>
+      </item>
+      <item number="3">
+        <title>Completion</title>
+        When roadmap.md is written with all features for all waves, use attempt_completion immediately. Do not ask for approval. Do NOT include acceptance criteria. Do NOT number features — the assembly step handles that.
+      </item>
+    </instructions>
+  </wave_map_prompt>
+
+  <assembly_verification_prompt>
+    <name>Architect Prompt for Assembly — Numbering & Dependency Check (Phase 2 Step 5)</name>
+    <description>
+      Simplified assembly prompt: number all features sequentially, verify cross-wave dependencies, ensure forward-flow. No generalization sweep (that's the PD's Step 7 audit).
+    </description>
+    <instructions>
+      <item number="1">
+        <title>Read the Complete Wave Map and Planning Directory</title>
+        Read agent-workspace/project-director/roadmap.md — all features across all waves should be specified. Also read the planning/ directory files (architecture.md, abstractions.md, data-model.md).
+      </item>
+      <item number="2">
+        <title>Number All Features Sequentially</title>
+        Replace temporary labels with sequential numbers: Feature 1, Feature 2, Feature 3, ... across all waves. Ensure numbering is continuous (no gaps, no duplicates).
+      </item>
+      <item number="3">
+        <title>Verify Cross-Wave Dependencies</title>
+        Check every feature's dependency list. For each dependency:
+        - Does the dependency feature exist in the roadmap?
+        - Is the dependency feature numbered BEFORE the dependent feature (forward flow)?
+        - Does any Wave 3 feature incorrectly depend on another Wave 3 feature that hasn't been built yet? (Wave 3 features should depend on Wave 1-2 features, not on each other unless explicitly ordered.)
+        If any dependency violations are found: fix the dependency list or reorder features as needed.
+      </item>
+      <item number="4">
+        <title>Verify Abstraction References</title>
+        Every Wave 3 feature must note which Wave 1 abstraction(s) from planning/abstractions.md it extends. Verify these references are correct: does the abstraction actually exist in the planning/ directory? If a Wave 3 feature needs an abstraction that isn't in the planning/ directory, flag it for the PD.
+      </item>
+      <item number="5">
+        <title>Completion</title>
+        When assembly is complete, use attempt_completion with summary: total features, features per wave, any unresolved dependency or abstraction issues flagged.
+      </item>
+    </instructions>
+  </assembly_verification_prompt>
+
+  <feature_developer_prompt_construction>
+    <overview>
+      Every time you spawn a feature-developer subtask, the prompt must be comprehensive and self-contained. The feature-developer operates independently and needs full context to succeed.
+    </overview>
+
+    <required_elements>
+      <element name="project_vision">
+        <description>
+          Copy the core vision, user personas, and success metrics from agent-workspace/project-director/vision/app-overview.md and vision/personas.md. Also include the tech stack summary from planning/tech-stack.md. This gives the feature-developer the "North Star" context for their work.
+        </description>
+      </element>
+      <element name="feature_specification">
+        <description>
+          Copy the exact feature line from agent-workspace/project-director/roadmap.md (name, 1-line description, dependencies, wave). Include the wave name so the FD understands the architectural context.
+
+          CRITICAL: The roadmap contains ONLY the feature name, 1-line description, and dependencies — NO acceptance criteria. Include this instruction: "Read the vision docs for this feature. Derive acceptance criteria from the vision. Create an implementation plan using the architecture and abstractions from planning/."
+
+          Also include paths to:
+          - The full planning/ directory (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md) — so the FD Architect understands the architecture and abstractions.
+          - The relevant vision docs (vision-summary.md, feature-inventory.md, features/, data/, screens/, flows/) — so the FD Architect derives acceptance criteria from the vision.
+        </description>
+      </element>
+      <element name="completion_instruction">
+        <description>
+          Always include this exact text: "When you have fully completed Phase 5, updated the partitioned knowledge base (agent-workspace/knowledge/), and your feature is archived and committed to its local branch, use attempt_completion to report back to me. Include in your summary: the feature name, branch name (or 'none — git skipped'), total steps completed, location of the archived plan, a per-file summary of what was added to each partitioned knowledge file (architecture.md, database.md, api-routes.md, frontend-ui.md), and your own scope-drift assessment: whether the delivered feature matches the acceptance criteria YOUR ARCHITECT derived from the vision docs, or diverges from them. If it diverges, state which acceptance criteria were affected, whether the adjustment was minor (plan edited in-place) or major (plan re-drafted via Architect), and why the divergence was necessary."
+        </description>
+      </element>
+      <element name="context_about_previous_features">
+        <description>
+          Briefly mention what features have already been built (from current-state.md "What the App Can Currently Do" section) so the feature-developer understands the existing foundation.
+
+          Also include the wave structure context: which Wave 1 abstractions exist, which Wave 2 skeleton is in place, and the current wave name. Format: "Wave 1 (Foundation) complete: [list abstractions from planning/abstractions.md]. Wave 2 (Skeleton) complete: [list]. Current wave: Wave 3 (Vertical Slices)."
+
+          PRUNING RULE: If more than 3 prior features exist, do NOT copy all bullet points from current-state.md. Instead summarize concisely: "Features 1–N have built: [high-level summary of domains, e.g., auth, user management, inventory CRUD]." Keep this section under 5 bullet points or 2 sentences to avoid context bloat in the FD prompt and its Architect subtask.
+        </description>
+      </element>
+    </required_elements>
+  </feature_developer_prompt_construction>
+
+  <test_fix_prompt_pattern>
+    <name>Code Subtask Prompt for Unit Test Fixes</name>
+    <description>
+      Canonical prompt to use when spawning a code subtask to fix failing unit tests in Phase 4, Step 1. This does NOT cover E2E test failures — those are handled by a separate error recovery path.
+    </description>
+    <template>
+      The unit test suite is failing after the latest feature integration. Run the unit tests, analyze the failures, and fix the regressions. Do NOT modify feature code unless it directly causes test failures. Do NOT touch E2E tests in tests/e2e/ — those are the PD's domain. Report back with what was broken and what you fixed.
+    </template>
+  </test_fix_prompt_pattern>
+
+  <knowledge_backfill_prompt_pattern>
+    <name>Architect Subtask Prompt for Knowledge Base Backfill</name>
+    <description>
+      Canonical prompt to use when spawning an architect subtask to backfill knowledge files that the feature-developer failed to update.
+    </description>
+    <template>
+      The feature-developer completed Feature [X] but may not have fully updated the partitioned knowledge base. Review agent-workspace/feature/archive/plan-[sanitized-branch-name].md and agent-workspace/feature/archive/ref-[sanitized-branch-name].md (if they exist), then update the relevant files in agent-workspace/knowledge/ with any missing architectural patterns, schemas, endpoints, or UI components.
+
+      IMPORTANT: Sanitize the branch name before constructing these paths — replace all "/" with "-" (e.g., "feature/user-auth" becomes "feature-user-auth") to match the feature-developer's archive naming convention.
+
+      If git automation was disabled for this feature (no branch name available), sanitize the feature name instead: lowercase, replace spaces with hyphens — to match the feature-developer's alternative archive naming convention.
+
+      When complete, use attempt_completion to report your results. Include in your summary: which knowledge files you updated and what you added to each.
+    </template>
+  </knowledge_backfill_prompt_pattern>
+
+  <roadmap_revision_prompt_pattern>
+    <name>Architect Subtask Prompt for Roadmap Revision</name>
+    <description>
+      Canonical prompt to use when the user wants to revise the roadmap, or when vision re-evaluation triggers a re-plan of remaining features.
+    </description>
+    <template>
+      [IF RE-PLANNING AFTER VISION DRIFT: The vision documents have been updated after building Features 1 through [N]. Revise the roadmap for the REMAINING features only (Features [N+1] onward). Preserve the wave structure. Re-evaluate generalization: new integration points may need abstraction. Update agent-workspace/project-director/roadmap.md.]
+
+      [IF USER FEEDBACK REVISION: The user has provided feedback on the roadmap. Revise agent-workspace/project-director/roadmap.md based on this feedback: [USER FEEDBACK]. Preserve wave structure and feature numbering where possible.]
+
+      When complete, use attempt_completion to complete your task.
+    </template>
+  </roadmap_revision_prompt_pattern>
+
+  <execution_plan_critic_prompt>
+    <name>Execution Plan Critic Subtask Prompt</name>
+    <description>
+      Canonical prompt to use when spawning an Architect-mode Critic subtask in Phase 2,
+      Step 6 to review the planning/ directory and roadmap.md before the generalization audit.
+    </description>
+    <usage>
+      Spawn via new_task in architect mode. The Critic reviews the planning/ directory files and
+      roadmap.md for architectural flaws, wave dependency integrity, abstraction coverage,
+      vision alignment, and feature ordering.
+    </usage>
+    <template>
+      "CRITICAL RULE: You must NEVER read, edit, or modify agent-workspace/project-director/state.json. That file is strictly managed by the Orchestrator.
+
+You are a strict Principal Engineer acting as a Design Critic. Review and polish the planning/ directory files and `agent-workspace/project-director/roadmap.md`.
+
+Perform a strict architectural review across five dimensions:
+
+1. WAVE DEPENDENCIES: Does every Wave 3 feature reference the Wave 1-2 abstractions it needs (entities from Wave 1 data model, app shell/skeleton from Wave 2)? Are there any circular dependencies between features? Can each feature's dependencies actually be built before the feature itself?
+
+2. ABSTRACTION COVERAGE: Are there integration points without provider interfaces in planning/abstractions.md? Every external service integration (LLM, payments, email, storage, auth) must have a defined abstraction interface. Flag any concrete vendor integration without a preceding abstraction.
+
+3. VISION ALIGNMENT: Does every roadmap feature trace back to a vision requirement? Are there vision requirements with no roadmap feature? Flag orphaned vision requirements (in vision docs but not roadmap) and unmoored roadmap features (in roadmap but not vision).
+
+4. FEATURE ORDERING: Do dependencies flow forward (later features depend on earlier features, never the reverse)? Can features actually be built in the specified order? Are there features that depend on features in a later wave?
+
+5. PLANNING/ COMPLETENESS: Are all 7 planning files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md) present and internally consistent? Do the abstraction interfaces in abstractions.md match the integration points in integration-points.md? Does the tech stack in tech-stack.md match the architecture described in architecture.md?
+
+Edit the files to fix any flaws you find. For vision gaps (orphaned requirements or unmoored features), flag them in your completion summary — do NOT edit vision docs.
+
+CRITICAL: If you found ZERO flaws and made ZERO changes, use attempt_completion immediately. HOWEVER, if you made ANY changes, use ask_followup_question with exactly 2 Suggested Responses: 'Approved, proceed' and 'Revert changes'. Include: 'If you want manual adjustments, please type your feedback in the chat.' Do NOT use attempt_completion until the user explicitly approves or reverts. If user clicks 'Approved, proceed', use attempt_completion with a success summary. If user clicks 'Revert changes', undo your edits and use attempt_completion with the message 'CHANGES REVERTED BY USER'."
+    </template>
+  </execution_plan_critic_prompt>
+
+  <e2e_test_generation_prompt>
+    <name>E2E Test Generation Prompt</name>
+    <description>
+      Canonical prompt to use when spawning a Code mode subtask to generate E2E regression tests for a just-completed feature. The E2E generation subtask analyzes the project type and selects the appropriate E2E framework — the PD does NOT prescribe Playwright or any specific tool.
+    </description>
+    <usage>
+      Spawn via new_task in Code mode. The prompt must include the feature name (sanitized), acceptance criteria (from the FD's archived plan — the FD Architect derived these from vision docs), tech stack context, and target file path.
+    </usage>
+    <template>
+      <section name="context">
+        <item number="1">
+          <title>Project Tech Stack</title>
+          [Copy the tech stack from the planning/ directory (planning/tech-stack.md) and relevant architecture details from agent-workspace/knowledge/architecture.md. Include: programming language, UI framework (web/WPF/CLI/mobile), build system, test runner already in use.]
+        </item>
+        <item number="2">
+          <title>Vision Documents</title>
+          Also read the relevant vision documents: personas (vision/personas.md) and user flows (vision/flows/) to understand the user journey this feature enables.
+        </item>
+        <item number="3">
+          <title>Feature to Test</title>
+          Feature name: [Feature Name]
+          Sanitized name for file: [sanitized-feature-name]
+        </item>
+        <item number="4">
+          <title>Acceptance Criteria (from FD Architect — derived from vision docs)</title>
+          [Copy the exact acceptance criteria from the FD's archived plan. These were derived by the FD Architect from vision docs. These are the requirements the E2E test MUST verify.]
+        </item>
+      </section>
+
+      <section name="instructions">
+        <item number="1">
+          <title>Analyze the Project Type and Select E2E Framework</title>
+          Based on the tech stack, determine the project type and choose the appropriate E2E testing framework:
+          - Web applications (React, Next.js, Vue, Svelte, Angular, plain HTML/JS): Evaluate Playwright, Cypress, or other browser-testing frameworks and choose the one best suited to the project's existing tooling and conventions
+          - WPF/WinUI/.NET desktop applications: Use WinAppDriver with FlaUI, or a custom test harness with UI Automation
+          - CLI/terminal applications: Use shell scripts, expect, or a custom test harness
+          - Mobile applications: Use Appium or Maestro
+          - API-only backends: Use Supertest, REST Client, or HttpClient-based test projects
+          - If the project already has an E2E framework configured (check tests/e2e/ for existing tests), use the SAME framework — do not introduce a second E2E tool
+          - If the project is a desktop app with no existing E2E setup: choose the most appropriate framework and set it up from scratch
+        </item>
+        <item number="2">
+          <title>Set Up the E2E Framework</title>
+          Install dependencies, configure the test runner, and add a run script to the project (e.g., package.json "test:e2e" script, .csproj test project, Makefile target). Ensure the framework can be run with a single command. If the framework requires a running application server, note this in your report.
+        </item>
+        <item number="3">
+          <title>Read the Feature Code and UI Structure</title>
+          Read the feature's code, UI markup, and component structure to understand DOM elements, component IDs, accessibility labels, and interaction patterns. This is critical for writing accurate selectors. If knowledge files exist (agent-workspace/knowledge/frontend-ui.md), read them for UI context. If unit tests exist (tests/unit/), read them to understand what's already covered — E2E tests should complement unit tests, not duplicate them.
+        </item>
+        <item number="4">
+          <title>Write the E2E Test</title>
+          Write a comprehensive E2E test at the target path: tests/e2e/feature-[sanitized-name].[ext] (choose the extension appropriate for the framework: .spec.ts for Playwright, .cs for .NET, .py for Python, etc.).
+          The test MUST:
+          - Verify EVERY acceptance criterion provided
+          - Use the feature name in the test description for traceability
+          - Use reliable selectors (prefer data-testid, accessibility labels, or stable IDs over CSS classes)
+          - Include setup and teardown that doesn't interfere with other tests
+          - Follow the existing project's coding conventions
+        </item>
+        <item number="5">
+          <title>Verify the Test Runs</title>
+          Run the E2E test command yourself to confirm it works. If the test fails, fix it — do not hand off a broken test. If the test framework requires a running server/app and none is running, note this in your report but verify the test code is syntactically correct.
+        </item>
+        <item number="6">
+          <title>Report Back</title>
+          Use attempt_completion with this exact structure in your summary:
+          - E2E Framework: [framework name and version]
+          - Run Command: [exact command to run the E2E suite, e.g., "npx playwright test" or "dotnet test tests/e2e/"]
+          - Test File: tests/e2e/feature-[sanitized-name].[ext]
+          - Acceptance Criteria Covered: [list each criterion and how the test verifies it]
+          - Setup Notes: [any prerequisites, e.g., "requires app running on localhost:3000" or "requires WinAppDriver service running"]
+          - Warnings: [any limitations or known issues]
+        </item>
+      </section>
+    </template>
+  </e2e_test_generation_prompt>
+
+  <dashboard_templates>
+    <name>Dashboard Templates</name>
+    <description>
+      Templates for the Project Director's living dashboard files. Created in Phase 1 Step 2
+      and updated throughout the project lifecycle. These are distinct from vision templates —
+      they track project state, not product vision.
+    </description>
+
+    <template name="backlog.md">
+      <content><![CDATA[
+# Backlog (Icebox)
+
+Scope-creep ideas and deferred features live here...
+
+| # | Idea | Proposed By | Date |
+|---|------|-------------|------|
+]]></content>
+    </template>
+
+    <template name="current-state.md">
+      <content><![CDATA[
+# Current State Dashboard
+
+## 1. What the App Can Currently Do
+
+_Initialized — awaiting vision discovery._
+
+## 2. UI Map
+
+_Not yet available._
+
+## 3. Architectural Health & Tech Debt
+
+_No assessment yet._
+
+## 4. Vision Updates
+
+_No changes yet — vision docs are the current authority._
+
+## 5. E2E Regression Suite
+
+_Not yet configured._
+]]></content>
+    </template>
+  </dashboard_templates>
+
+  <ad_hoc_code_subtask_prompt>
+    <name>Code Subtask Prompt for Ad-Hoc Changes</name>
+    <description>
+      Canonical prompt to use when spawning a Code mode subtask directly (bypassing FD) for small ad-hoc
+      changes: bug fixes, single-file refactors, minor logic adjustments. The PD MUST include the roadmap/
+      vision context so the Code subtask understands where this change fits in the larger project.
+    </description>
+    <usage>
+      Spawn via new_task in Code mode. The prompt must include: the user's exact request, roadmap context
+      (which feature this relates to, wave structure), relevant vision context, and the current state of
+      the project.
+    </usage>
+    <template>
+      <section name="context">
+        <item number="1">
+          <title>Project Context</title>
+          [Copy the project vision from vision-summary.md and the tech stack from planning/tech-stack.md. Include the wave structure: which Wave 1 abstractions exist, which Wave 2 skeleton is in place, which wave we're currently in.]
+        </item>
+        <item number="2">
+          <title>Where This Fits</title>
+          [Explain where this ad-hoc request fits in the roadmap. If it's covered by an upcoming feature: name the feature and wave. If it's new: explain why it's being handled directly rather than via FD.]
+        </item>
+        <item number="3">
+          <title>What's Already Built</title>
+          [Brief summary from current-state.md "What the App Can Currently Do" — keep to 2-3 bullet points.]
+        </item>
+      </section>
+
+      <section name="instructions">
+        <item number="1">
+          <title>Understand the Request</title>
+          Read the user's request and the project context. Understand where this change fits in the larger application. If the request is ambiguous, ask one focused clarifying question — do not over-analyze.
+        </item>
+        <item number="2">
+          <title>Make the Change</title>
+          Implement the requested change. Keep it minimal and targeted — do not expand the scope beyond what was asked. If you discover that the change requires touching shared infrastructure (interfaces, provider abstractions, core data model), flag this in your completion summary as "ARCHITECTURAL IMPACT" and explain why — the PD will need to reconcile this with the roadmap.
+        </item>
+        <item number="3">
+          <title>Run Tests</title>
+          Follow your standard quality loop: implement → run unit tests → self-refactor → run tests again. If tests fail: fix only if your change directly caused the failure. If pre-existing tests fail: flag in your completion summary — do NOT fix unrelated tests.
+        </item>
+        <item number="4">
+          <title>Report Back</title>
+          Use attempt_completion with this structure in your summary:
+          - What was changed: [file paths and brief description of each change]
+          - Tests: [all passed / N failed (which ones, why)]
+          - Architectural Impact: [none / description of any shared infrastructure touched]
+          - Scope Notes: [any observations about how this change relates to the larger project]
+        </item>
+      </section>
+    </template>
+  </ad_hoc_code_subtask_prompt>
+
+  <!-- DEPRECATED PROMPTS — kept for backward compatibility reference -->
+  <deprecated_prompts>
+    <name>Legacy Prompts (Deprecated)</name>
+    <description>
+      These prompts have been replaced by the new planning/ directory + wave map approach.
+      Kept for reference and backward compatibility with any code that still references them by name.
+    </description>
+
+    <standard_prd_roadmap_prompt>
+      <name>DEPRECATED — Standard Architect Prompt for PRD and Roadmap Creation</name>
+      <description>
+        Replaced by planning_directory_prompts + wave_map_prompt + assembly_verification_prompt.
+      </description>
+    </standard_prd_roadmap_prompt>
+
+    <prd_architecture_prompt>
+      <name>DEPRECATED — Architect Prompt for PRD & Architecture</name>
+      <description>
+        Replaced by planning_directory_prompts. The monolithic PRD is now split into focused planning/ files.
+      </description>
+    </prd_architecture_prompt>
+
+    <feature_specs_prompt>
+      <name>DEPRECATED — Architect Prompt for Feature Specification</name>
+      <description>
+        Replaced by wave_map_prompt. The roadmap is now a lightweight wave map — no acceptance criteria.
+      </description>
+    </feature_specs_prompt>
+
+    <feature_specs_continuation_prompt>
+      <name>DEPRECATED — Architect Prompt for Feature Specification Continuation</name>
+      <description>
+        Replaced by wave_map_prompt. One spawn creates the entire wave map.
+      </description>
+    </feature_specs_continuation_prompt>
+  </deprecated_prompts>
+</common_patterns>

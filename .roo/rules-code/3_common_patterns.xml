@@ -1,0 +1,172 @@
+<common_patterns>
+  <overview>
+    Reusable patterns for the Code mode, including the QA review loop, subtask delegation
+    patterns, and common coding approaches.
+  </overview>
+
+  <pattern name="qa_review_loop">
+    <description>The standard quality loop that runs after every implementation</description>
+    <context>After code implementation is complete and self-refactoring is done</context>
+    <qa_brief_structure>
+      <element>Goal: 1-3 sentences describing what was being worked on and what the changes aimed to achieve</element>
+      <element>Files changed: complete list of every modified or created file with full paths</element>
+      <element>Constraints: specific requirements, edge cases to watch for, areas of concern</element>
+      <element>Expected behavior: what should the changes accomplish when working correctly</element>
+    </qa_brief_structure>
+    <qa_subtask_prompt_template>
+      <example>
+        "Review the following code changes for bugs, issues, and quality problems.
+
+        GOAL: [1-3 sentence description of what we're trying to achieve]
+
+        FILES TO REVIEW (read every file):
+        - [path/to/file1.ts]
+        - [path/to/file2.ts]
+        - [path/to/__tests__/file1.test.ts]
+
+        CONSTRAINTS:
+        - [constraint 1]
+        - [constraint 2]
+
+        EXPECTED BEHAVIOR: [what should happen when the changes work correctly]
+
+        Read every file listed above and compile a structured QA report with your findings."
+      </example>
+    </qa_subtask_prompt_template>
+  </pattern>
+
+  <pattern name="qa_report_evaluation">
+    <description>Evaluating and acting on the QA report</description>
+    <context>After the QA subtask completes and returns its report</context>
+    <evaluation_framework>
+      <step>
+        <action>Read the QA completion summary in full</action>
+        <detail>The report has four sections: Bugs & Issues, Concerns & Risks, Test Quality, Nitpicks.</detail>
+      </step>
+      <step>
+        <action>Classify each finding as Accept or Dismiss</action>
+        <detail>
+          - Bugs & Issues: Almost always Accept — these are definite problems. Dismiss only if factually incorrect.
+          - Concerns & Risks: Accept if the risk is real; Dismiss if the scenario is implausible or already handled.
+          - Test Quality: Accept if the test issue is real; Dismiss if the test pattern is intentional.
+          - Nitpicks: Accept if trivial to fix; Dismiss if the stylistic choice is deliberate.
+        </detail>
+      </step>
+      <step>
+        <action>For each dismissal, provide a specific justification</action>
+        <detail>
+          Format: "Dismissed [finding #]: [reason]."
+          Valid reasons: intentional behavior, pre-existing (out of scope), factually incorrect, not applicable.
+          Document dismissals in your internal reasoning — you need to know why you dismissed something, but the user sees only the finished result.
+        </detail>
+      </step>
+      <step>
+        <action>Fix all accepted findings</action>
+        <detail>
+          Address Bugs & Issues first (they're definite problems), then Concerns & Risks,
+          then Test Quality issues. Nitpicks are optional — fix only if minimal effort.
+        </detail>
+      </step>
+      <step>
+        <action>Run the full automated test suite after all fixes</action>
+        <detail>Tests must pass before presenting results to the user.</detail>
+      </step>
+    </evaluation_framework>
+  </pattern>
+
+  <pattern name="design_polish_subtask">
+    <description>Auto-launching a UI Designer subtask for visual-only changes. Two triggers: (a) SHT reports VISUAL: 🔴 obvious breakage, (b) user explicitly expresses visual dissatisfaction with working functionality.</description>
+    <context>Functionality is confirmed working (via SHT all_passed or user confirmation), but visual quality needs improvement.</context>
+    <auto_launch_triggers>
+      <trigger name="sht_visual_breakage">SHT report has VISUAL: 🔴 — objective visual breakage detected. Launch immediately, no consent needed.</trigger>
+      <trigger name="user_visual_dissatisfaction">User says functionality works but design looks bad — explicit expression of visual dissatisfaction. Launch immediately, no consent needed.</trigger>
+    </auto_launch_triggers>
+    <subtask_brief_structure>
+      <element>Specific visual issues from SHT report or user feedback</element>
+      <element>Relevant file paths (files modified in this session, or all UI files if mapping is ambiguous)</element>
+      <element>Design system or token constraints (if any)</element>
+      <element>Note: "Functionality confirmed working. Visual-only fix needed."</element>
+    </subtask_brief_structure>
+  </pattern>
+
+  <pattern name="stuck_resolution_subtask">
+    <description>Offering a Debug subtask after 2-3 failed diagnostic→fix→verification cycles</description>
+    <context>2-3 full cycles of: diagnostic → fix → quality loop → verification gate → user still reports broken. Different approaches attempted each cycle. Diagnostic output gathered each cycle.</context>
+    <ask_framing>
+      <example>
+        "We've tried [N] diagnostic→fix→verification cycles without resolving [the problem]. Would you like me to launch
+        a Debug subtask to investigate from scratch? A fresh agent specialized in systematic debugging can
+        sometimes spot root causes we've been missing."
+      </example>
+    </ask_framing>
+    <subtask_brief_structure>
+      <element>Original problem statement (as the user first described it)</element>
+      <element>Every approach tried and why it failed</element>
+      <element>All diagnostic output gathered across all cycles</element>
+      <element>Relevant file paths and code sections</element>
+      <element>Any constraints or requirements</element>
+      <element>Explicit instruction: investigate systematically, identify root cause, propose a fix — do not implement without understanding</element>
+    </subtask_brief_structure>
+  </pattern>
+
+  <pattern name="subtask_integration">
+    <description>Reviewing and integrating subtask results (for user-consent subtasks)</description>
+    <context>After a design-polish or stuck-resolution subtask completes</context>
+    <review_checklist>
+      <item>Do the changes match the brief?</item>
+      <item>Are the changes consistent with existing code patterns?</item>
+      <item>Do tests still pass?</item>
+      <item>Are there any unintended side effects?</item>
+      <item>Is the code readable and maintainable?</item>
+    </review_checklist>
+    <post_integration>
+      <action>Run the full quality loop on the subtask's changes: test → refactor → test → QA review → fix → test</action>
+      <action>Only present to user after the quality loop completes</action>
+    </post_integration>
+    <report_structure>
+      <element>Summary of what the subtask changed</element>
+      <element>QA findings from the review of subtask changes</element>
+      <element>Any issues found during review (and whether they were fixed)</element>
+      <element>Confirmation that the original request is satisfied</element>
+    </report_structure>
+  </pattern>
+
+  <pattern name="targeted_code_change">
+    <description>Standard approach for making code changes</description>
+    <context>Any code modification request</context>
+    <approach>
+      <step>Read the file(s) that need to change to understand current structure</step>
+      <step>Identify the exact lines or sections to modify</step>
+      <step>Use targeted search/replace diffs for surgical edits</step>
+      <step>Verify the change compiles and tests pass</step>
+    </approach>
+  </pattern>
+
+  <pattern name="new_file_creation">
+    <description>Creating new files that integrate with existing code</description>
+    <context>Adding a new component, module, or utility</context>
+    <approach>
+      <step>Find a similar existing file to use as a structural reference</step>
+      <step>Match the conventions: imports, exports, naming, structure</step>
+      <step>Place the file in the appropriate directory following project conventions</step>
+      <step>Add any necessary imports or registrations in dependent files</step>
+      <step>Create corresponding test file if the project has tests</step>
+    </approach>
+  </pattern>
+
+  <pattern name="git_operations">
+    <description>Performing git operations with MCP git tools preference and shell fallback</description>
+    <context>Any time git operations are needed — staging files, committing, checking diffs, viewing status, or creating branches. This applies both when git commands are explicitly requested and when they're part of a standard workflow (e.g., the quality loop's git commit step).</context>
+    <preference_order>
+      <step priority="1">Use MCP Git Tools server if available — provides structured JSON output for reliable parsing and scope drift detection</step>
+      <step priority="2">Fall back to shell git commands if MCP git tools are unavailable, return errors, or are not detected at runtime</step>
+    </preference_order>
+    <covered_operations>stage/commit, diff, status, branch creation — the preference order above applies uniformly to all git operations</covered_operations>
+    <graceful_degradation>
+      <rule>If the prompt instructs use of MCP git tools, attempt MCP git tools first for every git operation.</rule>
+      <rule>If MCP git tools are not available (no matching tools found, or tools return errors), silently fall back to shell git commands. Do not ask the user — just use the fallback.</rule>
+      <rule>If the prompt does NOT instruct use of MCP git tools, default to shell git commands. MCP git tools are an optimization, not a requirement.</rule>
+      <rule>Never block progress waiting for MCP git tools. Shell git commands are always an acceptable fallback that produces the same results.</rule>
+    </graceful_degradation>
+  </pattern>
+</common_patterns>

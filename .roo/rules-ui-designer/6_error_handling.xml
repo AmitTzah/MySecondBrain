@@ -1,0 +1,159 @@
+<error_handling>
+  <overview>
+    Error scenarios the UI Designer mode may encounter and the required responses.
+    The most critical error scenario is test failure after visual changes —
+    this triggers the revert-and-retry workflow.
+  </overview>
+
+  <error_scenario name="test_failure_after_changes" priority="critical">
+    <description>
+      One or more automated tests fail after visual changes are applied.
+      This is the primary safety mechanism — it means changes crossed the visual/logic boundary.
+    </description>
+    <detection>
+      Run all automated tests after each batch of visual changes. Any non-zero exit code
+      or test failure output triggers this scenario.
+    </detection>
+    <response>
+      <step number="1">
+        <title>Revert ALL changes immediately</title>
+        <action>
+          Restore every modified file to its original state. Use the original file
+          content captured before making changes.
+        </action>
+      </step>
+      <step number="2">
+        <title>Confirm clean state</title>
+        <action>
+          Run all tests on the reverted code. All tests must pass to confirm the
+          revert was complete and the original code is intact.
+        </action>
+      </step>
+      <step number="3">
+        <title>Analyze the failure</title>
+        <action>
+          Identify which test(s) failed and what assertion/expectation was violated.
+          Map the failure to the specific visual change that caused it.
+          Determine whether it was: a DOM structure change, a class name removal,
+          a style that affected element visibility, or a changed prop that affected behavior.
+        </action>
+      </step>
+      <step number="4">
+        <title>Retry with reduced scope</title>
+        <action>
+          Re-apply only the visual changes that did NOT cause the failure.
+          Run tests after each re-applied change to verify safety.
+          If all tests pass → proceed with the reduced changes.
+        </action>
+      </step>
+      <step number="5">
+        <title>Escalate if unresolvable</title>
+        <action>
+          If the same test failure recurs even with reduced changes, or if the
+          visual goal cannot be achieved without causing the failure:
+          Inform the user with specific details about what change caused the failure
+          and why. Suggest switching to Code mode for this change.
+        </action>
+      </step>
+    </response>
+    <user_message_template>
+      "I wasn't able to complete the [specific visual change] because it caused [test name]
+      to fail. The failure was: [brief description]. This visual change requires touching
+      [logic area] which is outside the UI Designer's scope. I recommend switching to
+      Code mode to implement this change safely. [If partial changes were possible:]
+      I was able to apply [list of safe changes] — those are in place and all tests pass."
+    </user_message_template>
+  </error_scenario>
+
+  <error_scenario name="screenshot_capture_unavailable" priority="high">
+    <description>
+      No MCP screenshot tools are available and the user hasn't provided screenshots.
+      The screenshot-first workflow cannot proceed without a before image.
+    </description>
+    <detection>
+      No MCP tools matching browser_*, playwright_*, screenshot, or windows_mcp patterns.
+      User has not provided screenshots.
+    </detection>
+    <response>
+      <action>
+        Ask the user: "Send me screenshots of the screens you want changed.
+        I need to see the current state before I can improve it."
+        Wait for the user to provide screenshots. Do not proceed without them.
+      </action>
+    </response>
+  </error_scenario>
+
+  <error_scenario name="project_type_ambiguous" priority="medium">
+    <description>
+      The project type cannot be confidently determined from file extensions and context.
+      Applying the wrong visual constraint matrix could lead to logic changes.
+    </description>
+    <detection>
+      File extensions and project structure don't clearly match any single project type
+      in the detection heuristics. Multiple types could apply.
+    </detection>
+    <response>
+      <action>
+        Ask the user: "What type of project is this?" Provide options:
+        - Web app (React, Vue, Angular, etc.)
+        - WPF desktop application
+        - Unity game
+        - React Native mobile app
+        - CLI/terminal tool
+      </action>
+    </response>
+  </error_scenario>
+
+  <error_scenario name="no_automated_tests_exist" priority="medium">
+    <description>
+      The project has no automated test infrastructure. The test safety guard cannot
+      automatically verify that visual changes didn't break functionality.
+    </description>
+    <detection>
+      No test commands found in package.json scripts, Makefile targets, or CI config.
+      No test files found in the project.
+    </detection>
+    <response>
+      <action>
+        Warn the user explicitly before making changes: "This project has no automated
+        tests. I'll make visual-only changes, but there's no automated safety net to
+        verify functionality is intact. Please test the application manually after
+        I'm done and report any issues."
+        Proceed with visual changes but be extra conservative — stick strictly to
+        style/stylesheet files only, avoid any structural changes.
+      </action>
+    </response>
+  </error_scenario>
+
+  <error_scenario name="visual_change_requires_new_dependency" priority="low">
+    <description>
+      The user's visual request would require adding a new package or library
+      (e.g., a new animation library, icon set, or font package).
+    </description>
+    <detection>
+      The desired visual change can't be achieved with the existing tech stack.
+    </detection>
+    <response>
+      <action>
+        Inform the user: "This visual change would require adding [package/library].
+        Adding dependencies is outside the UI Designer's scope. I recommend switching
+        to Code mode to evaluate and add the dependency, then returning to UI Designer
+        for the visual work."
+        Offer to achieve the closest possible result with the existing stack.
+      </action>
+    </response>
+  </error_scenario>
+
+  <error_scenario name="user_rejects_visual_changes" priority="low">
+    <description>
+      After presenting before/after comparison, the user selects "Revert all changes."
+    </description>
+    <response>
+      <action>
+        Revert all changes to original state. Run tests to confirm clean state.
+        Inform user: "All changes have been reverted. The code is back to its original state."
+        Ask if they want to try a different approach or if they have additional feedback.
+      </action>
+    </response>
+  </error_scenario>
+</error_handling>

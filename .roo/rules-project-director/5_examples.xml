@@ -1,0 +1,357 @@
+<complete_examples>
+  <overview>
+    End-to-end examples of the Project Director workflow, demonstrating each phase from vision discovery to project completion.
+  </overview>
+
+  <example name="phase_1_vision_discovery">
+    <scenario>
+      The user presents a vague vision: "I want to build a SaaS platform for restaurant inventory management." The PD must first hash out the complete vision before any technical planning.
+    </scenario>
+
+    <user_request>Build a SaaS platform for restaurant inventory management.</user_request>
+
+    <workflow>
+      <step number="1">
+        <title>Phase 1: Initialize and Write Templates</title>
+        <approach>
+          PD parses the vague vision. Creates state.json with current_phase=1. Creates agent-workspace/project-director/vision/ directory with subdirectories (features/, data/, screens/, flows/) and writes atomic template files (app-overview.md, personas.md, feature-inventory.md, edge-cases.md) using the vision_templates pattern.
+        </approach>
+      </step>
+
+      <step number="2">
+        <title>Phase 1: Spawn Vision Hasher</title>
+        <approach>
+          PD spawns Vision Hasher via new_task with: template paths, user's vision brief, and constraint: "This is a SaaS web app, multi-tenant, targeting small-to-medium restaurants." Vision Hasher conducts a guided interview, fills all 7 templates, generates HTML wireframes for each screen, and returns with vision-summary.md reporting: 28 features described, 14 UI screens, 8 data entities. 2 flagged concerns: "Real-time inventory sync across multiple locations may be technically challenging" and "User wants offline mode — may conflict with real-time sync."
+        </approach>
+        <expected_outcome>Complete vision documented in agent-workspace/project-director/vision/. All templates filled, wireframes generated.</expected_outcome>
+      </step>
+
+      <step number="3">
+        <title>Phase 1: Vision Approval Gate</title>
+        <approach>
+          PD presents summary: "Vision complete: 28 features, 14 screens, 8 data entities. 2 flagged concerns for technical review." User reviews and clicks "Approved — let's create the execution plan." PD updates state.json: current_phase=2.
+        </approach>
+        <expected_outcome>Vision approved. Moving to execution planning.</expected_outcome>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>The PD never conducts the vision interview — Vision Hasher does it.</takeaway>
+      <takeaway>Vision templates ensure consistent, comprehensive output across all projects.</takeaway>
+      <takeaway>Flagged concerns don't block vision approval — they inform the Architect in Phase 2.</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="phase_2_execution_planning">
+    <scenario>
+      Vision docs are complete for a ChatGPT clone as a native Windows desktop application (WPF/.NET). The vision describes 24 features: chat interface, streaming responses, conversation history, artifacts (like Claude's), model selection, prompt library, etc. The PD must now create the execution plan with technology sourcing, a planning/ directory, and a lightweight wave map.
+    </scenario>
+
+    <workflow>
+      <step number="1">
+        <title>Phase 2 Step 1: Read Vision Documents</title>
+        <approach>
+          PD reads all vision docs. Counts: 24 features, 12 screens, 8 data entities. Identifies all integration points and data entities for the technology sourcing study.
+        </approach>
+      </step>
+
+      <step number="2">
+        <title>Phase 2 Step 2: Technology Sourcing Study</title>
+        <approach>
+          PD sets phase_2_substep="tech_sourcing", spawns Architect with technology_sourcing_prompt. Architect analyzes every component:
+
+          - Chat rendering engine → Custom Build (core differentiator, no existing WPF library matches the streaming markdown rendering needed)
+          - LLM integration → Open-Source Library (use an existing .NET OpenAI-compatible client, with provider abstraction)
+          - Artifacts feature → Reference Implementation (analyze how claude.ai implements artifacts in the browser; extract content block registry pattern, sandboxed rendering, incremental updates; adapt to WPF via UserControls + WebView2 for sandboxed content)
+          - Authentication → SaaS (Auth0 or similar — commodity, not worth building)
+          - Database → Open-Source Library (Entity Framework Core + SQLite for local-first desktop)
+          - Conversation persistence → Custom Build (specific data model tied to the chat domain)
+          - File attachments → Open-Source Library (existing .NET file handling libraries)
+          - Syntax highlighting → Open-Source Library (AvalonEdit or similar)
+
+          Architect writes tech-sourcing.md and saves ref-claude-artifacts.md to external-docs/. PD presents summary to user. User reviews the reference implementation approach for artifacts. User approves. PD sets phase_2_substep="architecture".
+        </approach>
+        <expected_outcome>Technology sourcing decisions documented and approved. Reference implementation analysis saved to external-docs/.</expected_outcome>
+      </step>
+
+      <step number="3">
+        <title>Phase 2 Step 3: Architecture & Abstractions — Planning/ Directory</title>
+        <approach>
+          PD spawns Architect with planning_directory_prompts. Batch 1: architecture.md, tech-stack.md, abstractions.md. Architect reads vision docs and tech-sourcing.md, creates the first three planning files:
+
+          - architecture.md: MVVM pattern, dependency injection, plugin-based content block system (from the Claude artifacts reference analysis). High-level component diagram: ChatShell → ContentBlockRegistry → RendererPipeline → LLMProvider → StorageProvider.
+          - tech-stack.md: WPF .NET 9, Entity Framework Core, SQLite, CommunityToolkit.Mvvm, Microsoft.Extensions.DependencyInjection. Per-component justifications referencing vision requirements and sourcing decisions.
+          - abstractions.md: ILLMProvider (GenerateAsync, StreamAsync → OpenAiProvider), IAuthProvider (LoginAsync, LogoutAsync → Auth0Provider), IStorageProvider (SaveAsync, LoadAsync → LocalFileStorageProvider), IContentBlockRenderer (RenderAsync → MarkdownRenderer, CodeBlockRenderer, ArtifactRenderer).
+
+          PD presents for human discussion. User reviews the abstractions and architecture. User approves. PD spawns Architect for batch 2.
+
+          Batch 2: data-model.md, integration-points.md, platform-notes.md, planning-summary.md. Architect creates the remaining files:
+
+          - data-model.md: Conversation, Message, Artifact, PromptTemplate entities with relationships and attributes derived from vision/data/.
+          - integration-points.md: OpenAI API, Auth0, local file system — all wrapped by abstractions from abstractions.md with fallback strategies.
+          - platform-notes.md: WPF patterns (XAML bindings, DataTemplate, UserControl composition), ClickOnce deployment, auto-update via Squirrel.Windows.
+          - planning-summary.md: Index tying all 7 files together with quick-reference tables.
+
+          PD presents for human discussion. User approves all files. PD sets phase_2_substep="wave_map".
+        </approach>
+        <expected_outcome>All 7 planning/ files created and approved. Architecture and abstractions locked in.</expected_outcome>
+      </step>
+
+      <step number="4">
+        <title>Phase 2 Step 4: Wave Map</title>
+        <approach>
+          PD spawns Architect with wave_map_prompt. Architect reads all vision docs and the complete planning/ directory, writes a lightweight roadmap.md:
+
+          Wave 1 (Foundation — 6 features): Project Scaffold & CI/CD, Data Model & Migrations, LLM Provider Abstraction, Auth Provider Abstraction, Storage Provider Abstraction, Content Block Registry.
+          Wave 2 (Skeleton — 4 features): App Shell & Navigation, All Screen Shells, Routing & Navigation Service, Theme & Styling.
+          Wave 3 (Vertical Slices — 10 features): Chat Message Rendering, Streaming Response Display, Conversation Management, Model Selection, Prompt Input, Markdown Rendering, Code Block, Artifacts System, File Attachments, Conversation Search.
+          Wave 4 (Cross-Cutting — 4 features): Permissions/Roles, Auto-Update, Analytics, E2E Test Suite.
+
+          Each feature has ONLY: name, 1-line description, dependencies. NO acceptance criteria. The FD Architect will derive those from vision docs.
+
+          PD presents for human discussion. User reviews the wave structure. User approves. PD sets phase_2_substep="assembly".
+        </approach>
+        <expected_outcome>Lightweight wave map with 24 features across 4 waves. FD Architect owns acceptance criteria.</expected_outcome>
+      </step>
+
+      <step number="5">
+        <title>Phase 2 Step 5: Assembly — Numbering & Dependency Check</title>
+        <approach>
+          PD spawns Architect with assembly_verification_prompt. Architect numbers all features 1-24, verifies forward-flow dependencies, checks abstraction references against planning/abstractions.md. No issues found. PD reads roadmap.md, counts 24 features, updates total_features=24 in state.json. Sets phase_2_substep="critic_review".
+        </approach>
+      </step>
+
+      <step number="6">
+        <title>Phase 2 Step 6: Critic Review</title>
+        <approach>
+          PD spawns independent Architect as Critic. Critic reviews all 5 dimensions across planning/ directory + roadmap.md. Finds: Feature 12 (Artifacts) doesn't explicitly reference the Wave 1 Content Block Registry it depends on. Also finds planning-summary.md is missing the ContentBlockRenderer from the quick-reference abstractions list. Critic fixes both. User approves. PD sets phase_2_substep="generalization_audit".
+        </approach>
+      </step>
+
+      <step number="7">
+        <title>Phase 2 Steps 7-8: Generalization Audit & Approval</title>
+        <approach>
+          PD scans roadmap. All integration points are properly abstracted — the tech sourcing step caught these early. No issues. PD sets phase_2_substep="approval_gate". Presents summary: ".NET 9 WPF desktop app. 24 features in 4 waves. Key sourcing decisions: custom chat engine, reference-impl artifacts (Claude pattern), SaaS auth, open-source data layer." User approves. PD configures smoke testing (desktop — Windows-MCP), sets current_phase=3, phase_2_substep=null.
+        </approach>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>Technology sourcing is a dedicated step BEFORE architecture — sourcing decisions drive the architecture.</takeaway>
+      <takeaway>The planning/ directory replaces the monolithic PRD — each file is a focused topic, easier for the FD Architect to consume.</takeaway>
+      <takeaway>The wave map is lightweight: feature names, 1-line descriptions, dependencies only. The FD Architect derives acceptance criteria from vision docs.</takeaway>
+      <takeaway>Phase 2 spawns 5-7 Architects total: 1 for tech sourcing, 2-3 for planning/, 1 for wave map, 1 for assembly, 1 for critic.</takeaway>
+      <takeaway>phase_2_substep enables precise resume if context is lost mid-planning.</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="full_build_loop">
+    <scenario>
+      With vision approved and execution plan in place, the PD begins the build loop.
+    </scenario>
+
+    <workflow>
+      <step number="1">
+        <title>Routine Loop: Phase 3 → 4 → 5</title>
+        <approach>
+          For each feature, the PD spawns FD (Phase 3), runs unit tests + QA-generated E2E tests + architectural audit + vision re-evaluation (Phase 4), then presents the PR gate (Phase 5). Features 1–14 proceed cleanly through this loop with no drift.
+        </approach>
+      </step>
+
+      <step number="2">
+        <title>Phase 4 Re-evaluation: Vision Drift After Feature 15</title>
+        <approach>
+          Feature 15 (Inventory Alerts) reveals that the vision's "real-time alerts" concept requires WebSocket infrastructure that wasn't in the Wave 1 data model. This is minor drift: the data model needs a new Notification entity that wasn't in the original vision.
+
+          PD creates vision/data/notification.md: adds Notification entity with attributes. Updates vision/feature-inventory.md: adds "Real-time notification delivery" to the alerts feature description. Notes in current-state.md: "Vision updated: added Notification entity (discovered during Feature 15). No re-plan needed — Notification entity is self-contained."
+        </approach>
+        <expected_outcome>Vision stays fluid. Minor drift resolved by PD editing vision docs directly.</expected_outcome>
+      </step>
+
+      <step number="3">
+        <title>Phase 4 Re-evaluation: Major Drift After Feature 22</title>
+        <approach>
+          Feature 22 (Supplier Management) reveals that the vision's permission model is fundamentally wrong. The vision described "simple owner/staff roles" but multi-location restaurants need per-location permissions. This affects Features 23-28 (all location-based features).
+
+          PD flags for user: "The vision's permission model conflicts with what we need for multi-location. Features 23-28 are affected." User selects "Re-plan remaining features." PD spawns Architect with updated vision docs (PD edited permissions section) + list of completed features (1-22). Architect revises roadmap for Features 23-35, adding a new "Per-Location RBAC" feature and adjusting dependent features. PD updates total_features in state.json from 35 to 36.
+        </approach>
+        <expected_outcome>Vision re-evaluation caught a fundamental issue before it cascaded into 6 features of wrong code.</expected_outcome>
+      </step>
+    </workflow>
+
+    <completion>
+      After all 36 features complete, state.json has status="complete". All vision docs reflect the true built state of the app. The initial 28-feature vision evolved to 36 roadmap features through the re-evaluation process, but every change was intentional and documented.
+    </completion>
+
+    <key_takeaways>
+      <takeaway>Vision re-evaluation after every feature is critical — it catches drift before it compounds.</takeaway>
+      <takeaway>Minor drift (new entity, small UI change) → PD edits vision directly. No re-plan.</takeaway>
+      <takeaway>Major drift (affects 3+ remaining features) → re-spawn Architect for remaining features only.</takeaway>
+      <takeaway>The vision and roadmap are living documents that evolve with the build.</takeaway>
+      <takeaway>Waves prevent spaghetti: Feature 15 added a Notification entity without touching Feature 1's data model code — it just extended it.</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="resume_after_interruption">
+    <scenario>
+      The context window was cleared mid-project. The PD resumes by reading state.json.
+    </scenario>
+
+    <workflow>
+      <step number="1">
+        <title>State Re-hydration</title>
+        <approach>
+          Read state.json: current_phase=3, status="in_progress", total_features=36, current_feature_index=12. PD announces: "Resuming. 12/36 features complete. Proceeding to Feature 13." Proceeds directly to Phase 3 Step 1.
+        </approach>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>state.json enables deterministic resume — no markdown parsing or guesswork required.</takeaway>
+      <takeaway>The PD should never re-initialize state.json if it already exists and is valid.</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="handling_test_failure">
+    <scenario>
+      After Feature 18 (Payment Abstraction + Stripe) completes, the regression test suite fails.
+    </scenario>
+
+    <workflow>
+      <step number="1">
+        <title>Phase 4: Test Failure Detected</title>
+        <approach>
+          Run test suite. 3 failures in checkout module. PD spawns code subtask with test_fix_prompt_pattern. Code subtask finds: Feature 18 changed the payment interface signature but didn't update checkout tests. Fixes tests. PD re-runs — all pass.
+        </approach>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>Never proceed to audit or PR with failing tests.</takeaway>
+      <takeaway>If the code fix fails after one retry, escalate to the user.</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="ad_hoc_request_interception">
+    <scenario>
+      Mid-project, the user makes an ad-hoc request instead of continuing with the next feature. The PD intercepts, analyzes against the roadmap, and presents smart routing options.
+    </scenario>
+
+    <user_request>Actually, before the next feature — can you fix the date formatting in the invoice table? It's showing UTC timestamps instead of the user's local timezone.</user_request>
+
+    <workflow>
+      <step number="1">
+        <title>Phase 3 Step 0: Detect Ad-Hoc Intent</title>
+        <approach>
+          PD reads state.json: current_phase=3, status="in_progress", current_feature_index=8, total_features=35. The user's request doesn't match resume patterns ("keep working on", "continue", "next feature") — it starts with "Actually, before the next feature..." This is an ad-hoc request. PD proceeds to classification.
+        </approach>
+      </step>
+
+      <step number="2">
+        <title>Phase 3 Step 0: Classify</title>
+        <approach>
+          PD reads roadmap.md. Feature 9 is "Invoice Management UI" and its description says "Display dates in user's local timezone." Feature 14 is "User Settings & Preferences" and includes timezone configuration.
+
+          PD reads vision docs: vision/feature-inventory.md lists "Invoice Management" with "date display in user timezone" as a core requirement. The date formatting fix is already covered by Feature 9 — it's just not built yet.
+
+          Classification: already_covered. The request is explicitly part of Feature 9 (Invoice Management UI), which is the immediate next feature.
+
+          PD presents options:
+          1. "Build Feature 9 (Invoice Management UI) now — it covers the date formatting fix and the full invoice UI"
+          2. "Implement just the date formatting fix now as a quick Code subtask (I'll note this partial completion in the roadmap — Feature 9 will skip this when it runs)"
+          3. "Skip for now — Feature 9 will handle this when it runs next"
+        </approach>
+        <expected_outcome>User selects option 1: "Build Feature 9 now."</expected_outcome>
+      </step>
+
+      <step number="3">
+        <title>Phase 3 Step 0: Execute — Spawn FD for Feature 9</title>
+        <approach>
+          Feature 9 is already the next feature (current_feature_index=8, so 8+1=9). No reordering needed. PD proceeds to Step 1, then Step 2-3 to spawn FD for Feature 9 with the standard prompt. The FD Architect reads vision docs, derives acceptance criteria (including date formatting in user timezone), reads planning/ directory for architecture and abstractions, and creates the implementation plan. The ad-hoc request is naturally absorbed into the planned workflow.
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      The ad-hoc date formatting request was classified as "already covered by Feature 9." Rather than doing a quick fix that would be overwritten when Feature 9 runs, the user chose to build Feature 9 now, which handles date formatting as part of its acceptance criteria derived from vision docs. No roadmap changes needed — this was already the next feature.
+    </completion>
+
+    <key_takeaways>
+      <takeaway>PD always checks the roadmap before acting — many ad-hoc requests are already planned.</takeaway>
+      <takeaway>"Build the next feature now" is often the best response to an ad-hoc request that overlaps with upcoming work.</takeaway>
+      <takeaway>Classification requires actually reading the roadmap and vision, not just keyword matching.</takeaway>
+      <takeaway>The FD Architect derives acceptance criteria from vision docs — the wave map only says "Invoice Management UI — Display dates in user's local timezone. Depends on: F8."</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="ad_hoc_request_small_code_change">
+    <scenario>
+      The user requests a small, standalone fix that doesn't map to any upcoming feature. PD spawns a Code subtask directly.
+    </scenario>
+
+    <user_request>I noticed the sidebar collapses when you resize the window below 900px, but it should stay open until 768px. Can you fix that?</user_request>
+
+    <workflow>
+      <step number="1">
+        <title>Phase 3 Step 0: Classify</title>
+        <approach>
+          PD reads roadmap.md: no upcoming feature covers responsive breakpoints — this is a small UI behavior fix. Vision docs don't specify exact breakpoints. The change touches one CSS file and possibly one component.
+
+          Classification: small_code_change. It's a single-file fix with no architectural impact.
+
+          PD presents options:
+          1. "Spawn a Code subtask to fix the breakpoint directly"
+          2. "Treat this as a refactoring feature and insert into the roadmap"
+          3. "I'll fold this into the next feature's scope"
+        </approach>
+        <expected_outcome>User selects option 1: "Spawn Code subtask."</expected_outcome>
+      </step>
+
+      <step number="2">
+        <title>Phase 3 Step 0: Spawn Code Subtask</title>
+        <approach>
+          PD constructs the prompt using ad_hoc_code_subtask_prompt: includes project context (React+Node.js, Wave 1-2 complete, currently in Wave 3), the user's exact request, and context that this is a responsive breakpoint fix in the app shell (Wave 2). Spawns Code mode via new_task. Code subtask fixes the CSS breakpoint, runs tests (all pass), and reports back with no architectural impact.
+        </approach>
+      </step>
+
+      <step number="3">
+        <title>Phase 3 Step 0: Reconcile Vision/Roadmap</title>
+        <approach>
+          PD reads the Code subtask's completion: one file changed (sidebar.css), breakpoint changed from 900px to 768px. No architectural impact. PD checks vision/screens/ for the relevant screen spec — it doesn't specify breakpoints at this level of detail. No vision update needed. PD documents in current-state.md: "Ad-hoc: Fixed sidebar collapse breakpoint (900px → 768px)."
+
+          Unit tests pass. PD commits the change. Loops back to Step 1 for the next planned feature.
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      A small ad-hoc CSS fix was handled via a direct Code subtask, bypassing the full FD→Architect→Code pipeline. The PD verified no architectural impact and no vision drift, then continued with the next planned feature. Total overhead: one Code subtask and a one-line dashboard update.
+    </completion>
+
+    <key_takeaways>
+      <takeaway>Not every change needs a full feature-development cycle — small, isolated fixes can go direct to Code.</takeaway>
+      <takeaway>The PD must still reconcile the change with vision/roadmap afterwards — even for small changes.</takeaway>
+      <takeaway>If the Code subtask reports "ARCHITECTURAL IMPACT," the PD must escalate — it wasn't as small as it seemed.</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="architectural_drift_detection">
+    <scenario>
+      Feature 24 introduces direct DB queries in UI components, bypassing the repository pattern from Wave 1.
+    </scenario>
+
+    <workflow>
+      <step number="1">
+        <title>Phase 4: Drift Detected in Audit</title>
+        <approach>
+          PD reads knowledge files. architecture.md describes repository pattern. Feature 24's code uses direct queries in components. PD flags: "Architectural Drift — Moderate. Feature 24 bypasses Wave 1 repository abstraction." Health: Fair. At PR gate, presents finding. User injects refactoring feature. PD inserts "Feature 25: Refactoring — Extract Data Access to Repository Layer" in Wave 4.
+        </approach>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>Wave 1 abstractions must be enforced. Drift is caught at audit, not at project end.</takeaway>
+      <takeaway>Health rating must be evidence-based. Cite specific files and patterns.</takeaway>
+    </key_takeaways>
+  </example>
+</complete_examples>

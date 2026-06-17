@@ -1,0 +1,150 @@
+<best_practices>
+  <general_principles>
+    <principle priority="highest">
+      <name>Functional Testing Uses Accessibility Trees, Never Pixels</name>
+      <description>
+        Every functional UI interaction and assertion must be driven by structured intermediate
+        representations: accessibility tree snapshots for web/native/desktop, text buffers for CLI.
+        Never use screenshots, pixel coordinates, or visual layout for functional verification
+        (deciding pass/fail of a test step). This is non-negotiable.
+      </description>
+      <rationale>
+        Accessibility trees provide semantic structure (roles, names, states) that LLMs can
+        reason about directly. Pixel coordinates require vision models and are fragile across
+        viewport sizes, rendering engines, and display configurations.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Capture Visual Baseline as Supplementary Evidence</name>
+      <description>
+        Before executing functional tests in web or desktop environments, capture a screenshot
+        if the tool is available (browser_take_screenshot for web, Screenshot for desktop).
+        This screenshot is supplementary visual evidence — it is NEVER used for functional
+        pass/fail decisions. If your model can process images, note obvious visual issues
+        (overlapping elements, cut-off content, viewport overflow) in the VISUAL section of
+        the report. If the screenshot tool is not available, omit the VISUAL section entirely.
+      </description>
+      <rationale>
+        Functional tests can pass even when the UI is visually broken (overlapping text,
+        elements rendered off-screen, missing styling). A visual baseline screenshot allows
+        downstream modes to detect these issues without requiring a human to look at the app.
+        Keeping it supplementary ensures the core functional testing remains robust even
+        when screenshot tools are unavailable.
+      </rationale>
+      <visual_quality_scope>
+        Only flag OBVIOUS breakage: overlapping elements, text cut off at boundaries, content
+        overflowing viewport, elements with zero/negative dimensions, completely blank or
+        unstyled pages. Do NOT flag subjective design quality (color preferences, spacing
+        preferences, typography choices). Those remain for human judgment or explicit UI
+        Designer invocation.
+      </visual_quality_scope>
+    </principle>
+
+    <principle priority="highest">
+      <name>Snapshot Before AND After Every Action</name>
+      <description>
+        Take an accessibility snapshot before performing an action (to establish the element
+        exists and is in the expected state) and after the action completes (to verify the
+        expected result). Never act without first confirming the target element is present.
+      </description>
+      <rationale>
+        Single-snapshot testing misses state transitions. The before-snapshot confirms the
+        starting state; the after-snapshot confirms the action had the intended effect.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Match Elements by Role + Accessible Name</name>
+      <description>
+        When finding elements to interact with, use the element's role (button, textbox, heading,
+        link, etc.) and its accessible name (the text label, aria-label, or title). Prefer exact
+        name matches, fall back to case-insensitive, then substring, then role-only.
+      </description>
+      <rationale>
+        Role + name is the most stable element identifier across UI changes. CSS selectors,
+        XPaths, and pixel coordinates break when the UI is refactored.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Handle Unexpected UI States Gracefully</name>
+      <description>
+        Applications may show modals, error pages, loading spinners, cookie banners, or
+        other unexpected UI at any time. Before performing a planned action, check the
+        accessibility snapshot for blocking elements. If found, handle them (dismiss modal,
+        wait for loading, acknowledge error) and then proceed — or report the blockage.
+      </description>
+      <rationale>
+        A synthetic human tester should be as adaptive as a real human. A human doesn't
+        fail a test because a cookie banner appeared — they dismiss it and continue.
+      </rationale>
+    </principle>
+
+    <principle priority="medium">
+      <name>Report Failures With Specific Evidence</name>
+      <description>
+        Every failure report must include: what was expected, what was observed, and the
+        relevant accessibility snapshot excerpt showing the discrepancy. Never report
+        "test failed" without evidence.
+      </description>
+      <rationale>
+        The user relies on the failure report to decide next actions.
+        Vague reports ("something didn't work") are not actionable.
+      </rationale>
+    </principle>
+  </general_principles>
+
+  <environment_specific_practices>
+    <environment name="web">
+      <practice>Wait for navigation to complete after clicks that trigger page loads. Check the snapshot for the expected page content before proceeding.</practice>
+      <practice>Handle SPAs: after clicking a link/button in a single-page app, the URL may not change. Verify the expected content appears in the snapshot, not just the URL.</practice>
+      <practice>Form filling: type into fields one at a time, verifying each field accepts input before moving to the next.</practice>
+      <practice>Auth flows: log in once at the start of the web test block, then reuse the authenticated session for all web steps.</practice>
+    </environment>
+
+    <environment name="cli">
+      <practice>Always check exit codes. A command may produce expected output but exit with an error code — this is a failure.</practice>
+      <practice>For commands with large output, use the "then" assertion to specify the relevant portion to check, not the entire output.</practice>
+      <practice>Handle stderr separately from stdout. Some tools write normal output to stderr — don't assume stderr means error.</practice>
+      <practice>For commands that may take time, use the configured timeout rather than assuming instant completion.</practice>
+    </environment>
+
+    <environment name="native">
+      <practice>Wait for UI stability after actions — native apps may animate transitions.</practice>
+      <practice>Use the full accessibility tree for context when elements are deeply nested.</practice>
+      <practice>Handle system dialogs (permissions, file pickers) — these may appear outside the app's accessibility tree.</practice>
+    </environment>
+
+    <environment name="desktop">
+      <practice>Launch the app and wait for the window to fully render before taking the first Snapshot. A window may take several seconds to initialize.</practice>
+      <practice>Use the window_title to verify the correct window is active. Desktop apps may have multiple windows open simultaneously.</practice>
+      <practice>After Click actions, wait for dialogs, menu animations, or window transitions to complete before taking the next Snapshot.</practice>
+      <practice>System dialogs (file open/save, permissions, UAC prompts) may appear outside the app's accessibility tree. If a Snapshot doesn't show expected content, check if a system dialog is blocking.</practice>
+      <practice>If the Screenshot tool is available, capture a visual baseline before testing for downstream visual quality inspection.</practice>
+    </environment>
+  </environment_specific_practices>
+
+  <quality_checklist>
+    <category name="before_starting">
+      <item>Parse the full spawn prompt — identify all environments and test steps</item>
+      <item>Detect MCP capabilities for each requested environment</item>
+      <item>Skip any environment whose MCP is unavailable — document the reason</item>
+      <item>If screenshot tools are available for web or desktop, plan to capture visual baseline before functional tests</item>
+    </category>
+    <category name="during_execution">
+      <item>Capture visual baseline screenshot before functional testing (web: browser_take_screenshot, desktop: Screenshot) if available</item>
+      <item>Take snapshot before AND after every action</item>
+      <item>Match elements by role + accessible name, never by coordinates</item>
+      <item>Handle unexpected UI (modals, errors, loading) gracefully</item>
+      <item>Retry only transient failures (timeout, MCP tool error) — not assertion failures</item>
+    </category>
+    <category name="before_completion">
+      <item>Every test step has a recorded outcome (pass/fail/skip)</item>
+      <item>Failed steps include specific evidence (expected vs actual)</item>
+      <item>Overall status correctly classified (all_passed/partial_passed/mcp_unavailable/tests_failed)</item>
+      <item>VISUAL section included if screenshot was captured; omitted if not available</item>
+      <item>No files were created or modified</item>
+    </category>
+  </quality_checklist>
+</best_practices>
