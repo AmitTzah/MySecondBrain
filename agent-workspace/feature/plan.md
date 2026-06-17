@@ -454,7 +454,7 @@ public partial class App : Application
 
 ---
 
-### Step 8: Create MySecondBrain.Package MSIX Packaging Project
+### [x] Step 8: Create MySecondBrain.Package MSIX Packaging Project
 
 **What:** Create `src/MySecondBrain.Package/` as a Windows Application Packaging Project (`.wapproj`) referencing the UI project. Configure `Package.appxmanifest` with required capabilities (`internetClient`, `runFullTrust`, `localSystemServices`), app display name, and visual assets placeholder. Add to solution.
 
