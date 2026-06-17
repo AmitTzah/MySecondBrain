@@ -231,7 +231,7 @@ MySecondBrain/
 
 ---
 
-### [ ] Step 1c: Create Repository Stubs in Data Project
+### [x] Step 1c: Create Repository Stubs in Data Project
 
 - **Goal:** Create 8 repository stub classes in `Data/Repositories/` that implement the repository interfaces from Core, constructor-inject `AppDbContext`, and return `null`/`Task.CompletedTask`. The Data project must still compile.
 
