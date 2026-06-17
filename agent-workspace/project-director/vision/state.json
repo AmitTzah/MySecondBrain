@@ -1,13 +1,18 @@
 {
   "app_name": "MySecondBrain",
-  "current_phase": "screens",
+  "current_phase": "flows",
   "phase_status": "in_progress",
   "completed": {
     "foundation": ["app-overview.md", "personas.md", "feature-inventory.md"],
     "screens": [
       {"stem": "studio-chat", "status": "confirmed"},
       {"stem": "onboarding-wizard", "status": "confirmed"},
-      {"stem": "model-comparison", "status": "confirmed"}
+      {"stem": "model-comparison", "status": "confirmed"},
+      {"stem": "settings", "status": "confirmed"},
+      {"stem": "wiki-browser", "status": "confirmed"},
+      {"stem": "usage-dashboard", "status": "confirmed"},
+      {"stem": "media-library", "status": "confirmed"},
+      {"stem": "global-artifacts-browser", "status": "confirmed"}
     ],
     "flows": [],
     "edge_cases": false,
@@ -19,14 +24,14 @@
     "features": ["settings-configuration", "model-configurations-personas", "studio-chat-workspace", "message-manipulation-branching", "chat-modes-controls", "artifacts-side-panel", "media-library", "tool-use-agents", "import-export", "prompt-library", "text-actions-three-tier", "chat-organization-search", "model-comparison", "personal-wiki", "data-model-lifecycle", "windows-os-integration", "language-rtl", "backup-recovery", "usage-pricing-dashboard", "nice-to-have-future", "git-wiki-version-control", "soft-delete-trash"],
     "data_entities": ["chat-thread", "message", "persona", "model-configuration", "api-key", "text-action", "artifact", "media-item", "wiki-file", "prompt-template", "usage-record", "backup-snapshot", "wiki-version-snapshot"]
   },
-  "last_context": "Model comparison screen confirmed (3/8). Added soft-delete trash (U1-U6), git wiki version control, thinking blocks to studio-chat, ⋯ context menu on sidebar. Next: settings screen.",
+  "last_context": "Phase 2 complete — all 8 screens confirmed with .md + .html mocks. Tab bar added to all non-Studio screens. 'Discuss with AI' button added to wiki-browser. Starting Phase 3: 8 user flows.",
   "metrics": {
     "features_documented": 22,
-    "screens_designed": 3,
+    "screens_designed": 8,
     "data_entities": 13,
     "flows_documented": 0,
-    "flagged_concerns": ["Auto-Summarize context overflow requires separate API call costing tokens", "Text completion APIs being deprecated by some providers", "Artifact generation mechanism needs architectural decision", "Terminal execution security model needs review", "WebSocket server security model needs review", "Global keyboard hooks may trigger antivirus false positives", "VACUUM requires temporary free disk space equal to database size", "Rich text bidirectional text rendering complexity", "Google Cloud Storage dependency for backups", "Locked chat encryption — permanent lockout risk must be communicated", "Git wiki version control — GitHub token storage requires DPAPI encryption, auto-commit debounce must handle rapid successive changes", "Model comparison — per-panel multi-turn conversations = N independent API streams. Cost/connection implications.", "Model comparison M spec simplified from original — Accept auto-saves branches, per-panel mini-chats, broadcast toggle"]
+    "flagged_concerns": ["Auto-Summarize context overflow requires separate API call costing tokens", "Text completion APIs being deprecated by some providers", "Artifact generation mechanism needs architectural decision", "Terminal execution security model needs review", "WebSocket server security model needs review", "Global keyboard hooks may trigger antivirus false positives", "VACUUM requires temporary free disk space equal to database size", "Rich text bidirectional text rendering complexity", "Google Cloud Storage dependency for backups", "Locked chat encryption — permanent lockout risk must be communicated", "Git wiki version control — GitHub token storage requires DPAPI encryption", "Model comparison — per-panel multi-turn conversations = N independent API streams", "Model comparison M spec simplified — Accept auto-saves branches, per-panel mini-chats", "Language & RTL (Q) feature may be out of scope — user chose English-only"]
   },
   "spawn_count": 2,
-  "last_commit": "3861d2d"
+  "last_commit": "d5862ed"
 }
