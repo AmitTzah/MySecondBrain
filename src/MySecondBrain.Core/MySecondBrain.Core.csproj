@@ -1,7 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <RootNamespace>MySecondBrain.Core</RootNamespace>
     <AssemblyName>MySecondBrain.Core</AssemblyName>
     <Description>Core abstractions, interfaces, DTOs, and enums for MySecondBrain</Description>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Markdig" Version="0.37.0" />
+  </ItemGroup>
 </Project>
