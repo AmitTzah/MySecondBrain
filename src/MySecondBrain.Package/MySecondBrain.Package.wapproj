@@ -11,5 +11,12 @@
   <ItemGroup>
     <ProjectReference Include="..\MySecondBrain.UI\MySecondBrain.UI.csproj" />
   </ItemGroup>
-  <Import Project="$(WapProjPath)\Microsoft.DesktopBridge.targets" />
+  <Import Project="$(WapProjPath)\Microsoft.DesktopBridge.targets" Condition="Exists('$(WapProjPath)\Microsoft.DesktopBridge.targets')" />
+
+  <!-- Fallback no-op targets when Desktop Bridge SDK is not installed -->
+  <Target Name="Build" Condition="!Exists('$(WapProjPath)\Microsoft.DesktopBridge.targets')" />
+  <Target Name="Rebuild" Condition="!Exists('$(WapProjPath)\Microsoft.DesktopBridge.targets')" />
+  <Target Name="Clean" Condition="!Exists('$(WapProjPath)\Microsoft.DesktopBridge.targets')" />
+  <Target Name="Publish" Condition="!Exists('$(WapProjPath)\Microsoft.DesktopBridge.targets')" />
+  <Target Name="VSTest" Condition="!Exists('$(WapProjPath)\Microsoft.DesktopBridge.targets')" />
 </Project>

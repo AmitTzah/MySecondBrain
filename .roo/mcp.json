@@ -9,7 +9,8 @@
 			],
 			"alwaysAllow": [
 				"git_add",
-				"git_commit"
+				"git_commit",
+				"git_status"
 			]
 		},
 		"windows-mcp": {

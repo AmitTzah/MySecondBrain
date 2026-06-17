@@ -490,7 +490,7 @@ public partial class App : Application
 
 ---
 
-### Step 9: Create GitHub Actions CI/CD Pipeline
+### [x] Step 9: Create GitHub Actions CI/CD Pipeline
 
 **What:** Create `.github/workflows/ci.yml` with a GitHub Actions workflow that triggers on push and pull_request to `main`, builds all 7 projects via `dotnet build`, and runs both test projects via `dotnet test`.
 
