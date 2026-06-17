@@ -217,6 +217,8 @@
             <button class="msg-action-btn" data-tooltip="Would star this message for quick access.">⭐</button>
             <button class="msg-action-btn" data-tooltip="Would copy message content as raw Markdown to clipboard.">📋 Copy MD</button>
             <button class="msg-action-btn" data-tooltip="Would copy message content as Rich Text (HTML/RTF) to clipboard.">📝 Copy Rich</button>
+            <button class="msg-action-btn" data-tooltip="Would open this assistant message in editable mode. Choose 'Edit in Place' (overwrite) or 'Edit as Branch' (new version). AI sees updated history on next send.">✏️</button>
+            <button class="msg-action-btn" data-tooltip="Would remove this message from current conversation history. Branch data preserved. Undo with Ctrl+Z.">🗑️</button>
             <button class="msg-action-btn" data-tooltip="Would replace this response with a new AI generation. Old response preserved as a branch.">🔄 Regenerate</button>
             <button class="msg-action-btn" data-tooltip="Would record positive feedback. Stored locally. Aggregated in Usage Dashboard.">👍</button>
             <button class="msg-action-btn" data-tooltip="Would record negative feedback. Stored locally.">👎</button>
@@ -241,9 +243,11 @@
             <p>You can combine them using <code>loop.run_in_executor()</code> to offload CPU work to a thread pool while keeping async I/O. This gives you the best of both worlds...<br><br><em>▌</em></p>
           </div>
           <div class="msg-actions">
-            <button class="msg-action-btn">⭐</button>
-            <button class="msg-action-btn">📋 Copy MD</button>
-            <button class="msg-action-btn">📝 Copy Rich</button>
+            <button class="msg-action-btn" data-tooltip="Would star this message for quick access.">⭐</button>
+            <button class="msg-action-btn" data-tooltip="Would copy as raw Markdown.">📋 Copy MD</button>
+            <button class="msg-action-btn" data-tooltip="Would copy as Rich Text.">📝 Copy Rich</button>
+            <button class="msg-action-btn" data-tooltip="Would open this message in editable mode. Assistant messages can also be edited.">✏️</button>
+            <button class="msg-action-btn" data-tooltip="Would remove this message from history. Undo with Ctrl+Z.">🗑️</button>
           </div>
         </div>
 
