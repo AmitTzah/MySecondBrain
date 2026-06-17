@@ -58,6 +58,11 @@
     .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:2px dashed #999;border-radius:4px;font-size:13px;font-weight:500;cursor:pointer;background:#fff;color:#333;text-decoration:none}
     .btn:hover{border-style:solid}
     .btn-sm{padding:4px 10px;font-size:11px}
+    .tab-bar{display:flex;align-items:center;background:#eee;border-bottom:2px dashed #bbb;min-height:34px;padding:0 8px;flex-shrink:0}
+    .tab{display:flex;align-items:center;padding:6px 12px;font-size:12px;color:#666;border-right:1px dashed #ddd;cursor:pointer}
+    .tab.active{background:#fff;color:#333;font-weight:600;border-bottom:2px solid #2563eb}
+    .tab-close{font-size:14px;margin-left:6px;color:#999;cursor:pointer}
+    .tab-add{padding:6px 12px;font-size:16px;color:#2563eb;cursor:pointer;font-weight:700}
     .tooltip-toast{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#ffd700;padding:12px 24px;border-radius:8px;font-size:13px;max-width:500px;text-align:center;z-index:9999;border:2px dashed #ffd700}
     ::-webkit-scrollbar{width:5px}
     ::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
@@ -66,6 +71,11 @@
 </head>
 <body>
   <div class="wireframe-banner">⚠️ VISION WIREFRAME — NOT FINAL DESIGN — Interactive mock for product discovery only</div>
+  <div class="tab-bar">
+    <div class="tab active"><a href="studio-chat.html" style="color:#333;text-decoration:none">Python Async Patterns</a> <span class="tab-close">×</span></div>
+    <div class="tab"><a href="studio-chat.html" style="color:#666;text-decoration:none">Website Redesign</a> <span class="tab-close">×</span></div>
+    <div class="tab-add" data-tooltip="Would open Persona picker to create a new chat tab.">+</div>
+  </div>
   <div class="layout-sidebar">
     <nav class="sidebar">
       <div class="sidebar-nav">

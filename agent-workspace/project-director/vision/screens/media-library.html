@@ -20,6 +20,11 @@
     .media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
     .media-card{border:2px dashed #ddd;border-radius:6px;overflow:hidden;cursor:pointer;background:#fff}
     .media-card:hover{border-color:#2563eb}
+    .tab-bar{display:flex;align-items:center;background:#eee;border-bottom:2px dashed #bbb;min-height:34px;padding:0 8px;flex-shrink:0}
+    .tab{display:flex;align-items:center;padding:6px 12px;font-size:12px;color:#666;border-right:1px dashed #ddd;cursor:pointer}
+    .tab.active{background:#fff;color:#333;font-weight:600;border-bottom:2px solid #2563eb}
+    .tab-close{font-size:14px;margin-left:6px;color:#999;cursor:pointer}
+    .tab-add{padding:6px 12px;font-size:16px;color:#2563eb;cursor:pointer;font-weight:700}
     .media-thumb{height:120px;display:flex;align-items:center;justify-content:center;background:#fafafa;font-size:40px;border-bottom:1px dashed #eee}
     .media-thumb.img{background:#f0f5ff}
     .media-info{padding:8px 10px}
@@ -35,6 +40,11 @@
 </head>
 <body>
   <div class="wireframe-banner">⚠️ VISION WIREFRAME — NOT FINAL DESIGN — Interactive mock for product discovery only</div>
+  <div class="tab-bar">
+    <div class="tab"><a href="studio-chat.html" style="color:#666;text-decoration:none">Python Async Patterns</a> <span class="tab-close">×</span></div>
+    <div class="tab"><a href="studio-chat.html" style="color:#666;text-decoration:none">Website Redesign</a> <span class="tab-close">×</span></div>
+    <div class="tab-add" data-tooltip="Would open Persona picker to create a new chat tab.">+</div>
+  </div>
   <div class="layout-sidebar">
     <nav class="sidebar"><div class="sidebar-nav">
       <a href="studio-chat.html" class="nav-item">💬 Chats</a>

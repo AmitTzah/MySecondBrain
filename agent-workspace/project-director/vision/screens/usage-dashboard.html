@@ -31,6 +31,11 @@
     .data-table th{text-align:left;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:2px dashed #ddd;cursor:pointer}
     .data-table td{padding:8px 10px;font-size:13px;color:#333;border-bottom:1px dashed #eee}
     .data-table tr:hover{background:#fafafa}
+    .tab-bar{display:flex;align-items:center;background:#eee;border-bottom:2px dashed #bbb;min-height:34px;padding:0 8px;flex-shrink:0}
+    .tab{display:flex;align-items:center;padding:6px 12px;font-size:12px;color:#666;border-right:1px dashed #ddd;cursor:pointer}
+    .tab.active{background:#fff;color:#333;font-weight:600;border-bottom:2px solid #2563eb}
+    .tab-close{font-size:14px;margin-left:6px;color:#999;cursor:pointer}
+    .tab-add{padding:6px 12px;font-size:16px;color:#2563eb;cursor:pointer;font-weight:700}
     .chat-link{color:#2563eb;cursor:pointer;text-decoration:underline;text-decoration-style:dashed}
     .feedback-table{width:100%;border-collapse:collapse;margin-bottom:16px}
     .feedback-table th{text-align:left;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;padding:8px 10px;border-bottom:2px dashed #ddd}
@@ -45,6 +50,11 @@
 </head>
 <body>
   <div class="wireframe-banner">⚠️ VISION WIREFRAME — NOT FINAL DESIGN — Interactive mock for product discovery only</div>
+  <div class="tab-bar">
+    <div class="tab"><a href="studio-chat.html" style="color:#666;text-decoration:none">Python Async Patterns</a> <span class="tab-close">×</span></div>
+    <div class="tab"><a href="studio-chat.html" style="color:#666;text-decoration:none">Website Redesign</a> <span class="tab-close">×</span></div>
+    <div class="tab-add" data-tooltip="Would open Persona picker to create a new chat tab.">+</div>
+  </div>
   <div class="layout-sidebar">
     <nav class="sidebar"><div class="sidebar-nav">
       <a href="studio-chat.html" class="nav-item">💬 Chats</a>
