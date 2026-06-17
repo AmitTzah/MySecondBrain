@@ -22,7 +22,7 @@
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 7,
-  "current_step": 0,
+  "current_step": 1,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }

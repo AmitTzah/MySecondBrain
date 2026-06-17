@@ -178,7 +178,7 @@ MySecondBrain/
 
 ## 5. Execution Steps
 
-### [ ] Step 1a: Create All Interfaces + DTO Records + Enums in Core Project
+### [x] Step 1a: Create All Interfaces + DTO Records + Enums in Core Project
 
 - **Goal:** Create every new C# file in `MySecondBrain.Core` — all interface contracts and DTO records — so the Core project compiles with zero errors. This is the foundation that Data, Services, and UI all depend on.
 
@@ -379,14 +379,14 @@ MySecondBrain/
 
 ## 6. Shared Technical Context
 
-- **[Initial State]:** No shared context yet. Feature 1 scaffolded the solution but DI container has only `MainWindow` registered.
-- **Target Framework:** `net8.0` (class libraries), `net8.0-windows10.0.17763.0` (UI and unit tests).
+- **[Step 1a]:** Created 41 interfaces in `Core/Interfaces/`, 4 model files in `Core/Models/`. Core.csproj now targets `net8.0-windows` with `UseWPF=true` + `Markdig` NuGet. `GlobalUsings.cs` includes `System.IO`. Key types available for downstream projects: all `I*` interfaces, `DomainModels` (ChatThread, Message, Persona, ModelConfiguration, ApiKey, WikiFile, WikiVersionSnapshot, UsageRecord, ToolAutoApprovalSettings), `Dtos` (35 records), `ServiceDtos` (15 records), `Enums` (11 enums + VirtualKey).
+- **Target Framework:** Core: `net8.0-windows`; Data/Services: `net8.0`; UI/Tests: `net8.0-windows10.0.17763.0`.
 - **Nullable/ImplicitUsings/TreatWarningsAsErrors:** Enabled solution-wide via `Directory.Build.props`.
-- **NuGet packages already available:** `Microsoft.Extensions.DependencyInjection 8.0.*` (UI, Services), `Microsoft.Extensions.Hosting 8.0.*` (Services), `Microsoft.Extensions.Logging 8.0.*` (Services), `CommunityToolkit.Mvvm 8.*` (UI), `xunit 2.*`, `Moq 4.*` (Tests.Unit).
+- **NuGet packages already available:** `Microsoft.Extensions.DependencyInjection 8.0.*` (UI, Services), `Microsoft.Extensions.Hosting 8.0.*` (Services), `Microsoft.Extensions.Logging 8.0.*` (Services), `CommunityToolkit.Mvvm 8.*` (UI), `Markdig *` (Core), `xunit 2.*`, `Moq 4.*` (Tests.Unit).
 - **Project reference chain:** Core ← Data ← Services ← UI. Tests reference all production projects.
 - **AppDbContext access:** Factory delegate in DI creates singleton with SQLite path at `%LOCALAPPDATA%\MySecondBrain\msb.db`. Directory created if missing.
 - **Multi-implementation pattern:** Multiple `AddSingleton<IX, ConcreteX>()` calls. Consumers use `IEnumerable<IX>` constructor injection (e.g., `ContentRendererRegistry`, `LLMProviderFactory`).
 - **Stub pattern:** All implementation classes return `null`, empty collections, or `Task.CompletedTask`. Future features fill in method bodies.
 - **ConfigureServices visibility:** `public static` so unit tests can invoke it via `App.ConfigureServices(services)`.
-- **Platform-specific service placement:** Services that depend on WPF/Windows types (`WpfClipboardService`, `GlobalHotkeyService`, `WpfThemeProvider`, `WinFormsSystemTrayService`, etc.) live in `UI/Services/`, not in the `Services` project.
-- **Entity vs. DTO separation:** Entity classes (EF Core entities with navigation properties) live in `Data/Entities/`. DTO records (pure data transfer objects) live in `Core/Models/`.
+- **Platform-specific service placement:** Services that depend on WPF/Windows types live in `UI/Services/`, not in the `Services` project.
+- **Entity vs. DTO separation:** Domain model classes in `Core/Models/DomainModels.cs` serve as shared types between interfaces and Data entities. EF configuration for these will be in `Data/Configurations/` (Step 1b).
