@@ -426,7 +426,7 @@ public partial class App : Application
 
 ---
 
-### Step 7: Create MySecondBrain.Tests.Integration Project
+### [x] Step 7: Create MySecondBrain.Tests.Integration Project
 
 **What:** Create `tests/integration/MySecondBrain.Tests.Integration/MySecondBrain.Tests.Integration.csproj` with xUnit and coverlet NuGet packages. Add project references to Core, Data, Services, and UI. Add to solution.
 

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build"
+         xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
+    <ProjectGuid>{ECEC0A21-361E-4644-B97F-5624C03A3986}</ProjectGuid>
+    <EntryPointProjectUniqueName>..\MySecondBrain.UI\MySecondBrain.UI.csproj</EntryPointProjectUniqueName>
+    <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
+    <AppxPackageSigningEnabled>False</AppxPackageSigningEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MySecondBrain.UI\MySecondBrain.UI.csproj" />
+  </ItemGroup>
+  <Import Project="$(WapProjPath)\Microsoft.DesktopBridge.targets" />
+</Project>

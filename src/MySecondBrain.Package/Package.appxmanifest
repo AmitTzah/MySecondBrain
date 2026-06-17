@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+         xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+         xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10">
+  <Identity Name="MySecondBrain" Publisher="CN=MySecondBrain" Version="0.1.0.0" />
+  <Properties>
+    <DisplayName>MySecondBrain</DisplayName>
+    <PublisherDisplayName>MySecondBrain</PublisherDisplayName>
+  </Properties>
+  <Applications>
+    <Application Id="MySecondBrain" Executable="MySecondBrain.UI.exe" EntryPoint="Windows.FullTrustApplication">
+      <desktop:Extension Category="windows.fullTrustProcess" />
+    </Application>
+  </Applications>
+  <Capabilities>
+    <Capability Name="internetClient"/>
+    <rescap:Capability Name="runFullTrust"/>
+    <rescap:Capability Name="localSystemServices"/>
+  </Capabilities>
+</Package>
