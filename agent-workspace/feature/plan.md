@@ -397,7 +397,7 @@ public partial class App : Application
 
 ---
 
-### Step 6: Create MySecondBrain.Tests.Unit Project
+### [x] Step 6: Create MySecondBrain.Tests.Unit Project
 
 **What:** Create `tests/unit/MySecondBrain.Tests.Unit/MySecondBrain.Tests.Unit.csproj` with xUnit, Moq, and coverlet NuGet packages. Add project references to Core, Data, Services, and UI. Add to solution.
 
