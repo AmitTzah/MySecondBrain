@@ -6,6 +6,10 @@
 				"mcp-server-git",
 				"--repository",
 				"C:/Users/Amit/Projects/MySecondBrain"
+			],
+			"alwaysAllow": [
+				"git_add",
+				"git_commit"
 			]
 		},
 		"windows-mcp": {
