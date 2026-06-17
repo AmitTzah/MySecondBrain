@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screen: Studio Chat — Vision Wireframe</title>
+  <style>
+    /* Reset & Base */
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;background:#f0f0f0;color:#333;overflow:hidden;height:100vh}
+    /* Wireframe Banner */
+    .wireframe-banner{background:#333;color:#ffd700;text-align:center;padding:6px 16px;font-size:12px;font-weight:600;letter-spacing:.5px;border-bottom:2px dashed #ffd700}
+    /* Layout */
+    .layout-sidebar{display:flex;height:calc(100vh - 32px)}
+    /* Sidebar */
+    .sidebar{width:280px;min-width:150px;background:#f5f5f5;border-right:2px dashed #bbb;display:flex;flex-direction:column;overflow:hidden}
+    .sidebar-nav{padding:8px;border-bottom:2px dashed #ddd}
+    .nav-item{display:block;padding:8px 12px;font-size:13px;color:#666;text-decoration:none;border:1px dashed transparent;border-radius:4px;margin-bottom:2px}
+    .nav-item:hover{background:#eee;color:#333}
+    .nav-item.active{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:600}
+    .sidebar-search{padding:8px}
+    .sidebar-search input{width:100%;padding:6px 10px;border:2px dashed #bbb;border-radius:4px;font-size:12px;background:#fff;color:#333}
+    .sidebar-tabs{display:flex;border-bottom:2px dashed #ddd}
+    .sidebar-tab{flex:1;text-align:center;padding:8px;font-size:12px;font-weight:600;color:#999;cursor:pointer;border-bottom:2px solid transparent}
+    .sidebar-tab.active{color:#2563eb;border-bottom-color:#2563eb}
+    .sidebar-chatlist{flex:1;overflow-y:auto;padding:4px 0}
+    .chat-group-label{padding:8px 12px 4px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:1px}
+    .chat-entry{padding:10px 12px;border-bottom:1px dashed #eee;cursor:pointer;position:relative}
+    .chat-entry:hover{background:#eee}
+    .chat-entry.active{background:#e8f0fe;border-left:3px solid #2563eb}
+    .chat-entry-title{font-size:13px;font-weight:600;color:#333;margin-bottom:2px}
+    .chat-entry-preview{font-size:11px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .chat-entry-meta{font-size:10px;color:#bbb;margin-top:2px}
+    .chat-entry-star{position:absolute;right:12px;top:10px;font-size:14px;color:#ffd700}
+    .sidebar-footer{padding:8px;border-top:2px dashed #ddd;text-align:center}
+    .sidebar-footer a{font-size:11px;color:#999;text-decoration:none}
+    /* Main Content */
+    .main-content{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
+    /* Tab Bar */
+    .tab-bar{display:flex;align-items:center;background:#eee;border-bottom:2px dashed #bbb;min-height:36px;padding:0 4px}
+    .tab{display:flex;align-items:center;padding:6px 12px;font-size:12px;color:#666;border-right:1px dashed #ddd;cursor:pointer;white-space:nowrap;max-width:180px}
+    .tab.active{background:#fff;color:#333;font-weight:600;border-bottom:2px solid #2563eb}
+    .tab-close{font-size:14px;margin-left:6px;color:#999;cursor:pointer}
+    .tab-incognito{font-size:12px;margin-right:4px}
+    .tab-add{padding:6px 12px;font-size:16px;color:#2563eb;cursor:pointer;font-weight:700}
+    .tab-complete-dot{width:8px;height:8px;background:#22c55e;border-radius:50%;margin-left:4px}
+    /* Chat Header */
+    .chat-header{display:flex;align-items:center;padding:8px 16px;border-bottom:2px dashed #ddd;gap:12px;flex-wrap:wrap;min-height:44px}
+    .chat-header-persona{font-size:13px;font-weight:600;color:#2563eb;cursor:pointer;text-decoration:underline;text-decoration-style:dashed}
+    .chat-header-context{font-size:11px;color:#666;background:#f5f5f5;padding:2px 8px;border-radius:3px;border:1px dashed #bbb}
+    .context-bar{width:120px;height:6px;background:#eee;border-radius:3px;overflow:hidden;border:1px dashed #bbb}
+    .context-bar-fill{height:100%;background:#22c55e;width:15%}
+    .chat-header-cost{font-size:11px;color:#999}
+    .chat-header-source{font-size:10px;background:#fffde7;padding:2px 8px;border:1px dashed #ffd700;border-radius:3px}
+    .chat-header-spacer{flex:1}
+    .chat-header-btn{font-size:13px;padding:4px 8px;border:1px dashed #bbb;background:#fff;color:#666;cursor:pointer;border-radius:3px}
+    .chat-header-btn:hover{background:#eee}
+    .font-size-display{font-size:11px;color:#999;min-width:20px;text-align:center}
+    /* Conversation */
+    .conversation{flex:1;overflow-y:auto;padding:16px}
+    .msg{margin-bottom:20px;max-width:85%;position:relative}
+    .msg-user{margin-left:auto;text-align:right}
+    .msg-assistant{margin-right:auto}
+    .msg-role{font-size:10px;font-weight:700;color:#999;margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
+    .msg-content{font-size:14px;line-height:1.6;color:#333;padding:12px 16px;border:2px dashed #bbb;border-radius:6px;background:#fafafa}
+    .msg-user .msg-content{background:#f0f4ff;border-color:#2563eb}
+    .msg-meta{font-size:10px;color:#bbb;margin-top:4px}
+    .msg-actions{display:flex;gap:4px;margin-top:4px;opacity:0;transition:opacity .15s}
+    .msg:hover .msg-actions{opacity:1}
+    .msg-action-btn{font-size:10px;padding:2px 6px;border:1px dashed #ccc;background:#fff;color:#999;cursor:pointer;border-radius:2px}
+    .msg-action-btn:hover{background:#eee;color:#333}
+    .code-block{background:#333;color:#f0f0f0;padding:12px;border-radius:4px;font-family:monospace;font-size:13px;margin:8px 0;border:2px dashed #666;position:relative}
+    .code-block-copy{position:absolute;top:4px;right:8px;font-size:10px;color:#999;cursor:pointer;background:#555;padding:2px 6px;border-radius:2px}
+    .branch-indicator{font-size:11px;color:#2563eb;font-weight:600;margin-bottom:4px}
+    .scroll-bottom{position:absolute;bottom:80px;right:24px;background:#333;color:#ffd700;padding:8px 14px;border-radius:20px;font-size:11px;cursor:pointer;border:2px dashed #ffd700}
+    /* Input Area */
+    .input-area{border-top:2px dashed #bbb;background:#fafafa}
+    .input-toolbar{display:flex;align-items:center;padding:6px 12px;gap:6px;border-bottom:1px dashed #eee;flex-wrap:wrap}
+    .toolbar-btn{padding:4px 8px;font-size:11px;border:1px dashed #bbb;background:#fff;color:#666;cursor:pointer;border-radius:3px}
+    .toolbar-btn:hover{background:#eee}
+    .toolbar-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
+    .toolbar-separator{width:1px;height:16px;background:#ddd;margin:0 4px}
+    .input-row{display:flex;align-items:flex-end;padding:8px 12px;gap:8px}
+    .input-textbox{flex:1;min-height:48px;max-height:200px;padding:10px 12px;border:2px dashed #bbb;border-radius:6px;font-size:14px;font-family:system-ui,sans-serif;resize:vertical;background:#fff;color:#333}
+    .input-textbox:focus{outline:none;border-color:#2563eb}
+    .attachment-row{display:flex;gap:8px;padding:4px 12px}
+    .attachment-thumb{width:56px;height:56px;border:2px dashed #bbb;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#999;cursor:pointer;position:relative}
+    .attachment-thumb-remove{position:absolute;top:-6px;right:-6px;background:#333;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;text-align:center;line-height:16px;cursor:pointer}
+    .input-send{background:#2563eb;color:#fff;border:2px dashed #2563eb;padding:10px 20px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer}
+    .input-token-count{font-size:10px;color:#999;padding:4px 12px}
+    /* Right Panel */
+    .right-panel{width:320px;min-width:200px;background:#fafafa;border-left:2px dashed #bbb;display:flex;flex-direction:column}
+    .right-panel.collapsed{display:none}
+    .right-panel-tabs{display:flex;border-bottom:2px dashed #ddd}
+    .right-panel-tab{flex:1;text-align:center;padding:8px;font-size:11px;font-weight:600;color:#999;cursor:pointer;border-bottom:2px solid transparent}
+    .right-panel-tab.active{color:#2563eb;border-bottom-color:#2563eb}
+    .right-panel-content{flex:1;overflow-y:auto;padding:12px}
+    .artifact-item{padding:8px;border:1px dashed #ddd;border-radius:4px;margin-bottom:6px;cursor:pointer;font-size:12px}
+    .artifact-item:hover{background:#eee}
+    .artifact-name{font-weight:600;color:#333}
+    .artifact-type{font-size:10px;color:#999}
+    .chatnav-item{padding:6px 8px;font-size:11px;color:#666;border-bottom:1px dashed #eee;cursor:pointer}
+    .chatnav-item:hover{background:#eee;color:#333}
+    .chatnav-item.active{background:#e8f0fe;color:#2563eb;font-weight:600}
+    .empty-state{text-align:center;padding:24px;color:#999;font-size:13px;border:2px dashed #ddd;border-radius:4px}
+    /* Tooltip Toast */
+    .tooltip-toast{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#ffd700;padding:12px 24px;border-radius:8px;font-size:13px;max-width:500px;text-align:center;z-index:9999;border:2px dashed #ffd700}
+    /* Status Bar */
+    .status-bar{background:#f5f5f5;border-top:2px dashed #bbb;padding:2px 12px;display:flex;align-items:center;gap:8px;font-size:10px;color:#999}
+    .status-dot{width:8px;height:8px;border-radius:50%;background:#22c55e}
+    .status-dot.offline{background:#ef4444}
+    /* Scrollbar */
+    ::-webkit-scrollbar{width:6px}
+    ::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+    ::-webkit-scrollbar-track{background:transparent}
+  </style>
+</head>
+<body>
+  <div class="wireframe-banner">
+    ⚠️ VISION WIREFRAME — NOT FINAL DESIGN — Interactive mock for product discovery only
+  </div>
+
+  <div class="layout-sidebar">
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <div class="sidebar-nav">
+        <a href="studio-chat.html" class="nav-item active">💬 Chats</a>
+        <a href="wiki-browser.html" class="nav-item">📝 Wiki</a>
+        <a href="media-library.html" class="nav-item">🖼️ Media</a>
+        <a href="global-artifacts-browser.html" class="nav-item">📄 Artifacts</a>
+        <a href="usage-dashboard.html" class="nav-item">📊 Usage</a>
+        <a href="settings.html" class="nav-item">⚙️ Settings</a>
+      </div>
+      <div class="sidebar-search">
+        <input type="text" placeholder="🔍 Search all chats... (Ctrl+Shift+F)">
+      </div>
+      <div class="sidebar-tabs">
+        <div class="sidebar-tab active">Chats</div>
+        <div class="sidebar-tab">Timeline</div>
+      </div>
+      <div class="sidebar-chatlist">
+        <div style="padding:6px 12px">
+          <button class="toolbar-btn active" style="width:100%;text-align:center;font-weight:600" data-tooltip="Would open the Persona picker. Selecting a Persona creates a new chat tab with that Persona's system prompt, model, and mode.">+ New Chat</button>
+        </div>
+        <div class="chat-group-label">📌 Pinned</div>
+        <div class="chat-entry active">
+          <div class="chat-entry-title">Python Async Patterns</div>
+          <div class="chat-entry-preview">Here's a summary of the key async patterns we discussed...</div>
+          <div class="chat-entry-meta">Python Expert · 2m ago</div>
+          <div class="chat-entry-star">★</div>
+        </div>
+        <div class="chat-group-label">Today</div>
+        <div class="chat-entry">
+          <div class="chat-entry-title">Website Redesign Ideas</div>
+          <div class="chat-entry-preview">Let me suggest some modern design approaches for your...</div>
+          <div class="chat-entry-meta">Writing Coach · 45m ago</div>
+        </div>
+        <div class="chat-entry">
+          <div class="chat-entry-title">Debugging Memory Leak</div>
+          <div class="chat-entry-preview">The memory profiler shows the leak is in the event loop...</div>
+          <div class="chat-entry-meta">Python Expert · 2h ago</div>
+        </div>
+        <div class="chat-group-label">Yesterday</div>
+        <div class="chat-entry">
+          <div class="chat-entry-title">API Key Setup Help</div>
+          <div class="chat-entry-preview">To add an API key, go to Settings → Providers...</div>
+          <div class="chat-entry-meta">General Assistant · 1d ago</div>
+        </div>
+        <div class="chat-entry">
+          <div class="chat-entry-title">Chapter 3 Outline 🔒</div>
+          <div class="chat-entry-preview">🔒 Locked</div>
+          <div class="chat-entry-meta">Writing Coach · 1d ago</div>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <a href="#" data-tooltip="Would prompt for password to reveal hidden locked chats in the sidebar.">🔒 Reveal Locked Chats</a>
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+      <!-- Tab Bar -->
+      <div class="tab-bar">
+        <div class="tab active">Python Async Patterns <span class="tab-close">×</span></div>
+        <div class="tab">Website Redesign <span class="tab-close">×</span></div>
+        <div class="tab"><span class="tab-incognito">🕶️</span> Quick Rewrite <span class="tab-close">×</span></div>
+        <div class="tab">Chapter 3 Outline <span class="tab-complete-dot"></span><span class="tab-close">×</span></div>
+        <div class="tab-add" data-tooltip="Would open the Persona picker to create a new chat tab.">+</div>
+      </div>
+
+      <!-- Chat Header -->
+      <div class="chat-header">
+        <span class="chat-header-persona" data-tooltip="Would open a popover showing the current system message for editing. Changes take effect for subsequent messages. 'Reset to Persona Default' available.">🤖 Python Expert</span>
+        <span class="chat-header-context">12,450 / 128,000 tokens</span>
+        <div class="context-bar"><div class="context-bar-fill" style="width:9.7%"></div></div>
+        <span class="chat-header-cost">$0.42 total</span>
+        <span class="chat-header-spacer"></span>
+        <button class="chat-header-btn" data-tooltip="Would decrease chat message font size by 1px. Current: 14px. Range: 10-24px.">A⁻</button>
+        <span class="font-size-display">14</span>
+        <button class="chat-header-btn" data-tooltip="Would increase chat message font size by 1px.">A⁺</button>
+        <button class="chat-header-btn" data-tooltip="Would instantly switch between dark mode and light mode for the entire application.">☀️</button>
+        <button class="chat-header-btn" data-tooltip="Would pin this window to stay on top of other applications. State remembered across sessions.">📌</button>
+        <button class="chat-header-btn" data-tooltip="Would open menu: Clear Conversation, Export Chat, Duplicate Chat, Chat Tree, Edit System Message, Summarize Chat, Make Temporary.">⋯</button>
+      </div>
+
+      <!-- Conversation -->
+      <div class="conversation">
+        <!-- User Message -->
+        <div class="msg msg-user">
+          <div class="msg-role">You · 2 min ago</div>
+          <div class="msg-content">Can you explain Python async patterns and when to use asyncio vs threading?</div>
+          <div class="msg-actions">
+            <button class="msg-action-btn" data-tooltip="Would star this message for quick access. Favorited messages can be filtered in Chat Nav and global search.">⭐</button>
+            <button class="msg-action-btn" data-tooltip="Would copy both raw Markdown and Rich Text (HTML/RTF) to clipboard.">📋</button>
+            <button class="msg-action-btn" data-tooltip="Would open this message in editable mode. Choose 'Edit in Place' (overwrite) or 'Edit as Branch' (new version).">✏️</button>
+            <button class="msg-action-btn" data-tooltip="Would remove this message from current conversation history. Undo with Ctrl+Z.">🗑️</button>
+          </div>
+        </div>
+
+        <!-- Assistant Message -->
+        <div class="msg msg-assistant">
+          <div class="msg-role">🤖 Python Expert · 2 min ago · 1,240 tokens · $0.008</div>
+          <div class="msg-content">
+            <p>Great question! Here's a breakdown of Python's async patterns:</p>
+            <br>
+            <p><strong>asyncio</strong> is best for <strong>I/O-bound</strong> tasks — network requests, file operations, database queries. It uses a single-threaded event loop, so there's no GIL contention.</p>
+            <br>
+            <p><strong>threading</strong> is better for <strong>CPU-bound</strong> tasks that release the GIL (like numpy operations) or when you need true parallelism.</p>
+            <br>
+            <div class="code-block">
+              <div class="code-block-copy">Copy</div>
+              <code>import asyncio<br><br>async def fetch_data(url):<br>&nbsp;&nbsp;&nbsp;&nbsp;async with aiohttp.ClientSession() as session:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;async with session.get(url) as resp:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return await resp.json()</code>
+            </div>
+            <br>
+            <p><em>Generated in 3.2s</em></p>
+          </div>
+          <div class="msg-actions">
+            <button class="msg-action-btn" data-tooltip="Would star this message for quick access.">⭐</button>
+            <button class="msg-action-btn" data-tooltip="Would copy both raw Markdown and Rich Text to clipboard.">📋</button>
+            <button class="msg-action-btn" data-tooltip="Would replace this response with a new AI generation. Old response preserved as a branch.">🔄 Regenerate</button>
+            <button class="msg-action-btn" data-tooltip="Would record your feedback. Stored locally for your reference.">👍</button>
+            <button class="msg-action-btn" data-tooltip="Would record your feedback.">👎</button>
+          </div>
+        </div>
+
+        <!-- Another exchange -->
+        <div class="msg msg-user">
+          <div class="msg-role">You · 1 min ago</div>
+          <div class="msg-content">What about using both together?</div>
+          <div class="msg-actions">
+            <button class="msg-action-btn">⭐</button><button class="msg-action-btn">📋</button><button class="msg-action-btn">✏️</button><button class="msg-action-btn">🗑️</button>
+          </div>
+        </div>
+
+        <div class="msg msg-assistant">
+          <div class="msg-role">🤖 Python Expert · streaming...</div>
+          <div class="msg-content">
+            <p>You can combine them, but you need to be careful. The recommended pattern is to use <code>asyncio</code> as the main event loop and offload CPU-intensive work to a thread pool using <code>loop.run_in_executor()</code>. This gives you the best of both worlds — async I/O with parallel CPU processing when needed.<br><br><em>▌</em></p>
+          </div>
+          <div class="msg-actions">
+            <button class="msg-action-btn">⭐</button><button class="msg-action-btn">📋</button>
+            <button class="msg-action-btn" data-tooltip="Would immediately stop the AI response generation. Partial response preserved.">⏹ Stop</button>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin:16px 0">
+          <button class="toolbar-btn" data-tooltip="Would smoothly scroll to the latest message.">↓ Scroll to bottom</button>
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <div class="input-toolbar">
+          <button class="toolbar-btn" data-tooltip="Would switch the active Persona for this chat. Changes system prompt and model for subsequent messages.">🤖 Python Expert ▾</button>
+          <button class="toolbar-btn" data-tooltip="Would toggle extended reasoning (thinking) mode for this chat. Shows AI reasoning chain before final answer.">🧠 Thinking</button>
+          <button class="toolbar-btn" data-tooltip="Would mute sound notifications for this specific chat.">🔇 Mute</button>
+          <button class="toolbar-btn" data-tooltip="Would enable/disable AI tool use (browser search, file ops, wiki search) for this chat.">🔧 Tools</button>
+          <button class="toolbar-btn" data-tooltip="Would override global tool auto-approval settings for this chat.">⚡ Auto-Approve</button>
+          <button class="toolbar-btn active" data-tooltip="Would toggle whether _memory.md content is injected into system context. When On, AI knows what it has learned about you.">🧠 Memory: On</button>
+          <button class="toolbar-btn" data-tooltip="Would open Model Comparison: select 2+ Personas and see responses side-by-side.">⚖ Compare</button>
+          <span class="toolbar-separator"></span>
+          <button class="toolbar-btn" data-tooltip="Would open the Prompt Library to insert a saved prompt with variables resolved.">📋 Prompts</button>
+          <button class="toolbar-btn" data-tooltip="Would show Text Actions dropdown: Rewrite, Summarize, Explain, Translate, Fix Grammar, Enhance Prompt.">⚡ Actions ▾</button>
+          <span class="toolbar-separator"></span>
+          <button class="toolbar-btn" data-tooltip="Would start recording from microphone for voice dictation via configured STT provider.">🎤</button>
+          <button class="toolbar-btn" data-tooltip="Would open webcam capture dialog to take a photo for vision-capable models.">📷</button>
+          <span class="toolbar-separator"></span>
+          <button class="toolbar-btn" data-tooltip="Would open Write to Wiki dialog: create new or update existing wiki file from this conversation.">📝 Write to Wiki</button>
+          <button class="toolbar-btn" data-tooltip="Would trigger AI to read this chat and update _memory.md with new facts about you. Review changes via Diff Viewer.">🔄 Update Memory</button>
+        </div>
+        <div class="attachment-row">
+          <div class="attachment-thumb" data-tooltip="Would open this image in a new tab for full-size viewing.">
+            📷 screenshot.png
+            <div class="attachment-thumb-remove">×</div>
+          </div>
+        </div>
+        <div class="input-row">
+          <textarea class="input-textbox" placeholder="Type your message... (Shift+Enter for newline)">Can you show a code example of that?</textarea>
+          <button class="input-send" data-tooltip="Would validate token count against context limit. On success: sends message to AI. On warning: shows pre-send token warning if approaching limit. Would include attached image in prompt for vision model.">Send</button>
+        </div>
+        <div class="input-token-count">142 chars · ~35 tokens · context at 10.1%</div>
+      </div>
+
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <div class="status-dot"></div> Online
+        <span style="flex:1"></span>
+        Ctrl+/ Shortcuts
+      </div>
+    </main>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+      <div class="right-panel-tabs">
+        <div class="right-panel-tab active">📄 Artifacts</div>
+        <div class="right-panel-tab">🧭 Chat Nav</div>
+      </div>
+      <div class="right-panel-content">
+        <div class="artifact-item">
+          <div class="artifact-name">async_examples.py</div>
+          <div class="artifact-type">Python · v3 · 2 min ago</div>
+        </div>
+        <div class="artifact-item">
+          <div class="artifact-name">README.md</div>
+          <div class="artifact-type">Markdown · v1 · 15 min ago</div>
+        </div>
+        <div style="margin-top:12px">
+          <button class="toolbar-btn" style="width:100%" data-tooltip="Would save this artifact as a file on disk.">💾 Save to Disk</button>
+          <button class="toolbar-btn" style="width:100%;margin-top:4px" data-tooltip="Would launch Write to Wiki pipeline with artifact content pre-filled.">📝 Save to Wiki</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tooltip Toast -->
+  <div id="tooltip-toast" class="tooltip-toast"></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var toast = document.getElementById('tooltip-toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'tooltip-toast';
+        toast.className = 'tooltip-toast';
+        document.body.appendChild(toast);
+      }
+      var triggers = document.querySelectorAll('[data-tooltip]:not(a)');
+      triggers.forEach(function(el) {
+        el.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var text = this.getAttribute('data-tooltip');
+          toast.textContent = text;
+          toast.style.display = 'block';
+          clearTimeout(toast._timeout);
+          toast._timeout = setTimeout(function() {
+            toast.style.display = 'none';
+          }, 4000);
+        });
+      });
+      document.addEventListener('click', function() {
+        toast.style.display = 'none';
+      });
+    });
+  </script>
+</body>
+</html>
