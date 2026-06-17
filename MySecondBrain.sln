@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MySecondBrain.Core", "src\M
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MySecondBrain.Data", "src\MySecondBrain.Data\MySecondBrain.Data.csproj", "{68237256-0C59-4147-94FF-7A55630FD92A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MySecondBrain.Services", "src\MySecondBrain.Services\MySecondBrain.Services.csproj", "{3A4C5304-8089-4F97-9F9F-1DE87CABBDEA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,9 +28,14 @@ Global
 		{68237256-0C59-4147-94FF-7A55630FD92A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{68237256-0C59-4147-94FF-7A55630FD92A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{68237256-0C59-4147-94FF-7A55630FD92A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A4C5304-8089-4F97-9F9F-1DE87CABBDEA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A4C5304-8089-4F97-9F9F-1DE87CABBDEA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A4C5304-8089-4F97-9F9F-1DE87CABBDEA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A4C5304-8089-4F97-9F9F-1DE87CABBDEA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{A68A3A0C-14F0-4549-A4DB-4718607DDFBD} = {EDEECC05-B8CF-4790-B247-7F995A2C489E}
 		{68237256-0C59-4147-94FF-7A55630FD92A} = {EDEECC05-B8CF-4790-B247-7F995A2C489E}
+		{3A4C5304-8089-4F97-9F9F-1DE87CABBDEA} = {EDEECC05-B8CF-4790-B247-7F995A2C489E}
 	EndGlobalSection
 EndGlobal

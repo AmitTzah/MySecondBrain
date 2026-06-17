@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>MySecondBrain.Services</RootNamespace>
+    <AssemblyName>MySecondBrain.Services</AssemblyName>
+    <Description>Business logic services, LLM provider adapters, and integration wrappers</Description>
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Markdown -->
+    <PackageReference Include="Markdig" Version="*" />
+    
+    <!-- LLM SDKs -->
+    <PackageReference Include="OpenAI" Version="*" />
+    <PackageReference Include="Anthropic.SDK" Version="*" />
+    <PackageReference Include="Google.Cloud.AIPlatform.V1" Version="*" />
+    
+    <!-- Token Counting -->
+    <PackageReference Include="SharpToken" Version="*" />
+    
+    <!-- Audio -->
+    <PackageReference Include="NAudio" Version="*" />
+    
+    <!-- Diff -->
+    <PackageReference Include="DiffPlex" Version="*" />
+    
+    <!-- PDF -->
+    <PackageReference Include="QuestPDF" Version="*" />
+    
+    <!-- Git -->
+    <PackageReference Include="LibGit2Sharp" Version="*" />
+    
+    <!-- Webcam -->
+    <PackageReference Include="AForge.Video.DirectShow" Version="*" />
+    
+    <!-- Local STT -->
+    <PackageReference Include="Whisper.net" Version="*" />
+    
+    <!-- Backup -->
+    <PackageReference Include="Google.Cloud.Storage.V1" Version="*" />
+    
+    <!-- DI and Hosting -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.*" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.*" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MySecondBrain.Core\MySecondBrain.Core.csproj" />
+    <ProjectReference Include="..\MySecondBrain.Data\MySecondBrain.Data.csproj" />
+  </ItemGroup>
+</Project>
