@@ -205,7 +205,7 @@ MySecondBrain/
 
 ---
 
-### Step 3: Create MySecondBrain.Data Project (Data Layer)
+### [x] Step 3: Create MySecondBrain.Data Project (Data Layer)
 
 **What:** Create `src/MySecondBrain.Data/MySecondBrain.Data.csproj` with Entity Framework Core + SQLite NuGet packages, project reference to Core, empty `AppDbContext` stub, and directory structure (`Entities/`, `Repositories/`, `Migrations/`, `Configurations/`). Add to solution.
 
