@@ -1,22 +1,31 @@
 {
   "project_vision": "MySecondBrain — a native Windows desktop app unifying all LLM interactions (provider-agnostic) with a personal wiki/second-brain knowledge management system",
-  "current_phase": 2,
-  "total_features": 0,
+  "current_phase": 3,
+  "total_features": 245,
   "current_feature_index": 0,
-  "status": "planning",
+  "status": "in_progress",
   "fd_status": "idle",
   "phase_2_substep": null,
   "phase_4_substep": null,
   "git_automation_enabled": true,
   "smoke_test_automation": {
-    "enabled": false,
+    "enabled": true,
     "environments": {
       "web": null,
       "cli": null,
       "native": null,
-      "desktop": null
+      "desktop": {
+        "executable_path": ".\\MySecondBrain.exe",
+        "window_title": "MySecondBrain",
+        "launch_args": null,
+        "mcp_available": false,
+        "mcp_name": "windows-mcp",
+        "verified": false
+      }
     },
-    "missing_prerequisites": []
+    "missing_prerequisites": [
+      "windows-mcp — Install: pip install uv && uvx windows-mcp serve. Add to Roo Code MCP settings: { \"mcpServers\": { \"windows-mcp\": { \"command\": \"uvx\", \"args\": [\"windows-mcp\", \"serve\", \"--exclude-tools\", \"PowerShell,Registry,Process\"] } } }. Restart Roo Code after install. ⚠️ Desktop smoke tests require an active, unlocked Windows session — not suitable for headless CI."
+    ]
   },
   "total_replans": 0,
   "current_branch_name": null
