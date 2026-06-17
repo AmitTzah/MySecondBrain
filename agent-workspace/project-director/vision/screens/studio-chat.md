@@ -75,6 +75,13 @@ Six icon+label navigation items:
   - Message content with full Markdown rendering (C2)
   - Code blocks with syntax highlighting + copy button on hover (C3)
   - Streaming tokens during generation (C4)
+  - **Thinking Block (when Thinking is enabled, E3):**
+    - Appears as a collapsible section within the assistant message, ABOVE the final response
+    - **During thinking (streaming):** Collapsed by default. Header shows "🧠 Thinking... [N]s" with a real-time second counter incrementing each second. Click to expand and see the streaming thinking process in real time. The thinking text renders as plain monospace text (no Markdown processing).
+    - **When thinking completes:** Header updates to "🧠 Thinking complete ([N]s)". The final response begins streaming below the thinking block. The thinking block remains collapsible — user can re-collapse to hide it.
+    - **After generation finishes:** Both thinking block and response are visible. Thinking block can be toggled collapsed/expanded. The completed thinking content is preserved as part of the message.
+    - **When Thinking is disabled (E3 off):** No thinking block appears — only the final response.
+    - **When model does not support thinking:** Thinking toggle is grayed out in toolbar with tooltip "This model does not support extended thinking." No thinking block ever appears.
   - Token count + estimated cost (C11)
   - Generation time on completion ("Generated in 3.2s")
 - Per-message action bar (visible on hover or always, per theme):

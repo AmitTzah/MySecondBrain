@@ -67,6 +67,18 @@
     .code-block{background:#333;color:#f0f0f0;padding:12px;border-radius:4px;font-family:monospace;font-size:13px;margin:8px 0;border:2px dashed #666;position:relative}
     .code-block-copy{position:absolute;top:4px;right:8px;font-size:10px;color:#999;cursor:pointer;background:#555;padding:2px 6px;border-radius:2px}
     .branch-indicator{font-size:11px;color:#2563eb;font-weight:600;margin-bottom:4px}
+    /* Thinking Block */
+    .thinking-block{border:2px dashed #bbb;border-radius:4px;margin-bottom:8px;overflow:hidden}
+    .thinking-header{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#f5f5f5;cursor:pointer;font-size:12px;color:#666;user-select:none;border-bottom:1px dashed #ddd}
+    .thinking-header:hover{background:#eee}
+    .thinking-header .thinking-icon{font-size:14px}
+    .thinking-header .thinking-counter{font-family:monospace;font-weight:600;color:#2563eb;min-width:32px}
+    .thinking-header .thinking-toggle{font-size:10px;color:#999;margin-left:auto}
+    .thinking-content{display:none;padding:8px 12px;font-family:monospace;font-size:11px;color:#999;line-height:1.5;max-height:200px;overflow-y:auto;background:#fafafa}
+    .thinking-content.expanded{display:block}
+    .thinking-block.complete .thinking-header{color:#333}
+    .thinking-block.complete .thinking-counter{color:#22c55e}
+    .thinking-block.streaming .thinking-header{background:#fffbf0}
     .scroll-bottom{position:sticky;bottom:8px;text-align:center}
     .scroll-bottom button{background:#333;color:#ffd700;padding:8px 14px;border-radius:20px;font-size:11px;cursor:pointer;border:2px dashed #ffd700}
     /* Input */
@@ -221,6 +233,18 @@
         <div class="msg msg-assistant">
           <div class="branch-indicator" data-tooltip="This message has 3 versions. Currently viewing v2. Click ← → arrows to cycle through branches. Selecting a different branch re-renders all subsequent messages.">◀ v2/3 ▶</div>
           <div class="msg-role">🤖 Python Expert · 2 min ago · 1,240 tokens · $0.008 · Generated in 3.2s</div>
+          <!-- Thinking Block (completed) -->
+          <div class="thinking-block complete" data-tooltip="Thinking was enabled. The AI's reasoning process is shown here. Click header to expand/collapse. The thinking block is part of the message — toggling it does not affect the response below.">
+            <div class="thinking-header" onclick="var c=this.nextElementSibling;c.classList.toggle('expanded');var t=this.querySelector('.thinking-toggle');t.textContent=c.classList.contains('expanded')?'▲':'▼'">
+              <span class="thinking-icon">🧠</span>
+              <span>Thinking complete</span>
+              <span class="thinking-counter">(3.2s)</span>
+              <span class="thinking-toggle">▼</span>
+            </div>
+            <div class="thinking-content expanded">
+              The user is asking about Python async patterns and when to use asyncio vs threading. I need to explain: 1) asyncio is for I/O-bound tasks (single-threaded event loop), 2) threading is for CPU-bound tasks, 3) GIL considerations, 4) code example showing asyncio usage, 5) mention combining both with run_in_executor for completeness.
+            </div>
+          </div>
           <div class="msg-content">
             <p>Great question! Here's a breakdown:</p>
             <br>
@@ -263,6 +287,18 @@
 
         <div class="msg msg-assistant">
           <div class="msg-role">🤖 Python Expert · streaming... ▌</div>
+          <!-- Thinking Block (streaming - in progress) -->
+          <div class="thinking-block streaming" data-tooltip="AI is currently thinking. The counter shows elapsed seconds. Click to expand and see the streaming reasoning in real time. The final response will appear below once thinking completes.">
+            <div class="thinking-header" onclick="var c=this.nextElementSibling;c.classList.toggle('expanded');var t=this.querySelector('.thinking-toggle');t.textContent=c.classList.contains('expanded')?'▲':'▼'">
+              <span class="thinking-icon">🧠</span>
+              <span>Thinking...</span>
+              <span class="thinking-counter">2.1s</span>
+              <span class="thinking-toggle">▼</span>
+            </div>
+            <div class="thinking-content expanded">
+              The user wants to know about combining asyncio and threading. I should mention loop.run_in_executor() as the standard approach. Need to explain: 1) run_in_executor offloads CPU-bound work to thread pool, 2) keeps async I/O non-blocking, 3) code example showing practical usage with ThreadPoolExecutor, 4) caveat about GIL for truly CPU-bound Python code...
+            </div>
+          </div>
           <div class="msg-content">
             <p>You can combine them using <code>loop.run_in_executor()</code> to offload CPU work to a thread pool while keeping async I/O. This gives you the best of both worlds...<br><br><em>▌</em></p>
           </div>
@@ -286,7 +322,7 @@
         <div class="draft-indicator" data-tooltip="Your message is auto-saved every 5 seconds. If the app closes unexpectedly, you'll be prompted to restore this draft.">💾 Draft saved</div>
         <div class="input-toolbar">
           <button class="toolbar-btn" data-tooltip="Would switch the active Persona for this chat. Changes system prompt and model for subsequent messages.">🤖 Python Expert ▾</button>
-          <button class="toolbar-btn" data-tooltip="Would toggle extended reasoning (thinking) mode.">🧠 Thinking</button>
+          <button class="toolbar-btn active" data-tooltip="Would toggle extended reasoning (thinking) mode. When ON (active): AI shows its reasoning as an expandable '🧠 Thinking... [N]s' block above each response. Collapsed by default during streaming. Expand to see thinking in real time. When OFF: AI responds directly without showing reasoning. Only works with models that support extended thinking.">🧠 Thinking</button>
           <button class="toolbar-btn" data-tooltip="Would mute sound notifications for this specific chat.">🔇 Mute</button>
           <button class="toolbar-btn" data-tooltip="Would enable/disable AI tool use for this chat.">🔧 Tools</button>
           <button class="toolbar-btn" data-tooltip="Would override global tool auto-approval settings for this chat.">⚡ Auto-Approve</button>

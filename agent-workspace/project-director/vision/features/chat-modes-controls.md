@@ -27,12 +27,15 @@ The user controls how AI conversations are structured: Standard chat mode (user/
 - ⚠️ FLAGGED: Text completion APIs are being deprecated by some providers. The Architect should verify API availability for target providers.
 
 ### E3. Thinking Toggle
-- Control in textbox toolbar: toggle switch or button with brain/lightbulb icon.
-- **When Enabled:** AI may display its reasoning chain (thinking process) before the final answer. Thinking appears as expandable/collapsible section.
-- **When Disabled:** AI responds directly without showing reasoning.
-- Only functional for models that support extended thinking (e.g., Claude's extended thinking, OpenAI o1).
-- For models without thinking support: toggle is grayed out with tooltip "This model does not support extended thinking."
-- **Per-Chat:** Setting applies to current chat only.
+- Control in textbox toolbar: toggle button with brain icon (🧠). Active state: highlighted with accent color.
+- **When Enabled (ON):** AI displays its reasoning chain (thinking process) before the final answer.
+  - **During thinking (streaming):** An expandable "🧠 Thinking... [N]s" block appears at the top of the assistant message, ABOVE where the final response will appear. The block is **collapsed by default** during streaming. The header shows a real-time second counter incrementing each second. The user can click the header to expand and see the streaming thinking text in real time (rendered as plain monospace, no Markdown processing).
+  - **When thinking completes:** The header updates to "🧠 Thinking complete ([N]s)". The final response begins streaming below the thinking block. The thinking block remains collapsible — user can re-collapse to hide the reasoning and focus on the response.
+  - **After generation finishes:** Both the thinking block and the response are preserved as part of the message. The thinking block can be toggled collapsed/expanded at any time. The completed thinking content is stored with the message.
+- **When Disabled (OFF):** AI responds directly without showing reasoning. No thinking block appears — only the final response.
+- Only functional for models that support extended thinking (e.g., Claude's extended thinking, OpenAI o1, DeepSeek R1).
+- For models without thinking support: toggle is grayed out with tooltip "This model does not support extended thinking." No thinking block ever appears.
+- **Per-Chat:** Setting applies to current chat only. Each chat remembers its Thinking toggle state independently.
 
 ### E4. Mute Notifications Toggle
 - Control in textbox toolbar: speaker/mute icon toggle.
