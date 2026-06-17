@@ -1,24 +1,108 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Usage Dashboard — Placeholder</title>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screen: Usage Dashboard — Vision Wireframe</title>
   <style>
-    body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f0f0;color:#666}
-    .placeholder{text-align:center;padding:48px;border:2px dashed #999;border-radius:8px;background:#fff;max-width:500px}
-    .placeholder-icon{font-size:64px;margin-bottom:16px}
-    .placeholder-title{font-size:20px;font-weight:600;margin-bottom:8px}
-    .placeholder-text{font-size:14px;color:#999;margin-bottom:24px}
-    .placeholder-link{color:#2563eb;font-size:14px}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;background:#f0f0f0;color:#333;overflow:hidden;height:100vh}
+    .wireframe-banner{background:#333;color:#ffd700;text-align:center;padding:6px 16px;font-size:12px;font-weight:600;letter-spacing:.5px;border-bottom:2px dashed #ffd700;flex-shrink:0}
+    .layout-sidebar{display:flex;height:calc(100vh - 32px)}
+    .sidebar{width:240px;background:#f5f5f5;border-right:2px dashed #bbb;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+    .sidebar-nav{padding:8px;border-bottom:2px dashed #ddd}
+    .nav-item{display:block;padding:8px 12px;font-size:13px;color:#666;text-decoration:none;border:1px dashed transparent;border-radius:4px;margin-bottom:2px}
+    .nav-item:hover{background:#eee;color:#333}
+    .nav-item.active{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:600}
+    .content{flex:1;overflow-y:auto;padding:24px 32px;background:#fff}
+    .summary-cards{display:flex;gap:16px;margin-bottom:24px}
+    .summary-card{flex:1;border:2px dashed #bbb;border-radius:6px;padding:16px;background:#fafafa}
+    .summary-card .sc-label{font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+    .summary-card .sc-value{font-size:24px;font-weight:700;color:#333}
+    .summary-card .sc-sub{font-size:11px;color:#999;margin-top:2px}
+    .filter-bar{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+    .filter-btn{padding:6px 14px;border:2px dashed #bbb;border-radius:4px;font-size:12px;cursor:pointer;background:#fff;color:#666}
+    .filter-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
+    .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+    .chart-box{border:2px dashed #ddd;border-radius:6px;padding:40px 20px;text-align:center;background:#fafafa;min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    .chart-box .chart-title{font-size:12px;font-weight:600;color:#666;margin-bottom:8px}
+    .chart-box .chart-placeholder{font-size:36px;color:#ccc}
+    .section-title{font-size:16px;font-weight:700;color:#333;margin-bottom:12px;padding-bottom:8px;border-bottom:2px dashed #eee}
+    .data-table{width:100%;border-collapse:collapse;margin-bottom:24px}
+    .data-table th{text-align:left;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:2px dashed #ddd;cursor:pointer}
+    .data-table td{padding:8px 10px;font-size:13px;color:#333;border-bottom:1px dashed #eee}
+    .data-table tr:hover{background:#fafafa}
+    .chat-link{color:#2563eb;cursor:pointer;text-decoration:underline;text-decoration-style:dashed}
+    .feedback-table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    .feedback-table th{text-align:left;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;padding:8px 10px;border-bottom:2px dashed #ddd}
+    .feedback-table td{padding:8px 10px;font-size:13px;color:#333;border-bottom:1px dashed #eee}
+    .approval-bar{display:inline-block;height:16px;border-radius:3px;background:#22c55e;vertical-align:middle}
+    .approval-bar-wrap{display:inline-block;width:80px;height:16px;background:#eee;border-radius:3px;vertical-align:middle;margin-right:8px;border:1px dashed #ccc}
+    .tooltip-toast{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#ffd700;padding:12px 24px;border-radius:8px;font-size:13px;max-width:500px;text-align:center;z-index:9999;border:2px dashed #ffd700}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+    ::-webkit-scrollbar-track{background:transparent}
   </style>
 </head>
 <body>
-  <div class="placeholder">
-    <div class="placeholder-icon">📊</div>
-    <h1 class="placeholder-title">Usage Dashboard</h1>
-    <p class="placeholder-text">Token usage charts, cost breakdowns by provider and model, per-chat cost table, and budget alerts. Filterable by time range.</p>
-    <a href="studio-chat.html" class="placeholder-link">← Back to Studio Chat</a>
+  <div class="wireframe-banner">⚠️ VISION WIREFRAME — NOT FINAL DESIGN — Interactive mock for product discovery only</div>
+  <div class="layout-sidebar">
+    <nav class="sidebar"><div class="sidebar-nav">
+      <a href="studio-chat.html" class="nav-item">💬 Chats</a>
+      <a href="wiki-browser.html" class="nav-item">📝 Wiki</a>
+      <a href="media-library.html" class="nav-item">🖼️ Media</a>
+      <a href="global-artifacts-browser.html" class="nav-item">📄 Artifacts</a>
+      <a href="usage-dashboard.html" class="nav-item active">📊 Usage</a>
+      <a href="settings.html" class="nav-item">⚙️ Settings</a>
+    </div></nav>
+    <div class="content">
+      <div class="summary-cards">
+        <div class="summary-card"><div class="sc-label">Total Tokens</div><div class="sc-value">847,230</div><div class="sc-sub">This month · +12% vs last</div></div>
+        <div class="summary-card"><div class="sc-label">Total Cost</div><div class="sc-value">$4.82</div><div class="sc-sub">This month · est. $6.20 projected</div></div>
+        <div class="summary-card"><div class="sc-label">Most Used Model</div><div class="sc-value">GPT-4o</div><div class="sc-sub">62% of all tokens</div></div>
+        <div class="summary-card"><div class="sc-label">Most Used Persona</div><div class="sc-value">Python Expert</div><div class="sc-sub">41% of all chats</div></div>
+      </div>
+
+      <div class="filter-bar">
+        <button class="filter-btn">Today</button>
+        <button class="filter-btn">This Week</button>
+        <button class="filter-btn active" data-tooltip="Currently showing data for the current calendar month. Click other presets or Custom Range to change.">This Month</button>
+        <button class="filter-btn">Custom Range</button>
+        <button class="filter-btn">All Time</button>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-box"><div class="chart-title">Token Usage Over Time</div><div class="chart-placeholder">📈</div><span style="font-size:11px;color:#999">Line chart: input tokens + output tokens</span></div>
+        <div class="chart-box"><div class="chart-title">Cost Over Time</div><div class="chart-placeholder">📊</div><span style="font-size:11px;color:#999">Bar chart: estimated cost per day</span></div>
+        <div class="chart-box"><div class="chart-title">By Provider</div><div class="chart-placeholder">🥧</div><span style="font-size:11px;color:#999">Pie chart: token distribution by provider</span></div>
+        <div class="chart-box"><div class="chart-title">By Model</div><div class="chart-placeholder">🥧</div><span style="font-size:11px;color:#999">Pie chart: token distribution by model</span></div>
+      </div>
+
+      <div class="section-title">Per-Chat Breakdown</div>
+      <table class="data-table">
+        <thead><tr><th data-tooltip="Click to sort by chat title.">Chat Title ↕</th><th>Date</th><th>Models</th><th>Tokens</th><th>Cost</th><th>Persona</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chat-link" data-tooltip="Would open this chat in Studio.">Python Async Patterns</span></td><td>Jun 15</td><td>GPT-4o, Claude 3.5</td><td>48,200</td><td>$0.32</td><td>Python Expert</td></tr>
+          <tr><td><span class="chat-link">Website Redesign</span></td><td>Jun 14</td><td>Claude 3.5 Sonnet</td><td>32,100</td><td>$0.18</td><td>Writing Coach</td></tr>
+          <tr><td><span class="chat-link">Debugging Memory Leak</span></td><td>Jun 12</td><td>DeepSeek V3</td><td>18,500</td><td>$0.04</td><td>Code Helper</td></tr>
+          <tr><td><span class="chat-link">Chapter 3 Outline</span></td><td>Jun 10</td><td>Claude 3.5</td><td>25,800</td><td>$0.21</td><td>Writing Coach</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-title">AI Feedback Summary</div>
+      <table class="feedback-table">
+        <thead><tr><th>Persona</th><th>Rated</th><th>👍</th><th>👎</th><th>Approval</th></tr></thead>
+        <tbody>
+          <tr><td>🐍 Python Expert</td><td>30</td><td>26</td><td>4</td><td><div class="approval-bar-wrap"><div class="approval-bar" style="width:87%"></div></div>87%</td></tr>
+          <tr><td>💻 Code Helper</td><td>22</td><td>19</td><td>3</td><td><div class="approval-bar-wrap"><div class="approval-bar" style="width:86%"></div></div>86%</td></tr>
+          <tr><td>✍️ Writing Coach</td><td>18</td><td>14</td><td>4</td><td><div class="approval-bar-wrap"><div class="approval-bar" style="width:78%"></div></div>78%</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
+  <div class="tooltip-toast" id="tooltip-toast"></div>
+  <script>
+    function showToast(m){var t=document.getElementById('tooltip-toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(function(){t.style.display='none'},4000)}
+    document.addEventListener('DOMContentLoaded',function(){var t=document.getElementById('tooltip-toast');document.querySelectorAll('[data-tooltip]:not(a)').forEach(function(e){e.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();t.textContent=this.getAttribute('data-tooltip');t.style.display='block';clearTimeout(t._t);t._t=setTimeout(function(){t.style.display='none'},4000)})})})
+  </script>
 </body>
 </html>
