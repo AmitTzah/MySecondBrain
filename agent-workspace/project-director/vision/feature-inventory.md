@@ -39,9 +39,9 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **C2. Message Content Rendering:** Markdown (headings, bold, italic, code blocks with syntax highlighting, lists, links, tables, blockquotes), images (inline, clickable), audio (mini player), video (embedded player).
 - **C3. Code Block Rendering:** Syntax highlighting by declared language. Copy button on hover at top-right.
 - **C4. Streaming Response Display:** Token-by-token rendering. Markdown/code render progressively. Generation time shown on completion.
-- **C5. Message Actions:** Send (Enter/button), Stop generation, Regenerate last response.
+- **C5. Message Actions:** Send (Enter/button). During generation, Send transforms into spinner + red "Stop." Clicking Stop preserves partial response.
 - **C5a. Conditional [Apply] Button (Tier 1 Elevation):** When chat originated from Tier 1 text transformation: source indicator banner + [Apply Latest] in header. Per-message [Apply] on direct transformations. Grayed out if source app closed.
-- **C6. Copy:** Each message has Copy button placing raw Markdown AND Rich Text (HTML/RTF) on clipboard. Copy entire conversation option.
+- **C6. Copy:** Two explicit per-message buttons: "Copy MD" (raw Markdown) and "Copy Rich" (HTML/RTF). Copy entire conversation via menu option.
 - **C7. Chat Titling:** Auto-generated from first user message via AI. Manually editable.
 - **C8. Continue Generation:** "Continue" button when last message is from assistant. Sends continuation request.
 - **C9. Drag & Drop Files/Media:** Drag files/images/video/audio into input. Images for vision models. Text files read into prompt. Other files: metadata included.
@@ -73,6 +73,8 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **C33. Message Favoriting:** Star individual messages (★). Filter favorited in Chat Nav. Global search filter for favorited.
 - **C34. Spell Check in Textbox:** Red squiggly underline for misspelled words. Right-click suggestions. Toggle in Settings.
 - **C35. Cross-Tab Completion Alert:** Pulsing green dot on inactive tab when generation completes. Sound + brief "✓" in tab title. Configurable in Settings.
+- **C36. Auto-Save Message Drafts:** Textbox content auto-saves every 5 seconds. Recover unsent drafts after crash or accidental tab close. "Restore draft?" dialog.
+- **C37. Right Panel Layout:** Two vertically stacked resizable sections: Artifacts (top) + Chat Nav (bottom). Divider for resizing. Both collapsible. No tabs — both visible simultaneously.
 
 ### D. Message Manipulation & Branching
 **Spec:** [`features/message-manipulation-branching.md`](features/message-manipulation-branching.md)
@@ -237,6 +239,7 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **S3. Usage Charts:** Line chart (tokens over time), bar chart (cost over time), pie charts (by provider, by model).
 - **S4. Per-Chat Breakdown:** Table of chats with token count, cost, models. Click to open chat.
 - **S5. Budget Alerts:** Monthly spending limit. Warning at threshold (e.g., 80%). Option to block API calls when exceeded.
+- **S6. AI Feedback Summary:** Aggregated 👍/👎 per Persona and Model. Approval percentages, trend charts, rankings. Filterable by time range.
 
 ### T. Nice-to-Have Features
 **Spec:** [`features/nice-to-have-future.md`](features/nice-to-have-future.md)

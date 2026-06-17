@@ -68,10 +68,16 @@ The user edits, deletes, branches, and navigates conversation messages. Every me
 - **Use Case:** "I want to explore a different direction from this point without affecting the original conversation"
 
 ### D8. Message Feedback
-- **Buttons:** Thumbs-up and thumbs-down on each assistant message
+- **Buttons:** Thumbs-up (👍) and thumbs-down (👎) on each assistant message
 - **Toggle:** Click to give feedback, click again to remove
-- **Storage:** Feedback stored with message. Visual indicator on messages with feedback.
-- **Use Case:** Track which prompts/models produce best results for personal reference
+- **Storage:** Feedback stored with message (field: feedback = "thumbs_up" | "thumbs_down" | null). Visual indicator on messages with feedback.
+- **Aggregation (in Usage Dashboard S):** Feedback data aggregated in Usage Dashboard:
+  - Per Persona: "Python Expert: 87% positive (26/30)"
+  - Per Model: "GPT-4o: 92% positive"
+  - Feedback trend over time (line chart)
+  - Most/least positively rated Personas ranking
+- **Filtering:** Global search (L3) has "👍 Only" filter to find positively-rated messages
+- **Use Case:** Track which Personas and models produce best results. Identify underperforming configurations.
 
 ### D9. Undo/Redo Message Edits
 - **Scope:** Edit (D1), Delete (D2), Regenerate (C5)

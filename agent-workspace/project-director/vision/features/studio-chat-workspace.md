@@ -37,11 +37,16 @@ Assistant messages render: Markdown (headings H1-H6, bold, italic, inline code, 
 
 ### C5. Message Actions
 - **Send:** Enter key or click Send button. Shift+Enter for newline in input.
-- **Stop:** Visible only during generation. Stops and keeps partial response.
-- **Regenerate:** Visible on last assistant message. Replaces with new generation.
+- **During Generation:** The Send button transforms into a spinner + red "Stop" button. Clicking Stop preserves partial response and reverts to Send.
+- **Regenerate:** Visible on last assistant message. Replaces with new generation. Old response preserved as branch.
 - **Edit:** Opens message in editable mode (D1)
 - **Delete:** Removes message from history (D2)
-- **Copy:** Places raw Markdown + Rich Text (HTML/RTF) on clipboard (C6)
+
+### C6. Copy
+- **Two explicit copy buttons per message:**
+  - **"Copy MD" (📋):** Copies raw Markdown to clipboard — for pasting into VS Code, Obsidian, plain text editors
+  - **"Copy Rich" (📝):** Copies Rich Text (HTML/RTF) to clipboard — for pasting into Word, Outlook, browsers with formatting preserved
+- Menu option: "Copy Entire Conversation" → copies as Markdown or plain text (user choice)
 
 ### C5a. Conditional [Apply] Button
 See [`features/windows-os-integration.md`](features/windows-os-integration.md) P3 for full spatial anchoring spec.
@@ -274,6 +279,27 @@ Top-to-bottom in the main content area:
 - **Performance:** Local spell-check library. No API calls.
 
 ### C35. Cross-Tab Completion Alert
+- **Indicator:** When AI generation completes on an inactive tab (user is viewing a different tab), the inactive tab shows a pulsing green dot or checkmark
+- **Sound:** Plays notification sound (A4) regardless of active tab
+- **Tab Bar:** Tab title briefly changes to "[Title] ✓" for 5 seconds after completion
+- **Configuration:** Settings → Notifications → "Alert when generation completes on inactive tab" toggle. Default: enabled.
+- **Multiple Completions:** If multiple inactive tabs complete, each shows the indicator independently
+
+### C36. Auto-Save Message Drafts
+- **Behavior:** Textbox content auto-saves every 5 seconds while user is typing
+- **Storage:** Draft saved locally (SQLite or temp file). Per-chat: each chat tab has its own draft.
+- **Indicator:** Small "💾 Draft saved" text below toolbar while typing. Changes to "💾 Draft saved" with green check after each auto-save.
+- **Recovery:** If app closes unexpectedly (crash, force quit) or user accidentally closes a tab with content, on next open: dialog "You have an unsent draft in '[Chat Title]'. Restore it?" Options: [Restore Draft] / [Discard]
+- **Tab Close:** If user manually closes tab with unsent text, same restore dialog appears.
+- **Cleanup:** Draft deleted when message is sent successfully. If user clears textbox and 5 seconds pass with empty content, draft is deleted.
+- **Multiple Drafts:** If multiple tabs had drafts, dialog shows list: "Restore drafts from [N] chats?" with individual toggles.
+
+### C37. Right Panel Layout
+The right panel contains two vertically stacked resizable sections (no tabs):
+- **Top: Artifacts (F2).** Collapsible section header "📄 Artifacts (N)". Lists artifacts with name, type, version. Save to Disk / Save to Wiki buttons.
+- **Resizable Divider:** Drag to resize relative heights of the two sections.
+- **Bottom: Chat Navigation (D6).** Collapsible section header "🧭 Chat Navigation". Scrollable message list. "★ Favorited only" filter. Active message highlighted.
+- Both sections independently collapsible. Entire right panel collapsible via toggle in chat header.
 - **Indicator:** When AI generation completes on an inactive tab (user is viewing a different tab), the inactive tab shows a pulsing green dot or checkmark
 - **Sound:** Plays notification sound (A4) regardless of active tab
 - **Tab Bar:** Tab title briefly changes to "[Title] ✓" for 5 seconds after completion

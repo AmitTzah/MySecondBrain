@@ -1,7 +1,7 @@
 # Usage & Pricing Dashboard — Feature Spec
 
 ## What the User Accomplishes
-The user views comprehensive usage statistics — token counts and estimated costs across all providers, models, and chats. Filterable by time range, provider, and chat. Charts visualize usage trends. Budget alerts prevent overspending.
+The user views comprehensive usage statistics — token counts and estimated costs across all providers, models, and chats. Filterable by time range, provider, and chat. Charts visualize usage trends. Budget alerts prevent overspending. Also displays aggregated AI response feedback (thumbs up/down) per Persona and Model.
 
 ## Trigger
 - Studio sidebar → "Usage" nav item
@@ -33,6 +33,19 @@ The user views comprehensive usage statistics — token counts and estimated cos
 - **Empty State:** "No chat activity in the selected time range."
 
 ### S5. Budget Alerts
+- **Monthly Budget:** User sets a monthly spending limit in Settings → Pricing (in USD)
+- **Warning Threshold:** Configurable percentage (default: 80%). When reached: non-intrusive warning in Studio
+- **Block Threshold:** Optional. When 100% reached: block further API calls
+- **Reset:** Budget resets on 1st of each month
+
+### S6. AI Response Feedback Summary
+- **Feedback Per Persona:** Table showing each Persona with total messages rated, thumbs up count, thumbs down count, and approval percentage (e.g., "Python Expert: 87% positive (26/30)")
+- **Feedback Per Model:** Same breakdown by Model Configuration
+- **Feedback Trend:** Line chart showing approval percentage over time (by week/month)
+- **Rankings:** "Most 👍 Personas" and "Most 👎 Personas" top-5 lists
+- **Filter:** Time range filter applies to feedback data (same as S2)
+- **Empty State:** "No feedback recorded yet. Use 👍/👎 on AI responses to track what works best."
+- **Data Source:** Message feedback field (D8). Purely local — no data sent to providers.
 - **Monthly Budget:** User sets a monthly spending limit in Settings → Pricing (in USD)
 - **Warning Threshold:** Configurable percentage (default: 80%). When reached: non-intrusive warning in Studio: "You've used 80% of your monthly budget ($[spent] of $[limit])."
 - **Block Threshold:** Optional. When 100% reached: block further API calls. "Monthly budget reached. API calls are blocked until [1st of next month]. Adjust budget in Settings."
