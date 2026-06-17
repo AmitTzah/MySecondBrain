@@ -1,0 +1,28 @@
+{
+  "feature_name": ".NET 8.0 WPF Solution Scaffold",
+  "branch_name": "feature/solution-scaffold",
+  "git_automation_enabled": true,
+  "smoke_test_automation": {
+    "enabled": true,
+    "environments": {
+      "web": null,
+      "cli": null,
+      "native": null,
+      "desktop": {
+        "executable_path": ".\\MySecondBrain.exe",
+        "window_title": "MySecondBrain",
+        "launch_args": null,
+        "mcp_available": true,
+        "mcp_name": "windows-mcp",
+        "verified": true
+      }
+    },
+    "missing_prerequisites": []
+  },
+  "current_phase": 3,
+  "plan_status": "validated",
+  "total_steps": 10,
+  "current_step": 0,
+  "pivot_in_progress": false,
+  "phase_5_substep": null
+}
