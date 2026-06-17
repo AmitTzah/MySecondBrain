@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screen: Model Comparison — Vision Wireframe</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;background:#f0f0f0;color:#333;overflow:hidden;height:100vh}
+    .wireframe-banner{background:#333;color:#ffd700;text-align:center;padding:6px 16px;font-size:12px;font-weight:600;letter-spacing:.5px;border-bottom:2px dashed #ffd700;flex-shrink:0}
+    .layout-sidebar{display:flex;height:calc(100vh - 32px)}
+    /* Sidebar */
+    .sidebar{width:260px;min-width:150px;background:#f5f5f5;border-right:2px dashed #bbb;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+    .sidebar-nav{padding:8px;border-bottom:2px dashed #ddd}
+    .nav-item{display:block;padding:8px 12px;font-size:13px;color:#666;text-decoration:none;border:1px dashed transparent;border-radius:4px;margin-bottom:2px}
+    .nav-item:hover{background:#eee;color:#333}
+    .nav-item.active{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:600}
+    .sidebar-chatlist{flex:1;overflow-y:auto;padding:4px 0}
+    .chat-entry{padding:10px 12px;border-bottom:1px dashed #eee;cursor:pointer;font-size:12px;color:#666}
+    .chat-entry.active{background:#e8f0fe;border-left:3px solid #2563eb;font-weight:600;color:#333}
+    .chat-entry-title{font-size:12px;font-weight:600;color:#333;margin-bottom:2px}
+    .chat-entry-preview{font-size:10px;color:#999}
+    .tab-bar{display:flex;align-items:center;background:#eee;border-bottom:2px dashed #bbb;min-height:34px;padding:0 8px;flex-shrink:0}
+    .tab{display:flex;align-items:center;padding:6px 12px;font-size:12px;color:#666;border-right:1px dashed #ddd;cursor:pointer}
+    .tab.active{background:#fff;color:#333;font-weight:600;border-bottom:2px solid #2563eb}
+    .tab-close{font-size:14px;margin-left:6px;color:#999;cursor:pointer}
+    .main-content{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
+    /* Header */
+    .comp-header{display:flex;align-items:center;padding:8px 16px;border-bottom:2px dashed #ddd;gap:12px;background:#fafafa;flex-shrink:0}
+    .comp-header h2{font-size:15px;font-weight:700;color:#333;flex:1}
+    .layout-toggle{display:flex;border:2px dashed #bbb;border-radius:4px;overflow:hidden}
+    .lt-btn{padding:5px 10px;font-size:11px;cursor:pointer;background:#fff;color:#666;border:none}
+    .lt-btn.active{background:#2563eb;color:#fff}
+    .screen{display:none;flex:1;overflow:hidden}
+    .screen.active{display:flex;flex-direction:column}
+    /* Setup */
+    .setup-content{flex:1;overflow-y:auto;padding:28px 48px;max-width:900px;margin:0 auto;width:100%}
+    .chips-row{display:flex;flex-wrap:wrap;gap:6px;min-height:32px;align-items:center;margin-bottom:14px;padding:8px 12px;border:2px dashed #ddd;border-radius:4px;background:#fafafa}
+    .chips-hint{font-size:12px;color:#999}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#f0f5ff;border:2px dashed #2563eb;border-radius:16px;font-size:12px}
+    .chip .chip-name{font-weight:600;color:#2563eb}
+    .chip .chip-model{font-size:10px;color:#999}
+    .chip-remove{color:#c44;cursor:pointer;font-weight:700;font-size:14px;margin-left:2px}
+    .checklist-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .checklist-links{display:flex;gap:8px}
+    .checklist-links a{font-size:11px;color:#2563eb;cursor:pointer;text-decoration:underline}
+    .checklist-filter input{width:100%;padding:8px 10px;border:2px dashed #bbb;border-radius:4px;font-size:12px;margin-bottom:8px;background:#fff;color:#333}
+    .checklist{max-height:240px;overflow-y:auto;border:2px dashed #ddd;border-radius:4px;margin-bottom:14px}
+    .checklist-item{display:flex;align-items:center;padding:8px 12px;border-bottom:1px dashed #eee;gap:10px;cursor:pointer}
+    .checklist-item:hover{background:#fafafa}
+    .checklist-item:last-child{border-bottom:none}
+    .checklist-item input[type="checkbox"]{width:20px;height:20px;cursor:pointer;accent-color:#2563eb;flex-shrink:0}
+    .checklist-item .cl-name{font-weight:600;font-size:13px;color:#333;flex:1}
+    .checklist-item .cl-model{font-size:11px;color:#999}
+    .cl-recent{font-size:9px;color:#2563eb;background:#f0f5ff;padding:1px 6px;border-radius:3px}
+    .checklist-item.disabled{opacity:.4;cursor:not-allowed}
+    .checklist-item.disabled input{pointer-events:none}
+    .prompt-area textarea{width:100%;min-height:80px;padding:10px 12px;border:2px dashed #bbb;border-radius:4px;font-size:14px;font-family:system-ui,sans-serif;resize:vertical;background:#fff;color:#333}
+    .prompt-meta{display:flex;justify-content:space-between;font-size:10px;color:#999;padding:2px 0}
+    .setup-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+    .section-label{font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+    /* Results */
+    .results-area{flex:1;overflow:hidden;display:flex;gap:8px;padding:8px}
+    .results-area.horizontal{flex-direction:row}
+    .results-area.vertical{flex-direction:column}
+    .result-panel{flex:1;border:2px dashed #bbb;border-radius:6px;display:flex;flex-direction:column;overflow:hidden;background:#fff;min-width:0}
+    .rp-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:2px dashed #ddd;background:#fafafa;flex-shrink:0}
+    .rp-persona{font-weight:600;font-size:12px;color:#333}
+    .rp-model{font-size:10px;color:#999}
+    .rp-metrics{display:flex;gap:10px;padding:4px 12px;font-size:9px;color:#999;border-bottom:1px dashed #eee;flex-shrink:0}
+    .rp-conversation{flex:1;overflow-y:auto;padding:10px;font-size:13px;line-height:1.5}
+    .rp-msg{margin-bottom:10px;padding:8px 10px;border-radius:4px;border:1px dashed #ddd}
+    .rp-msg-user{background:#f0f4ff;border-color:#2563eb;text-align:right}
+    .rp-msg-assistant{background:#fafafa}
+    .rp-msg-role{font-size:9px;font-weight:700;color:#999;text-transform:uppercase;margin-bottom:3px}
+    .rp-input-row{display:flex;gap:6px;padding:8px;border-top:2px dashed #ddd;flex-shrink:0}
+    .rp-input-row input{flex:1;padding:6px 10px;border:2px dashed #bbb;border-radius:4px;font-size:12px;background:#fff;color:#333}
+    .rp-input-row input:focus{outline:none;border-color:#2563eb}
+    .rp-input-row .rp-send{padding:6px 14px;background:#2563eb;color:#fff;border:2px dashed #2563eb;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer}
+    .rp-input-row .rp-accept{padding:6px 14px;background:#16a34a;color:#fff;border:2px dashed #16a34a;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer}
+    .rp-input-row .rp-stop{padding:6px 14px;background:#ef4444;color:#fff;border:2px dashed #ef4444;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;display:none}
+    .rp-input-row .rp-accept:disabled{opacity:.4;cursor:not-allowed}
+    /* Thinking block */
+    .thinking-block{border:1px dashed #ccc;border-radius:3px;margin-bottom:6px;overflow:hidden}
+    .thinking-header{display:flex;align-items:center;gap:6px;padding:4px 10px;background:#f5f5f5;cursor:pointer;font-size:10px;color:#666;user-select:none}
+    .thinking-counter{font-family:monospace;font-weight:600;color:#2563eb;min-width:24px}
+    .thinking-toggle{font-size:9px;color:#999;margin-left:auto}
+    .thinking-content{display:none;padding:6px 10px;font-family:monospace;font-size:9px;color:#999;line-height:1.4;max-height:100px;overflow-y:auto;background:#fafafa}
+    .thinking-content.expanded{display:block}
+    .code-block{background:#333;color:#f0f0f0;padding:8px;border-radius:3px;font-family:monospace;font-size:11px;margin:6px 0;border:1px dashed #666}
+    /* Right Panel */
+    .right-panel{width:280px;min-width:180px;background:#fafafa;border-left:2px dashed #bbb;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+    .panel-section{display:flex;flex-direction:column;overflow:hidden}
+    .panel-section-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:2px dashed #ddd;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;flex-shrink:0}
+    .panel-section-content{overflow-y:auto;padding:8px;flex:1}
+    .panel-divider{height:4px;background:#e0e0e0;cursor:row-resize;border-top:1px dashed #ccc;border-bottom:1px dashed #ccc;flex-shrink:0}
+    .artifact-item{padding:8px;border:1px dashed #ddd;border-radius:4px;margin-bottom:6px;cursor:pointer;font-size:12px}
+    .artifact-name{font-weight:600;color:#333}
+    .artifact-type{font-size:10px;color:#999}
+    .chatnav-item{padding:6px 8px;font-size:11px;color:#666;border-bottom:1px dashed #eee;cursor:pointer}
+    .chatnav-item.active{background:#e8f0fe;color:#2563eb;font-weight:600}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:2px dashed #999;border-radius:4px;font-family:system-ui,sans-serif;font-size:13px;font-weight:500;cursor:pointer;background:#fff;color:#333;text-decoration:none}
+    .btn:hover{border-style:solid}
+    .btn-primary{background:#2563eb;color:#fff;border-color:#2563eb;border-style:solid}
+    .btn-primary:disabled{opacity:.4;cursor:not-allowed}
+    .btn-sm{padding:4px 10px;font-size:11px}
+    .tooltip-toast{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#ffd700;padding:12px 24px;border-radius:8px;font-size:13px;max-width:500px;text-align:center;z-index:9999;border:2px dashed #ffd700}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+    ::-webkit-scrollbar-track{background:transparent}
+    .broadcast-row{display:flex;gap:8px;padding:12px 16px;border-top:2px dashed #2563eb;background:#fffde7;flex-shrink:0;max-width:600px;margin:0 auto;width:100%}
+    .broadcast-row input{flex:1;padding:8px 10px;border:2px dashed #bbb;border-radius:4px;font-size:13px;background:#fff;color:#333}
+    .broadcast-row input:focus{outline:none;border-color:#2563eb}
+    .rp-input-row.hidden input, .rp-input-row.hidden .rp-send, .rp-input-row.hidden .rp-stop{display:none}
+    .rp-input-row.hidden .rp-accept{flex:1}
+    .collapse-btn{font-size:14px;color:#999;cursor:pointer;background:none;border:none}
+  </style>
+</head>
+<body>
+  <div class="wireframe-banner">
+    ⚠️ VISION WIREFRAME — NOT FINAL DESIGN — Interactive mock for product discovery only
+  </div>
+
+  <div class="layout-sidebar">
+    <nav class="sidebar">
+      <div class="sidebar-nav">
+        <a href="studio-chat.html" class="nav-item">💬 Chats</a>
+        <a href="wiki-browser.html" class="nav-item">📝 Wiki</a>
+        <a href="media-library.html" class="nav-item">🖼️ Media</a>
+        <a href="global-artifacts-browser.html" class="nav-item">📄 Artifacts</a>
+        <a href="usage-dashboard.html" class="nav-item">📊 Usage</a>
+        <a href="settings.html" class="nav-item">⚙️ Settings</a>
+      </div>
+      <div class="sidebar-chatlist">
+        <div class="chat-entry active">
+          <div class="chat-entry-title">Python Async Patterns</div>
+          <div class="chat-entry-preview">⚖ Comparing models...</div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="main-content">
+      <div class="tab-bar">
+        <div class="tab active">Python Async Patterns <span class="tab-close">×</span></div>
+        <div class="tab">Website Redesign <span class="tab-close">×</span></div>
+      </div>
+
+      <div class="comp-header">
+        <h2>⚖ Model Comparison</h2>
+        <div class="layout-toggle" id="layoutToggle" style="display:none">
+          <button class="lt-btn active" onclick="setLayout('horizontal')" data-tooltip="Side-by-side columns.">⬛⬛ Horizontal</button>
+          <button class="lt-btn" onclick="setLayout('vertical')" data-tooltip="Stacked rows.">⬛ Vertical</button>
+        </div>
+        <button class="btn btn-sm" id="broadcastBtn" style="display:none" onclick="toggleBroadcast()" data-tooltip="Toggle between per-panel text inputs (each Persona gets its own follow-up) and a single broadcast input (same message sent to all panels at once).">
+          🔗 Broadcast: Off
+        </button>
+        <a href="studio-chat.html" class="btn btn-sm" data-tooltip="Close comparison. If no Accept clicked, nothing saved to chat.">✕ Close</a>
+      </div>
+
+      <!-- SETUP -->
+      <div class="screen active" id="screen-setup">
+        <div class="setup-content">
+          <div class="section-label">Selected Personas (min 2, max 4)</div>
+          <div class="chips-row" id="chipsRow">
+            <span class="chips-hint" id="chipsHint">Select at least 2 Personas below</span>
+          </div>
+          <div class="checklist-header">
+            <span class="section-label" style="margin-bottom:0">Available Personas</span>
+            <div class="checklist-links">
+              <a onclick="selectAll()" data-tooltip="Select up to 4 Personas.">Select All</a>
+              <a onclick="deselectAll()" data-tooltip="Deselect all.">Deselect All</a>
+            </div>
+          </div>
+          <div class="checklist-filter"><input type="text" placeholder="Filter Personas..."></div>
+          <div class="checklist" id="checklist">
+            <label class="checklist-item" id="item1">
+              <input type="checkbox" onchange="togglePersona(this,'Python Expert','GPT-4o','item1')">
+              <span class="cl-name">🐍 Python Expert</span><span class="cl-model">GPT-4o</span><span class="cl-recent">↺ Last used</span>
+            </label>
+            <label class="checklist-item" id="item2">
+              <input type="checkbox" onchange="togglePersona(this,'Code Helper','DeepSeek V3','item2')">
+              <span class="cl-name">💻 Code Helper</span><span class="cl-model">DeepSeek V3</span><span class="cl-recent">↺ Last used</span>
+            </label>
+            <label class="checklist-item" id="item3">
+              <input type="checkbox" onchange="togglePersona(this,'General Assistant','Gemini 2.0 Flash','item3')">
+              <span class="cl-name">🤖 General Assistant</span><span class="cl-model">Gemini 2.0 Flash</span>
+            </label>
+            <label class="checklist-item" id="item4">
+              <input type="checkbox" onchange="togglePersona(this,'Writing Coach','Claude 3.5 Sonnet','item4')">
+              <span class="cl-name">✍️ Writing Coach</span><span class="cl-model">Claude 3.5 Sonnet</span>
+            </label>
+          </div>
+          <div class="section-label">Initial Prompt</div>
+          <div class="prompt-area">
+            <textarea id="promptText">Can you explain Python async patterns and when to use asyncio vs threading? Include a code example.</textarea>
+            <div class="prompt-meta"><span>127 chars</span><span>~20 tokens</span></div>
+          </div>
+          <div class="section-label">Results Layout</div>
+          <div style="margin-bottom:4px">
+            <button class="lt-btn active" onclick="setSetupLayout('horizontal',this)" data-tooltip="Side-by-side panels (default).">⬛⬛ Horizontal</button>
+            <button class="lt-btn" onclick="setSetupLayout('vertical',this)" data-tooltip="Stacked panels.">⬛ Vertical</button>
+          </div>
+          <div class="setup-actions">
+            <a href="studio-chat.html" class="btn">Cancel</a>
+            <button class="btn btn-primary" id="startBtn" disabled onclick="showResults()" data-tooltip="Send prompt to all selected Personas. Each panel becomes an independent chat — continue the conversation with each Persona, then Accept the best one.">Start Comparison</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULTS -->
+      <div class="screen" id="screen-results">
+        <div class="results-area horizontal" id="resultsArea">
+          <!-- Panel 1 -->
+          <div class="result-panel" id="panel1">
+            <div class="rp-header">
+              <div><div class="rp-persona">🐍 Python Expert</div><div class="rp-model">GPT-4o</div></div>
+            </div>
+            <div class="rp-metrics"><span>⏱ 3.2s</span><span>📊 1,240 tok</span><span>💰 $0.008</span></div>
+            <div class="rp-conversation">
+              <div class="rp-msg rp-msg-user"><div class="rp-msg-role">You</div>Can you explain Python async patterns and when to use asyncio vs threading? Include a code example.</div>
+              <div class="rp-msg rp-msg-assistant">
+                <div class="rp-msg-role">Python Expert</div>
+                <div class="thinking-block complete">
+                  <div class="thinking-header" onclick="var c=this.nextElementSibling;c.classList.toggle('expanded');var t=this.querySelector('.thinking-toggle');t.textContent=c.classList.contains('expanded')?'▲':'▼'"><span>🧠</span> Thinking complete <span class="thinking-counter">3.2s</span><span class="thinking-toggle">▼</span></div>
+                  <div class="thinking-content expanded">User wants async patterns explained. Cover: I/O vs CPU-bound, event loop, GIL, code example with aiohttp.</div>
+                </div>
+                <p><strong>asyncio</strong> is best for <strong>I/O-bound</strong> tasks. Single-threaded event loop, no GIL contention.</p>
+                <p><strong>threading</strong> is better for <strong>CPU-bound</strong> tasks or true parallelism.</p>
+                <div class="code-block"><code>import asyncio<br>import aiohttp<br><br>async def fetch(url):<br>&nbsp;&nbsp;&nbsp;&nbsp;async with aiohttp.ClientSession() as s:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;async with s.get(url) as r:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return await r.json()</code></div>
+              </div>
+            </div>
+            <div class="rp-input-row">
+              <input type="text" placeholder="Follow up with Python Expert..." data-tooltip="Type a follow-up message to this specific Persona. Each panel has its own independent conversation.">
+              <button class="rp-send" data-tooltip="Send your follow-up to this Persona only. Response streams in this panel.">Send</button>
+              <button class="rp-stop" data-tooltip="Stop this panel's generation. Partial response preserved.">Stop</button>
+              <button class="rp-accept" onclick="acceptPanel(1)" data-tooltip="Accept this entire conversation into your main chat. Other conversations are automatically saved as branches. Returns to Studio.">Accept</button>
+            </div>
+          </div>
+
+          <!-- Panel 2 -->
+          <div class="result-panel" id="panel2">
+            <div class="rp-header">
+              <div><div class="rp-persona">💻 Code Helper</div><div class="rp-model">DeepSeek V3</div></div>
+            </div>
+            <div class="rp-metrics"><span>⏱ 4.1s</span><span>📊 1,580 tok</span><span>💰 $0.003</span></div>
+            <div class="rp-conversation">
+              <div class="rp-msg rp-msg-user"><div class="rp-msg-role">You</div>Can you explain Python async patterns and when to use asyncio vs threading? Include a code example.</div>
+              <div class="rp-msg rp-msg-assistant">
+                <div class="rp-msg-role">Code Helper</div>
+                <p>Here's a practical breakdown:</p>
+                <p><strong>Use asyncio when:</strong> waiting on I/O — APIs, DBs, files.</p>
+                <p><strong>Use threading when:</strong> CPU parallelism or blocking C libs.</p>
+                <div class="code-block"><code># Concurrent API calls<br>async def fetch_all(urls):<br>&nbsp;&nbsp;&nbsp;&nbsp;tasks = [fetch(u) for u in urls]<br>&nbsp;&nbsp;&nbsp;&nbsp;return await asyncio.gather(*tasks)</code></div>
+              </div>
+            </div>
+            <div class="rp-input-row">
+              <input type="text" placeholder="Follow up with Code Helper..." data-tooltip="Type a follow-up message to this specific Persona.">
+              <button class="rp-send" data-tooltip="Send follow-up to this Persona only.">Send</button>
+              <button class="rp-stop" data-tooltip="Stop this panel's generation.">Stop</button>
+              <button class="rp-accept" onclick="acceptPanel(2)" data-tooltip="Accept this entire conversation into your main chat. Other conversations auto-saved as branches.">Accept</button>
+            </div>
+          </div>
+
+          <!-- Panel 3 -->
+          <div class="result-panel" id="panel3">
+            <div class="rp-header">
+              <div><div class="rp-persona">🤖 General Assistant</div><div class="rp-model">Gemini 2.0 Flash</div></div>
+            </div>
+            <div class="rp-metrics"><span>⏱ 2.8s</span><span>📊 980 tok</span><span>💰 $0.001</span></div>
+            <div class="rp-conversation">
+              <div class="rp-msg rp-msg-user"><div class="rp-msg-role">You</div>Can you explain Python async patterns and when to use asyncio vs threading? Include a code example.</div>
+              <div class="rp-msg rp-msg-assistant">
+                <div class="rp-msg-role">General Assistant</div>
+                <p>Python has two main concurrency approaches:</p>
+                <p><strong>asyncio</strong> — cooperative multitasking. Perfect for I/O-bound work.</p>
+                <p><strong>threading</strong> — OS-level threads. Better for CPU but adds GIL complexity.</p>
+                <p>Rule of thumb: waiting on network → asyncio. Crunching numbers → threading.</p>
+              </div>
+            </div>
+            <div class="rp-input-row">
+              <input type="text" placeholder="Follow up with General Assistant..." data-tooltip="Type a follow-up message to this specific Persona.">
+              <button class="rp-send" data-tooltip="Send follow-up to this Persona only.">Send</button>
+              <button class="rp-stop" data-tooltip="Stop this panel's generation.">Stop</button>
+              <button class="rp-accept" onclick="acceptPanel(3)" data-tooltip="Accept this entire conversation into your main chat. Other conversations auto-saved as branches.">Accept</button>
+            </div>
+          </div>
+        </div>
+        <!-- Broadcast input (hidden by default) -->
+        <div class="broadcast-row" id="broadcastRow" style="display:none">
+          <input type="text" placeholder="Type a message to send to ALL Personas at once..." data-tooltip="This message is sent to all panels simultaneously. Each panel gets the same follow-up.">
+          <button class="rp-send" data-tooltip="Send this message to all Personas simultaneously. Each panel's conversation updates independently.">Send to All</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+      <div class="panel-section" style="flex:1;min-height:120px">
+        <div class="panel-section-header">📄 Artifacts (2)<button class="collapse-btn">−</button></div>
+        <div class="panel-section-content">
+          <div class="artifact-item"><div class="artifact-name">async_examples.py</div><div class="artifact-type">Python · v3</div></div>
+          <div class="artifact-item"><div class="artifact-name">README.md</div><div class="artifact-type">Markdown · v1</div></div>
+        </div>
+      </div>
+      <div class="panel-divider"></div>
+      <div class="panel-section" style="flex:1;min-height:100px">
+        <div class="panel-section-header">🧭 Chat Navigation<button class="collapse-btn">−</button></div>
+        <div class="panel-section-content">
+          <div class="chatnav-item active">#1 You: Can you explain Python async...</div>
+          <div class="chatnav-item">#2 Python Expert: Great question!...</div>
+          <div class="chatnav-item">#3 You: What about using both?</div>
+          <div class="chatnav-item">#4 Python Expert: You can combine...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tooltip-toast" id="tooltip-toast"></div>
+
+  <script>
+    var selectedCount = 0, selectedMap = {}, chosenLayout = 'horizontal';
+
+    function togglePersona(cb, name, model, itemId) {
+      if (cb.checked) {
+        if (selectedCount >= 4) { cb.checked = false; showToast('Maximum 4 Personas.'); return; }
+        selectedCount++; selectedMap[itemId] = {name: name, model: model};
+      } else { selectedCount--; delete selectedMap[itemId]; }
+      updateChips(); updateStartButton(); updateLimits();
+    }
+    function updateChips() {
+      var row = document.getElementById('chipsRow'), hint = document.getElementById('chipsHint');
+      row.querySelectorAll('.chip').forEach(function(c) { c.remove(); });
+      if (Object.keys(selectedMap).length === 0) { hint.style.display = 'inline'; }
+      else { hint.style.display = 'none';
+        for (var key in selectedMap) { var p = selectedMap[key];
+          var chip = document.createElement('span'); chip.className = 'chip';
+          chip.innerHTML = '<span class="chip-name">' + p.name + '</span><span class="chip-model">' + p.model + '</span><span class="chip-remove" onclick="removeChip(\'' + key + '\')">✕</span>';
+          row.appendChild(chip);
+        }
+      }
+    }
+    function removeChip(id) {
+      var cb = document.querySelector('#' + id + ' input[type="checkbox"]');
+      if (cb) cb.checked = false;
+      selectedCount--; delete selectedMap[id];
+      updateChips(); updateStartButton(); updateLimits();
+    }
+    function updateStartButton() {
+      var btn = document.getElementById('startBtn');
+      btn.disabled = (selectedCount < 2);
+      btn.style.opacity = selectedCount < 2 ? '0.4' : '1';
+    }
+    function updateLimits() {
+      document.querySelectorAll('.checklist-item').forEach(function(item) {
+        var cb = item.querySelector('input[type="checkbox"]');
+        if (!cb.checked && selectedCount >= 4) item.classList.add('disabled');
+        else item.classList.remove('disabled');
+      });
+    }
+    function selectAll() {
+      var count = 0;
+      document.querySelectorAll('.checklist-item').forEach(function(item) {
+        if (count >= 4) return;
+        var cb = item.querySelector('input[type="checkbox"]');
+        if (!cb.checked) { cb.checked = true; count++; }
+      });
+      // Rebuild
+      selectedCount = 0; selectedMap = {};
+      document.querySelectorAll('.checklist-item input:checked').forEach(function(cb) {
+        var item = cb.closest('.checklist-item');
+        selectedCount++;
+        selectedMap[item.id] = {
+          name: item.querySelector('.cl-name').textContent.replace(/^[^\s]+\s/, ''),
+          model: item.querySelector('.cl-model').textContent
+        };
+      });
+      updateChips(); updateStartButton(); updateLimits();
+    }
+    function deselectAll() {
+      document.querySelectorAll('.checklist-item input').forEach(function(cb) { cb.checked = false; });
+      selectedCount = 0; selectedMap = {};
+      updateChips(); updateStartButton(); updateLimits();
+    }
+    function setSetupLayout(mode, btn) {
+      chosenLayout = mode;
+      document.querySelectorAll('.setup-content .lt-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    }
+    function showResults() {
+      document.getElementById('screen-setup').classList.remove('active');
+      document.getElementById('screen-results').classList.add('active');
+      document.getElementById('layoutToggle').style.display = 'flex';
+      document.getElementById('broadcastBtn').style.display = 'inline-flex';
+      document.querySelector('#layoutToggle .lt-btn').classList.add('active');
+      showToast('Comparison started. Chat with each Persona independently in their panels. Click Accept on the best conversation to return to your chat.');
+    }
+    function setLayout(mode) {
+      var area = document.getElementById('resultsArea'), btns = document.querySelectorAll('#layoutToggle .lt-btn');
+      btns.forEach(function(b) { b.classList.remove('active'); });
+      area.className = 'results-area ' + mode;
+      (mode === 'vertical' ? btns[1] : btns[0]).classList.add('active');
+    }
+    function toggleBroadcast() {
+      var btn = document.getElementById('broadcastBtn');
+      var row = document.getElementById('broadcastRow');
+      var inputs = document.querySelectorAll('.rp-input-row');
+      var isOn = row.style.display !== 'none';
+      if (isOn) {
+        row.style.display = 'none';
+        inputs.forEach(function(el) { el.classList.remove('hidden'); });
+        btn.innerHTML = '🔗 Broadcast: Off';
+        btn.style.background = '#fff'; btn.style.color = '#333'; btn.style.borderColor = '#999';
+      } else {
+        row.style.display = 'flex';
+        inputs.forEach(function(el) { el.classList.add('hidden'); });
+        btn.innerHTML = '🔗 Broadcast: On';
+        btn.style.background = '#2563eb'; btn.style.color = '#fff'; btn.style.borderColor = '#2563eb';
+      }
+    }
+
+    function acceptPanel(n) {
+      var persona = document.querySelector('#panel' + n + ' .rp-persona').textContent;
+      showToast('Accepted ' + persona + ' conversation! Other conversations auto-saved as branches. Returning to chat...');
+      setTimeout(function() { window.location.href = 'studio-chat.html'; }, 1500);
+    }
+    // Pre-select 3
+    setTimeout(function() {
+      ['item1','item2','item3'].forEach(function(id) {
+        var cb = document.querySelector('#' + id + ' input[type="checkbox"]');
+        if (cb) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
+      });
+    }, 100);
+
+    function showToast(msg) {
+      var toast = document.getElementById('tooltip-toast');
+      toast.textContent = msg; toast.style.display = 'block';
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(function() { toast.style.display = 'none'; }, 4000);
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      var toast = document.getElementById('tooltip-toast');
+      document.querySelectorAll('[data-tooltip]:not(a)').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+          e.preventDefault(); e.stopPropagation();
+          toast.textContent = this.getAttribute('data-tooltip');
+          toast.style.display = 'block';
+          clearTimeout(toast._timeout);
+          toast._timeout = setTimeout(function() { toast.style.display = 'none'; }, 4000);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
