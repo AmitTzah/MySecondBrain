@@ -157,7 +157,7 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **L1. Sidebar Chat List:** All permanent chats sorted by selected order. Pinned at top. Grouped by date. Shows title, preview, timestamp, star, tags.
 - **L2. Chat Favoriting:** Star/unstar. Filter toggle for favorites only.
 - **L3. Full-Text Search:** Searches all chat messages (permanent + transient in window). Results with snippets, chat name, timestamp, highlights. Click to open and scroll.
-- **L4. Delete Chat:** Confirmation dialog. Cascading deletion of media/artifacts exclusively linked.
+- **L4. Delete Chat (Soft-Delete):** Moves chat to Trash (30-day soft-delete). Restore available. Permanent delete from Trash. Trash view in sidebar. See [`features/soft-delete-trash.md`](features/soft-delete-trash.md).
 - **L5. Timeline Tab:** Chronological feed of all transient actions (Tier 1 + Tier 2). Shows action type, preview, timestamp, source app.
 - **L6. Sidebar Filtering:** Default: permanent chats. Timeline tab: transient actions. Toggle between views.
 - **L7. Chat Tags/Labels:** User-defined tags (e.g., "coding", "writing"). Filterable.
@@ -240,6 +240,16 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **S4. Per-Chat Breakdown:** Table of chats with token count, cost, models. Click to open chat.
 - **S5. Budget Alerts:** Monthly spending limit. Warning at threshold (e.g., 80%). Option to block API calls when exceeded.
 - **S6. AI Feedback Summary:** Aggregated 👍/👎 per Persona and Model. Approval percentages, trend charts, rankings. Filterable by time range.
+
+### U. Soft-Delete Trash
+**Spec:** [`features/soft-delete-trash.md`](features/soft-delete-trash.md)
+
+- **U1. Soft-Delete on Chat Deletion:** Deleting a chat moves it to Trash (IsDeleted=true, DeletedAt timestamp). 30-day recovery window.
+- **U2. Trash View:** Sidebar "🗑️ Trash" showing all soft-deleted chats with Restore and Delete Permanently buttons.
+- **U3. 30-Day Auto-Purge:** Background task permanently deletes chats older than 30 days in Trash.
+- **U4. Restore from Trash:** Restores chat to original location (folder, tags, pinned status preserved).
+- **U5. Permanent Delete from Trash:** Explicit permanent deletion with confirmation. Follows O5 garbage collection.
+- **U6. Empty Trash:** Bulk permanent delete of all items in Trash with confirmation.
 
 ### T. Nice-to-Have Features
 **Spec:** [`features/nice-to-have-future.md`](features/nice-to-have-future.md)

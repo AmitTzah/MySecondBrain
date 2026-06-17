@@ -35,6 +35,8 @@ A ChatThread is the core container for all AI interactions, regardless of origin
 | colorLabel | string | No | Nullable. Hex color or preset name | Color label (L14) |
 | tags | string[] | No | Array of tag strings | User-defined tags (L7) |
 | folderId | string | No | Nullable. References Folder | Parent folder (L9) |
+| isDeleted | boolean | Yes | Default: false | Soft-delete flag (T1). Chat in Trash. |
+| deletedAt | datetime | No | Nullable. Set when isDeleted becomes true | Soft-delete timestamp. Used for 30-day auto-purge (T3). |
 
 ## Lifecycle
 
@@ -53,9 +55,11 @@ A ChatThread is the core container for all AI interactions, regardless of origin
 - **System Message:** User edits per-chat system message (E5).
 
 ### Delete
-- **Manual:** User deletes from sidebar (L4). Confirmation dialog. Cascading per O5.
-- **Auto-Cleanup:** Background task deletes threads where isTransient=true AND age > 7 days AND no exceptions apply (O4).
-- **Hard Delete:** Permanent. Media/artifacts exclusively linked are also deleted (O5).
+- **Soft-Delete (L4):** User deletes from sidebar → moves to Trash. Sets isDeleted=true, deletedAt=now. Chat hidden from lists.
+- **Restore (T4):** User restores from Trash → clears isDeleted and deletedAt. Chat returns to original location.
+- **Permanent Delete (T5):** User explicitly deletes from Trash → hard delete per O5.
+- **30-Day Auto-Purge (T3):** Background task hard-deletes threads where isDeleted=true AND deletedAt > 30 days ago.
+- **Auto-Cleanup (O4):** Background task deletes threads where isTransient=true AND age > 7 days. Transient threads skip soft-delete (go directly to hard delete).
 
 ## Relationships
 - **has many** Messages (one ChatThread contains many Messages)
@@ -70,4 +74,5 @@ A ChatThread is the core container for all AI interactions, regardless of origin
 - Sidebar Chat List (L1) — Title, preview, timestamp, star, tags
 - Timeline Tab (L5) — Transient threads displayed chronologically
 - Search Results (L3) — Thread title shown with matching messages
+- Trash View — Soft-deleted threads listed with deletion date, Restore, and Delete Permanently
 - [`screens/settings.md`](screens/settings.md) — Not directly displayed, but Persona/model configs that reference threads are managed here

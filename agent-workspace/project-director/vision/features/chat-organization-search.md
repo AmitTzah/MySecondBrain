@@ -34,10 +34,18 @@ Sidebar with two tabs: "Chats" (permanent) and "Timeline" (transient). See [`scr
 - **Search Bar:** Search-as-you-type with debounce (300ms).
 - **Empty State:** "No results for '[query]'"
 
-### L4. Delete Chat
-- **Confirmation Dialog:** "Delete '[chat title]'? This will permanently delete all messages, branches, and artifacts in this chat. Media and artifacts saved to disk or wiki will be preserved."
-- **Cascading Deletion:** Per O5, exclusively linked media/artifacts deleted. Shared/saved items preserved.
-- **Undo:** Brief toast: "Chat deleted. Undo?" (5 second window)
+### L4. Delete Chat (Soft-Delete → Trash)
+- **Soft-Delete:** Deleting a chat moves it to Trash, NOT permanent deletion.
+- **Confirmation Dialog:** "Move '[chat title]' to Trash? It will be permanently deleted after 30 days." Options: "Move to Trash" / "Cancel"
+- **Result:** Chat marked `IsDeleted=true` with `DeletedAt` timestamp. Disappears from chat list, pinned, folders, and search. Appears in Trash view (🗑️ in sidebar).
+- **If chat is open in a tab:** Tab closes automatically. Toast: "'[title]' moved to Trash. Tab closed."
+- **Toast after delete:** "Moved to Trash. Restore within 30 days."
+- **Trash View:** Accessible from sidebar navigation. Shows all soft-deleted chats sorted by deletion date. Each entry: title, deletion date, Restore button, Delete Permanently button.
+- **Restore:** Removes `IsDeleted` flag. Chat returns to original location (folder, tags, pinned status preserved). Toast: "'[title]' restored."
+- **Permanent Delete (from Trash):** Confirmation: "Permanently delete '[title]'? This cannot be undone." On confirm: hard deletes per O5.
+- **30-Day Auto-Purge:** Background task permanently deletes chats where `IsDeleted=true` AND `DeletedAt` > 30 days ago. No user notification.
+- **Empty Trash:** Button at top of Trash view. Confirmation: "Permanently delete all [N] items in Trash?" On confirm: hard deletes all.
+- See [`features/soft-delete-trash.md`](../features/soft-delete-trash.md) for full spec.
 
 ### L5. Timeline Tab
 - **Access:** Second tab in sidebar: "Timeline"
