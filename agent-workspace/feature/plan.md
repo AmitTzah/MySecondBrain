@@ -257,7 +257,7 @@ public class AppDbContext : DbContext
 
 ---
 
-### Step 4: Create MySecondBrain.Services Project (Business Logic Layer)
+### [x] Step 4: Create MySecondBrain.Services Project (Business Logic Layer)
 
 **What:** Create `src/MySecondBrain.Services/MySecondBrain.Services.csproj` with all 14 OSS NuGet packages for processing/LLM/integration libraries, project references to Core and Data, and directory structure (`Chat/`, `LLM/`, `Wiki/`, `Tools/`, `Backup/`, `Audio/`, `Encryption/`, `Update/`). Add to solution.
 
