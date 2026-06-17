@@ -304,6 +304,7 @@ For every feature group in [`feature-inventory.md`](feature-inventory.md), edge 
 
 ### N. Personal Wiki / Second Brain
 
+- **Existing wiki folder selected during onboarding has no index.md:** The app immediately runs wiki indexing (N2) and auto-generates `index.md` (N11) at the wiki root. Display shows ".md files found: [N]" + "index.md auto-generated." If the folder contains zero `.md` files, a starter `index.md` is created with a welcome message.
 - **Wiki directory contains 10,000+ .md files:** Indexing takes longer on startup. Index stored in SQLite for fast search. Related Sections and Backlinks may be slower to compute.
 - **Wiki .md file with broken internal links:** Wiki Browser renders the link as plain text (not clickable). Broken link detection: TBD (could be a future feature).
 - **Wiki .md file with circular cross-links (A → B → C → A):** Rendered as clickable links. No infinite loop — user navigates manually. No performance issue.

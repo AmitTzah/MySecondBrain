@@ -157,8 +157,11 @@ Each card shows:
 
 **Selected Path Display (appears after selection/creation):**
 - Folder icon + full path in monospace text
-- If existing folder: ".md files found: [N]" + "Total size: [X] KB/MB"
-- If new folder created: "Created with starter index.md"
+- **If existing folder:** App immediately runs wiki indexing (N2) to scan all `.md` files and regenerate `index.md` (N11) at the wiki root. Display shows:
+  - ".md files found: [N]" + "Total size: [X] KB/MB"
+  - "index.md auto-generated" (or "index.md updated" if it already existed)
+  - If the folder contains zero `.md` files: "No .md files found. index.md created as a starting point."
+- **If new folder created:** "Created with starter index.md"
 
 **Git Version Control (checkbox):**
 - ☐ "Initialize git repository for version control"
