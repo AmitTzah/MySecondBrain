@@ -3,22 +3,177 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wiki Browser — Placeholder</title>
+  <title>Screen: Wiki Browser — Vision Wireframe</title>
   <style>
-    body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f0f0;color:#666}
-    .placeholder{text-align:center;padding:48px;border:2px dashed #999;border-radius:8px;background:#fff;max-width:500px}
-    .placeholder-icon{font-size:64px;margin-bottom:16px}
-    .placeholder-title{font-size:20px;font-weight:600;margin-bottom:8px}
-    .placeholder-text{font-size:14px;color:#999;margin-bottom:24px}
-    .placeholder-link{color:#2563eb;font-size:14px}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;background:#f0f0f0;color:#333;overflow:hidden;height:100vh}
+    .wireframe-banner{background:#333;color:#ffd700;text-align:center;padding:6px 16px;font-size:12px;font-weight:600;letter-spacing:.5px;border-bottom:2px dashed #ffd700;flex-shrink:0}
+    .layout-sidebar{display:flex;height:calc(100vh - 32px)}
+    .sidebar{width:240px;min-width:150px;background:#f5f5f5;border-right:2px dashed #bbb;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+    .sidebar-nav{padding:8px;border-bottom:2px dashed #ddd}
+    .nav-item{display:block;padding:8px 12px;font-size:13px;color:#666;text-decoration:none;border:1px dashed transparent;border-radius:4px;margin-bottom:2px}
+    .nav-item:hover{background:#eee;color:#333}
+    .nav-item.active{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:600}
+    .file-tree{width:240px;background:#fafafa;border-right:2px dashed #ddd;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+    .file-tree h3{padding:12px;font-size:12px;font-weight:700;color:#333;border-bottom:2px dashed #ddd;flex-shrink:0}
+    .tree-filter{padding:8px;border-bottom:1px dashed #eee;flex-shrink:0}
+    .tree-filter input{width:100%;padding:6px 8px;border:2px dashed #bbb;border-radius:4px;font-size:11px;background:#fff;color:#333}
+    .tree-list{flex:1;overflow-y:auto;padding:4px 0}
+    .tree-folder{padding:6px 12px;font-size:12px;color:#666;cursor:pointer;display:flex;align-items:center;gap:6px}
+    .tree-folder:hover{background:#eee}
+    .tree-file{padding:6px 12px 6px 24px;font-size:12px;color:#333;cursor:pointer;display:flex;align-items:center;gap:6px;border-left:3px solid transparent}
+    .tree-file:hover{background:#e8f0fe}
+    .tree-file.active{background:#e8f0fe;border-left-color:#2563eb;font-weight:600}
+    .tree-file .file-dot{width:6px;height:6px;background:#f59e0b;border-radius:50%;margin-left:auto}
+    .viewer{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
+    .viewer-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:2px dashed #ddd;background:#fafafa;flex-shrink:0}
+    .viewer-header h2{font-size:15px;font-weight:700;color:#333}
+    .viewer-body{flex:1;overflow-y:auto;padding:24px 32px;font-size:14px;line-height:1.7}
+    .viewer-body h1{font-size:24px;margin-bottom:12px;color:#333}
+    .viewer-body h2{font-size:18px;margin:20px 0 8px;color:#333;padding-bottom:4px;border-bottom:1px dashed #ddd}
+    .viewer-body h3{font-size:15px;margin:16px 0 6px;color:#444}
+    .viewer-body p{margin-bottom:10px;color:#333}
+    .viewer-body code{background:#f5f5f5;padding:2px 6px;border-radius:3px;font-family:monospace;font-size:13px;border:1px dashed #ddd}
+    .viewer-body ul,.viewer-body ol{margin:8px 0 8px 24px}
+    .viewer-body li{margin-bottom:4px}
+    .viewer-body a{color:#2563eb}
+    .viewer-body .wiki-link{color:#2563eb;text-decoration:underline;text-decoration-style:dashed;cursor:pointer}
+    .code-block{background:#333;color:#f0f0f0;padding:10px;border-radius:4px;font-family:monospace;font-size:12px;margin:8px 0;border:2px dashed #666}
+    .empty-viewer{flex:1;display:flex;align-items:center;justify-content:center;color:#999;font-size:14px}
+    .info-panel{width:280px;background:#fafafa;border-left:2px dashed #bbb;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+    .info-tabs{display:flex;border-bottom:2px dashed #ddd;flex-shrink:0}
+    .info-tab{flex:1;text-align:center;padding:8px;font-size:11px;font-weight:600;color:#999;cursor:pointer;border-bottom:2px solid transparent}
+    .info-tab.active{color:#2563eb;border-bottom-color:#2563eb}
+    .info-content{flex:1;overflow-y:auto;padding:12px}
+    .info-content .tab-content{display:none}
+    .info-content .tab-content.active{display:block}
+    .related-item,.backlink-item{padding:8px;border:1px dashed #ddd;border-radius:4px;margin-bottom:6px;font-size:12px;cursor:pointer}
+    .related-item:hover,.backlink-item:hover{background:#eee}
+    .related-item .ri-file{font-weight:600;color:#333}
+    .related-item .ri-heading{font-size:11px;color:#2563eb}
+    .related-item .ri-snippet{font-size:10px;color:#999;margin-top:2px}
+    .file-info-row{display:flex;justify-content:space-between;padding:6px 0;font-size:12px;border-bottom:1px dashed #eee}
+    .file-info-row .fi-label{color:#999}
+    .file-info-row .fi-value{color:#333;font-weight:500}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:2px dashed #999;border-radius:4px;font-size:13px;font-weight:500;cursor:pointer;background:#fff;color:#333;text-decoration:none}
+    .btn:hover{border-style:solid}
+    .btn-sm{padding:4px 10px;font-size:11px}
+    .tooltip-toast{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#ffd700;padding:12px 24px;border-radius:8px;font-size:13px;max-width:500px;text-align:center;z-index:9999;border:2px dashed #ffd700}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+    ::-webkit-scrollbar-track{background:transparent}
   </style>
 </head>
 <body>
-  <div class="placeholder">
-    <div class="placeholder-icon">📝</div>
-    <h1 class="placeholder-title">Wiki Browser</h1>
-    <p class="placeholder-text">Browse, search, and view your personal wiki .md files. Three-panel layout: File Tree, Markdown Viewer, Info Panel with related sections and backlinks.</p>
-    <a href="studio-chat.html" class="placeholder-link">← Back to Studio Chat</a>
+  <div class="wireframe-banner">⚠️ VISION WIREFRAME — NOT FINAL DESIGN — Interactive mock for product discovery only</div>
+  <div class="layout-sidebar">
+    <nav class="sidebar">
+      <div class="sidebar-nav">
+        <a href="studio-chat.html" class="nav-item">💬 Chats</a>
+        <a href="wiki-browser.html" class="nav-item active">📝 Wiki</a>
+        <a href="media-library.html" class="nav-item">🖼️ Media</a>
+        <a href="global-artifacts-browser.html" class="nav-item">📄 Artifacts</a>
+        <a href="usage-dashboard.html" class="nav-item">📊 Usage</a>
+        <a href="settings.html" class="nav-item">⚙️ Settings</a>
+      </div>
+    </nav>
+
+    <div class="file-tree">
+      <h3>📁 Wiki Files</h3>
+      <div class="tree-filter"><input type="text" placeholder="Filter files..." data-tooltip="Would filter the file tree to matching filenames as you type."></div>
+      <div class="tree-list">
+        <div class="tree-folder" data-tooltip="Collapsible folder. Click to expand/collapse.">📂 coding</div>
+        <div class="tree-file active" data-tooltip="Currently viewing. Right-click for context menu: Open in External Editor, Version History, Delete, Rename.">📄 python-async-patterns.md</div>
+        <div class="tree-file" data-tooltip="Click to view. File has unsaved external changes.">📄 docker-tips.md <span class="file-dot"></span></div>
+        <div class="tree-file">📄 git-workflow.md</div>
+        <div class="tree-folder">📂 writing</div>
+        <div class="tree-file">📄 chapter-outline.md</div>
+        <div class="tree-file">📄 character-notes.md</div>
+        <div class="tree-folder">📂 research</div>
+        <div class="tree-file">📄 llm-architecture.md</div>
+        <div class="tree-file">📄 prompt-engineering.md</div>
+        <div class="tree-file">📄 index.md</div>
+        <div class="tree-file">📄 _memory.md</div>
+      </div>
+    </div>
+
+    <div class="viewer">
+      <div class="viewer-header">
+        <h2>python-async-patterns.md</h2>
+        <button class="btn btn-sm" data-tooltip="Would launch this file in your system default .md editor (e.g., VS Code).">📝 Open in External Editor</button>
+      </div>
+      <div class="viewer-body">
+        <h1>Python Async Patterns</h1>
+        <p>A comprehensive guide to asynchronous programming in Python, covering <code>asyncio</code>, threading, and when to use each approach.</p>
+
+        <h2>asyncio — Cooperative Multitasking</h2>
+        <p><strong>asyncio</strong> is Python's built-in library for writing concurrent code using the <code>async</code>/<code>await</code> syntax. It runs on a single thread using an event loop.</p>
+        <p><strong>Best for:</strong> I/O-bound tasks — network requests, file operations, database queries. The event loop switches between tasks while waiting for I/O, so there's no GIL contention.</p>
+
+        <h3>Basic Example</h3>
+        <div class="code-block"><code>import asyncio<br>import aiohttp<br><br>async def fetch(url):<br>&nbsp;&nbsp;&nbsp;&nbsp;async with aiohttp.ClientSession() as s:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;async with s.get(url) as r:<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return await r.json()<br><br>async def main():<br>&nbsp;&nbsp;&nbsp;&nbsp;urls = ['https://api.example.com/1', ...]<br>&nbsp;&nbsp;&nbsp;&nbsp;results = await asyncio.gather(*[fetch(u) for u in urls])</code></div>
+
+        <h2>threading — OS-Level Parallelism</h2>
+        <p><strong>threading</strong> uses OS-level threads that run in parallel. Each thread has its own stack but shares memory space.</p>
+        <p><strong>Best for:</strong> CPU-bound tasks or calling blocking C libraries that release the GIL.</p>
+
+        <h2>See Also</h2>
+        <ul>
+          <li><span class="wiki-link" data-tooltip="Would open docker-tips.md in this viewer.">docker-tips.md</span> — Container optimization patterns</li>
+          <li><span class="wiki-link" data-tooltip="Would open llm-architecture.md in this viewer.">llm-architecture.md</span> — LLM architecture notes</li>
+          <li><a href="https://docs.python.org/3/library/asyncio.html" target="_blank">Python asyncio docs ↗</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <div class="info-tabs">
+        <div class="info-tab active" onclick="switchInfoTab('related')" data-tooltip="Sections in other wiki files sharing keywords with this file. Zero API cost — purely local.">Related Sections</div>
+        <div class="info-tab" onclick="switchInfoTab('backlinks')" data-tooltip="Other wiki files that contain links TO this file.">Backlinks</div>
+        <div class="info-tab" onclick="switchInfoTab('fileinfo')" data-tooltip="File metadata: word count, reading time, headings, cross-links.">File Info</div>
+      </div>
+      <div class="info-content">
+        <div class="tab-content active" id="tab-related">
+          <div class="related-item" data-tooltip="Would open docker-tips.md, scrolled to the 'Performance' section.">
+            <div class="ri-file">📄 docker-tips.md</div>
+            <div class="ri-heading">## Performance</div>
+            <div class="ri-snippet">...using async I/O in containers can significantly improve...</div>
+          </div>
+          <div class="related-item" data-tooltip="Would open prompt-engineering.md, scrolled to the 'Code Generation' section.">
+            <div class="ri-file">📄 prompt-engineering.md</div>
+            <div class="ri-heading">## Code Generation</div>
+            <div class="ri-snippet">...when asking for Python async code, specify the event loop...</div>
+          </div>
+        </div>
+        <div class="tab-content" id="tab-backlinks">
+          <div class="backlink-item" data-tooltip="Would open index.md to see where it links to this file.">
+            <div class="ri-file">📄 index.md</div>
+            <div class="ri-snippet">- [Python Async Patterns](python-async-patterns.md)</div>
+          </div>
+          <div class="backlink-item" data-tooltip="Would open _memory.md to see the context.">
+            <div class="ri-file">📄 _memory.md</div>
+            <div class="ri-snippet">User is knowledgeable about [Python async](python-async-patterns.md)...</div>
+          </div>
+        </div>
+        <div class="tab-content" id="tab-fileinfo">
+          <div class="file-info-row"><span class="fi-label">Words</span><span class="fi-value">847</span></div>
+          <div class="file-info-row"><span class="fi-label">Characters</span><span class="fi-value">5,230</span></div>
+          <div class="file-info-row"><span class="fi-label">Reading time</span><span class="fi-value">~4 min</span></div>
+          <div class="file-info-row"><span class="fi-label">Headings</span><span class="fi-value">8</span></div>
+          <div class="file-info-row"><span class="fi-label">Created</span><span class="fi-value">2026-05-12</span></div>
+          <div class="file-info-row"><span class="fi-label">Modified</span><span class="fi-value">2026-06-15</span></div>
+          <div class="file-info-row"><span class="fi-label">Cross-links in</span><span class="fi-value">2</span></div>
+          <div class="file-info-row"><span class="fi-label">Cross-links out</span><span class="fi-value">3</span></div>
+          <div style="margin-top:12px"><a href="#" style="font-size:11px;color:#2563eb" data-tooltip="Would open version history showing all snapshots of this file.">View 5 snapshots →</a></div>
+        </div>
+      </div>
+    </div>
   </div>
+  <div class="tooltip-toast" id="tooltip-toast"></div>
+  <script>
+    function switchInfoTab(tab){document.querySelectorAll('.info-tab').forEach(function(t,i){t.classList.toggle('active',i===['related','backlinks','fileinfo'].indexOf(tab))});document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active')});document.getElementById('tab-'+tab).classList.add('active')}
+    function showToast(msg){var t=document.getElementById('tooltip-toast');t.textContent=msg;t.style.display='block';clearTimeout(t._timeout);t._timeout=setTimeout(function(){t.style.display='none'},4000)}
+    document.addEventListener('DOMContentLoaded',function(){var t=document.getElementById('tooltip-toast');document.querySelectorAll('[data-tooltip]:not(a)').forEach(function(e){e.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();t.textContent=this.getAttribute('data-tooltip');t.style.display='block';clearTimeout(t._timeout);t._timeout=setTimeout(function(){t.style.display='none'},4000)})})})
+  </script>
 </body>
 </html>
