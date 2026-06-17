@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
+    <RootNamespace>MySecondBrain.UI</RootNamespace>
+    <AssemblyName>MySecondBrain.UI</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>App.manifest</ApplicationManifest>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <WindowsSdkPackageVersion>10.0.17763.56</WindowsSdkPackageVersion>
+    <Description>WPF desktop application for MySecondBrain — three-tier UI</Description>
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.*" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.*" />
+    <PackageReference Include="WeCantSpell.Hunspell" Version="4.*" />
+    <PackageReference Include="Autoupdater.NET.Official" Version="1.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MySecondBrain.Core\MySecondBrain.Core.csproj" />
+    <ProjectReference Include="..\MySecondBrain.Data\MySecondBrain.Data.csproj" />
+    <ProjectReference Include="..\MySecondBrain.Services\MySecondBrain.Services.csproj" />
+  </ItemGroup>
+</Project>
