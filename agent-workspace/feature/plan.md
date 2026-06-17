@@ -178,31 +178,143 @@ MySecondBrain/
 
 ## 5. Execution Steps
 
-### [ ] Step 1: Create All Types — Interfaces, DTOs, Entities, and Stub Implementations
+### [ ] Step 1a: Create All Interfaces + DTO Records + Enums in Core Project
 
-- **Goal:** Create every new C# file needed for the DI container to compile: 31 interfaces in Core/Interfaces/, 10 DTO records + enums in Core/Models/, 12 entity classes in Data/Entities/, 8 stub repositories in Data/Repositories/, 23 stub services in Services/, 11 ViewModels in UI/ViewModels/, 8 content renderers in UI/Controls/, and 15 UI service stubs in UI/Services/. Update `AppDbContext.cs` to use `%LOCALAPPDATA%\MySecondBrain\msb.db` and include `DbSet<T>` for all 12 entities.
+- **Goal:** Create every new C# file in `MySecondBrain.Core` — all interface contracts and DTO records — so the Core project compiles with zero errors. This is the foundation that Data, Services, and UI all depend on.
 
 - **Actions:**
-  - Create all 31 interfaces with full method signatures from [`abstractions.md`](../project-director/planning/abstractions.md) §1–§13
-  - Create DTO records and enums in Core/Models/
-  - Create 12 entity classes with `[Key]` attributes, navigation properties, and basic fields
-  - Create 8 stub repositories (constructor-inject `AppDbContext`, return `null`/`Task.CompletedTask`)
-  - Create 23 stub services (constructor-inject dependencies, return `null`/`Task.CompletedTask`)
-  - Create 11 ViewModel stubs inheriting `ObservableObject` (CommunityToolkit.Mvvm)
-  - Create 8 content block renderer stubs (7 `IContentBlockRenderer` + `ContentRendererRegistry`)
-  - Create 15 UI-specific service stubs
-  - Update `AppDbContext.cs`: add `DbSet<T>` for all entities, change fallback path to `%LOCALAPPDATA%\MySecondBrain\msb.db`
-  - Remove `.gitkeep` files from populated directories
+  - Create ~41 interface files in `src/MySecondBrain.Core/Interfaces/` with full method signatures from [`abstractions.md`](../project-director/planning/abstractions.md) §1–§13:
+    - **Provider:** `ILLMProvider`, `ILLMProviderFactory`, `ISTTProvider`, `IBackupProvider`, `ISearchProvider`, `ITokenizer`, `ITokenizerFactory`, `IChatImporter`, `IToolExecutor`, `IToolOrchestrator`, `IContentBlockRenderer`, `IContentRendererRegistry`, `IThemeProvider`, `IUpdateChecker`
+    - **Repository:** `IChatThreadRepository`, `IMessageRepository`, `IPersonaRepository`, `IModelConfigurationRepository`, `IApiKeyRepository`, `IWikiIndexRepository`, `IUsageRepository`, `ISettingsRepository`
+    - **Service:** `ILLMProviderService`, `IChatThreadService`, `IWikiService`, `IEncryptionService`, `IChatEncryptionService`, `IClipboardService`, `IWikiFileWatcher`, `ILocalWebSocketServer`, `ISystemTrayService`, `IGlobalHotkeyService`, `IHwndCaptureService`, `ITextInjectionService`, `IAudioService`, `ICameraService`, `IVideoPlayerService`, `ISpellCheckService`, `IWikiGitService`, `IChatSearchService`, `IAutoCleanupService`
+  - Create DTO records and enums in `src/MySecondBrain.Core/Models/`:
+    - **LLM streaming DTOs:** `StreamChunk`, `ChatRequest`, `ChatResponse`, `ChatMessage`, `ToolDefinition`, `ToolCallDelta`, `ToolCall`, `UsageInfo`, `ModelInfo`
+    - **Provider DTOs:** `STTResult`, `BackupResult`, `BackupInfo`, `SearchResults`, `SearchResultItem`, `ToolValidationResult`, `ToolResult`, `RenderContext`, `ImportResult`, `ImportedChatThread`, `ImportedMessage`, `ImportWarning`, `ImportValidationResult`, `UpdateCheckResult`, `UpdateInfo`, `HwndCaptureResult`, `TextInjectionResult`, `PlaybackPositionEventArgs`, `VideoErrorEventArgs`, `WikiFileChangedEventArgs`, `HotkeyAssignment`, `HotkeyTriggeredEventArgs`, `ChatSearchResult`, `CleanupCompletedEventArgs`, `GitLogEntry`, `GitCommitEventArgs`
+    - **Enums:** `ProviderType`, `STTProviderType`, `BackupProviderType`, `SearchProviderType`, `ChatSortOrder`, `ToolRiskLevel`, `AppTheme`, `ChatTheme`, `WikiFileChangeType`, `ContextOverflowStrategy`, plus any enums referenced by interfaces (place in `Enums.cs` or co-located with related interface)
+  - Add any required NuGet package references to Core.csproj (e.g., `Markdig` for `MarkdownObject` if used in DTOs/renderer interfaces)
+  - Remove `.gitkeep` files from `src/MySecondBrain.Core/Interfaces/` and `src/MySecondBrain.Core/Models/`
 
-- **Automated Testing:** Run `dotnet build MySecondBrain.sln`. Must pass with 0 errors and 0 warnings (`TreatWarningsAsErrors=true`). Run `dotnet restore MySecondBrain.sln` first to ensure all NuGet packages resolve.
+- **Automated Testing:** The Core project has no project dependencies — it must compile standalone.
 
 - **Live Smoke Test (Mandatory):**
   ```bash
-  dotnet restore MySecondBrain.sln && dotnet build MySecondBrain.sln
+  dotnet build src/MySecondBrain.Core/MySecondBrain.Core.csproj
   ```
-  Verify: `Build succeeded. 0 Warning(s) 0 Error(s)` across all 7 projects.
+  Verify: `Build succeeded. 0 Warning(s) 0 Error(s)`.
 
-- **Suggested Commit Message:** `feat: create all interfaces, DTOs, entities, and stub implementations for DI container`
+- **Suggested Commit Message:** `feat(core): create all interfaces and DTO records for DI container`
+
+---
+
+### [ ] Step 1b: Create Entity Classes + Update AppDbContext in Data Project
+
+- **Goal:** Create 12 EF Core entity classes in `Data/Entities/` and update `AppDbContext.cs` with `DbSet<T>` properties and `%LOCALAPPDATA%` connection string. The Data project must compile after this step.
+
+- **Actions:**
+  - Create 12 entity classes in `src/MySecondBrain.Data/Entities/` with `[Key]` attributes, navigation properties, and fields per [`data-model.md`](../project-director/planning/data-model.md):
+    - `ApiKey.cs`, `Persona.cs`, `ModelConfiguration.cs`, `ChatThread.cs`, `Message.cs`, `Artifact.cs`, `MediaItem.cs`, `PromptTemplate.cs`, `TextAction.cs`, `UsageRecord.cs`, `WikiFile.cs`, `WikiVersionSnapshot.cs`
+  - Update `src/MySecondBrain.Data/AppDbContext.cs`:
+    - Add `DbSet<T>` property for each of the 12 entities
+    - Change `OnConfiguring` fallback path from `"Data Source=msb.db"` to `%LOCALAPPDATA%\MySecondBrain\msb.db`
+    - Ensure directory is created if missing: `Directory.CreateDirectory(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MySecondBrain"))`
+  - Remove `.gitkeep` from `src/MySecondBrain.Data/Entities/`
+
+- **Automated Testing:** Data project depends on Core (already built in 1a). Must compile.
+
+- **Live Smoke Test (Mandatory):**
+  ```bash
+  dotnet build src/MySecondBrain.Data/MySecondBrain.Data.csproj
+  ```
+  Verify: `Build succeeded. 0 Warning(s) 0 Error(s)`.
+
+- **Suggested Commit Message:** `feat(data): create entity classes and update AppDbContext with DbSet and %LOCALAPPDATA% path`
+
+---
+
+### [ ] Step 1c: Create Repository Stubs in Data Project
+
+- **Goal:** Create 8 repository stub classes in `Data/Repositories/` that implement the repository interfaces from Core, constructor-inject `AppDbContext`, and return `null`/`Task.CompletedTask`. The Data project must still compile.
+
+- **Actions:**
+  - Create 8 stub repository classes in `src/MySecondBrain.Data/Repositories/`:
+    - `ChatThreadRepository.cs` (implements `IChatThreadRepository`)
+    - `MessageRepository.cs` (implements `IMessageRepository`)
+    - `PersonaRepository.cs` (implements `IPersonaRepository`)
+    - `ModelConfigurationRepository.cs` (implements `IModelConfigurationRepository`)
+    - `ApiKeyRepository.cs` (implements `IApiKeyRepository`)
+    - `WikiIndexRepository.cs` (implements `IWikiIndexRepository`)
+    - `UsageRepository.cs` (implements `IUsageRepository`)
+    - `SettingsRepository.cs` (implements `ISettingsRepository`)
+  - Each stub: constructor receives `AppDbContext`, stores in private field. Every interface method returns `null`, `Task.FromResult<T?>(null)`, `Task.FromResult<IReadOnlyList<T>>(Array.Empty<T>())`, or `Task.CompletedTask` as appropriate for the return type.
+  - Remove `.gitkeep` from `src/MySecondBrain.Data/Repositories/`
+
+- **Automated Testing:** Data project still compiles (extension of step 1b).
+
+- **Live Smoke Test (Mandatory):**
+  ```bash
+  dotnet build src/MySecondBrain.Data/MySecondBrain.Data.csproj
+  ```
+  Verify: `Build succeeded. 0 Warning(s) 0 Error(s)`.
+
+- **Suggested Commit Message:** `feat(data): create 8 repository stubs implementing Core repository interfaces`
+
+---
+
+### [ ] Step 1d: Create Service/Provider Stubs in Services Project
+
+- **Goal:** Create 35 service and provider stub classes in `Services/` subdirectories that implement service interfaces from Core. Each stub constructor-injects its dependencies via constructor injection. The Services project must compile.
+
+- **Actions:**
+  - Create 23 stub classes in appropriate subdirectories under `src/MySecondBrain.Services/`:
+    - **Chat/** — `ChatThreadService.cs`, `Fts5ChatSearchService.cs`, `PeriodicAutoCleanupService.cs`
+    - **LLM/** — `LLMProviderService.cs`, `LLMProviderFactory.cs`, `TokenizerFactory.cs`, `OpenAIProvider.cs`, `AnthropicProvider.cs`, `GoogleProvider.cs`, `OpenAICompatibleProvider.cs`, `OpenAIWhisperProvider.cs`, `LocalWhisperProvider.cs`, `WindowsSpeechProvider.cs`, `SharpTokenTokenizer.cs`, `AnthropicTokenizer.cs`, `FallbackTokenizer.cs`
+    - **Wiki/** — `WikiService.cs`, `FileSystemWatcherAdapter.cs`
+    - **Tools/** — `ToolOrchestrator.cs`, `WebSearchToolExecutor.cs`, `TerminalToolExecutor.cs`, `FileGenerateToolExecutor.cs`, `FileEditToolExecutor.cs`, `WikiSearchToolExecutor.cs`
+    - **Backup/** — `GcsBackupProvider.cs`, `LocalFolderBackupProvider.cs`
+    - **Encryption/** — `DpapiEncryptionService.cs`, `AesGcmChatEncryptionService.cs`
+    - **Update/** — `AutoUpdaterDotNet.cs`, `MsixAppInstallerUpdater.cs`
+    - **Search/** — `GoogleCustomSearchProvider.cs`, `BingSearchProvider.cs`
+    - **Chat/Import/** — `ChatGPTImporter.cs`, `ClaudeImporter.cs`
+    - **Audio/** — `NaudioAudioService.cs`
+  - Each stub: constructor-injects required dependencies. Method bodies return `null`, empty collections, or `Task.CompletedTask`.
+  - Remove all `.gitkeep` files from populated subdirectories under `src/MySecondBrain.Services/`.
+
+- **Automated Testing:** Services project depends on Core + Data. Must compile.
+
+- **Live Smoke Test (Mandatory):**
+  ```bash
+  dotnet build src/MySecondBrain.Services/MySecondBrain.Services.csproj
+  ```
+  Verify: `Build succeeded. 0 Warning(s) 0 Error(s)`.
+
+- **Suggested Commit Message:** `feat(services): create 35 service and provider stubs across all service subdirectories`
+
+---
+
+### [ ] Step 1e: Create ViewModel Stubs + Content Renderers + UI Service Stubs in UI Project
+
+- **Goal:** Create 11 ViewModel stubs, 8 content block renderer stubs, and 15 UI-specific service stubs in the UI project. The UI project must compile.
+
+- **Actions:**
+  - Create 11 ViewModel stubs in `src/MySecondBrain.UI/ViewModels/`, each inheriting `ObservableObject` (CommunityToolkit.Mvvm), constructor-injecting required services:
+    - `MainWindowViewModel.cs`, `ChatThreadViewModel.cs`, `SettingsViewModel.cs`, `WikiBrowserViewModel.cs`, `UsageDashboardViewModel.cs`, `MediaLibraryViewModel.cs`, `GlobalArtifactsBrowserViewModel.cs`, `Tier1OverlayViewModel.cs`, `Tier2CommandBarViewModel.cs`, `ModelComparisonViewModel.cs`, `OnboardingWizardViewModel.cs`
+  - Create 8 content block renderer stubs in `src/MySecondBrain.UI/Controls/`:
+    - 7 renderers implementing `IContentBlockRenderer`: `MarkdownTextRenderer.cs`, `CodeBlockRenderer.cs`, `ArtifactReferenceRenderer.cs`, `ImageRenderer.cs`, `MediaRenderer.cs`, `ThinkingRenderer.cs`, `ToolCallRenderer.cs`
+    - 1 registry implementing `IContentRendererRegistry`: `ContentRendererRegistry.cs`
+  - Create 15 UI-specific service stubs in `src/MySecondBrain.UI/Services/` (services that depend on WPF/Windows types and cannot live in the Services project):
+    - `WpfClipboardService.cs`, `GlobalHotkeyService.cs`, `WpfThemeProvider.cs`, `WinFormsSystemTrayService.cs`, `Win32HwndCaptureService.cs`, `UiaTextInjectionService.cs`, `WpfVideoPlayerService.cs`, `AForgeCameraService.cs`, `HunspellSpellCheckService.cs`, `KestrelWebSocketServer.cs`, `LibGit2SharpGitService.cs`, plus any remaining platform-specific stubs
+  - Add any required NuGet package references to UI.csproj (e.g., `Markdig` if used by renderer stubs via `MarkdownObject`)
+  - Remove `.gitkeep` files from `src/MySecondBrain.UI/ViewModels/`, `src/MySecondBrain.UI/Controls/`, and `src/MySecondBrain.UI/Services/`
+
+- **Automated Testing:** UI project depends on Core + Services (transitively). Must compile. No DI wiring yet — that's Step 2.
+
+- **Live Smoke Test (Mandatory):**
+  ```bash
+  dotnet build src/MySecondBrain.UI/MySecondBrain.UI.csproj
+  ```
+  Verify: `Build succeeded. 0 Warning(s) 0 Error(s)`.
+
+- **Suggested Commit Message:** `feat(ui): create ViewModels, content renderers, and UI service stubs`
 
 ---
 

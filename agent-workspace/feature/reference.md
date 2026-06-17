@@ -44,7 +44,7 @@
 
 ## Step-Specific Documentation
 
-### Step 1: Create All Types — Interfaces, DTOs, Entities, and Stub Implementations
+### Step 1a: Create All Interfaces + DTO Records + Enums in Core Project
 
 #### Interfaces (Core/Interfaces/)
 
@@ -71,31 +71,20 @@ public interface IChatThreadRepository
 }
 ```
 
-**Full interface contracts:** See [`abstractions.md`](../project-director/planning/abstractions.md) §1–§13 for all 31 interfaces.
+**Full interface contracts:** See [`abstractions.md`](../project-director/planning/abstractions.md) §1–§13 for all interfaces.
 
-#### Entity Classes (Data/Entities/) and DTO Records (Core/Models/)
+**Interface file listing (41 total):**
 
-- **Library:** None (pure C# classes/records)
-- **Import:** Entity classes reference `System.ComponentModel.DataAnnotations` for `[Key]`, `[MaxLength]` etc.
-- **Snippet (representative entity):**
+| Category | Interfaces |
+|----------|-----------|
+| Provider | `ILLMProvider`, `ILLMProviderFactory`, `ISTTProvider`, `IBackupProvider`, `ISearchProvider`, `ITokenizer`, `ITokenizerFactory`, `IChatImporter`, `IToolExecutor`, `IToolOrchestrator`, `IContentBlockRenderer`, `IContentRendererRegistry`, `IThemeProvider`, `IUpdateChecker` |
+| Repository | `IChatThreadRepository`, `IMessageRepository`, `IPersonaRepository`, `IModelConfigurationRepository`, `IApiKeyRepository`, `IWikiIndexRepository`, `IUsageRepository`, `ISettingsRepository` |
+| Service | `ILLMProviderService`, `IChatThreadService`, `IWikiService`, `IEncryptionService`, `IChatEncryptionService`, `IClipboardService`, `IWikiFileWatcher`, `ILocalWebSocketServer`, `ISystemTrayService`, `IGlobalHotkeyService`, `IHwndCaptureService`, `ITextInjectionService`, `IAudioService`, `ICameraService`, `IVideoPlayerService`, `ISpellCheckService`, `IWikiGitService`, `IChatSearchService`, `IAutoCleanupService` |
 
-```csharp
-namespace MySecondBrain.Data.Entities;
+#### DTO Records and Enums (Core/Models/)
 
-public class ChatThread
-{
-    public string Id { get; set; } = Guid.NewGuid().ToString("N");
-    public string? Title { get; set; }
-    public bool IsTransient { get; set; }
-    public bool IsDeleted { get; set; }
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-    public DateTimeOffset LastActivityAt { get; set; } = DateTimeOffset.UtcNow;
-    public string? PersonaId { get; set; }
-    public string? ModelConfigId { get; set; }
-    public ICollection<Message> Messages { get; set; } = new List<Message>();
-}
-```
-
+- **Library:** None (pure C# records/enums). Add `Markdig` NuGet package reference to `Core.csproj` if `MarkdownObject` is referenced in DTOs or renderer interfaces.
+- **Import:** N/A for records. Enums may need `System` only.
 - **Snippet (representative DTO record):**
 
 ```csharp
@@ -111,10 +100,67 @@ public record StreamChunk(
 );
 ```
 
+**DTO records to create:** `StreamChunk`, `ChatRequest`, `ChatResponse`, `ChatMessage`, `ToolDefinition`, `ToolCallDelta`, `ToolCall`, `UsageInfo`, `ModelInfo`, `STTResult`, `BackupResult`, `BackupInfo`, `SearchResults`, `SearchResultItem`, `ToolValidationResult`, `ToolResult`, `RenderContext`, `ImportResult`, `ImportedChatThread`, `ImportedMessage`, `ImportWarning`, `ImportValidationResult`, `UpdateCheckResult`, `UpdateInfo`, `HwndCaptureResult`, `TextInjectionResult`, `PlaybackPositionEventArgs`, `VideoErrorEventArgs`, `WikiFileChangedEventArgs`, `HotkeyAssignment`, `HotkeyTriggeredEventArgs`, `ChatSearchResult`, `CleanupCompletedEventArgs`, `GitLogEntry`, `GitCommitEventArgs`
+
+**Enum types to create:** `ProviderType`, `STTProviderType`, `BackupProviderType`, `SearchProviderType`, `ChatSortOrder`, `ToolRiskLevel`, `AppTheme`, `ChatTheme`, `WikiFileChangeType`, `ContextOverflowStrategy` — place in `Enums.cs` or co-located with related interface.
+
+**Build verification:**
+```bash
+dotnet build src/MySecondBrain.Core/MySecondBrain.Core.csproj
+```
+
+---
+
+### Step 1b: Create Entity Classes + Update AppDbContext in Data Project
+
+#### Entity Classes (Data/Entities/)
+
+- **Library:** `Microsoft.EntityFrameworkCore` (already referenced in Data project)
+- **Import:** `System.ComponentModel.DataAnnotations` for `[Key]`, `[MaxLength]` etc.
+- **Snippet (representative entity):**
+
+```csharp
+namespace MySecondBrain.Data.Entities;
+
+public class ChatThread
+{
+    [Key]
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string? Title { get; set; }
+    public bool IsTransient { get; set; }
+    public bool IsDeleted { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset LastActivityAt { get; set; } = DateTimeOffset.UtcNow;
+    public string? PersonaId { get; set; }
+    public string? ModelConfigId { get; set; }
+    public ICollection<Message> Messages { get; set; } = new List<Message>();
+}
+```
+
+**12 entity classes to create:** `ApiKey`, `Persona`, `ModelConfiguration`, `ChatThread`, `Message`, `Artifact`, `MediaItem`, `PromptTemplate`, `TextAction`, `UsageRecord`, `WikiFile`, `WikiVersionSnapshot`. Full field definitions in [`data-model.md`](../project-director/planning/data-model.md).
+
+#### AppDbContext Update
+
+- **File:** [`src/MySecondBrain.Data/AppDbContext.cs`](../../src/MySecondBrain.Data/AppDbContext.cs)
+- **Changes:**
+  - Add `DbSet<T>` property for each of the 12 entities
+  - Replace fallback connection string: `"Data Source=msb.db"` → `Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MySecondBrain", "msb.db")`
+  - Ensure directory exists: `Directory.CreateDirectory(...)` in `OnConfiguring`
+- **Import:** `using Microsoft.EntityFrameworkCore;`
+
+**Build verification:**
+```bash
+dotnet build src/MySecondBrain.Data/MySecondBrain.Data.csproj
+```
+
+---
+
+### Step 1c: Create Repository Stubs in Data Project
+
 #### Stub Repository Implementations (Data/Repositories/)
 
 - **Library:** `Microsoft.EntityFrameworkCore` (already referenced in Data project)
-- **Import:** `using Microsoft.EntityFrameworkCore;`, `using MySecondBrain.Core.Interfaces;`
+- **Import:** `using Microsoft.EntityFrameworkCore;`, `using MySecondBrain.Core.Interfaces;`, `using MySecondBrain.Data.Entities;`
 - **Snippet:**
 
 ```csharp
@@ -136,10 +182,21 @@ public class ChatThreadRepository : IChatThreadRepository
 }
 ```
 
+**8 repository stubs to create:** `ChatThreadRepository`, `MessageRepository`, `PersonaRepository`, `ModelConfigurationRepository`, `ApiKeyRepository`, `WikiIndexRepository`, `UsageRepository`, `SettingsRepository`
+
+**Build verification:**
+```bash
+dotnet build src/MySecondBrain.Data/MySecondBrain.Data.csproj
+```
+
+---
+
+### Step 1d: Create Service/Provider Stubs in Services Project
+
 #### Stub Service Implementations (Services/)
 
 - **Library:** `Microsoft.Extensions.DependencyInjection`, `Microsoft.Extensions.Logging` (already in Services project)
-- **Import:** `using Microsoft.Extensions.Logging;`, `using MySecondBrain.Core.Interfaces;`
+- **Import:** `using Microsoft.Extensions.Logging;`, `using MySecondBrain.Core.Interfaces;`, `using MySecondBrain.Core.Models;`
 - **Snippet:**
 
 ```csharp
@@ -168,11 +225,35 @@ public class ChatThreadService : IChatThreadService
 }
 ```
 
-#### Stub ViewModel and Content Block Renderer Classes (UI/)
+**35 service/provider stubs to create by subdirectory:**
+
+| Subdirectory | Stubs |
+|-------------|-------|
+| Chat/ | `ChatThreadService`, `Fts5ChatSearchService`, `PeriodicAutoCleanupService` |
+| LLM/ | `LLMProviderService`, `LLMProviderFactory`, `TokenizerFactory`, `OpenAIProvider`, `AnthropicProvider`, `GoogleProvider`, `OpenAICompatibleProvider`, `OpenAIWhisperProvider`, `LocalWhisperProvider`, `WindowsSpeechProvider`, `SharpTokenTokenizer`, `AnthropicTokenizer`, `FallbackTokenizer` |
+| Wiki/ | `WikiService`, `FileSystemWatcherAdapter` |
+| Tools/ | `ToolOrchestrator`, `WebSearchToolExecutor`, `TerminalToolExecutor`, `FileGenerateToolExecutor`, `FileEditToolExecutor`, `WikiSearchToolExecutor` |
+| Backup/ | `GcsBackupProvider`, `LocalFolderBackupProvider` |
+| Encryption/ | `DpapiEncryptionService`, `AesGcmChatEncryptionService` |
+| Update/ | `AutoUpdaterDotNet`, `MsixAppInstallerUpdater` |
+| Chat/ (import) | `ChatGPTImporter`, `ClaudeImporter` (or separate Import/ subdirectory) |
+| Search/ | `GoogleCustomSearchProvider`, `BingSearchProvider` |
+| Audio/ | `NaudioAudioService` |
+
+**Build verification:**
+```bash
+dotnet build src/MySecondBrain.Services/MySecondBrain.Services.csproj
+```
+
+---
+
+### Step 1e: Create ViewModel Stubs + Content Renderers + UI Service Stubs in UI Project
+
+#### Stub ViewModels (UI/ViewModels/)
 
 - **Library:** `CommunityToolkit.Mvvm` (8.*, already referenced in UI project)
 - **Import:** `using CommunityToolkit.Mvvm.ComponentModel;`, `using MySecondBrain.Core.Interfaces;`
-- **Snippet (ViewModel):**
+- **Snippet:**
 
 ```csharp
 namespace MySecondBrain.UI.ViewModels;
@@ -190,7 +271,13 @@ public partial class ChatThreadViewModel : ObservableObject
 }
 ```
 
-- **Snippet (Content Block Renderer):**
+**11 ViewModels to create:** `MainWindowViewModel`, `ChatThreadViewModel`, `SettingsViewModel`, `WikiBrowserViewModel`, `UsageDashboardViewModel`, `MediaLibraryViewModel`, `GlobalArtifactsBrowserViewModel`, `Tier1OverlayViewModel`, `Tier2CommandBarViewModel`, `ModelComparisonViewModel`, `OnboardingWizardViewModel`
+
+#### Stub Content Block Renderers (UI/Controls/)
+
+- **Library:** `CommunityToolkit.Mvvm` (UI project). Add `Markdig` NuGet reference to `UI.csproj` if `MarkdownObject` is used in `IContentBlockRenderer` stubs.
+- **Import:** `using MySecondBrain.Core.Interfaces;`, `using MySecondBrain.Core.Models;`
+- **Snippet:**
 
 ```csharp
 namespace MySecondBrain.UI.Controls;
@@ -205,6 +292,32 @@ public class MarkdownTextRenderer : IContentBlockRenderer
     public Task RenderAsync(MarkdownObject markdownNode, FlowDocument targetDocument,
         RenderContext context, CancellationToken ct) => Task.CompletedTask;
 }
+```
+
+**8 content block renderer stubs:** 7 `IContentBlockRenderer` implementations (`MarkdownTextRenderer`, `CodeBlockRenderer`, `ArtifactReferenceRenderer`, `ImageRenderer`, `MediaRenderer`, `ThinkingRenderer`, `ToolCallRenderer`) + 1 `ContentRendererRegistry` implementing `IContentRendererRegistry`
+
+#### Stub UI-Specific Services (UI/Services/)
+
+- **Library:** WPF/Windows types (`System.Windows`, `System.Windows.Forms`, etc.)
+- **Import:** `using MySecondBrain.Core.Interfaces;`
+- **Snippet:**
+
+```csharp
+namespace MySecondBrain.UI.Services;
+
+public class WpfClipboardService : IClipboardService
+{
+    public string? GetText() => null;
+    public string? GetHtml() => null;
+    // ... remaining methods return null / empty / Task.CompletedTask
+}
+```
+
+**15 UI-specific service stubs:** `WpfClipboardService`, `GlobalHotkeyService`, `WpfThemeProvider`, `WinFormsSystemTrayService`, `Win32HwndCaptureService`, `UiaTextInjectionService`, `WpfVideoPlayerService`, `AForgeCameraService`, `HunspellSpellCheckService`, `KestrelWebSocketServer`, `LibGit2SharpGitService`, plus remaining platform-specific stubs.
+
+**Build verification:**
+```bash
+dotnet build src/MySecondBrain.UI/MySecondBrain.UI.csproj
 ```
 
 ---
