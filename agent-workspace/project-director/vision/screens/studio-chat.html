@@ -28,7 +28,10 @@
     .chat-entry-title{font-size:13px;font-weight:600;color:#333;margin-bottom:2px}
     .chat-entry-preview{font-size:11px;color:#999;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .chat-entry-meta{font-size:10px;color:#bbb;margin-top:2px}
-    .chat-entry-star{position:absolute;right:12px;top:10px;font-size:14px;color:#ffd700}
+    .chat-entry-star{position:absolute;right:36px;top:10px;font-size:14px;color:#ffd700}
+    .chat-entry-dots{position:absolute;right:10px;top:8px;font-size:16px;color:#bbb;cursor:pointer;padding:2px 4px;border-radius:3px;opacity:0}
+    .chat-entry:hover .chat-entry-dots{opacity:1}
+    .chat-entry-dots:hover{background:#ddd;color:#333}
     .sidebar-footer{padding:8px;border-top:2px dashed #ddd;text-align:center}
     .sidebar-footer a{font-size:11px;color:#999;text-decoration:none}
     /* Main */
@@ -158,18 +161,21 @@
           <div class="chat-entry-preview">Here's a summary of the key async patterns we discussed...</div>
           <div class="chat-entry-meta">Python Expert · 2m ago</div>
           <div class="chat-entry-star">★</div>
+          <span class="chat-entry-dots" data-tooltip="Would open context menu: Rename, Delete, Archive, Duplicate, Export, Pin, Tags, Move to Folder, Color Label, Lock Chat. Also accessible via right-click.">⋯</span>
         </div>
         <div class="chat-group-label">📁 Coding</div>
         <div class="chat-entry" style="padding-left:20px">
           <div class="chat-entry-title">Debugging Memory Leak</div>
           <div class="chat-entry-preview">The memory profiler shows the leak is in the event loop...</div>
           <div class="chat-entry-meta">Python Expert · 2h ago</div>
+          <span class="chat-entry-dots" data-tooltip="Would open context menu: Rename, Delete, Archive, Duplicate, Export, Pin, Tags, Move to Folder, Color Label, Lock Chat.">⋯</span>
         </div>
         <div class="chat-group-label">📁 Writing</div>
         <div class="chat-entry" style="padding-left:20px">
           <div class="chat-entry-title">Chapter 3 Outline 🔒</div>
           <div class="chat-entry-preview">🔒 Locked</div>
           <div class="chat-entry-meta">Writing Coach · 1d ago</div>
+          <span class="chat-entry-dots" data-tooltip="Would open context menu: Rename, Delete, Archive, Duplicate, Export, Pin, Tags, Move to Folder, Color Label, Lock Chat.">⋯</span>
         </div>
         <div class="chat-group-label">📂 Unfiled</div>
         <div class="chat-group-label">Today</div>
@@ -177,11 +183,13 @@
           <div class="chat-entry-title">Website Redesign Ideas</div>
           <div class="chat-entry-preview">Let me suggest some modern design approaches...</div>
           <div class="chat-entry-meta">Writing Coach · 45m ago</div>
+          <span class="chat-entry-dots" data-tooltip="Would open context menu: Rename, Delete, Archive, Duplicate, Export, Pin, Tags, Move to Folder, Color Label, Lock Chat.">⋯</span>
         </div>
         <div class="chat-entry">
           <div class="chat-entry-title">Chapter 3 Outline 🔒</div>
           <div class="chat-entry-preview">🔒 Locked</div>
           <div class="chat-entry-meta">Writing Coach · 1d ago</div>
+          <span class="chat-entry-dots" data-tooltip="Would open context menu: Rename, Delete, Archive, Duplicate, Export, Pin, Tags, Move to Folder, Color Label, Lock Chat.">⋯</span>
         </div>
       </div>
       <div class="sidebar-footer">

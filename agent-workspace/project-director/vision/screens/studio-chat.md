@@ -35,8 +35,8 @@ Six icon+label navigation items:
 - Sort dropdown: Most Recent (default), Name A-Z, Date Created, Last Activity
 - Pinned chats section (top, above date groups)
 - Date groups: Today, Yesterday, This Week, This Month, Older
-- Each entry: title, last message preview (1 line, truncated), relative timestamp, star (★/☆), tags (max 3), color dot
-- Right-click context menu: Rename, Delete, Archive, Duplicate, Export, Pin, Tags, Move to Folder, Color Label, Lock Chat (C31)
+- Each entry: title, last message preview (1 line, truncated), relative timestamp, star (★/☆), tags (max 3), color dot, ⋯ (three-dot menu button)
+- ⋯ button (visible on hover): Opens context menu with Rename, Delete, Archive, Duplicate, Export, Pin, Tags, Move to Folder, Color Label, Lock Chat (C31). Right-click also opens same menu.
 - "Reveal Locked Chats" button (🔒 icon) at bottom of chat list (if hidden locked chats enabled, C31)
 - "+ New Chat" button at top of chat list
 

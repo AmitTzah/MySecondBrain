@@ -92,8 +92,8 @@ Sidebar with two tabs: "Chats" (permanent) and "Timeline" (transient). See [`scr
 - **Bulk Actions Bar:** Appears when items selected: Delete, Archive, Export, Tag, Move to Folder
 - **Confirmation:** Destructive actions show confirmation: "Delete [N] chats?"
 
-### L12. Right-Click Context Menu
-On any chat in sidebar: Rename, Delete, Archive/Unarchive, Duplicate (D7), Export (I1), Pin/Unpin, Add/Edit Tags, Move to Folder, Color Label (L14). Destructive actions show confirmation.
+### L12. Context Menu (⋯ Button + Right-Click)
+Click ⋯ (three-dot) button on any chat entry in sidebar (visible on hover), OR right-click the chat entry. Menu options: Rename, Delete, Archive/Unarchive, Duplicate (D7), Export (I1), Pin/Unpin, Add/Edit Tags, Move to Folder, Color Label (L14). Destructive actions show confirmation.
 
 ### L13. Chat Sorting Options
 - **Sort Dropdown:** In sidebar header
