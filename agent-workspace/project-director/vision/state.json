@@ -1,6 +1,6 @@
 {
   "app_name": "MySecondBrain",
-  "current_phase": "flows",
+  "current_phase": "edge_cases",
   "phase_status": "in_progress",
   "completed": {
     "foundation": ["app-overview.md", "personas.md", "feature-inventory.md"],
@@ -14,7 +14,7 @@
       {"stem": "media-library", "status": "confirmed"},
       {"stem": "global-artifacts-browser", "status": "confirmed"}
     ],
-    "flows": [],
+    "flows": ["flows/first-launch-onboarding.md", "flows/tier1-hotkey-rewrite.md", "flows/tier2-command-bar-query.md", "flows/write-to-wiki.md", "flows/deep-research.md", "flows/elevate-transient-to-permanent.md", "flows/import-chatgpt.md", "flows/model-comparison-flow.md"],
     "edge_cases": false,
     "wire_up": false
   },
@@ -24,14 +24,14 @@
     "features": ["settings-configuration", "model-configurations-personas", "studio-chat-workspace", "message-manipulation-branching", "chat-modes-controls", "artifacts-side-panel", "media-library", "tool-use-agents", "import-export", "prompt-library", "text-actions-three-tier", "chat-organization-search", "model-comparison", "personal-wiki", "data-model-lifecycle", "windows-os-integration", "language-rtl", "backup-recovery", "usage-pricing-dashboard", "nice-to-have-future", "git-wiki-version-control", "soft-delete-trash"],
     "data_entities": ["chat-thread", "message", "persona", "model-configuration", "api-key", "text-action", "artifact", "media-item", "wiki-file", "prompt-template", "usage-record", "backup-snapshot", "wiki-version-snapshot"]
   },
-  "last_context": "Phase 2 complete — all 8 screens confirmed with .md + .html mocks. Tab bar added to all non-Studio screens. 'Discuss with AI' button added to wiki-browser. Starting Phase 3: 8 user flows.",
+  "last_context": "Phase 3 complete — all 8 user flows documented in flows/*.md. Starting Phase 4: edge cases.",
   "metrics": {
     "features_documented": 22,
     "screens_designed": 8,
     "data_entities": 13,
-    "flows_documented": 0,
+    "flows_documented": 8,
     "flagged_concerns": ["Auto-Summarize context overflow requires separate API call costing tokens", "Text completion APIs being deprecated by some providers", "Artifact generation mechanism needs architectural decision", "Terminal execution security model needs review", "WebSocket server security model needs review", "Global keyboard hooks may trigger antivirus false positives", "VACUUM requires temporary free disk space equal to database size", "Rich text bidirectional text rendering complexity", "Google Cloud Storage dependency for backups", "Locked chat encryption — permanent lockout risk must be communicated", "Git wiki version control — GitHub token storage requires DPAPI encryption", "Model comparison — per-panel multi-turn conversations = N independent API streams", "Model comparison M spec simplified — Accept auto-saves branches, per-panel mini-chats", "Language & RTL (Q) feature may be out of scope — user chose English-only"]
   },
-  "spawn_count": 2,
+  "spawn_count": 3,
   "last_commit": "d5862ed"
 }

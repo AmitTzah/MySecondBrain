@@ -112,6 +112,7 @@ Six icon+label navigation items:
   - Text Actions dropdown (K2)
   - Microphone button (C21)
   - Camera button (C22)
+  - Attach File button (📎, C9b)
   - "Write to Wiki" button (N5)
   - "Update Memory" button (N12)
 - **Textbox:** Multi-line, resizable. Spell check with red squiggly underlines (C34). Real-time token counter with pre-send warning when approaching context limit (C11).
@@ -176,6 +177,7 @@ Six icon+label navigation items:
 | Stop button | Stop generation | "Would immediately stop the AI response generation. Partial response preserved in chat." |
 | 🎤 Microphone | Voice input | "Would start recording from your microphone. Click again to stop. Audio sent to configured STT provider. Transcribed text appears in textbox." |
 | 📷 Camera | Camera capture | "Would open webcam capture dialog. Take a photo to attach to the current message for vision-capable models." |
+| 📎 Attach File | Attach files | "Would open a file picker to attach images, PDFs, HTML, text files, code files, audio, or video. Supported file types depend on the active model. Unsupported files are attached as metadata only with a warning badge." |
 | Write to Wiki | Create wiki entry | "Would open the Write to Wiki dialog: create new or update existing wiki file from this conversation. AI generates polished summary with cross-links." |
 | Update Memory | Update AI memory | "Would trigger AI to read this chat and update _memory.md with new facts and preferences about you. You review changes via Diff Viewer before saving." |
 | Memory toggle | Memory aware | "Would toggle whether _memory.md content is injected into system context for this chat. When On, AI knows what it has learned about you." |

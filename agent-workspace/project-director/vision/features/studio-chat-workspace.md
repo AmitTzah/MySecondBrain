@@ -77,8 +77,10 @@ See [`features/windows-os-integration.md`](features/windows-os-integration.md) P
 - Drop zone: entire chat input area
 - **Images:** Sent to AI (vision-capable models). Rendered inline after sending.
 - **Video/Audio:** Included as input for multi-modal models. Rendered with inline player.
-- **Text files:** Content read and included in prompt
-- **Other files:** Metadata (filename, type, size) included in prompt context
+- **Text files (.txt, .md, .csv, code files):** Content read and included in prompt
+- **PDF files:** Content extracted (text and embedded images where possible) and included in prompt for models that support PDF input natively (Anthropic, some OpenAI models). For models without native PDF support, text is extracted locally and included as plain text.
+- **HTML files:** Content extracted (text content, stripped of tags) and included in prompt
+- **Other files:** Metadata (filename, type, size) included in prompt context; content not read
 - **Drop Indicator:** Visual feedback during drag-over
 
 ### C9a. Paste Image from Clipboard (Ctrl+V)
@@ -89,6 +91,31 @@ See [`features/windows-os-integration.md`](features/windows-os-integration.md) P
 - **Remove:** X button on each thumbnail removes it before sending
 - Images in the attachment row are sent with the next message (for vision-capable models)
 - **Text still editable:** The textbox remains the primary input; images are attachments, not inline
+
+### C9b. Attach File Button (📎)
+- **Location:** Textbox toolbar, alongside microphone (C21) and camera (C22) buttons
+- **Behavior:** Opens a standard Windows file picker dialog
+- **Supported file types:** All common document and media types — images (.png, .jpg, .gif, .webp, .bmp), documents (.pdf, .html, .htm), text (.txt, .md, .csv, .log), code (.py, .js, .ts, .json, .yaml, .xml, .css, .java, .c, .cpp, .rs, .go, .rb, and other common extensions), audio (.mp3, .wav, .ogg, .m4a), video (.mp4, .webm, .mov)
+- **After selection:** File appears as a thumbnail/card in the attachment row below the textbox, identical to drag-and-drop (C9) and clipboard paste (C9a) attachments
+- **Multiple files:** File picker supports multi-select. Each file appears as a separate attachment card
+- **Remove:** X button on each attachment card removes it before sending
+- **Click attachment:** Opens the file in the system default application (for images: inline preview; for documents: system default viewer)
+- **File size limit:** Maximum 100MB per file. Warning if exceeded: "File '[filename]' is too large ([size]). Maximum file size is 100MB."
+
+### C9c. Model-Aware File Type Compatibility
+- When files are attached (via C9 drag-drop, C9a paste, or C9b file picker), the app checks the active Model Configuration's provider and model capabilities
+- **Compatibility mapping per provider:**
+  - OpenAI (GPT-4o, GPT-4V): Images ✓, text files ✓, PDF (text extraction ✓). Video/Audio ✗ (metadata only).
+  - Anthropic (Claude 3.5 Sonnet, Opus): Images ✓, PDF (native) ✓, text files ✓. Video/Audio ✗ (metadata only).
+  - Google (Gemini): Images ✓, video ✓, audio ✓, PDF ✓, text files ✓.
+  - DeepSeek, MiMo, Moonshot, Mistral: Text files only. Images/PDF/Video/Audio ✗ (metadata only).
+  - OpenAI-Compatible (local): Depends on the specific local model. User configures supported types in Model Configuration (B2). Default: text only.
+- **Warning display:** For each attached file that the model does NOT support, a yellow warning badge appears on the attachment card: "⚠️ [Model name] does not support [file type]. Attached as metadata only."
+- **Sending with unsupported files:** The message sends normally. Unsupported files have their filename, type, and size included in the prompt as metadata (e.g., "[Attached file: report.pdf (2.3MB) — content not available to this model]"). The AI may acknowledge the file exists but cannot process its content.
+- **Provider-specific behavior:**
+  - Unsupported file types are NEVER sent to the provider API (prevents API errors)
+  - The user is not blocked from sending — they can still get a response about the text portion of their message
+  - The warning is informational, not a hard block
 
 ### C10. Multiple Chat Tabs
 - Tab bar above chat view. Each tab = independent ChatThread.
