@@ -18,14 +18,12 @@
         "executable_path": ".\\MySecondBrain.exe",
         "window_title": "MySecondBrain",
         "launch_args": null,
-        "mcp_available": false,
+        "mcp_available": true,
         "mcp_name": "windows-mcp",
-        "verified": false
+        "verified": true
       }
     },
-    "missing_prerequisites": [
-      "windows-mcp — Install: pip install uv && uvx windows-mcp serve. Add to Roo Code MCP settings: { \"mcpServers\": { \"windows-mcp\": { \"command\": \"uvx\", \"args\": [\"windows-mcp\", \"serve\", \"--exclude-tools\", \"PowerShell,Registry,Process\"] } } }. Restart Roo Code after install. ⚠️ Desktop smoke tests require an active, unlocked Windows session — not suitable for headless CI."
-    ]
+    "missing_prerequisites": []
   },
   "total_replans": 0,
   "current_branch_name": null
