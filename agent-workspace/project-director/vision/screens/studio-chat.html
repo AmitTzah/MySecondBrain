@@ -95,6 +95,8 @@
     .panel-section-content{overflow-y:auto;padding:8px}
     .panel-divider{height:4px;background:#e0e0e0;cursor:row-resize;border-top:1px dashed #ccc;border-bottom:1px dashed #ccc}
     .panel-divider:hover{background:#bbb}
+    .col-resize-handle{width:4px;background:#e0e0e0;cursor:col-resize;border-left:1px dashed #ccc;border-right:1px dashed #ccc;flex-shrink:0}
+    .col-resize-handle:hover{background:#bbb}
     .artifact-item{padding:8px;border:1px dashed #ddd;border-radius:4px;margin-bottom:6px;cursor:pointer;font-size:12px}
     .artifact-item:hover{background:#eee}
     .artifact-name{font-weight:600;color:#333}
@@ -174,6 +176,8 @@
         <a href="#" data-tooltip="Would prompt for password to reveal hidden locked chats in the sidebar.">🔒 Reveal Locked Chats</a>
       </div>
     </nav>
+
+    <div class="col-resize-handle" data-tooltip="Drag to resize sidebar width. Minimum 150px, maximum 50% of window."></div>
 
     <!-- MAIN CONTENT -->
     <main class="main-content">
@@ -317,6 +321,8 @@
         Ctrl+/ Shortcuts
       </div>
     </main>
+
+    <div class="col-resize-handle" data-tooltip="Drag to resize right panel width. Minimum 200px, maximum 50% of window."></div>
 
     <!-- RIGHT PANEL: Artifacts on top, Chat Nav below, divider between -->
     <div class="right-panel">
