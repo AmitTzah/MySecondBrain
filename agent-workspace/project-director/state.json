@@ -1,0 +1,23 @@
+{
+  "project_vision": "MySecondBrain — a native Windows desktop app unifying all LLM interactions (provider-agnostic) with a personal wiki/second-brain knowledge management system",
+  "current_phase": 1,
+  "total_features": 0,
+  "current_feature_index": 0,
+  "status": "planning",
+  "fd_status": "idle",
+  "phase_2_substep": null,
+  "phase_4_substep": null,
+  "git_automation_enabled": true,
+  "smoke_test_automation": {
+    "enabled": false,
+    "environments": {
+      "web": null,
+      "cli": null,
+      "native": null,
+      "desktop": null
+    },
+    "missing_prerequisites": []
+  },
+  "total_replans": 0,
+  "current_branch_name": null
+}
