@@ -36,6 +36,7 @@ Same as [`studio-chat.md`](studio-chat.md) Region 1. 📝 Wiki nav item active.
 - **Internal wiki links** (e.g., `[other file](other-file.md)`) are clickable and navigate within the Wiki Browser to that file.
 - **External links** open in the default system browser.
 - **"Open in External Editor" button** in header — launches the file in the system default `.md` editor.
+- **"💬 Discuss with AI" button** in header — creates a new chat (or opens existing) with the current file's full content pre-loaded as context. The file is @ mentioned so the AI has full awareness. This enables a "wiki → chat → Write to Wiki" loop: browse wiki, discuss a file with AI, refine it, then save back via Write to Wiki (N5).
 - **File name** displayed as the title at the top.
 - Empty state (no file selected): "Select a file from the tree to view its content."
 
