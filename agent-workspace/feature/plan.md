@@ -260,7 +260,7 @@ MySecondBrain/
 
 ---
 
-### [ ] Step 1d: Create Service/Provider Stubs in Services Project
+### [x] Step 1d: Create Service/Provider Stubs in Services Project
 
 - **Goal:** Create 35 service and provider stub classes in `Services/` subdirectories that implement service interfaces from Core. Each stub constructor-injects its dependencies via constructor injection. The Services project must compile.
 
