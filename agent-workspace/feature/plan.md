@@ -167,7 +167,7 @@ MySecondBrain/
 
 ---
 
-### Step 2: Create MySecondBrain.Core Project (Abstractions Layer)
+### [x] Step 2: Create MySecondBrain.Core Project (Abstractions Layer)
 
 **What:** Create `src/MySecondBrain.Core/MySecondBrain.Core.csproj` as a `net8.0` class library with no external NuGet dependencies. Create empty directory structure (`Interfaces/`, `Models/`, `Extensions/`) with `.gitkeep` files. Create `GlobalUsings.cs`. Add project reference to solution.
 
