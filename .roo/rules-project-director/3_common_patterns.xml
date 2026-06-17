@@ -477,9 +477,16 @@
 
           CRITICAL: The roadmap contains ONLY the feature name, 1-line description, and dependencies — NO acceptance criteria. Include this instruction: "Read the vision docs for this feature. Derive acceptance criteria from the vision. Create an implementation plan using the architecture and abstractions from planning/."
 
+          PRE-RESOLVE VISION FILES (do NOT just dump directory paths):
+          Before constructing the FD spawn prompt, read vision-summary.md and locate the target feature in the Feature Index table (Feature | Tier | Screens Used | Data Entities). Extract the specific screens and data entities listed for this feature. Then include these EXACT file paths in the FD spawn prompt:
+          1. features/[feature-name].md — the detailed behavioral spec for this specific feature
+          2. screens/[screen-a].md, screens/[screen-b].md, ... — the canonical AI-mode specs for each screen this feature appears on (from the Feature Index "Screens Used" column)
+          3. data/[entity-x].md, data/[entity-y].md, ... — the data entity specs this feature touches (from the Feature Index "Data Entities" column)
+          4. vision-summary.md and feature-inventory.md — for broader context and cross-reference navigation
+          5. Also note the corresponding HTML mock files: screens/[screen-a].html, screens/[screen-b].html — these are interactive mocks for human simulation; the FD Architect may open them in a browser for visual understanding but derives acceptance criteria from the .md specs
+
           Also include paths to:
           - The full planning/ directory (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md) — so the FD Architect understands the architecture and abstractions.
-          - The relevant vision docs (vision-summary.md, feature-inventory.md, features/, data/, screens/, flows/) — so the FD Architect derives acceptance criteria from the vision.
         </description>
       </element>
       <element name="completion_instruction">
