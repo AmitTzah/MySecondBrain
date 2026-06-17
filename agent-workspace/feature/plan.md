@@ -206,7 +206,7 @@ MySecondBrain/
 
 ---
 
-### [ ] Step 1b: Create Entity Classes + Update AppDbContext in Data Project
+### [x] Step 1b: Create Entity Classes + Update AppDbContext in Data Project
 
 - **Goal:** Create 12 EF Core entity classes in `Data/Entities/` and update `AppDbContext.cs` with `DbSet<T>` properties and `%LOCALAPPDATA%` connection string. The Data project must compile after this step.
 
@@ -379,14 +379,15 @@ MySecondBrain/
 
 ## 6. Shared Technical Context
 
-- **[Step 1a]:** Created 41 interfaces in `Core/Interfaces/`, 4 model files in `Core/Models/`. Core.csproj now targets `net8.0-windows` with `UseWPF=true` + `Markdig` NuGet. `GlobalUsings.cs` includes `System.IO`. Key types available for downstream projects: all `I*` interfaces, `DomainModels` (ChatThread, Message, Persona, ModelConfiguration, ApiKey, WikiFile, WikiVersionSnapshot, UsageRecord, ToolAutoApprovalSettings), `Dtos` (35 records), `ServiceDtos` (15 records), `Enums` (11 enums + VirtualKey).
-- **Target Framework:** Core: `net8.0-windows`; Data/Services: `net8.0`; UI/Tests: `net8.0-windows10.0.17763.0`.
+- **[Step 1a]:** Created 41 interfaces in `Core/Interfaces/`, 4 model files in `Core/Models/`. Core.csproj now targets `net8.0-windows` with `UseWPF=true` + `Markdig` NuGet.
+- **[Step 1b]:** Created 12 EF Core entities in `Data/Entities/` with full navigation properties and FK relationships. `AppDbContext` has 12 `DbSet<T>` properties and `OnConfiguring` uses `%LOCALAPPDATA%\MySecondBrain\msb.db`. Key FK chains: ChatThread→Message (1:many), Message→Message (self-ref parent/child for branching), WikiFile→WikiVersionSnapshot (FilePath PK), Persona→ModelConfiguration, ApiKey→ModelConfiguration. `OnModelCreating` configures WikiVersionSnapshot FK to WikiFile.FilePath.
+- **Target Framework:** Core+Data: `net8.0-windows`; Services: `net8.0` (pending update); UI/Tests: `net8.0-windows10.0.17763.0`.
 - **Nullable/ImplicitUsings/TreatWarningsAsErrors:** Enabled solution-wide via `Directory.Build.props`.
 - **NuGet packages already available:** `Microsoft.Extensions.DependencyInjection 8.0.*` (UI, Services), `Microsoft.Extensions.Hosting 8.0.*` (Services), `Microsoft.Extensions.Logging 8.0.*` (Services), `CommunityToolkit.Mvvm 8.*` (UI), `Markdig *` (Core), `xunit 2.*`, `Moq 4.*` (Tests.Unit).
 - **Project reference chain:** Core ← Data ← Services ← UI. Tests reference all production projects.
 - **AppDbContext access:** Factory delegate in DI creates singleton with SQLite path at `%LOCALAPPDATA%\MySecondBrain\msb.db`. Directory created if missing.
-- **Multi-implementation pattern:** Multiple `AddSingleton<IX, ConcreteX>()` calls. Consumers use `IEnumerable<IX>` constructor injection (e.g., `ContentRendererRegistry`, `LLMProviderFactory`).
-- **Stub pattern:** All implementation classes return `null`, empty collections, or `Task.CompletedTask`. Future features fill in method bodies.
+- **Multi-implementation pattern:** Multiple `AddSingleton<IX, ConcreteX>()` calls. Consumers use `IEnumerable<IX>` constructor injection.
+- **Stub pattern:** All implementation classes return `null`, empty collections, or `Task.CompletedTask`.
 - **ConfigureServices visibility:** `public static` so unit tests can invoke it via `App.ConfigureServices(services)`.
-- **Platform-specific service placement:** Services that depend on WPF/Windows types live in `UI/Services/`, not in the `Services` project.
-- **Entity vs. DTO separation:** Domain model classes in `Core/Models/DomainModels.cs` serve as shared types between interfaces and Data entities. EF configuration for these will be in `Data/Configurations/` (Step 1b).
+- **Platform-specific service placement:** Services that depend on WPF/Windows types live in `UI/Services/`.
+- **Entity vs. DTO separation:** Domain models in `Core/Models/` are shared POCOs; EF entities in `Data/Entities/` are independent with navigation properties. String-based enums (Provider, Role, etc.) for flexibility.
