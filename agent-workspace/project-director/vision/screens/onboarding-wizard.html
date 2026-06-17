@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screen: Onboarding Wizard — Vision Wireframe</title>
+  <style>
+    /* === RESET & BASE === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f0f0f0;
+      color: #333;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* === WIREFRAME BANNER === */
+    .wireframe-banner {
+      background: #333;
+      color: #ffd700;
+      text-align: center;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      border-bottom: 2px dashed #ffd700;
+      flex-shrink: 0;
+    }
+
+    /* === HEADER === */
+    .wizard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 32px;
+      border-bottom: 2px dashed #bbb;
+      background: #fff;
+      flex-shrink: 0;
+    }
+    .wizard-header .app-logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: #333;
+    }
+    .wizard-header .app-logo .logo-icon {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      background: #333;
+      color: #fff;
+      text-align: center;
+      line-height: 28px;
+      border-radius: 4px;
+      margin-right: 8px;
+      font-size: 14px;
+    }
+    .wizard-header .onboarding-label {
+      font-size: 13px;
+      color: #999;
+      font-weight: 500;
+    }
+
+    /* === MAIN CONTENT AREA === */
+    .wizard-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      overflow-y: auto;
+    }
+
+    /* === STEP INDICATOR === */
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 24px 32px 0;
+      flex-shrink: 0;
+      background: #f0f0f0;
+    }
+    .step-dot-wrap {
+      display: flex;
+      align-items: center;
+    }
+    .step-dot-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: default;
+    }
+    .step-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px dashed #999;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: #999;
+      transition: all 0.2s;
+    }
+    .step-dot.active {
+      border-color: #2563eb;
+      background: #2563eb;
+      color: #fff;
+      border-style: solid;
+      width: 36px;
+      height: 36px;
+    }
+    .step-dot.done {
+      border-color: #2563eb;
+      background: #fff;
+      color: #2563eb;
+      border-style: solid;
+    }
+    .step-line {
+      width: 48px;
+      height: 2px;
+      background: #ddd;
+      margin: 0 4px 22px;
+    }
+    .step-line.done {
+      background: #2563eb;
+    }
+    .step-label {
+      font-size: 11px;
+      color: #999;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .step-label.active {
+      color: #2563eb;
+      font-weight: 700;
+    }
+    .step-label.done {
+      color: #2563eb;
+    }
+
+    /* === CONTENT CARD === */
+    .content-card {
+      background: #fff;
+      border: 2px dashed #bbb;
+      border-radius: 8px;
+      padding: 40px;
+      max-width: 640px;
+      width: 100%;
+    }
+    .content-card.welcome-card {
+      text-align: center;
+    }
+    .content-card h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    .content-card .subtitle {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    /* === WELCOME SCREEN === */
+    .welcome-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .feature-cards {
+      display: flex;
+      gap: 16px;
+      margin: 28px 0;
+    }
+    .feature-card {
+      flex: 1;
+      border: 2px dashed #ddd;
+      border-radius: 6px;
+      padding: 20px 14px;
+      text-align: center;
+      background: #fafafa;
+    }
+    .feature-card .fc-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .feature-card .fc-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    .feature-card .fc-desc {
+      font-size: 11px;
+      color: #999;
+      line-height: 1.4;
+    }
+
+    /* === FORM ELEMENTS === */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px dashed #bbb;
+      border-radius: 4px;
+      font-family: system-ui, sans-serif;
+      font-size: 14px;
+      color: #333;
+      background: #fff;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      outline: none;
+      border-color: #2563eb;
+      border-style: solid;
+    }
+    .form-textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    .form-row {
+      display: flex;
+      gap: 12px;
+    }
+    .form-row > * { flex: 1; }
+
+    /* === BUTTONS === */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border: 2px dashed #999;
+      border-radius: 4px;
+      font-family: system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      background: #fff;
+      color: #333;
+      text-decoration: none;
+    }
+    .btn:hover { border-style: solid; }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+      border-color: #2563eb;
+      border-style: solid;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-sm {
+      padding: 6px 14px;
+      font-size: 12px;
+    }
+    .btn-danger {
+      border-color: #c44;
+      color: #c44;
+    }
+    .btn-danger:hover { background: #fee; border-style: solid; }
+    .btn-link {
+      border: none;
+      background: none;
+      color: #2563eb;
+      padding: 6px 0;
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* === NAVIGATION BAR === */
+    .nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 2px dashed #eee;
+    }
+    .nav-bar .nav-left { display: flex; gap: 8px; }
+    .nav-bar .nav-right { display: flex; gap: 8px; }
+
+    /* === KEY LIST === */
+    .key-list {
+      margin-top: 16px;
+    }
+    .key-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border: 2px dashed #ddd;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      background: #fafafa;
+      gap: 12px;
+    }
+    .key-item .key-provider {
+      font-weight: 600;
+      font-size: 13px;
+      color: #333;
+      min-width: 90px;
+    }
+    .key-item .key-value {
+      font-family: monospace;
+      font-size: 12px;
+      color: #999;
+      flex: 1;
+    }
+    .key-item .key-status {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 3px;
+    }
+    .key-status.valid { color: #1a7; background: #e8f8f0; }
+    .key-status.untested { color: #a80; background: #fff8e8; }
+    .key-status.invalid { color: #c44; background: #fde8e8; }
+
+    /* === PERSONA CARDS === */
+    .persona-cards {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .persona-card {
+      flex: 1;
+      border: 2px dashed #ddd;
+      border-radius: 6px;
+      padding: 16px;
+      cursor: pointer;
+      background: #fff;
+      transition: border-color 0.15s;
+    }
+    .persona-card:hover { border-color: #999; }
+    .persona-card.selected {
+      border-color: #2563eb;
+      border-style: solid;
+      background: #f0f5ff;
+    }
+    .persona-card .pc-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 6px;
+    }
+    .persona-card .pc-preview {
+      font-size: 11px;
+      color: #999;
+      line-height: 1.4;
+    }
+
+    /* === CUSTOMIZATION PANEL === */
+    .customization-panel {
+      border: 2px dashed #ccc;
+      border-radius: 6px;
+      padding: 20px;
+      margin-top: 12px;
+      background: #fafafa;
+      display: none;
+    }
+    .customization-panel.visible { display: block; }
+
+    /* === FOLDER DISPLAY === */
+    .folder-display {
+      display: none;
+      padding: 14px;
+      border: 2px dashed #ddd;
+      border-radius: 4px;
+      margin: 16px 0;
+      background: #fafafa;
+    }
+    .folder-display.visible { display: block; }
+    .folder-display .fd-path {
+      font-family: monospace;
+      font-size: 13px;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    .folder-display .fd-meta {
+      font-size: 11px;
+      color: #999;
+    }
+
+    /* === CHECKBOX === */
+    .checkbox-group {
+      margin: 16px 0;
+    }
+    .checkbox-group label {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #333;
+    }
+    .checkbox-group input[type="checkbox"] {
+      margin-top: 2px;
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    .checkbox-sub {
+      margin-left: 26px;
+      margin-top: 8px;
+      padding: 12px;
+      border: 2px dashed #ddd;
+      border-radius: 4px;
+      background: #fafafa;
+      display: none;
+    }
+    .checkbox-sub.visible { display: block; }
+
+    /* === HOTKEY TABLE === */
+    .hotkey-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+    }
+    .hotkey-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 12px;
+      border-bottom: 2px dashed #ddd;
+    }
+    .hotkey-table td {
+      padding: 12px;
+      border-bottom: 2px dashed #eee;
+      font-size: 14px;
+      color: #333;
+      vertical-align: middle;
+    }
+    .hotkey-table .hk-combo {
+      font-family: monospace;
+      font-weight: 600;
+      background: #f5f5f5;
+      padding: 4px 10px;
+      border-radius: 3px;
+      border: 1px dashed #bbb;
+    }
+
+    /* === FINISH SCREEN === */
+    .finish-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 3px solid #2563eb;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      color: #2563eb;
+      background: #f0f5ff;
+    }
+    .summary-card {
+      border: 2px dashed #ddd;
+      border-radius: 6px;
+      padding: 20px;
+      margin: 24px 0;
+      text-align: left;
+      background: #fafafa;
+    }
+    .summary-card .summary-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 14px;
+      color: #333;
+      border-bottom: 1px dashed #eee;
+    }
+    .summary-row:last-child { border-bottom: none; }
+    .summary-row .sr-icon { font-size: 16px; min-width: 24px; }
+
+    /* === EMPTY STATE === */
+    .empty-state {
+      text-align: center;
+      padding: 24px;
+      color: #999;
+      font-size: 14px;
+      border: 2px dashed #ddd;
+      border-radius: 4px;
+      margin: 16px 0;
+    }
+    .empty-state .empty-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    /* === KEY RECORDER OVERLAY === */
+    .key-recorder-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .key-recorder-overlay.visible {
+      display: flex;
+    }
+    .key-recorder {
+      background: #fff;
+      border: 2px dashed #333;
+      border-radius: 8px;
+      padding: 32px;
+      text-align: center;
+      max-width: 360px;
+    }
+    .key-recorder .kr-prompt {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 16px;
+    }
+    .key-recorder .kr-display {
+      font-family: monospace;
+      font-size: 28px;
+      font-weight: 700;
+      color: #333;
+      padding: 20px;
+      border: 2px dashed #2563eb;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      background: #f0f5ff;
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .key-recorder .kr-conflict {
+      font-size: 12px;
+      color: #a80;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .key-recorder .kr-conflict.visible { display: block; }
+
+    /* === TOOLTIP TOAST === */
+    .tooltip-toast {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #333;
+      color: #ffd700;
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 200;
+      max-width: 500px;
+      text-align: center;
+      border: 1px dashed #ffd700;
+    }
+
+    /* === SCREEN VISIBILITY === */
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .step-indicator-wrap { display: none; }
+    .step-indicator-wrap.visible { display: flex; }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 600px) {
+      .feature-cards { flex-direction: column; }
+      .persona-cards { flex-direction: column; }
+      .content-card { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wireframe-banner">
+    ⚠️ VISION WIREFRAME — NOT FINAL DESIGN — Interactive mock for product discovery only
+  </div>
+
+  <!-- Header -->
+  <div class="wizard-header">
+    <span class="app-logo"><span class="logo-icon">🧠</span>MySecondBrain</span>
+    <span class="onboarding-label">Onboarding</span>
+  </div>
+
+  <!-- Step Indicator -->
+  <div class="step-indicator step-indicator-wrap" id="stepIndicator">
+    <div class="step-dot-wrap">
+      <div class="step-dot-group">
+        <div class="step-dot active" id="dot1">1</div>
+        <span class="step-label active" id="lbl1">API Keys</span>
+      </div>
+    </div>
+    <div class="step-line" id="line1"></div>
+    <div class="step-dot-wrap">
+      <div class="step-dot-group">
+        <div class="step-dot" id="dot2">2</div>
+        <span class="step-label" id="lbl2">Persona</span>
+      </div>
+    </div>
+    <div class="step-line" id="line2"></div>
+    <div class="step-dot-wrap">
+      <div class="step-dot-group">
+        <div class="step-dot" id="dot3">3</div>
+        <span class="step-label" id="lbl3">Wiki</span>
+      </div>
+    </div>
+    <div class="step-line" id="line3"></div>
+    <div class="step-dot-wrap">
+      <div class="step-dot-group">
+        <div class="step-dot" id="dot4">4</div>
+        <span class="step-label" id="lbl4">Hotkeys</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wizard Body -->
+  <div class="wizard-body">
+
+    <!-- ====== WELCOME SCREEN ====== -->
+    <div class="screen active" id="screen-welcome">
+      <div class="content-card welcome-card">
+        <span class="welcome-icon">🧠</span>
+        <h2>Welcome to MySecondBrain</h2>
+        <p class="subtitle">Your unified AI hub — any model, any provider, your own keys.<br>Never open another AI chat website again.</p>
+
+        <div class="feature-cards">
+          <div class="feature-card">
+            <span class="fc-icon">🔄</span>
+            <div class="fc-title">Three-Tier AI</div>
+            <div class="fc-desc">Hotkey rewrites, Command Bar, and full Studio — AI is always one keystroke away</div>
+          </div>
+          <div class="feature-card">
+            <span class="fc-icon">🔑</span>
+            <div class="fc-title">Bring Your Own Keys</div>
+            <div class="fc-desc">Use any AI provider. No subscription, no platform lock-in.</div>
+          </div>
+          <div class="feature-card">
+            <span class="fc-icon">📝</span>
+            <div class="fc-title">Personal Wiki</div>
+            <div class="fc-desc">Turn AI conversations into permanent .md notes on your own computer</div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="goToStep(1)" data-tooltip="Would begin the 4-step setup process: API Keys, Persona, Wiki Directory, and Hotkeys.">Get Started</button>
+      </div>
+    </div>
+
+    <!-- ====== STEP 1: API KEYS ====== -->
+    <div class="screen" id="screen-step1">
+      <div class="content-card">
+        <h2>Add Your API Keys</h2>
+        <p class="subtitle">Connect to AI providers using your own keys. You can add more anytime in Settings.</p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Provider</label>
+            <select class="form-select" id="keyProvider">
+              <option>OpenAI</option><option>Anthropic (Claude)</option><option>Google (Gemini)</option>
+              <option>DeepSeek</option><option>Xiaomi MiMo</option><option>Moonshot</option>
+              <option>Mistral</option><option>OpenAI-Compatible</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Display Name (optional)</label>
+            <input class="form-input" id="keyName" placeholder="My OpenAI Key">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>API Key</label>
+          <input class="form-input" id="keyValue" placeholder="sk-..." type="password">
+        </div>
+        <button class="btn btn-primary" onclick="addKey()" data-tooltip="Would validate the key is non-empty and not a duplicate, then add it to the list below with 'Not tested' status.">Add Key</button>
+        <button class="btn btn-sm" onclick="testAllKeys()" data-tooltip="Would send a minimal API request for each untested key. Green ✓ means valid. Red ✕ means invalid with error details shown." style="margin-left:8px;">Test All Keys</button>
+
+        <div class="key-list" id="keyList">
+          <div class="empty-state" id="keyListEmpty">
+            <span class="empty-icon">🔑</span>
+            No keys added yet. Add at least one API key to start using AI models.
+          </div>
+          <!-- Demo: pre-populated key -->
+          <div class="key-item" id="demoKey">
+            <span class="key-provider">OpenAI</span>
+            <span class="key-value">sk-...abc123</span>
+            <span class="key-status untested">⚠ Not tested</span>
+            <button class="btn btn-sm btn-danger" onclick="this.parentElement.remove();checkKeyListEmpty()" data-tooltip="Would show confirmation: 'Remove this key?' On confirm, removes the key from the list.">✕</button>
+          </div>
+        </div>
+
+        <div class="nav-bar">
+          <div class="nav-left">
+            <button class="btn" onclick="goToStep(0)">← Back</button>
+          </div>
+          <div class="nav-right">
+            <button class="btn" onclick="goToStep(2)" data-tooltip="Would skip API key setup. No keys configured — you can add them later in Settings → Providers.">Skip</button>
+            <button class="btn btn-primary" onclick="goToStep(2)" data-tooltip="Would save any added keys and advance to Step 2: Choose Your Assistant.">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== STEP 2: PERSONA ====== -->
+    <div class="screen" id="screen-step2">
+      <div class="content-card">
+        <h2>Choose Your Assistant</h2>
+        <p class="subtitle">A Persona defines how the AI behaves. Pick one and customize it to your style.</p>
+
+        <div class="persona-cards" id="personaCards">
+          <div class="persona-card selected" onclick="selectPersona(this)" data-persona="general">
+            <div class="pc-name">General Assistant</div>
+            <div class="pc-preview">You are a helpful, thoughtful assistant. Provide clear, accurate, and concise responses. When you don't know something, say so honestly.</div>
+          </div>
+          <div class="persona-card" onclick="selectPersona(this)" data-persona="code">
+            <div class="pc-name">Code Helper</div>
+            <div class="pc-preview">You are an expert software developer. Write clean, well-documented code. Explain your reasoning. Prefer practical solutions over theoretical ones.</div>
+          </div>
+          <div class="persona-card" onclick="selectPersona(this)" data-persona="writing">
+            <div class="pc-name">Writing Coach</div>
+            <div class="pc-preview">You are an experienced writing coach and editor. Help improve clarity, flow, and impact. Be constructive and specific in feedback. Preserve the author's voice.</div>
+          </div>
+        </div>
+
+        <div class="customization-panel visible" id="customPanel">
+          <div class="form-group">
+            <label>Display Name</label>
+            <input class="form-input" id="personaName" value="General Assistant">
+          </div>
+          <div class="form-group">
+            <label>System Prompt</label>
+            <textarea class="form-textarea" id="personaPrompt">You are a helpful, thoughtful assistant. Provide clear, accurate, and concise responses. When you don't know something, say so honestly.</textarea>
+          </div>
+          <div class="form-group">
+            <label>Default Chat Mode</label>
+            <div style="display:flex;gap:16px;padding-top:4px;">
+              <label style="font-weight:400;font-size:14px;cursor:pointer;"><input type="radio" name="chatMode" value="standard" checked> Standard</label>
+              <label style="font-weight:400;font-size:14px;cursor:pointer;"><input type="radio" name="chatMode" value="completion"> Text Completion</label>
+            </div>
+          </div>
+          <p style="font-size:12px;color:#999;">Will use your first validated API key with default model settings. Customize in Settings → Profiles.</p>
+        </div>
+
+        <button class="btn-link" onclick="document.getElementById('customPanel').classList.add('visible');" data-tooltip="Would open a blank persona form (name, system prompt, chat mode) for creating a persona from scratch.">+ Create from Scratch</button>
+
+        <div class="nav-bar">
+          <div class="nav-left">
+            <button class="btn" onclick="goToStep(1)">← Back</button>
+          </div>
+          <div class="nav-right">
+            <button class="btn" onclick="goToStep(3)" data-tooltip="Would skip Persona selection. The 'General Assistant' persona is used as the default. You can customize later in Settings → Profiles.">Skip</button>
+            <button class="btn btn-primary" onclick="goToStep(3)" data-tooltip="Would save the selected persona with any customizations and advance to Step 3: Set Up Your Personal Wiki.">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== STEP 3: WIKI DIRECTORY ====== -->
+    <div class="screen" id="screen-step3">
+      <div class="content-card">
+        <h2>Set Up Your Personal Wiki</h2>
+        <p class="subtitle">Your wiki is a folder of Markdown files on your computer. AI can read it, write to it, and help you build your second brain.</p>
+
+        <div style="display:flex;gap:12px;">
+          <button class="btn" onclick="showWikiFolder('C:\\Users\\Amit\\Documents\\notes')" data-tooltip="Would open a Windows folder picker dialog. After selection, displays the path and counts .md files found.">Choose Existing Folder</button>
+          <button class="btn" onclick="showWikiFolder('C:\\Users\\Amit\\Documents\\MySecondBrain-Wiki', true)" data-tooltip="Would create a new folder 'Documents/MySecondBrain-Wiki/' with a starter index.md file containing '# My Wiki\\n\\nWelcome to your personal wiki.'">Create New Wiki Folder</button>
+        </div>
+
+        <div class="folder-display" id="folderDisplay">
+          <div class="fd-path">📁 C:\Users\Amit\Documents\MySecondBrain-Wiki\</div>
+          <div class="fd-meta">Created with starter index.md</div>
+        </div>
+
+        <div class="checkbox-group">
+          <label>
+            <input type="checkbox" id="gitCheckbox" onchange="toggleGitSub(this)">
+            <span><strong>Initialize git repository for version control</strong><br><span style="font-size:12px;color:#999;">Auto-commits on file change (debounced ~30s). Commit messages like "wiki: Write to Wiki — python-tips.md"</span></span>
+          </label>
+        </div>
+
+        <div class="checkbox-sub" id="gitSub">
+          <div class="form-group">
+            <label>GitHub Personal Access Token</label>
+            <input class="form-input" id="githubToken" placeholder="ghp_..." type="password">
+          </div>
+          <div class="form-group">
+            <label>Repository Name</label>
+            <input class="form-input" id="githubRepo" placeholder="my-second-brain-wiki" value="my-second-brain-wiki">
+          </div>
+          <div class="checkbox-group">
+            <label>
+              <input type="checkbox" id="githubPrivate" checked>
+              <span>Create private repository</span>
+            </label>
+          </div>
+          <button class="btn btn-sm" onclick="testGitHub()" data-tooltip="Would validate the GitHub token, check if repo exists, create if not. On success: '✓ Connected to github.com/[user]/[repo]'. Auto-push enabled after each commit.">Test Connection</button>
+          <span id="githubStatus" style="font-size:12px;margin-left:8px;"></span>
+          <p style="font-size:11px;color:#999;margin-top:8px;">GitHub free tier supports unlimited repos up to 1GB each. .md files are tiny — you won't hit this limit.</p>
+        </div>
+
+        <div class="nav-bar">
+          <div class="nav-left">
+            <button class="btn" onclick="goToStep(2)">← Back</button>
+          </div>
+          <div class="nav-right">
+            <button class="btn" onclick="goToStep(4)" data-tooltip="Would skip wiki setup. No wiki configured — you can set it up later in Settings → Wiki.">Skip</button>
+            <button class="btn btn-primary" onclick="goToStep(4)" data-tooltip="Would save the wiki directory path (and git config if enabled) and advance to Step 4: Review Your Hotkeys.">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== STEP 4: HOTKEYS ====== -->
+    <div class="screen" id="screen-step4">
+      <div class="content-card">
+        <h2>Review Your Hotkeys</h2>
+        <p class="subtitle">These global shortcuts work from any Windows application — no need to switch windows.</p>
+
+        <table class="hotkey-table">
+          <thead>
+            <tr><th>Text Action</th><th>Default Hotkey</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Rewrite</td>
+              <td><span class="hk-combo">Alt+Q</span></td>
+              <td><button class="btn btn-sm" onclick="openKeyRecorder('rewrite')" data-tooltip="Would open a key recorder overlay: 'Press new key combination...' Captures the next key combo, checks for conflicts with Windows or other apps.">Change</button></td>
+            </tr>
+            <tr>
+              <td>Summarize</td>
+              <td><span class="hk-combo">Alt+W</span></td>
+              <td><button class="btn btn-sm" onclick="openKeyRecorder('summarize')" data-tooltip="Would open a key recorder overlay to capture a new hotkey combination for Summarize.">Change</button></td>
+            </tr>
+            <tr>
+              <td>Explain</td>
+              <td><span class="hk-combo">Alt+E</span></td>
+              <td><button class="btn btn-sm" onclick="openKeyRecorder('explain')" data-tooltip="Would open a key recorder overlay to capture a new hotkey combination for Explain.">Change</button></td>
+            </tr>
+            <tr>
+              <td>Translate</td>
+              <td><span class="hk-combo">Alt+R</span></td>
+              <td><button class="btn btn-sm" onclick="openKeyRecorder('translate')" data-tooltip="Would open a key recorder overlay to capture a new hotkey combination for Translate.">Change</button></td>
+            </tr>
+            <tr>
+              <td>Command Bar</td>
+              <td><span class="hk-combo">Alt+Space</span></td>
+              <td><button class="btn btn-sm" onclick="openKeyRecorder('cmdbar')" data-tooltip="Would open a key recorder overlay to capture a new hotkey combination for the Command Bar (Alt+Space default).">Change</button></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <button class="btn-link" onclick="resetHotkeys()" data-tooltip="Would restore all hotkeys to their default values: Alt+Q/W/E/R for text actions, Alt+Space for Command Bar.">Reset to Defaults</button>
+
+        <div class="nav-bar">
+          <div class="nav-left">
+            <button class="btn" onclick="goToStep(3)">← Back</button>
+          </div>
+          <div class="nav-right">
+            <button class="btn" onclick="goToFinish()" data-tooltip="Would skip hotkey configuration. All default hotkeys (Alt+Q/W/E/R, Alt+Space) are used as-is. You can customize later in Settings → Hotkeys.">Skip</button>
+            <button class="btn btn-primary" onclick="goToFinish()" data-tooltip="Would save hotkey assignments and proceed to the Finish screen where you can launch the Studio.">Finish</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== FINISH SCREEN ====== -->
+    <div class="screen" id="screen-finish">
+      <div class="content-card welcome-card">
+        <div class="finish-icon">✓</div>
+        <h2>You're All Set!</h2>
+        <p class="subtitle">MySecondBrain is configured and ready to go.</p>
+
+        <div class="summary-card">
+          <div class="summary-row"><span class="sr-icon">🔑</span> 1 API key added (OpenAI)</div>
+          <div class="summary-row"><span class="sr-icon">🤖</span> Persona: General Assistant</div>
+          <div class="summary-row"><span class="sr-icon">📝</span> Wiki: C:\Users\Amit\Documents\MySecondBrain-Wiki\</div>
+          <div class="summary-row"><span class="sr-icon">⌨️</span> 5 hotkeys configured (defaults)</div>
+        </div>
+
+        <a href="studio-chat.html" class="btn btn-primary" style="display:inline-flex;text-decoration:none;" data-tooltip="Would close the wizard and open the Studio with a new chat using the 'General Assistant' persona. The Studio sidebar and all features are now active.">Launch Studio</a>
+        <br><br>
+        <button class="btn" onclick="alert('Would open a file picker for ChatGPT/Claude export JSON files. After selecting a file: preview (chat title, message count, date range) → confirm → imported as a new ChatThread in the sidebar.')" data-tooltip="Would open file picker for ChatGPT/Claude export JSON. Shows preview (title, message count, date range). On confirm: creates new ChatThread with all messages preserved. See features/import-export.md I2 for full behavior.">Import from ChatGPT or Claude</button>
+        <p style="font-size:12px;color:#999;margin-top:16px;">You can re-run this wizard anytime from Settings → Onboarding.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Key Recorder Overlay -->
+  <div class="key-recorder-overlay" id="keyRecorderOverlay">
+    <div class="key-recorder">
+      <div class="kr-prompt">Press new key combination...</div>
+      <div class="kr-display" id="krDisplay">...</div>
+      <div class="kr-conflict" id="krConflict">⚠ This combination may conflict with Windows explorer. Use anyway?</div>
+      <button class="btn btn-primary btn-sm" onclick="closeKeyRecorder()" data-tooltip="Would save the captured key combination and update the hotkey table. If conflict detected, would ask for confirmation.">Confirm</button>
+      <button class="btn btn-sm" onclick="closeKeyRecorder()" style="margin-left:8px;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Tooltip Toast -->
+  <div class="tooltip-toast" id="tooltip-toast"></div>
+
+  <script>
+    // ===== WIZARD NAVIGATION =====
+    var currentStep = 0; // 0=welcome, 1-4=steps, 5=finish
+
+    function goToStep(step) {
+      currentStep = step;
+      // Hide all screens
+      document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+      // Show target screen
+      var screenMap = {
+        0: 'screen-welcome',
+        1: 'screen-step1',
+        2: 'screen-step2',
+        3: 'screen-step3',
+        4: 'screen-step4'
+      };
+      if (step >= 0 && step <= 4) {
+        document.getElementById(screenMap[step]).classList.add('active');
+      }
+
+      // Show/hide step indicator
+      var indicator = document.getElementById('stepIndicator');
+      if (step >= 1 && step <= 4) {
+        indicator.classList.add('visible');
+      } else {
+        indicator.classList.remove('visible');
+      }
+
+      // Update step dots
+      for (var i = 1; i <= 4; i++) {
+        var dot = document.getElementById('dot' + i);
+        var lbl = document.getElementById('lbl' + i);
+        var line = i > 1 ? document.getElementById('line' + (i-1)) : null;
+
+        dot.className = 'step-dot';
+        lbl.className = 'step-label';
+
+        if (i < step) {
+          dot.classList.add('done');
+          dot.textContent = '✓';
+          lbl.classList.add('done');
+          if (line) line.classList.add('done');
+        } else if (i === step) {
+          dot.classList.add('active');
+          dot.textContent = i;
+          lbl.classList.add('active');
+          if (line) line.classList.add('done');
+        } else {
+          dot.textContent = i;
+          if (line) line.classList.remove('done');
+        }
+      }
+    }
+
+    function goToFinish() {
+      currentStep = 5;
+      document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+      document.getElementById('screen-finish').classList.add('active');
+      document.getElementById('stepIndicator').classList.remove('visible');
+    }
+
+    // ===== STEP 1: API KEYS =====
+    function addKey() {
+      var provider = document.getElementById('keyProvider').value;
+      var keyName = document.getElementById('keyName').value || 'Untitled';
+      var keyValue = document.getElementById('keyValue').value;
+      if (!keyValue) {
+        showToast('Please enter an API key value.');
+        return;
+      }
+      // Hide empty state
+      var empty = document.getElementById('keyListEmpty');
+      if (empty) empty.style.display = 'none';
+      // Create key item
+      var div = document.createElement('div');
+      div.className = 'key-item';
+      var masked = keyValue.substring(0, 3) + '...' + (keyValue.length > 6 ? keyValue.slice(-6) : '');
+      div.innerHTML = '<span class="key-provider">' + provider + '</span>' +
+        '<span class="key-value">' + masked + '</span>' +
+        '<span class="key-status untested">⚠ Not tested</span>' +
+        '<button class="btn btn-sm btn-danger" onclick="this.parentElement.remove();checkKeyListEmpty();" data-tooltip="Would show confirmation: \'Remove this key?\' On confirm, removes the key from the list.">✕</button>';
+      document.getElementById('keyList').appendChild(div);
+      // Clear inputs
+      document.getElementById('keyName').value = '';
+      document.getElementById('keyValue').value = '';
+      showToast('API key added: ' + provider + ' (' + keyName + '). Click "Test All Keys" to validate.');
+    }
+
+    function testAllKeys() {
+      var items = document.querySelectorAll('#keyList .key-item');
+      if (items.length === 0) {
+        showToast('No keys to test. Add at least one API key first.');
+        return;
+      }
+      items.forEach(function(item) {
+        var status = item.querySelector('.key-status');
+        status.textContent = '⏳ Testing...';
+        status.className = 'key-status untested';
+        setTimeout(function() {
+          status.textContent = '✓ Validated';
+          status.className = 'key-status valid';
+        }, 800 + Math.random() * 600);
+      });
+      showToast('Testing all keys against their providers...');
+    }
+
+    function checkKeyListEmpty() {
+      var items = document.querySelectorAll('#keyList .key-item');
+      var empty = document.getElementById('keyListEmpty');
+      if (empty && items.length === 0) {
+        empty.style.display = 'block';
+      }
+    }
+
+    // ===== STEP 2: PERSONA =====
+    function selectPersona(card) {
+      document.querySelectorAll('.persona-card').forEach(function(c) { c.classList.remove('selected'); });
+      card.classList.add('selected');
+      var panel = document.getElementById('customPanel');
+      panel.classList.add('visible');
+      var persona = card.getAttribute('data-persona');
+      var prompts = {
+        'general': ['General Assistant', 'You are a helpful, thoughtful assistant. Provide clear, accurate, and concise responses. When you don\'t know something, say so honestly.'],
+        'code': ['Code Helper', 'You are an expert software developer. Write clean, well-documented code. Explain your reasoning. Prefer practical solutions over theoretical ones.'],
+        'writing': ['Writing Coach', 'You are an experienced writing coach and editor. Help improve clarity, flow, and impact. Be constructive and specific in feedback. Preserve the author\'s voice.']
+      };
+      if (prompts[persona]) {
+        document.getElementById('personaName').value = prompts[persona][0];
+        document.getElementById('personaPrompt').value = prompts[persona][1];
+      }
+    }
+
+    // ===== STEP 3: WIKI =====
+    function showWikiFolder(path, isNew) {
+      var display = document.getElementById('folderDisplay');
+      display.classList.add('visible');
+      display.querySelector('.fd-path').textContent = '📁 ' + path;
+      if (isNew) {
+        display.querySelector('.fd-meta').textContent = 'Created with starter index.md';
+      } else {
+        display.querySelector('.fd-meta').textContent = '47 .md files found · 1.2 MB total';
+      }
+    }
+
+    function toggleGitSub(cb) {
+      var sub = document.getElementById('gitSub');
+      if (cb.checked) {
+        sub.classList.add('visible');
+      } else {
+        sub.classList.remove('visible');
+      }
+    }
+
+    function testGitHub() {
+      var token = document.getElementById('githubToken').value;
+      var repo = document.getElementById('githubRepo').value;
+      if (!token) { showToast('Please enter a GitHub Personal Access Token.'); return; }
+      if (!repo) { showToast('Please enter a repository name.'); return; }
+      var status = document.getElementById('githubStatus');
+      status.textContent = '⏳ Connecting...';
+      status.style.color = '#a80';
+      setTimeout(function() {
+        status.textContent = '✓ Connected to github.com/amit/' + repo;
+        status.style.color = '#1a7';
+        showToast('GitHub connection verified. Auto-push enabled: commits will be pushed automatically.');
+      }, 1200);
+    }
+
+    // ===== STEP 4: HOTKEYS =====
+    function openKeyRecorder(action) {
+      document.getElementById('keyRecorderOverlay').classList.add('visible');
+      document.getElementById('krDisplay').textContent = 'Press keys...';
+      document.getElementById('krConflict').classList.remove('visible');
+      showToast('Key recorder open — this is a simulation. In the real app, pressing a key combination would capture it here.');
+    }
+
+    function closeKeyRecorder() {
+      document.getElementById('keyRecorderOverlay').classList.remove('visible');
+    }
+
+    function resetHotkeys() {
+      showToast('All hotkeys reset to defaults: Alt+Q/W/E/R for text actions, Alt+Space for Command Bar.');
+    }
+
+    // ===== TOAST =====
+    function showToast(msg) {
+      var toast = document.getElementById('tooltip-toast');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(function() {
+        toast.style.display = 'none';
+      }, 4000);
+    }
+
+    // ===== TOOLTIP SYSTEM =====
+    document.addEventListener('DOMContentLoaded', function() {
+      var toast = document.getElementById('tooltip-toast');
+      var triggers = document.querySelectorAll('[data-tooltip]:not(a)');
+      triggers.forEach(function(el) {
+        el.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          var text = this.getAttribute('data-tooltip');
+          toast.textContent = text;
+          toast.style.display = 'block';
+          clearTimeout(toast._timeout);
+          toast._timeout = setTimeout(function() {
+            toast.style.display = 'none';
+          }, 4000);
+        });
+      });
+      document.addEventListener('click', function() {
+        toast.style.display = 'none';
+      });
+    });
+
+    // Initialize: show Welcome screen, hide step indicator
+    goToStep(0);
+  </script>
+</body>
+</html>
