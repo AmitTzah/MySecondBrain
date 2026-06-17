@@ -17,13 +17,21 @@ The user edits, deletes, branches, and navigates conversation messages. Every me
 ## Detailed Behavior
 
 ### D1. Edit Any Past Message
-- **Access:** Click edit icon on any message (user or assistant)
+- **Access:** Click ✏️ edit icon on any message (user or assistant)
 - **Edit Mode:** Message content opens in editable text area. For assistant messages, Markdown source is editable.
 - **Two Modes (user chooses after editing):**
   - **Edit in Place:** Overwrites message content. No branch created. All subsequent messages remain unchanged in the conversation flow. The original content is preserved in version history but not as a navigable branch.
   - **Edit as Branch:** Creates a new version branch at that point. Original message preserved as v1, edit becomes v2. Branch indicator "2/2" appears. All subsequent AI calls use edited history.
 - **Warning:** If the message being edited has subsequent messages that depend on it (especially assistant responses), editing in place may create logical inconsistency. A subtle warning appears: "Editing this message may affect context for subsequent messages."
 - **Permission:** User can edit any message in any of their chats.
+
+### D1a. Quick Branch (Dedicated ↳ Branch Button)
+- **Access:** "↳ Branch" button on each assistant message (alongside ✏️, 🗑️, 🔄)
+- **Behavior:** Creates a new branch at this message point WITHOUT opening the editor. The conversation forks immediately — you start a new path from here. Original messages preserved.
+- **Use Case:** "I want to explore a different direction from this point without editing anything first."
+- **Difference from D1:** D1 requires editing content to create a branch. D1a creates a branch instantly — the branch point is the existing message content.
+- **After Branch:** Branch indicator appears. User sends next message from the new branch. Original branch remains accessible via ◀ ▶ arrows (D3).
+- **Difference from D7 (Fork):** D7 creates a NEW ChatThread. D1a creates a branch WITHIN the same ChatThread.
 
 ### D2. Delete Any Past Message
 - **Access:** Click delete icon on any message

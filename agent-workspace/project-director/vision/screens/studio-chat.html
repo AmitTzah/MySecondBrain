@@ -60,7 +60,8 @@
     .msg-content{font-size:14px;line-height:1.6;color:#333;padding:12px 16px;border:2px dashed #bbb;border-radius:6px;background:#fafafa}
     .msg-user .msg-content{background:#f0f4ff;border-color:#2563eb}
     .msg-meta{font-size:10px;color:#bbb;margin-top:4px}
-    .msg-actions{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+    .msg-actions{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;opacity:0;transition:opacity .15s}
+    .msg:hover .msg-actions{opacity:1}
     .msg-action-btn{font-size:10px;padding:2px 6px;border:1px dashed #ccc;background:#fff;color:#999;cursor:pointer;border-radius:2px}
     .msg-action-btn:hover{background:#eee;color:#333}
     .code-block{background:#333;color:#f0f0f0;padding:12px;border-radius:4px;font-family:monospace;font-size:13px;margin:8px 0;border:2px dashed #666;position:relative}
@@ -194,6 +195,8 @@
             <button class="msg-action-btn" data-tooltip="Would copy message content as raw Markdown to clipboard (for pasting into VS Code, Obsidian, plain text editors).">📋 Copy MD</button>
             <button class="msg-action-btn" data-tooltip="Would copy message content as Rich Text (HTML/RTF) to clipboard (for pasting into Word, Outlook, browsers with formatting preserved).">📝 Copy Rich</button>
             <button class="msg-action-btn" data-tooltip="Would open this message in editable mode. Choose 'Edit in Place' (overwrite) or 'Edit as Branch' (new version).">✏️</button>
+            <button class="msg-action-btn" data-tooltip="Would create a new branch at this message point within the SAME chat — start a new conversation path from here. Original messages preserved.">↳ Branch</button>
+            <button class="msg-action-btn" data-tooltip="Would create a NEW ChatThread containing all messages up to this point. Opens in a new tab. Original chat unchanged.">⤴ Fork</button>
             <button class="msg-action-btn" data-tooltip="Would remove this message from current conversation history. Undo with Ctrl+Z.">🗑️</button>
           </div>
         </div>
@@ -217,7 +220,9 @@
             <button class="msg-action-btn" data-tooltip="Would star this message for quick access.">⭐</button>
             <button class="msg-action-btn" data-tooltip="Would copy message content as raw Markdown to clipboard.">📋 Copy MD</button>
             <button class="msg-action-btn" data-tooltip="Would copy message content as Rich Text (HTML/RTF) to clipboard.">📝 Copy Rich</button>
-            <button class="msg-action-btn" data-tooltip="Would open this assistant message in editable mode. Choose 'Edit in Place' (overwrite) or 'Edit as Branch' (new version). AI sees updated history on next send.">✏️</button>
+            <button class="msg-action-btn" data-tooltip="Would open this assistant message in editable mode. Choose 'Edit in Place' (overwrite) or 'Edit as Branch' (new version).">✏️</button>
+            <button class="msg-action-btn" data-tooltip="Would create a new branch at this message point within the SAME chat — start a new conversation path from here. Original messages preserved. Switch branches with ◀ ▶ arrows.">↳ Branch</button>
+            <button class="msg-action-btn" data-tooltip="Would create a NEW ChatThread containing all messages up to this point. Opens in a new tab. Original chat unchanged.">⤴ Fork</button>
             <button class="msg-action-btn" data-tooltip="Would remove this message from current conversation history. Branch data preserved. Undo with Ctrl+Z.">🗑️</button>
             <button class="msg-action-btn" data-tooltip="Would replace this response with a new AI generation. Old response preserved as a branch.">🔄 Regenerate</button>
             <button class="msg-action-btn" data-tooltip="Would record positive feedback. Stored locally. Aggregated in Usage Dashboard.">👍</button>
@@ -233,6 +238,8 @@
             <button class="msg-action-btn">📋 Copy MD</button>
             <button class="msg-action-btn">📝 Copy Rich</button>
             <button class="msg-action-btn">✏️</button>
+            <button class="msg-action-btn">↳ Branch</button>
+            <button class="msg-action-btn">⤴ Fork</button>
             <button class="msg-action-btn">🗑️</button>
           </div>
         </div>
@@ -246,7 +253,9 @@
             <button class="msg-action-btn" data-tooltip="Would star this message for quick access.">⭐</button>
             <button class="msg-action-btn" data-tooltip="Would copy as raw Markdown.">📋 Copy MD</button>
             <button class="msg-action-btn" data-tooltip="Would copy as Rich Text.">📝 Copy Rich</button>
-            <button class="msg-action-btn" data-tooltip="Would open this message in editable mode. Assistant messages can also be edited.">✏️</button>
+            <button class="msg-action-btn" data-tooltip="Would open this message in editable mode.">✏️</button>
+            <button class="msg-action-btn" data-tooltip="Would create a new branch at this message point within the SAME chat.">↳ Branch</button>
+            <button class="msg-action-btn" data-tooltip="Would create a NEW ChatThread with messages up to this point. Opens in new tab.">⤴ Fork</button>
             <button class="msg-action-btn" data-tooltip="Would remove this message from history. Undo with Ctrl+Z.">🗑️</button>
           </div>
         </div>
