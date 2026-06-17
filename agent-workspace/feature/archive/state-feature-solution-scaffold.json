@@ -1,12 +1,6 @@
 {
-  "project_vision": "MySecondBrain — a native Windows desktop app unifying all LLM interactions (provider-agnostic) with a personal wiki/second-brain knowledge management system",
-  "current_phase": 5,
-  "total_features": 245,
-  "current_feature_index": 1,
-  "status": "in_progress",
-  "fd_status": "completed",
-  "phase_2_substep": null,
-  "phase_4_substep": "dashboarded",
+  "feature_name": ".NET 8.0 WPF Solution Scaffold",
+  "branch_name": "feature/solution-scaffold",
   "git_automation_enabled": true,
   "smoke_test_automation": {
     "enabled": true,
@@ -25,6 +19,10 @@
     },
     "missing_prerequisites": []
   },
-  "total_replans": 0,
-  "current_branch_name": "feature/solution-scaffold"
+  "current_phase": 5,
+  "plan_status": "archived",
+  "total_steps": 10,
+  "current_step": 10,
+  "pivot_in_progress": false,
+  "phase_5_substep": "state_finalized"
 }

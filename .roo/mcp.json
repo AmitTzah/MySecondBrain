@@ -1,12 +1,45 @@
 {
-  "mcpServers": {
-    "git": {
-      "command": "uvx",
-      "args": [
-        "mcp-server-git",
-        "--repository",
-        "C:/Users/Amit/Projects/MySecondBrain"
-      ]
-    }
-  }
+	"mcpServers": {
+		"git": {
+			"command": "uvx",
+			"args": [
+				"mcp-server-git",
+				"--repository",
+				"C:/Users/Amit/Projects/MySecondBrain"
+			],
+			"alwaysAllow": [
+				"git_add",
+				"git_commit",
+				"git_status"
+			]
+		},
+		"windows-mcp": {
+			"command": "uvx",
+			"args": [
+				"windows-mcp",
+				"serve",
+				"--exclude-tools",
+				"PowerShell,Registry,Process"
+			],
+			"env": {
+				"ANONYMIZED_TELEMETRY": "false",
+				"WINDOWS_MCP_SCREENSHOT_SCALE": "0.5"
+			},
+			"alwaysAllow": [
+				"Snapshot",
+				"Screenshot",
+				"Wait",
+				"WaitFor",
+				"Type",
+				"Click",
+				"App",
+				"Scroll",
+				"Move",
+				"Scrape",
+				"Notification",
+				"Clipboard",
+				"Shortcut"
+			]
+		}
+	}
 }

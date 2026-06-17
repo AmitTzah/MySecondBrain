@@ -1,0 +1,12 @@
+{
+  "environments": {
+    "desktop": {
+      "executable_path": ".\\MySecondBrain.exe",
+      "window_title": "MySecondBrain",
+      "launch_args": null,
+      "mcp_name": "windows-mcp",
+      "mcp_install_note": "pip install uv && uvx windows-mcp serve --exclude-tools PowerShell,Registry,Process"
+    }
+  },
+  "note": "Smoke tests run via synthetic-human-tester mode using Windows-MCP. Requires active Windows desktop session. Not headless."
+}
