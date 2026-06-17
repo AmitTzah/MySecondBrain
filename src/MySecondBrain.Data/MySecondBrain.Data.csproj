@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <RootNamespace>MySecondBrain.Data</RootNamespace>
     <AssemblyName>MySecondBrain.Data</AssemblyName>
     <Description>Entity Framework Core data layer with SQLite for MySecondBrain</Description>
