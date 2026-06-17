@@ -3,22 +3,307 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Settings — Placeholder</title>
+  <title>Screen: Settings — Vision Wireframe</title>
   <style>
-    body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f0f0;color:#666}
-    .placeholder{text-align:center;padding:48px;border:2px dashed #999;border-radius:8px;background:#fff;max-width:500px}
-    .placeholder-icon{font-size:64px;margin-bottom:16px}
-    .placeholder-title{font-size:20px;font-weight:600;margin-bottom:8px}
-    .placeholder-text{font-size:14px;color:#999;margin-bottom:24px}
-    .placeholder-link{color:#2563eb;font-size:14px}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;background:#f0f0f0;color:#333;overflow:hidden;height:100vh}
+    .wireframe-banner{background:#333;color:#ffd700;text-align:center;padding:6px 16px;font-size:12px;font-weight:600;letter-spacing:.5px;border-bottom:2px dashed #ffd700;flex-shrink:0}
+    .layout-sidebar{display:flex;height:calc(100vh - 32px)}
+    .sidebar{width:240px;min-width:150px;background:#f5f5f5;border-right:2px dashed #bbb;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+    .sidebar-nav{padding:8px;border-bottom:2px dashed #ddd}
+    .nav-item{display:block;padding:8px 12px;font-size:13px;color:#666;text-decoration:none;border:1px dashed transparent;border-radius:4px;margin-bottom:2px}
+    .nav-item:hover{background:#eee;color:#333}
+    .nav-item.active{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:600}
+    .settings-sidebar{width:200px;background:#fafafa;border-right:2px dashed #ddd;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+    .settings-sidebar h3{padding:12px;font-size:13px;font-weight:700;color:#333;border-bottom:2px dashed #ddd;flex-shrink:0}
+    .cat-list{flex:1;overflow-y:auto;padding:4px 0}
+    .cat-item{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:12px;color:#666;cursor:pointer;border-left:3px solid transparent}
+    .cat-item:hover{background:#eee;color:#333}
+    .cat-item.active{background:#e8f0fe;color:#2563eb;font-weight:600;border-left-color:#2563eb}
+    .cat-item .cat-icon{font-size:14px;width:20px;text-align:center}
+    .settings-footer{padding:10px 12px;border-top:2px dashed #ddd;flex-shrink:0}
+    .settings-footer a{font-size:11px;color:#2563eb;text-decoration:underline;cursor:pointer}
+    .content-area{flex:1;overflow-y:auto;padding:28px 36px;background:#fff}
+    .content-area h2{font-size:20px;font-weight:700;color:#333;margin-bottom:20px;padding-bottom:12px;border-bottom:2px dashed #eee}
+    .setting-group{margin-bottom:24px}
+    .setting-group h4{font-size:13px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+    .setting-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px dashed #eee;gap:16px}
+    .setting-row:last-child{border-bottom:none}
+    .setting-label{flex:1}
+    .setting-label .sl-title{font-size:14px;font-weight:500;color:#333}
+    .setting-label .sl-desc{font-size:11px;color:#999;margin-top:2px}
+    .setting-control{flex-shrink:0}
+    .form-input,.form-select{padding:8px 12px;border:2px dashed #bbb;border-radius:4px;font-size:13px;background:#fff;color:#333;font-family:system-ui,sans-serif}
+    .form-input:focus,.form-select:focus{outline:none;border-color:#2563eb}
+    .form-select{min-width:180px}
+    .form-input{min-width:200px}
+    .toggle{position:relative;display:inline-block;width:44px;height:24px}
+    .toggle input{display:none}
+    .toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ddd;border-radius:12px;transition:.2s;border:2px dashed #bbb}
+    .toggle input:checked+.toggle-slider{background:#2563eb;border-color:#2563eb}
+    .toggle-slider:before{content:"";position:absolute;height:16px;width:16px;left:3px;bottom:2px;background:#fff;border-radius:50%;transition:.2s}
+    .toggle input:checked+.toggle-slider:before{transform:translateX(20px)}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:2px dashed #999;border-radius:4px;font-size:13px;font-weight:500;cursor:pointer;background:#fff;color:#333;text-decoration:none}
+    .btn:hover{border-style:solid}
+    .btn-primary{background:#2563eb;color:#fff;border-color:#2563eb;border-style:solid}
+    .btn-sm{padding:5px 12px;font-size:11px}
+    .btn-danger{border-color:#c44;color:#c44}
+    .key-table,.config-table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    .key-table th,.config-table th{text-align:left;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:2px dashed #ddd}
+    .key-table td,.config-table td{padding:8px 10px;font-size:13px;color:#333;border-bottom:1px dashed #eee;vertical-align:middle}
+    .status-badge{font-size:10px;padding:2px 8px;border-radius:3px;font-weight:600}
+    .status-valid{background:#dcfce7;color:#16a34a}
+    .status-untested{background:#fff8e8;color:#a80}
+    .key-masked{font-family:monospace;font-size:11px;color:#999}
+    .preview-box{border:2px dashed #ddd;border-radius:6px;padding:20px;margin-top:12px;background:#fafafa}
+    .preview-msg{max-width:70%;padding:10px 14px;border-radius:4px;font-size:13px}
+    .preview-msg.assistant{background:#fafafa;border:1px dashed #ddd}
+    .category-content{display:none}
+    .category-content.active{display:block}
+    .tooltip-toast{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#ffd700;padding:12px 24px;border-radius:8px;font-size:13px;max-width:500px;text-align:center;z-index:9999;border:2px dashed #ffd700}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
+    ::-webkit-scrollbar-track{background:transparent}
   </style>
 </head>
 <body>
-  <div class="placeholder">
-    <div class="placeholder-icon">⚙️</div>
-    <h1 class="placeholder-title">Settings</h1>
-    <p class="placeholder-text">API keys, Personas, Model Configurations, Appearance, Wiki, Backup, Hotkeys, Tools, and all other global configuration.</p>
-    <a href="studio-chat.html" class="placeholder-link">← Back to Studio Chat</a>
+  <div class="wireframe-banner">
+    ⚠️ VISION WIREFRAME — NOT FINAL DESIGN — Interactive mock for product discovery only
   </div>
+
+  <div class="layout-sidebar">
+    <!-- Studio Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-nav">
+        <a href="studio-chat.html" class="nav-item">💬 Chats</a>
+        <a href="wiki-browser.html" class="nav-item">📝 Wiki</a>
+        <a href="media-library.html" class="nav-item">🖼️ Media</a>
+        <a href="global-artifacts-browser.html" class="nav-item">📄 Artifacts</a>
+        <a href="usage-dashboard.html" class="nav-item">📊 Usage</a>
+        <a href="settings.html" class="nav-item active">⚙️ Settings</a>
+      </div>
+    </nav>
+
+    <!-- Settings Category Sidebar -->
+    <div class="settings-sidebar">
+      <h3>Settings</h3>
+      <div class="cat-list">
+        <div class="cat-item active" onclick="showCategory('providers')" data-tooltip="Manage API keys for AI providers. Add, test, edit, and delete keys."><span class="cat-icon">🔑</span> Providers</div>
+        <div class="cat-item" onclick="showCategory('profiles')" data-tooltip="Manage Personas and Model Configurations. Set default Persona for new chats."><span class="cat-icon">👤</span> Profiles</div>
+        <div class="cat-item" onclick="showCategory('appearance')" data-tooltip="Dark/Light mode, chat visual theme, font family, size, and weight."><span class="cat-icon">🎨</span> Appearance</div>
+        <div class="cat-item" onclick="showCategory('wiki')" data-tooltip="Wiki directory, indexing status, git version control."><span class="cat-icon">📝</span> Wiki</div>
+        <div class="cat-item" onclick="showCategory('backup')" data-tooltip="Google Cloud Storage backup configuration, schedule, and restore."><span class="cat-icon">☁️</span> Backup</div>
+        <div class="cat-item" onclick="showCategory('hotkeys')" data-tooltip="Global hotkey assignments for Text Actions and Command Bar."><span class="cat-icon">⌨️</span> Hotkeys</div>
+        <div class="cat-item" onclick="showCategory('tools')" data-tooltip="Tool auto-approval defaults per tool type. STT provider configuration."><span class="cat-icon">🔧</span> Tools</div>
+        <div class="cat-item" onclick="showCategory('notifications')" data-tooltip="Sound on completion, disable streaming, cross-tab alerts."><span class="cat-icon">🔔</span> Notifications</div>
+        <div class="cat-item" onclick="showCategory('startup')" data-tooltip="Launch on Windows startup, restore last session, minimize to tray."><span class="cat-icon">🚀</span> Startup</div>
+        <div class="cat-item" onclick="showCategory('updates')" data-tooltip="Auto-update check frequency and current version."><span class="cat-icon">🔄</span> Updates</div>
+        <div class="cat-item" onclick="showCategory('pricing')" data-tooltip="Monthly budget limits, warning thresholds, API call blocking."><span class="cat-icon">💰</span> Pricing</div>
+        <div class="cat-item" onclick="showCategory('security')" data-tooltip="API key encryption status, locked chat global password."><span class="cat-icon">🔒</span> Security</div>
+        <div class="cat-item" onclick="showCategory('maintenance')" data-tooltip="Database compaction (VACUUM), file size, reclaimable space."><span class="cat-icon">🛠️</span> Maintenance</div>
+      </div>
+      <div class="settings-footer">
+        <a href="onboarding-wizard.html" data-tooltip="Re-launch the first-time setup wizard to add API keys, choose a Persona, set up wiki, and configure hotkeys.">🔄 Re-run Onboarding Wizard</a>
+      </div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="content-area" id="contentArea">
+      <!-- Providers -->
+      <div class="category-content active" id="cat-providers">
+        <h2>🔑 Providers</h2>
+        <div class="setting-group">
+          <h4>API Keys</h4>
+          <table class="key-table">
+            <thead><tr><th>Provider</th><th>Display Name</th><th>Key</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>OpenAI</td><td>My OpenAI Key</td><td><span class="key-masked">sk-...abc123</span></td>
+                <td><span class="status-badge status-valid">✓ Validated</span></td>
+                <td><button class="btn btn-sm" data-tooltip="Would open edit form to change key value or display name.">Edit</button> <button class="btn btn-sm btn-danger" data-tooltip="Would show confirmation: 'Delete this API key? Model Configurations using it will need a new key.'">Delete</button> <button class="btn btn-sm" data-tooltip="Would send a minimal API request to validate the key against the provider.">Test</button></td>
+              </tr>
+              <tr>
+                <td>Anthropic</td><td>Claude Key</td><td><span class="key-masked">sk-ant-...xyz789</span></td>
+                <td><span class="status-badge status-untested">⚠ Not tested</span></td>
+                <td><button class="btn btn-sm">Edit</button> <button class="btn btn-sm btn-danger">Delete</button> <button class="btn btn-sm">Test</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <button class="btn btn-primary" data-tooltip="Would open form: Provider dropdown (OpenAI, Anthropic, Google, DeepSeek, etc.), API Key field, optional Display Name, Test Key button, Save.">+ Add API Key</button>
+        </div>
+        <div class="setting-group">
+          <h4>Encryption</h4>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">API keys encrypted at rest</div><div class="sl-desc">Keys are encrypted via Windows DPAPI, tied to your local Windows user account.</div></div>
+            <div class="setting-control"><span class="status-badge status-valid">✓ Encrypted</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Profiles -->
+      <div class="category-content" id="cat-profiles">
+        <h2>👤 Profiles</h2>
+        <div class="setting-group">
+          <h4>Default Persona for New Chats</h4>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Default Persona</div><div class="sl-desc">Auto-assigned when creating a new chat (Ctrl+N).</div></div>
+            <div class="setting-control"><select class="form-select" data-tooltip="Would change the default Persona for all new chats. 'Last Used' uses the most recently active Persona."><option>General Assistant</option><option>Python Expert</option><option>Code Helper</option><option>Writing Coach</option><option>Last Used</option></select></div>
+          </div>
+        </div>
+        <div class="setting-group">
+          <h4>Personas</h4>
+          <table class="config-table">
+            <thead><tr><th>Name</th><th>System Prompt</th><th>Model</th><th>Mode</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>🐍 Python Expert</td><td>You are an expert Python developer...</td><td>GPT-4o</td><td>Standard</td><td><button class="btn btn-sm">Edit</button> <button class="btn btn-sm">Duplicate</button></td></tr>
+              <tr><td>💻 Code Helper</td><td>You are an expert software developer...</td><td>DeepSeek V3</td><td>Standard</td><td><button class="btn btn-sm">Edit</button> <button class="btn btn-sm">Duplicate</button></td></tr>
+              <tr><td>✍️ Writing Coach</td><td>You are an experienced writing coach...</td><td>Claude 3.5 Sonnet</td><td>Standard</td><td><button class="btn btn-sm">Edit</button> <button class="btn btn-sm">Duplicate</button></td></tr>
+            </tbody>
+          </table>
+          <button class="btn btn-primary" data-tooltip="Would open Persona creation form: Display Name, System Prompt, Default Model Configuration, Default Chat Mode (Standard/Text Completion).">+ New Persona</button>
+        </div>
+        <div class="setting-group">
+          <h4>Model Configurations</h4>
+          <table class="config-table">
+            <thead><tr><th>Name</th><th>Provider</th><th>Model ID</th><th>Temp</th><th>Strategy</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>GPT-4o — Fast</td><td>OpenAI</td><td>gpt-4o</td><td>1.0</td><td>Sliding Window</td><td><button class="btn btn-sm">Edit</button></td></tr>
+              <tr><td>Claude 3.5 — Creative</td><td>Anthropic</td><td>claude-3-5-sonnet</td><td>1.4</td><td>Auto-Summarize</td><td><button class="btn btn-sm">Edit</button></td></tr>
+            </tbody>
+          </table>
+          <button class="btn btn-primary" data-tooltip="Would open Model Config form: Display Name, Provider, API Key, Model ID, Temperature (0-2), Max Tokens, Context Window, Thinking toggle, Pricing, Context Overflow Strategy.">+ New Model Configuration</button>
+        </div>
+      </div>
+
+      <!-- Appearance -->
+      <div class="category-content" id="cat-appearance">
+        <h2>🎨 Appearance</h2>
+        <div class="setting-group">
+          <h4>Theme</h4>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Application Theme</div><div class="sl-desc">Affects entire UI chrome: sidebar, headers, settings, etc.</div></div>
+            <div class="setting-control"><select class="form-select" data-tooltip="Would switch the entire app between dark and light mode. Dark is default."><option>Dark</option><option>Light</option></select></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Chat Visual Theme</div><div class="sl-desc">Message layout style. Classic (user right, assistant left), Compact (minimal spacing), Bubble (chat bubbles).</div></div>
+            <div class="setting-control"><select class="form-select" data-tooltip="Would change how messages are laid out in the conversation view. Independent of dark/light mode."><option>Classic</option><option>Compact</option><option>Bubble</option></select></div>
+          </div>
+        </div>
+        <div class="setting-group">
+          <h4>Font</h4>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Font Family</div><div class="sl-desc">Font used for chat messages.</div></div>
+            <div class="setting-control"><select class="form-select"><option>System UI</option><option>Segoe UI</option><option>Consolas</option><option>Calibri</option></select></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Font Size</div><div class="sl-desc">Chat message font size (10-24px).</div></div>
+            <div class="setting-control"><input class="form-input" type="number" value="14" min="10" max="24" style="width:80px" data-tooltip="Would change chat message font size. Changes preview in real time below."></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Font Weight</div><div class="sl-desc">Normal or Bold for chat messages.</div></div>
+            <div class="setting-control">
+              <label class="toggle" data-tooltip="Would toggle between Normal and Bold font weight."><input type="checkbox"><span class="toggle-slider"></span></label>
+              <span style="font-size:12px;color:#999;margin-left:8px">Bold</span>
+            </div>
+          </div>
+        </div>
+        <div class="setting-group">
+          <h4>Live Preview</h4>
+          <div class="preview-box">
+            <div class="preview-msg assistant" style="margin-left:0"><strong>Assistant</strong><br>This is how your chat messages will look with the current font settings.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wiki -->
+      <div class="category-content" id="cat-wiki">
+        <h2>📝 Wiki</h2>
+        <div class="setting-group">
+          <h4>Wiki Directory</h4>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Directory</div><div class="sl-desc" style="font-family:monospace;font-size:12px">C:\Users\Amit\Documents\MySecondBrain-Wiki\</div></div>
+            <div class="setting-control"><button class="btn btn-sm" data-tooltip="Would open Windows folder picker to select a new wiki directory.">Change</button></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Indexing Status</div><div class="sl-desc">✓ 47 .md files indexed · Last indexed: 2 min ago</div></div>
+            <div class="setting-control"><button class="btn btn-sm" data-tooltip="Would rebuild the wiki index from all .md files in the wiki directory.">Re-index Now</button></div>
+          </div>
+        </div>
+        <div class="setting-group">
+          <h4>Git Version Control</h4>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Git Repository</div><div class="sl-desc">Auto-commits on file change (debounced ~30s).</div></div>
+            <div class="setting-control"><label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">GitHub Sync</div><div class="sl-desc">✓ Connected to github.com/amit/my-second-brain-wiki</div></div>
+            <div class="setting-control"><button class="btn btn-sm" data-tooltip="Would open GitHub configuration: token, repo name, private toggle.">Configure</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Startup -->
+      <div class="category-content" id="cat-startup">
+        <h2>🚀 Startup</h2>
+        <div class="setting-group">
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Launch on Windows Startup</div><div class="sl-desc">Automatically start MySecondBrain when you log in to Windows.</div></div>
+            <div class="setting-control"><label class="toggle" data-tooltip="Would add/remove the app from Windows startup. When ON, app launches automatically on login."><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Restore Last Session</div><div class="sl-desc">Reopen all chats and tabs from your previous session on launch.</div></div>
+            <div class="setting-control"><label class="toggle" data-tooltip="Would restore all open chats, tabs, and window position from last session. When OFF, opens with a single new chat."><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Minimize to Tray on Close</div><div class="sl-desc">Closing the window minimizes to system tray instead of exiting. Right-click tray icon → Exit to fully close.</div></div>
+            <div class="setting-control"><label class="toggle" data-tooltip="Would change close behavior: X button minimizes to tray. Use tray icon → Exit to fully close the app."><input type="checkbox"><span class="toggle-slider"></span></label></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Placeholder categories (shown when selected) -->
+      <div class="category-content" id="cat-backup"><h2>☁️ Backup</h2><p style="color:#999">Google Cloud Storage backup configuration, schedule, and restore. See features/backup-recovery.md R1-R4.</p></div>
+      <div class="category-content" id="cat-hotkeys"><h2>⌨️ Hotkeys</h2><p style="color:#999">Global hotkey assignments for Text Actions and Command Bar. Same as onboarding wizard Step 4.</p></div>
+      <div class="category-content" id="cat-tools"><h2>🔧 Tools</h2><p style="color:#999">Tool auto-approval defaults (Browser Search, Terminal, File Gen, File Edit) and STT provider configuration.</p></div>
+      <div class="category-content" id="cat-language"><h2>🌐 Language</h2><p style="color:#999">UI language (English, Hebrew) and RTL auto-detection settings.</p></div>
+      <div class="category-content" id="cat-notifications"><h2>🔔 Notifications</h2><p style="color:#999">Sound on completion, disable streaming toggle, cross-tab completion alerts.</p></div>
+      <div class="category-content" id="cat-updates"><h2>🔄 Updates</h2><p style="color:#999">Auto-update check frequency and current version display.</p></div>
+      <div class="category-content" id="cat-pricing"><h2>💰 Pricing</h2><p style="color:#999">Monthly budget limit, warning threshold, and API call blocking when exceeded.</p></div>
+      <div class="category-content" id="cat-security"><h2>🔒 Security</h2><p style="color:#999">API key encryption status, locked chat global password, hide locked chats toggle.</p></div>
+      <div class="category-content" id="cat-maintenance"><h2>🛠️ Maintenance</h2><p style="color:#999">Database file size, Compact Database (VACUUM), reclaimable space.</p></div>
+    </div>
+  </div>
+
+  <div class="tooltip-toast" id="tooltip-toast"></div>
+
+  <script>
+    function showCategory(cat) {
+      document.querySelectorAll('.cat-item').forEach(function(el) { el.classList.remove('active'); });
+      document.querySelector('.cat-item[onclick*="' + cat + '"]').classList.add('active');
+      document.querySelectorAll('.category-content').forEach(function(el) { el.classList.remove('active'); });
+      var target = document.getElementById('cat-' + cat);
+      if (target) target.classList.add('active');
+    }
+
+    function showToast(msg) {
+      var toast = document.getElementById('tooltip-toast');
+      toast.textContent = msg; toast.style.display = 'block';
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(function() { toast.style.display = 'none'; }, 4000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      var toast = document.getElementById('tooltip-toast');
+      document.querySelectorAll('[data-tooltip]:not(a)').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+          e.preventDefault(); e.stopPropagation();
+          toast.textContent = this.getAttribute('data-tooltip');
+          toast.style.display = 'block';
+          clearTimeout(toast._timeout);
+          toast._timeout = setTimeout(function() { toast.style.display = 'none'; }, 4000);
+        });
+      });
+    });
+  </script>
 </body>
 </html>

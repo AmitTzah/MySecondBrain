@@ -6,7 +6,8 @@
     "foundation": ["app-overview.md", "personas.md", "feature-inventory.md"],
     "screens": [
       {"stem": "studio-chat", "status": "confirmed"},
-      {"stem": "onboarding-wizard", "status": "confirmed"}
+      {"stem": "onboarding-wizard", "status": "confirmed"},
+      {"stem": "model-comparison", "status": "confirmed"}
     ],
     "flows": [],
     "edge_cases": false,
@@ -15,17 +16,17 @@
   "planned": {
     "screens": ["studio-chat", "settings", "wiki-browser", "usage-dashboard", "media-library", "global-artifacts-browser", "onboarding-wizard", "model-comparison"],
     "flows": ["first-launch-onboarding", "tier1-hotkey-rewrite", "tier2-command-bar-query", "write-to-wiki", "deep-research", "elevate-transient-to-permanent", "import-chatgpt", "model-comparison-flow"],
-    "features": ["settings-configuration", "model-configurations-personas", "studio-chat-workspace", "message-manipulation-branching", "chat-modes-controls", "artifacts-side-panel", "media-library", "tool-use-agents", "import-export", "prompt-library", "text-actions-three-tier", "chat-organization-search", "model-comparison", "personal-wiki", "data-model-lifecycle", "windows-os-integration", "language-rtl", "backup-recovery", "usage-pricing-dashboard", "nice-to-have-future", "git-wiki-version-control"],
+    "features": ["settings-configuration", "model-configurations-personas", "studio-chat-workspace", "message-manipulation-branching", "chat-modes-controls", "artifacts-side-panel", "media-library", "tool-use-agents", "import-export", "prompt-library", "text-actions-three-tier", "chat-organization-search", "model-comparison", "personal-wiki", "data-model-lifecycle", "windows-os-integration", "language-rtl", "backup-recovery", "usage-pricing-dashboard", "nice-to-have-future", "git-wiki-version-control", "soft-delete-trash"],
     "data_entities": ["chat-thread", "message", "persona", "model-configuration", "api-key", "text-action", "artifact", "media-item", "wiki-file", "prompt-template", "usage-record", "backup-snapshot", "wiki-version-snapshot"]
   },
-  "last_context": "Onboarding wizard screen locked. 2/8 screens confirmed. Next: model-comparison screen.",
+  "last_context": "Model comparison screen confirmed (3/8). Added soft-delete trash (U1-U6), git wiki version control, thinking blocks to studio-chat, ⋯ context menu on sidebar. Next: settings screen.",
   "metrics": {
-    "features_documented": 21,
-    "screens_designed": 2,
+    "features_documented": 22,
+    "screens_designed": 3,
     "data_entities": 13,
     "flows_documented": 0,
-    "flagged_concerns": ["Auto-Summarize context overflow requires separate API call costing tokens", "Text completion APIs being deprecated by some providers", "Artifact generation mechanism needs architectural decision", "Terminal execution security model needs review", "WebSocket server security model needs review", "Global keyboard hooks may trigger antivirus false positives", "VACUUM requires temporary free disk space equal to database size", "Rich text bidirectional text rendering complexity", "Google Cloud Storage dependency for backups", "Locked chat encryption — permanent lockout risk must be communicated", "Git wiki version control — GitHub token storage requires DPAPI encryption, auto-commit debounce must handle rapid successive changes, .git folder in wiki directory adds hidden files users may not expect"]
+    "flagged_concerns": ["Auto-Summarize context overflow requires separate API call costing tokens", "Text completion APIs being deprecated by some providers", "Artifact generation mechanism needs architectural decision", "Terminal execution security model needs review", "WebSocket server security model needs review", "Global keyboard hooks may trigger antivirus false positives", "VACUUM requires temporary free disk space equal to database size", "Rich text bidirectional text rendering complexity", "Google Cloud Storage dependency for backups", "Locked chat encryption — permanent lockout risk must be communicated", "Git wiki version control — GitHub token storage requires DPAPI encryption, auto-commit debounce must handle rapid successive changes", "Model comparison — per-panel multi-turn conversations = N independent API streams. Cost/connection implications.", "Model comparison M spec simplified from original — Accept auto-saves branches, per-panel mini-chats, broadcast toggle"]
   },
   "spawn_count": 2,
-  "last_commit": ""
+  "last_commit": "3861d2d"
 }
