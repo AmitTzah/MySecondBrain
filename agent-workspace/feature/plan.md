@@ -308,7 +308,7 @@ public class AppDbContext : DbContext
 
 ---
 
-### Step 5: Create MySecondBrain.UI WPF Application Project
+### [x] Step 5: Create MySecondBrain.UI WPF Application Project
 
 **What:** Create `src/MySecondBrain.UI/MySecondBrain.UI.csproj` as a WPF application targeting `net8.0-windows10.0.17763.0` with `UseWPF=true` and `UseWindowsForms=true`. Reference CommunityToolkit.Mvvm, LiveCharts2, WeCantSpell.Hunspell, and Autoupdater.NET.Official NuGet packages. Add project references to Core, Data, and Services. Create `App.xaml`/`App.xaml.cs` with DI container scaffolding, `MainWindow.xaml`/`.cs`, `App.manifest` with PerMonitorV2 DPI + supportedOS, and directory structure (`Views/`, `ViewModels/`, `Controls/`, `Themes/`, `Converters/`, `Services/`, `Resources/`). Add to solution.
 
