@@ -5,6 +5,10 @@ public enum ProviderType
     OpenAI,
     Anthropic,
     Google,
+    DeepSeek,
+    MiMo,
+    Moonshot,
+    Mistral,
     OpenAICompatible
 }
 
@@ -64,9 +68,9 @@ public enum WikiFileChangeType
 
 public enum ContextOverflowStrategy
 {
-    TrimOldest,
-    SummarizeMiddle,
-    Error
+    SlidingWindow,
+    AutoSummarize,
+    HardStop
 }
 
 public enum VirtualKey

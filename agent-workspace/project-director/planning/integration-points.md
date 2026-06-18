@@ -348,35 +348,6 @@ Hunspell ─────────────► ISpellCheckService
 LibGit2Sharp ─────────► IWikiGitService
 Serilog Destructuring ─► ApiKeyDestructuringPolicy (IDestructuringPolicy)
 
-```
-External World                            MySecondBrain
-─────────────                            ─────────────
-                                        
-OpenAI API ───────────► ILLMProvider (OpenAIProvider)
-Anthropic API ────────► ILLMProvider (AnthropicProvider)
-Google Gemini ────────► ILLMProvider (GoogleProvider)
-OpenAI-Compatible ────► ILLMProvider (OpenAICompatibleProvider)
-Google GCS ───────────► IBackupProvider (GcsBackupProvider)
-Google/Bing Search ───► ISearchProvider (GoogleCustomSearch / BingSearchProvider)
-GitHub ───────────────► IWikiGitService (LibGit2Sharp)
-Update Feed ──────────► IUpdateChecker (AutoUpdaterDotNet)
-                                        
-Windows DPAPI ─────────► IEncryptionService (ProtectedData)
-AES-256-GCM (.NET) ───► IChatEncryptionService
-Clipboard (.NET) ─────► IClipboardService
-FileSystemWatcher ────► IWikiFileWatcher
-Kestrel ──────────────► ILocalWebSocketServer
-NotifyIcon ───────────► ISystemTrayService
-RegisterHotKey ───────► IGlobalHotkeyService
-UIA/Win32 (TextPattern, ValuePattern, TreeWalker, DocumentRange, PrintWindow/BitBlt) ──► IHwndCaptureService + ITextInjectionService
-SharpToken ───────────► ITokenizer / ITokenizerFactory
-Whisper API/.net ─────► ISTTProvider
-NAudio ───────────────► IAudioService
-AForge.NET ───────────► ICameraService
-MediaElement/VLC ─────► IVideoPlayerService
-Hunspell ─────────────► ISpellCheckService
-LibGit2Sharp ─────────► IWikiGitService
-```
 
 ---
 

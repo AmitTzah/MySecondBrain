@@ -162,14 +162,14 @@ public class UsageRepository : IUsageRepository
         return new UsageRecord
         {
             Id = entity.Id,
-            ChatThreadId = entity.ThreadId,
+            ThreadId = entity.ThreadId,
             MessageId = entity.MessageId,
-            ModelId = entity.ModelIdentifier,
+            ModelIdentifier = entity.ModelIdentifier,
             ProviderType = ParseProviderType(entity.Provider),
             PromptTokens = entity.PromptTokens,
             CompletionTokens = entity.CompletionTokens,
             TotalTokens = entity.TotalTokens,
-            Timestamp = entity.CreatedAt,
+            CreatedAt = entity.CreatedAt,
         };
     }
 
@@ -179,13 +179,13 @@ public class UsageRepository : IUsageRepository
         {
             Id = model.Id,
             MessageId = model.MessageId,
-            ThreadId = model.ChatThreadId,
+            ThreadId = model.ThreadId,
             Provider = model.ProviderType.ToString(),
-            ModelIdentifier = model.ModelId,
+            ModelIdentifier = model.ModelIdentifier,
             PromptTokens = model.PromptTokens,
             CompletionTokens = model.CompletionTokens,
             TotalTokens = model.TotalTokens,
-            CreatedAt = model.Timestamp,
+            CreatedAt = model.CreatedAt,
         };
     }
 
@@ -196,6 +196,10 @@ public class UsageRepository : IUsageRepository
             "OpenAI" => ProviderType.OpenAI,
             "Anthropic" => ProviderType.Anthropic,
             "Google" => ProviderType.Google,
+            "DeepSeek" => ProviderType.DeepSeek,
+            "MiMo" => ProviderType.MiMo,
+            "Moonshot" => ProviderType.Moonshot,
+            "Mistral" => ProviderType.Mistral,
             "OpenAICompatible" => ProviderType.OpenAICompatible,
             _ => ProviderType.OpenAICompatible, // Default for unknown/custom providers
         };

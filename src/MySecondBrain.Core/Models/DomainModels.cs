@@ -24,32 +24,42 @@ public class Message
     public string ThreadId { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
-    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
+    public string? RawContent { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public string? ModelName { get; set; }
     public string? BranchId { get; set; }
     public string? ParentMessageId { get; set; }
-    public bool IsActiveBranch { get; set; }
+    public int VersionNumber { get; set; } = 1;
+    public bool IsActiveBranch { get; set; } = true;
+    public bool? IsDirectTransformation { get; set; }
+    public string? Feedback { get; set; }
+    public decimal? EstimatedCost { get; set; }
+    public long? GenerationTimeMs { get; set; }
 }
 
 public class Persona
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
-    public string Name { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
     public string? SystemPrompt { get; set; }
-    public bool IsDefault { get; set; }
+    public bool IsBuiltIn { get; set; }
 }
 
 public class ModelConfiguration
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
-    public string Name { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
     public ProviderType ProviderType { get; set; }
-    public string ModelId { get; set; } = string.Empty;
+    public string ModelIdentifier { get; set; } = string.Empty;
     public string? EndpointUrl { get; set; }
-    public double Temperature { get; set; } = 0.7;
-    public int MaxTokens { get; set; } = 4096;
+    public double Temperature { get; set; } = 1.0;
+    public int MaxOutputTokens { get; set; } = 4096;
+    public int MaxContextWindow { get; set; } = 128000;
     public bool ThinkingEnabled { get; set; }
     public int? ThinkingTokens { get; set; }
+    public decimal? PricingInputPer1K { get; set; }
+    public decimal? PricingOutputPer1K { get; set; }
+    public string ContextOverflowStrategy { get; set; } = "SlidingWindow";
 }
 
 public class ApiKey
@@ -81,14 +91,14 @@ public class WikiVersionSnapshot
 public class UsageRecord
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
-    public string ChatThreadId { get; set; } = string.Empty;
+    public string ThreadId { get; set; } = string.Empty;
     public string MessageId { get; set; } = string.Empty;
-    public string ModelId { get; set; } = string.Empty;
+    public string ModelIdentifier { get; set; } = string.Empty;
     public ProviderType ProviderType { get; set; }
     public int PromptTokens { get; set; }
     public int CompletionTokens { get; set; }
     public int TotalTokens { get; set; }
-    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
 /// <summary>

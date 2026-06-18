@@ -155,10 +155,16 @@ public class MessageRepository : IMessageRepository
             ThreadId = entity.ThreadId,
             Role = entity.Role,
             Content = entity.Content,
-            Timestamp = entity.CreatedAt,
+            RawContent = entity.RawContent,
+            CreatedAt = entity.CreatedAt,
             BranchId = entity.BranchId,
             ParentMessageId = entity.ParentMessageId,
+            VersionNumber = entity.VersionNumber,
             IsActiveBranch = entity.IsActiveBranch,
+            IsDirectTransformation = entity.IsDirectTransformation,
+            Feedback = entity.Feedback,
+            EstimatedCost = entity.EstimatedCost,
+            GenerationTimeMs = entity.GenerationTimeMs,
         };
     }
 
@@ -170,10 +176,16 @@ public class MessageRepository : IMessageRepository
             ThreadId = model.ThreadId,
             Role = model.Role,
             Content = model.Content,
-            CreatedAt = model.Timestamp,
+            RawContent = model.RawContent,
+            CreatedAt = model.CreatedAt,
             BranchId = model.BranchId ?? Guid.NewGuid().ToString("N"),
             ParentMessageId = model.ParentMessageId,
+            VersionNumber = model.VersionNumber,
             IsActiveBranch = model.IsActiveBranch,
+            IsDirectTransformation = model.IsDirectTransformation,
+            Feedback = model.Feedback,
+            EstimatedCost = model.EstimatedCost,
+            GenerationTimeMs = model.GenerationTimeMs,
         };
     }
 }

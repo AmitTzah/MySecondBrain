@@ -88,7 +88,7 @@ All entities are defined in `MySecondBrain.Data/Entities/` as EF Core entity cla
 | # | Entity | PK | FK Relationships | Notes |
 |---|--------|----|-----------------|-------|
 | 1 | `ApiKey` | `Id` (string GUID) | ← referenced by `ModelConfiguration.ApiKeyId` | CreatedAt timestamp. KeyValue stored encrypted (encryption is service-layer). |
-| 2 | `AppSetting` | `Key` (string, MaxLength 200) | — (standalone key-value) | Backs `SettingsRepository`. Value column holds plain strings or JSON-serialized objects. |
+| 2 | `AppSetting` | `Key` (string, MaxLength 256) | — (standalone key-value) | Backs `SettingsRepository`. Value column holds plain strings or JSON-serialized objects. |
 | 3 | `Artifact` | `Id` (string GUID) | `ThreadId` → `ChatThread.Id` (required, Cascade) | CreatedAt, UpdatedAt timestamps. |
 | 4 | `ChatThread` | `Id` (string GUID) | `PersonaId` → `Persona.Id` (optional, SetNull); `ModelConfigId` → `ModelConfiguration.Id` (optional, SetNull) | 25 properties. Soft-delete via `IsDeleted` + `DeletedAt`. `IsTransient` for auto-cleanup. |
 | 5 | `MediaItem` | `Id` (string GUID) | `ThreadId` → `ChatThread.Id` (required, Cascade); `MessageId` → `Message.Id` (optional, SetNull) | Soft-delete via `IsDeleted` + `DeletedAt`. |

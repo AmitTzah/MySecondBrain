@@ -1365,10 +1365,10 @@ public class DataLayerTests
         using (connection)
         {
             var repo = new PersonaRepository(db);
-            var persona = new CoreModels.Persona { Name = "Test Persona", SystemPrompt = "You are a test." };
+            var persona = new CoreModels.Persona { DisplayName = "Test Persona", SystemPrompt = "You are a test." };
             var result = await repo.CreateAsync(persona);
             Assert.NotNull(result);
-            Assert.Equal("Test Persona", result.Name);
+            Assert.Equal("Test Persona", result.DisplayName);
             Assert.Equal("You are a test.", result.SystemPrompt);
             Assert.NotEmpty(result.Id);
         }
@@ -1382,10 +1382,10 @@ public class DataLayerTests
         using (connection)
         {
             var repo = new PersonaRepository(db);
-            var created = await repo.CreateAsync(new CoreModels.Persona { Name = "Find Me" });
+            var created = await repo.CreateAsync(new CoreModels.Persona { DisplayName = "Find Me" });
             var found = await repo.GetByIdAsync(created.Id);
             Assert.NotNull(found);
-            Assert.Equal("Find Me", found!.Name);
+            Assert.Equal("Find Me", found!.DisplayName);
         }
     }
 
@@ -1409,8 +1409,8 @@ public class DataLayerTests
         using (connection)
         {
             var repo = new PersonaRepository(db);
-            await repo.CreateAsync(new CoreModels.Persona { Name = "A" });
-            await repo.CreateAsync(new CoreModels.Persona { Name = "B" });
+            await repo.CreateAsync(new CoreModels.Persona { DisplayName = "A" });
+            await repo.CreateAsync(new CoreModels.Persona { DisplayName = "B" });
             var results = await repo.GetAllAsync();
             Assert.Equal(4, results.Count); // 2 seed personas + 2 created
         }
@@ -1427,15 +1427,15 @@ public class DataLayerTests
             // Seed data has 2 built-in personas; ordered by Id, "General Assistant" (000...01) comes first
             var defaultPersona = await repo.GetDefaultAsync();
             Assert.NotNull(defaultPersona);
-            Assert.True(defaultPersona!.IsDefault);
+            Assert.True(defaultPersona!.IsBuiltIn);
             Assert.Equal("00000000000000000000000000000001", defaultPersona.Id);
-            Assert.Equal("General Assistant", defaultPersona.Name);
+            Assert.Equal("General Assistant", defaultPersona.DisplayName);
 
             // Add a non-default persona and verify built-in is still returned as default
-            await repo.CreateAsync(new CoreModels.Persona { Name = "Custom", IsDefault = false });
+            await repo.CreateAsync(new CoreModels.Persona { DisplayName = "Custom", IsBuiltIn = false });
             var stillDefault = await repo.GetDefaultAsync();
             Assert.NotNull(stillDefault);
-            Assert.True(stillDefault!.IsDefault);
+            Assert.True(stillDefault!.IsBuiltIn);
             Assert.Equal("00000000000000000000000000000001", stillDefault.Id);
         }
     }
@@ -1453,11 +1453,11 @@ public class DataLayerTests
             await db.SaveChangesAsync();
 
             var repo = new PersonaRepository(db);
-            var created = await repo.CreateAsync(new CoreModels.Persona { Name = "Only Persona", IsDefault = false });
+            var created = await repo.CreateAsync(new CoreModels.Persona { DisplayName = "Only Persona", IsBuiltIn = false });
             var defaultPersona = await repo.GetDefaultAsync();
             Assert.NotNull(defaultPersona);
             Assert.Equal(created.Id, defaultPersona!.Id);
-            Assert.Equal("Only Persona", defaultPersona.Name);
+            Assert.Equal("Only Persona", defaultPersona.DisplayName);
         }
     }
 
@@ -1469,11 +1469,11 @@ public class DataLayerTests
         using (connection)
         {
             var repo = new PersonaRepository(db);
-            var created = await repo.CreateAsync(new CoreModels.Persona { Name = "Original" });
-            created.Name = "Updated";
+            var created = await repo.CreateAsync(new CoreModels.Persona { DisplayName = "Original" });
+            created.DisplayName = "Updated";
             await repo.UpdateAsync(created);
             var updated = await repo.GetByIdAsync(created.Id);
-            Assert.Equal("Updated", updated!.Name);
+            Assert.Equal("Updated", updated!.DisplayName);
         }
     }
 
@@ -1485,7 +1485,7 @@ public class DataLayerTests
         using (connection)
         {
             var repo = new PersonaRepository(db);
-            var created = await repo.CreateAsync(new CoreModels.Persona { Name = "To Delete" });
+            var created = await repo.CreateAsync(new CoreModels.Persona { DisplayName = "To Delete" });
             await repo.DeleteAsync(created.Id);
             Assert.Null(await repo.GetByIdAsync(created.Id));
         }
@@ -1501,17 +1501,17 @@ public class DataLayerTests
             var repo = new ModelConfigurationRepository(db);
             var config = new CoreModels.ModelConfiguration
             {
-                Name = "GPT-4o",
+                DisplayName = "GPT-4o",
                 ProviderType = CoreModels.ProviderType.OpenAI,
-                ModelId = "gpt-4o",
+                ModelIdentifier = "gpt-4o",
                 Temperature = 0.8,
-                MaxTokens = 8192
+                MaxOutputTokens = 8192
             };
             var result = await repo.CreateAsync(config);
             Assert.NotNull(result);
-            Assert.Equal("GPT-4o", result.Name);
+            Assert.Equal("GPT-4o", result.DisplayName);
             Assert.Equal(CoreModels.ProviderType.OpenAI, result.ProviderType);
-            Assert.Equal("gpt-4o", result.ModelId);
+            Assert.Equal("gpt-4o", result.ModelIdentifier);
             Assert.NotEmpty(result.Id);
         }
     }
@@ -1526,13 +1526,13 @@ public class DataLayerTests
             var repo = new ModelConfigurationRepository(db);
             var created = await repo.CreateAsync(new CoreModels.ModelConfiguration
             {
-                Name = "Claude Sonnet",
+                DisplayName = "Claude Sonnet",
                 ProviderType = CoreModels.ProviderType.Anthropic,
-                ModelId = "claude-sonnet-4-20250514"
+                ModelIdentifier = "claude-sonnet-4-20250514"
             });
             var found = await repo.GetByIdAsync(created.Id);
             Assert.NotNull(found);
-            Assert.Equal("Claude Sonnet", found!.Name);
+            Assert.Equal("Claude Sonnet", found!.DisplayName);
             Assert.Equal(CoreModels.ProviderType.Anthropic, found.ProviderType);
         }
     }
@@ -1580,9 +1580,9 @@ public class DataLayerTests
             var repo = new ModelConfigurationRepository(db);
             var created = await repo.CreateAsync(new CoreModels.ModelConfiguration
             {
-                Name = "Unreferenced Config",
+                DisplayName = "Unreferenced Config",
                 ProviderType = CoreModels.ProviderType.OpenAI,
-                ModelId = "gpt-4o"
+                ModelIdentifier = "gpt-4o"
             });
             // Should not throw
             await repo.DeleteAsync(created.Id);
@@ -1600,11 +1600,11 @@ public class DataLayerTests
             var repo = new ModelConfigurationRepository(db);
             await repo.CreateAsync(new CoreModels.ModelConfiguration
             {
-                Name = "GPT-4o", ProviderType = CoreModels.ProviderType.OpenAI, ModelId = "gpt-4o"
+                DisplayName = "GPT-4o", ProviderType = CoreModels.ProviderType.OpenAI, ModelIdentifier = "gpt-4o"
             });
             await repo.CreateAsync(new CoreModels.ModelConfiguration
             {
-                Name = "Claude", ProviderType = CoreModels.ProviderType.Anthropic, ModelId = "claude-3"
+                DisplayName = "Claude", ProviderType = CoreModels.ProviderType.Anthropic, ModelIdentifier = "claude-3"
             });
             var results = await repo.GetAllAsync();
             Assert.Equal(2, results.Count);
@@ -1633,28 +1633,28 @@ public class DataLayerTests
             var repo = new ModelConfigurationRepository(db);
             var created = await repo.CreateAsync(new CoreModels.ModelConfiguration
             {
-                Name = "Original Config",
+                DisplayName = "Original Config",
                 ProviderType = CoreModels.ProviderType.Google,
-                ModelId = "gemini-pro",
+                ModelIdentifier = "gemini-pro",
                 Temperature = 0.5,
-                MaxTokens = 2048,
+                MaxOutputTokens = 2048,
                 ThinkingEnabled = false,
                 ThinkingTokens = 64000
             });
-            created.Name = "Updated Config";
+            created.DisplayName = "Updated Config";
             created.ProviderType = CoreModels.ProviderType.Anthropic;
-            created.ModelId = "claude-3-opus";
+            created.ModelIdentifier = "claude-3-opus";
             created.Temperature = 0.9;
-            created.MaxTokens = 8192;
+            created.MaxOutputTokens = 8192;
             created.ThinkingEnabled = true;
             created.ThinkingTokens = 32000;
             await repo.UpdateAsync(created);
             var updated = await repo.GetByIdAsync(created.Id);
-            Assert.Equal("Updated Config", updated!.Name);
+            Assert.Equal("Updated Config", updated!.DisplayName);
             Assert.Equal(CoreModels.ProviderType.Anthropic, updated.ProviderType);
-            Assert.Equal("claude-3-opus", updated.ModelId);
+            Assert.Equal("claude-3-opus", updated.ModelIdentifier);
             Assert.Equal(0.9, updated.Temperature);
-            Assert.Equal(8192, updated.MaxTokens);
+            Assert.Equal(8192, updated.MaxOutputTokens);
             Assert.True(updated.ThinkingEnabled);
             Assert.Equal(32000, updated.ThinkingTokens);
         }
@@ -2472,14 +2472,14 @@ public class DataLayerTests
             var record = new CoreModels.UsageRecord
             {
                 Id = Guid.NewGuid().ToString("N"),
-                ChatThreadId = "thread-1",
+                ThreadId = "thread-1",
                 MessageId = "msg-1",
-                ModelId = "gpt-4o",
+                ModelIdentifier = "gpt-4o",
                 ProviderType = CoreModels.ProviderType.OpenAI,
                 PromptTokens = 100,
                 CompletionTokens = 50,
                 TotalTokens = 150,
-                Timestamp = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow
             };
             await repo.RecordUsageAsync(record);
 
@@ -2535,8 +2535,8 @@ public class DataLayerTests
             var repo = new UsageRepository(db);
             var results = await repo.GetUsageAsync(now.AddDays(-4), now);
             Assert.Equal(2, results.Count);
-            Assert.Contains(results, r => r.ModelId == "claude-3");
-            Assert.Contains(results, r => r.ModelId == "gemini-pro");
+            Assert.Contains(results, r => r.ModelIdentifier == "claude-3");
+            Assert.Contains(results, r => r.ModelIdentifier == "gemini-pro");
         }
     }
 

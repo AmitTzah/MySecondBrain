@@ -55,5 +55,5 @@ public class LLMProviderService : ILLMProviderService
         IReadOnlyList<ChatMessage> history,
         string newMessage,
         ModelConfiguration config) =>
-        new(false, 0, config.MaxTokens, 0, ContextOverflowStrategy.Error);
+        new(false, 0, config.MaxOutputTokens, 0, ContextOverflowStrategy.HardStop);
 }

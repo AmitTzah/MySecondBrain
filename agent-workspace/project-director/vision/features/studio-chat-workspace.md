@@ -322,11 +322,6 @@ The right panel contains two vertically stacked resizable sections (no tabs):
 - **Resizable Divider:** Drag to resize relative heights of the two sections.
 - **Bottom: Chat Navigation (D6).** Collapsible section header "🧭 Chat Navigation". Scrollable message list. "★ Favorited only" filter. Active message highlighted.
 - Both sections independently collapsible. Entire right panel collapsible via toggle in chat header.
-- **Indicator:** When AI generation completes on an inactive tab (user is viewing a different tab), the inactive tab shows a pulsing green dot or checkmark
-- **Sound:** Plays notification sound (A4) regardless of active tab
-- **Tab Bar:** Tab title briefly changes to "[Title] ✓" for 5 seconds after completion
-- **Configuration:** Settings → Notifications → "Alert when generation completes on inactive tab" toggle. Default: enabled.
-- **Multiple Completions:** If multiple inactive tabs complete, each shows the indicator independently
 
 ## Data
 - [`data/chat-thread.md`](data/chat-thread.md) — C30: isTransient flag, C31: encryption metadata

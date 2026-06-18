@@ -133,7 +133,7 @@ public class ChatThreadRepository : IChatThreadRepository
         var allExceptions = await _db.ChatThreads
             .Where(t => t.IsTransient)
             .Where(t => t.IsFavorite || t.Tags != null || t.IsPinned || t.IsArchived
-                || t.Messages.Any(m => m.Role == "User" && m.VersionNumber == 1)
+                || t.Messages.Any(m => m.Role == "User" && m.ParentMessageId != null)
                 || t.Artifacts.Any())
             .ToListAsync();
 

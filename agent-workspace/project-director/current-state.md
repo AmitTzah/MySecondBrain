@@ -5,7 +5,7 @@
 - **Feature 1:** .NET 8.0 WPF solution scaffold — 7-project layered architecture, 15 OSS NuGet packages, MSIX, GitHub Actions CI/CD
 - **Feature 2:** Dependency Injection container — 76+ registrations, 42+ interfaces, all provider stubs, 8 DI tests
 - **Feature 3:** Logging infrastructure — Serilog with rolling file sink (%LOCALAPPDATA%\MySecondBrain\logs\), JSON structured output, console sink (debug), thread/machine enrichment
-- **Feature 4:** Data layer — 14 entities (13 vision + MessageDrafts + AppSetting), AppDbContext with SQLite + FTS5, 8 real repository implementations, InitialCreate migration with auto-migrate at startup, 104 data layer tests
+- **Feature 4:** Data layer — 14 entities currently implemented (13 vision entities minus BackupSnapshot which is deferred to Feature 17 + MessageDrafts + AppSetting), AppDbContext with SQLite + FTS5, 8 real repository implementations, InitialCreate migration with auto-migrate at startup, 104 data layer tests
 
 ## 2. UI Map
 

@@ -52,9 +52,9 @@ public class PersonaRepository : IPersonaRepository
         var entity = await _db.Personas.FindAsync(persona.Id);
         if (entity is null) return;
 
-        entity.DisplayName = persona.Name;
+        entity.DisplayName = persona.DisplayName;
         entity.SystemPrompt = persona.SystemPrompt;
-        entity.IsBuiltIn = persona.IsDefault;
+        entity.IsBuiltIn = persona.IsBuiltIn;
         entity.UpdatedAt = DateTimeOffset.UtcNow;
 
         _db.Entry(entity).State = EntityState.Modified;
@@ -77,9 +77,9 @@ public class PersonaRepository : IPersonaRepository
         return new Persona
         {
             Id = entity.Id,
-            Name = entity.DisplayName,
+            DisplayName = entity.DisplayName,
             SystemPrompt = entity.SystemPrompt,
-            IsDefault = entity.IsBuiltIn,
+            IsBuiltIn = entity.IsBuiltIn,
         };
     }
 
@@ -88,9 +88,9 @@ public class PersonaRepository : IPersonaRepository
         return new Entities.Persona
         {
             Id = model.Id,
-            DisplayName = model.Name,
+            DisplayName = model.DisplayName,
             SystemPrompt = model.SystemPrompt,
-            IsBuiltIn = model.IsDefault,
+            IsBuiltIn = model.IsBuiltIn,
         };
     }
 }

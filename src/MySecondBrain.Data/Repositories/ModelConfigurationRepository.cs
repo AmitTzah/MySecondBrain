@@ -41,13 +41,16 @@ public class ModelConfigurationRepository : IModelConfigurationRepository
         var entity = await _db.ModelConfigurations.FindAsync(config.Id);
         if (entity is null) return;
 
-        entity.DisplayName = config.Name;
+        entity.DisplayName = config.DisplayName;
         entity.Provider = config.ProviderType.ToString();
-        entity.ModelIdentifier = config.ModelId;
+        entity.ModelIdentifier = config.ModelIdentifier;
         entity.Temperature = config.Temperature;
-        entity.MaxOutputTokens = config.MaxTokens;
+        entity.MaxOutputTokens = config.MaxOutputTokens;
+        entity.MaxContextWindow = config.ThinkingTokens ?? config.MaxContextWindow;
         entity.ThinkingEnabled = config.ThinkingEnabled;
-        entity.MaxContextWindow = config.ThinkingTokens ?? entity.MaxContextWindow;
+        entity.PricingInputPer1K = config.PricingInputPer1K;
+        entity.PricingOutputPer1K = config.PricingOutputPer1K;
+        entity.ContextOverflowStrategy = config.ContextOverflowStrategy;
         entity.UpdatedAt = DateTimeOffset.UtcNow;
 
         _db.Entry(entity).State = EntityState.Modified;
@@ -78,13 +81,17 @@ public class ModelConfigurationRepository : IModelConfigurationRepository
         return new ModelConfiguration
         {
             Id = entity.Id,
-            Name = entity.DisplayName,
+            DisplayName = entity.DisplayName,
             ProviderType = Enum.TryParse<ProviderType>(entity.Provider, out var pt) ? pt : ProviderType.OpenAI,
-            ModelId = entity.ModelIdentifier ?? string.Empty,
+            ModelIdentifier = entity.ModelIdentifier ?? string.Empty,
             Temperature = entity.Temperature,
-            MaxTokens = entity.MaxOutputTokens,
+            MaxOutputTokens = entity.MaxOutputTokens,
+            MaxContextWindow = entity.MaxContextWindow,
             ThinkingEnabled = entity.ThinkingEnabled,
             ThinkingTokens = entity.MaxContextWindow,
+            PricingInputPer1K = entity.PricingInputPer1K,
+            PricingOutputPer1K = entity.PricingOutputPer1K,
+            ContextOverflowStrategy = entity.ContextOverflowStrategy,
         };
     }
 
@@ -93,13 +100,16 @@ public class ModelConfigurationRepository : IModelConfigurationRepository
         return new Entities.ModelConfiguration
         {
             Id = model.Id,
-            DisplayName = model.Name,
+            DisplayName = model.DisplayName,
             Provider = model.ProviderType.ToString(),
-            ModelIdentifier = model.ModelId,
+            ModelIdentifier = model.ModelIdentifier,
             Temperature = model.Temperature,
-            MaxOutputTokens = model.MaxTokens,
+            MaxOutputTokens = model.MaxOutputTokens,
+            MaxContextWindow = model.ThinkingTokens ?? model.MaxContextWindow,
             ThinkingEnabled = model.ThinkingEnabled,
-            MaxContextWindow = model.ThinkingTokens ?? 128000,
+            PricingInputPer1K = model.PricingInputPer1K,
+            PricingOutputPer1K = model.PricingOutputPer1K,
+            ContextOverflowStrategy = model.ContextOverflowStrategy,
         };
     }
 }
