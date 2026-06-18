@@ -216,99 +216,141 @@
     </phase>
 
     <phase name="verification_gate">
-      <description>Verify the changes — either via automated smoke test (synthetic-human-tester) or manual user testing. Do NOT call attempt_completion until verification passes.</description>
+      <description>Verify the changes. Code mode first self-verifies everything it can programmatically. SHT or human verification is only escalated for GUI interactions that require human-like perception — never for CLI output, build results, or anything verifiable in the terminal.</description>
+
       <critical_rule priority="highest">
         You have completed: implement → write tests → all automated tests → refactor → all automated tests → QA review → fix → all automated tests.
-        All code-level quality checks are done. Now the changes must be verified against a running application.
+        All code-level quality checks are done. Now determine what needs live verification.
 
-        If smoke_test_automation is enabled (flag = true in your prompt): compile a structured test plan and spawn a synthetic-human-tester subtask to perform automated live smoke tests. This is automatic — do NOT ask the user for consent.
-
-        If smoke_test_automation is disabled (flag = false): proceed directly to manual verification — ask the user to test.
-
-        If smoke_test_automation is NOT specified (flag absent): ask the user whether they want automated smoke testing or manual verification. This is a one-time ask per session.
+        VERIFICATION PHILOSOPHY: You self-verify everything you can. A human (or SHT) is only needed for GUI interactions that require visual perception — things you cannot verify by reading terminal output or checking exit codes. CLI output, build results, .exe launch success, integration test results — you verify these yourself. Do NOT bother the user or spawn SHT for things you can verify in the terminal.
 
         Do NOT ask the user to review code changes — the QA subtask already reviewed every file.
-        The user verifies functional behavior, not code correctness.
+        The user only verifies GUI behavior that cannot be verified programmatically.
       </critical_rule>
 
-      <smoke_test_automation_check priority="high">
+      <self_verification_tier priority="high">
         <description>
-          Before asking the user to manually verify, check whether smoke_test_automation is available.
-          This flag is provided in your prompt. If absent, ask the user once whether to enable it.
+          Before considering SHT or human verification, exhaust what you can verify yourself.
+          You have full command access — use it. Do NOT skip to escalation without attempting self-verification first.
         </description>
+
+        <verification_capabilities>
+          <capability name="build_and_launch">
+            <description>You can build the project and launch the resulting binary/executable. This verifies: compilation succeeds, the application starts without crash, the main window/entry point is reachable.</description>
+            <for_desktop_apps>
+              <step>Run the build command (e.g., dotnet build, msbuild, cargo build). Verify exit code 0.</step>
+              <step>Launch the .exe / binary. Verify the process starts and stays alive for several seconds (no immediate crash).</step>
+              <step>If the app has a visible window: verify the window appears (process running, no crash dump). This confirms basic launch integrity.</step>
+              <step>Kill the process after verification.</step>
+            </for_desktop_apps>
+            <for_web_apps>
+              <step>Run the build command. Verify exit code 0.</step>
+              <step>Start the dev server in background. Send an HTTP request to the base URL. Verify HTTP 200 response.</step>
+            </for_web_apps>
+          </capability>
+
+          <capability name="integration_tests">
+            <description>Run integration tests that exercise the full stack. These verify: database connectivity, API endpoints, service wiring, real file I/O.</description>
+            <step>Run integration test suite (e.g., dotnet test --filter Category=Integration). Verify all pass.</step>
+          </capability>
+
+          <capability name="cli_verification">
+            <description>If the project has a CLI component: run the CLI commands that exercise the changed functionality. Verify exit codes and output directly.</description>
+            <step>Construct and run the CLI command(s) that exercise the changes. Verify exit code 0 and expected output.</step>
+            <step>CLI output is self-verifiable — you read stdout/stderr and check against expectations. Never escalate CLI verification to SHT or human.</step>
+          </capability>
+        </verification_capabilities>
+
+        <self_verification_result>
+          <description>After self-verification, compile a summary of what was verified and what remains unverified.</description>
+          <field name="self_verified">List of capabilities you verified and their results (build: ✅, launch: ✅, integration tests: ✅, CLI: ✅)</field>
+          <field name="unverified">List of GUI interactions that you CANNOT verify yourself: click flows through dialogs, visual layout correctness, drag-and-drop, multi-window workflows, animations, responsive behavior</field>
+        </self_verification_result>
+      </self_verification_tier>
+
+      <classification priority="high">
+        <description>Based on the self-verification result, determine whether escalation is needed.</description>
         <decision_tree>
-          <branch condition="smoke_test_automation.enabled is true AND smoke_test_automation.environments is non-empty">
-            <action>Proceed to automated_smoke_test branch below — compile test plan and spawn synthetic-human-tester.</action>
+          <branch condition="unverified list is EMPTY — everything was self-verified">
+            <action>All changes have been verified programmatically. No GUI interactions need human/SHT verification.</action>
+            <action>Proceed directly to user_confirms_works branch below — run final automated tests and call attempt_completion. Do NOT ask the user to test. Do NOT spawn SHT.</action>
           </branch>
-          <branch condition="smoke_test_automation flag is FALSE">
-            <action>Skip automated smoke testing. Proceed to manual verification steps below.</action>
-          </branch>
-          <branch condition="smoke_test_automation flag is ABSENT (not provided by caller)">
-            <action>Use ask_followup_question: "All automated tests pass. Would you like me to run automated live smoke tests (via synthetic-human-tester), or would you prefer to test manually?" Options:
-              1. "Run automated smoke tests"
-              2. "I'll test manually"
-            </action>
-            <action>If user selects "Run automated smoke tests": proceed to automated_smoke_test branch below. Set an internal flag so you don't re-ask for this session.</action>
-            <action>If user selects "I'll test manually": proceed to manual verification steps below.</action>
+          <branch condition="unverified list is NON-EMPTY — GUI interactions need verification">
+            <action>GUI interactions remain that you cannot verify yourself (click flows, visual layout, dialogs, etc.). These require escalation.</action>
+            <action>Proceed to the escalation_tier below.</action>
           </branch>
         </decision_tree>
-      </smoke_test_automation_check>
+      </classification>
+
+      <escalation_tier>
+        <description>
+          GUI verification is needed. Check whether smoke_test_automation is available for automated GUI testing via SHT.
+          SHT only tests GUI environments (web, desktop, native) — CLI is never an SHT environment.
+        </description>
+
+        <decision_tree>
+          <branch condition="smoke_test_automation.enabled is true AND smoke_test_automation.environments has at least one GUI environment (web, desktop, or native configured)">
+            <action>Proceed to automated_smoke_test branch below — compile a GUI-only test plan and spawn synthetic-human-tester.</action>
+          </branch>
+          <branch condition="smoke_test_automation is disabled or absent, OR smoke_test_automation.enabled is true but zero GUI environments are configured">
+            <action>Proceed to manual verification — ask the user to test ONLY the unverified GUI interactions. Do NOT ask them to verify things you already verified yourself.</action>
+            <action>If smoke_test_automation flag is ABSENT: use ask_followup_question once: "I've verified everything I can (build, launch, integration tests, CLI). The remaining items need GUI testing. Would you like automated GUI smoke testing via synthetic-human-tester for future sessions?" Options: 1. "Yes — set up automated GUI smoke testing", 2. "No — I'll test GUI manually." If option 1: guide through setup, store in agent-workspace/testing-environments.json. If option 2: proceed to manual verification steps below.</action>
+          </branch>
+        </decision_tree>
+      </escalation_tier>
 
       <branch name="automated_smoke_test">
-        <trigger>smoke_test_automation is enabled (flag = true, or user opted in)</trigger>
+        <trigger>smoke_test_automation is enabled AND at least one GUI environment (web, desktop, native) is configured</trigger>
         <detail>
-          Compile a structured test plan from the changes made, spawn a synthetic-human-tester subtask,
-          and evaluate the results. This replaces the manual verification step.
+          Compile a GUI-only test plan from the unverified items, spawn a synthetic-human-tester subtask,
+          and evaluate the results. SHT tests GUI applications — it does NOT test CLI tools or terminal output.
         </detail>
         <steps>
           <step number="1">
             <title>Summarize what was accomplished</title>
-            <action>Summarize: what was implemented/changed, which files were modified, automated test results. Do NOT include QA findings.</action>
+            <action>Summarize: what was implemented/changed, which files were modified, self-verification results. Do NOT include QA findings.</action>
           </step>
           <step number="2">
-            <title>Compile the smoke test plan</title>
+            <title>Compile the GUI smoke test plan</title>
             <action priority="critical">
-              From the changes made, construct a Gherkin-style test plan that verifies the new/modified
-              functionality works correctly in a running application. Steps use Given/When/Then format
-              tagged by environment (web, cli, native).
+              From the unverified GUI interactions, construct a Gherkin-style test plan that verifies the GUI behavior.
+              Steps use Given/When/Then format tagged by environment (web, desktop, native).
+
+              ONLY include steps for GUI interactions you CANNOT verify yourself. Skip anything you already verified
+              in the self-verification tier (build, launch, integration tests, CLI output).
 
               Derive test steps from:
+              - The unverified GUI interactions from your self_verification_result
               - The acceptance criteria or requirements from the user's request
-              - The Live Smoke Test instructions from the plan step (if provided in the implementation plan)
-              - The specific UI elements, CLI commands, desktop interactions, or API endpoints that were changed
-              - Any verification steps included in the prompt
+              - The Live Smoke Test instructions from the plan step (if provided)
 
               Each step must be concrete and testable: "I click the 'Save' button" not "I test the save feature."
 
               Tag each step with the environment that matches the interaction type:
               - Web UI (navigate, click, fill forms) → environment: web
-              - CLI (run commands, verify exit codes) → environment: cli
-              - Desktop (launch app, click menus, verify window titles) → environment: desktop
+              - Desktop (launch app, click menus, verify window titles, dialogs) → environment: desktop
               - Mobile/native (app interactions) → environment: native
-              Derive the environment tag from the changed files and the smoke test description. SHT will detect the appropriate MCP at runtime.
+              Do NOT tag anything as environment: cli — SHT does not test CLI.
             </action>
           </step>
           <step number="3">
             <title>Determine the environment configuration</title>
             <action>
-              If an environments block is provided in the prompt, use it directly.
-              If no environments block is provided, construct one from the project context:
-              - web: check package.json "proxy" field → check .env / .env.local for PORT → check vite.config.ts server.port → check next.config.js → check webpack devServer config. If none found, ask the user for the base_url (combine with the smoke test opt-in question if the user hasn't been asked yet).
-              - cli: check package.json "scripts" for test/lint/build commands → check Makefile targets → check the project's primary binary. If unclear, ask the user.
-              - native: not applicable unless the user indicates a native app — skip.
-              - desktop: not applicable unless the user indicates a desktop app — skip.
+              Use the environments block from the smoke_test_automation config provided in your prompt.
+              Pass through all fields (base_url, executable_path, window_title, app_id, auth, mcp_available, etc.) to SHT unchanged.
+              Only include environments that have configured values AND match the test plan steps.
             </action>
           </step>
           <step number="4">
             <title>Spawn synthetic-human-tester subtask</title>
             <action>
               Spawn a synthetic-human-tester subtask via new_task. The prompt MUST include:
-              - environments: { web: { base_url, auth? }, cli: { binary, working_dir? }, native: { app_id? } }
-              - test_plan: array of { environment, given?, when, then } steps
+              - environments: { web: { base_url, auth? }, desktop: { executable_path, window_title?, launch_args? }, native: { app_id?, appium_endpoint? } }
+              - test_plan: array of { environment, given?, when, then } steps (GUI-only, no CLI steps)
               - options: { timeout_seconds, stop_on_first_failure } (optional)
 
-              This is automatic — do NOT ask the user for consent. Synthetic-human-tester is the
-              automated replacement for the manual verification gate.
+              This is automatic — do NOT ask the user for consent. SHT is the automated replacement
+              for manual GUI verification only.
             </action>
           </step>
           <step number="5">
@@ -320,20 +362,19 @@
             <subtask_failure_check priority="high">
               <description>
                 Before evaluating the report content, verify the subtask completed successfully
-                and returned a valid structured report. Synthetic-human-tester can crash, time out,
-                or return malformed output.
+                and returned a valid structured report.
               </description>
               <decision_tree>
                 <branch condition="Subtask failed to start, crashed, or timed out">
-                  <action>Use ask_followup_question: "Automated smoke testing could not complete — the synthetic-human-tester subtask [failed to start/crashed/timed out]. How would you like to proceed?" Options:
-                    1. "I'll test manually"
-                    2. "Skip verification for now"
+                  <action>Use ask_followup_question: "Automated GUI smoke testing could not complete — the synthetic-human-tester subtask [failed to start/crashed/timed out]. How would you like to proceed?" Options:
+                    1. "I'll test the GUI manually"
+                    2. "Skip GUI verification for now"
                     3. "Retry automated smoke testing"
                   </action>
-                  <action>If user selects option 1: proceed to manual verification steps below. If option 2: run final automated tests and call attempt_completion. If option 3: verify the application is still running (for web: send HTTP request to base_url; for CLI: check binary accessibility; for desktop: verify process exists). If the app is no longer running, tell the user and let them restart it before re-spawning synthetic-human-tester. If the app is running: re-spawn synthetic-human-tester.</action>
+                  <action>If user selects option 1: proceed to manual verification steps below. If option 2: run final automated tests and call attempt_completion. If option 3: verify the application is still running (for web: send HTTP request to base_url; for desktop: verify process exists). If the app is no longer running, tell the user and let them restart it before re-spawning synthetic-human-tester. If the app is running: re-spawn synthetic-human-tester.</action>
                 </branch>
                 <branch condition="Subtask completed but completion summary has no valid STATUS field or is malformed">
-                  <action>Fall back to manual verification. Tell the user: "Automated smoke testing completed but returned an unrecognizable report. I'll ask you to verify manually instead." Proceed to manual verification steps below.</action>
+                  <action>Fall back to manual GUI verification. Tell the user: "Automated smoke testing completed but returned an unrecognizable report. I'll ask you to verify the GUI manually instead." Proceed to manual verification steps below.</action>
                 </branch>
                 <branch condition="Subtask completed with valid structured report">
                   <action>Proceed to the status evaluation decision tree below.</action>
@@ -342,7 +383,7 @@
             </subtask_failure_check>
             <decision_tree>
               <branch condition="STATUS is all_passed">
-                <action>All smoke tests passed. Before completing, check the VISUAL section of the SHT report (if present).</action>
+                <action>All GUI smoke tests passed. Before completing, check the VISUAL section of the SHT report (if present).</action>
                 <visual_subcheck>
                   <branch condition="VISUAL is absent (no screenshot tool available) or VISUAL is 🟢 (no obvious issues)">
                     <action>Proceed to user_confirms_works branch — run final automated tests and call attempt_completion. No user interaction needed.</action>
@@ -352,13 +393,13 @@
                   </branch>
                   <branch condition="VISUAL is 🔴 (obvious breakage detected)">
                     <action priority="critical">
-                      Functional tests pass BUT the SHT detected obvious visual breakage (overlapping elements, cut-off content, viewport overflow, blank pages). This is objective breakage — not subjective design preference.
+                      Functional GUI tests pass BUT the SHT detected obvious visual breakage (overlapping elements, cut-off content, viewport overflow, blank pages). This is objective breakage — not subjective design preference.
 
                       Do NOT call attempt_completion. Instead, auto-launch a UI Designer subtask (ui-designer mode) to fix the visual issues. This is automatic — do NOT ask the user for consent. The SHT already identified objective visual breakage against the running application.
 
                       Spawn the UI Designer subtask with:
                       - The specific visual issues from the SHT VISUAL section
-                      - Relevant file paths for the affected UI. Resolution strategy: if the visual issue descriptions clearly map to files you modified in this session, pass those files. If the mapping is ambiguous (e.g., visual breakage may be in an unchanged CSS file), pass all UI-related files in the project (components/, styles/, layouts/) so UI Designer can discover the affected area.
+                      - Relevant file paths for the affected UI
                       - Note: "Functionality is confirmed working via synthetic-human-tester (STATUS: all_passed). Visual-only fix needed."
 
                       After the UI Designer completes:
@@ -370,30 +411,30 @@
                 </visual_subcheck>
               </branch>
               <branch condition="STATUS is partial_passed">
-                <action>Some environments passed, some skipped. Before asking the user, check the VISUAL section of the SHT report.</action>
+                <action>Some GUI environments passed, some skipped. Before asking the user, check the VISUAL section of the SHT report.</action>
                 <visual_subcheck>
                   <branch condition="VISUAL is absent, 🟢, or 🟡">
-                    <action>Report the results and ask the user to confirm: "Smoke tests: web ✅, CLI ✅, native ⏭️ (not configured). Proceed with completion?" Options: 1. "Yes — proceed", 2. "No — I want to test the skipped environments manually first". If option 1: proceed to user_confirms_works. If option 2: proceed to manual verification steps below for the skipped environments.</action>
+                    <action>Report the results and ask the user to confirm: "GUI smoke tests: [results]. Proceed with completion?" Options: 1. "Yes — proceed", 2. "No — I want to test the skipped environments manually first". If option 1: proceed to user_confirms_works. If option 2: proceed to manual verification steps below for the skipped environments.</action>
                   </branch>
                   <branch condition="VISUAL is 🔴 (obvious breakage detected)">
                     <action priority="critical">
-                      At least one tested environment passed functionally but has obvious visual breakage. Do NOT ask the user to confirm before fixing the visual issues.
+                      At least one tested GUI environment passed functionally but has obvious visual breakage. Do NOT ask the user to confirm before fixing the visual issues.
 
                       Auto-launch a UI Designer subtask (ui-designer mode) to fix the visual issues identified in the SHT VISUAL section. This is automatic — the SHT already identified objective visual breakage.
 
                       After the UI Designer completes:
                       1. Review its changes for correctness
                       2. Run full automated test suite — if any test fails, revert UI Designer changes
-                      3. If tests pass, then ask the user: "Smoke tests: [results]. Visual issues fixed by UI Designer. Proceed with completion?" Options: 1. "Yes — proceed", 2. "No — I want to test the skipped environments manually first."
+                      3. If tests pass, then ask the user: "GUI smoke tests: [results]. Visual issues fixed by UI Designer. Proceed with completion?" Options: 1. "Yes — proceed", 2. "No — I want to test the skipped environments manually first."
                       If option 1: proceed to user_confirms_works. If option 2: proceed to manual verification.
                     </action>
                   </branch>
                 </visual_subcheck>
               </branch>
               <branch condition="STATUS is mcp_unavailable">
-                <action>No MCP servers were available for any environment. Use ask_followup_question: "Automated smoke testing is not available — [details from report]. How would you like to proceed?" Options:
-                  1. "I'll test manually"
-                  2. "Skip verification for now"
+                <action>No MCP servers were available for any GUI environment. Use ask_followup_question: "Automated GUI smoke testing is not available — [details from report]. How would you like to proceed?" Options:
+                  1. "I'll test the GUI manually"
+                  2. "Skip GUI verification for now"
                   3. "I'll fix the MCP configuration and retry"
                 </action>
                 <action>If user selects option 1: proceed to manual verification steps below. If option 2: run final automated tests and call attempt_completion. If option 3: wait for user, then re-spawn.</action>
@@ -403,13 +444,13 @@
                   - MCP tool errors (connection refused, timeout, internal server error from the MCP)
                   - App crash mid-test (500 errors appearing after tests started passing, sudden connection loss)
                   - Environment disappearance (app was reachable, then became unreachable mid-test)
-                  If the evidence clearly points to infrastructure failure: use ask_followup_question with the failure details and options: "Retry automated smoke testing", "I'll test manually", "Skip verification for now". Do NOT enter the code debugging loop.
+                  If the evidence clearly points to infrastructure failure: use ask_followup_question with the failure details and options: "Retry automated smoke testing", "I'll test the GUI manually", "Skip GUI verification for now". Do NOT enter the code debugging loop.
                 </action>
-                <action>If the failure evidence is NOT infrastructure-related (assertion mismatch, missing element, wrong page content): enter diagnostic-first debugging using the failure evidence as the starting point — do NOT add [DEBUG] statements yet. Analyze the failure report first: can you identify the root cause from the evidence? If yes: apply fix, write regression test, re-run quality loop, return to verification gate. If the evidence is inconclusive: add [DEBUG] statements and proceed with normal diagnostic-first debugging, asking the user to reproduce (since the automated environment may not be available for the user).</action>
+                <action>If the failure evidence is NOT infrastructure-related (assertion mismatch, missing element, wrong page content): enter diagnostic-first debugging using the failure evidence as the starting point — do NOT add [DEBUG] statements yet. Analyze the failure report first: can you identify the root cause from the evidence? If yes: apply fix, write regression test, re-run quality loop, return to verification gate. If the evidence is inconclusive: add [DEBUG] statements and proceed with normal diagnostic-first debugging, asking the user to reproduce.</action>
                 <action>Before re-spawning synthetic-human-tester: verify the app is still running.
-                  - For web: send a quick HTTP request to the base_url (e.g., via curl or a simple fetch). If the server doesn't respond, the app may have stopped.
-                  - For CLI: verify the binary is still accessible (e.g., `which [binary]` or check the path).
-                  If the app is no longer running: tell the user and offer to restart the app or fall back to manual verification. If the app is still running: re-spawn synthetic-human-tester (not manual verification) to verify the fix.</action>
+                  - For web: send a quick HTTP request to the base_url. If the server doesn't respond, the app may have stopped.
+                  - For desktop: verify the process still exists.
+                  If the app is no longer running: tell the user and offer to restart the app or fall back to manual GUI verification. If the app is still running: re-spawn synthetic-human-tester (not manual verification) to verify the fix.</action>
               </branch>
             </decision_tree>
           </step>
@@ -420,15 +461,16 @@
         <step>
           <action>Summarize what was accomplished</action>
           <detail>
-            Include: what was implemented/changed, which files were modified, and automated test results.
+            Include: what was implemented/changed, which files were modified, self-verification results, and automated test results.
             Do NOT include QA findings, dismissal counts, or review statistics. QA is an internal tool — the user sees the finished result, not the quality process.
           </detail>
         </step>
         <step>
-          <action>Ask the user to verify</action>
+          <action>Ask the user to verify ONLY the unverified GUI interactions</action>
           <detail>
-            Use ask_followup_question with clear verification steps. If specific verification
-            instructions were provided in the prompt, use those verbatim with the specified response options.
+            Use ask_followup_question with clear GUI verification steps. State what you already verified yourself (build, launch, integration tests, CLI) so the user knows they only need to test the GUI parts.
+
+            If specific GUI verification instructions were provided in the prompt, use those verbatim.
             If no specific instructions were provided, use these two options:
             1. "Works correctly ✅"
             2. "Something is wrong — I'll describe below"
@@ -442,9 +484,9 @@
       </steps>
 
       <branch name="user_confirms_works">
-        <trigger>User indicates the changes work correctly (e.g., clicks "Works correctly ✅" or "Smoke test passed ✅"), OR synthetic-human-tester returns STATUS: all_passed or STATUS: partial_passed</trigger>
+        <trigger>User indicates the changes work correctly (e.g., clicks "Works correctly ✅" or "Smoke test passed ✅"), OR synthetic-human-tester returns STATUS: all_passed or STATUS: partial_passed, OR self-verification confirmed everything with no GUI escalation needed</trigger>
         <critical_rule priority="highest">
-          Verification has passed (either user confirmed manually, or synthetic-human-tester reported all_passed/partial_passed). Now:
+          Verification has passed (self-verified, user confirmed GUI manually, or synthetic-human-tester reported all_passed/partial_passed). Now:
           1. Run ALL automated tests one final time.
           2. If all pass: call attempt_completion immediately.
           3. If any test fails: apply the minimal fix to make it pass, re-run tests, then call attempt_completion.
@@ -461,7 +503,7 @@
           1. Add [DEBUG] diagnostic output statements → give user reproduction steps → analyze output. The ONLY exception: a single-character typo in a string literal or variable name that is immediately identifiable from the error message alone — fix the one character directly and skip to step 3.
           2. Identify root cause → apply fix → write a regression test that reproduces the exact bug → remove ALL [DEBUG] statements.
           3. Re-run the full quality loop (implement fix → tests → refactor → tests → QA → fix → tests).
-          4. Return to the verification gate — ask the user to verify again.
+          4. Return to the verification gate — begin again with self-verification tier.
         </flow>
         <regression_test_requirement priority="critical">
           Every bug fix must include a regression test that reproduces the exact failure the user experienced.
@@ -479,7 +521,7 @@
 
       <branch name="user_gives_ambiguous_response">
         <trigger>User's response doesn't clearly indicate "works" or "broken" — e.g., "I'm not sure what to check", "Can you explain?", or a question about the changes</trigger>
-        <action>Clarify the verification steps. Re-state what was built and provide more specific, actionable checks. If the user seems confused about what to test, give step-by-step instructions. Then re-ask: "After following these steps, does it work correctly?" with the same response options.</action>
+        <action>Clarify the GUI verification steps. Re-state what was built and provide more specific, actionable checks for the GUI parts. If the user seems confused about what to test, give step-by-step instructions. Then re-ask: "After following these steps, does it work correctly?" with the same response options.</action>
         <action>Do NOT interpret an ambiguous response as "works" or "broken." Always clarify and re-ask.</action>
       </branch>
 
@@ -512,9 +554,13 @@
 
   <subtask_delegation_workflow>
     <overview>
-      Four delegation scenarios exist. Three are automatic (QA review, synthetic-human-tester smoke test, UI/design polish via UI Designer subtask),
+      Four delegation scenarios exist. Two are automatic (QA review, UI/design polish via UI Designer subtask),
+      one is automatic when configured (synthetic-human-tester GUI smoke test — only for GUI environments: web, desktop, native),
       one requires user consent (stuck resolution via Debug subtask).
       The Debug subtask is proposed via the ask tool and never launched without explicit user approval.
+
+      SHT is only used for GUI verification that Code mode cannot self-verify. CLI verification, build results,
+      .exe launch, and integration test results are self-verified by Code mode — never escalated to SHT.
     </overview>
 
     <scenario name="qa_review" type="automatic">
@@ -530,54 +576,54 @@
 
     <scenario name="synthetic_human_smoke_test" type="automatic_when_configured">
       <description>
-        When smoke_test_automation is enabled (flag = true in the spawn prompt), Code mode
-        automatically spawns a synthetic-human-tester subtask at the verification gate instead
-        of asking the user to manually verify. The synthetic-human-tester performs live smoke
-        tests against the running application via MCP servers and returns a structured pass/fail
-        report. If smoke_test_automation is absent, Code mode asks the user once whether to
-        enable it. If disabled (flag = false), Code mode proceeds with manual verification.
+        When smoke_test_automation is enabled AND at least one GUI environment (web, desktop, native)
+        is configured AND the self-verification tier identified unverified GUI interactions, Code mode
+        automatically spawns a synthetic-human-tester subtask to perform GUI-only live smoke tests.
+        SHT tests GUI applications via MCP servers — it does NOT test CLI tools, terminal output,
+        build results, or anything Code mode can verify itself.
 
-        This is the automated replacement for the manual verification gate.
+        If smoke_test_automation is absent, Code mode asks the user once whether to enable it
+        (for GUI testing only). If disabled, Code mode proceeds with manual GUI verification.
+
+        This is the automated replacement for manual GUI verification only — never for CLI or
+        programmatically verifiable items.
       </description>
       <trigger>
-        The verification gate phase after the full quality loop completes. The smoke_test_automation
-        flag is checked before asking the user to manually verify.
+        The escalation tier of the verification gate, after self-verification confirms GUI interactions
+        remain unverified and smoke_test_automation is enabled with GUI environments configured.
       </trigger>
       <integration>
         The synthetic-human-tester workflow is fully defined in the main_workflow →
-        verification_gate → automated_smoke_test branch above.
+        verification_gate → escalation_tier → automated_smoke_test branch above.
       </integration>
       <spawn_prompt_structure>
-        <description>The spawn prompt for synthetic-human-tester must follow this exact format. This is the contract between Code mode and synthetic-human-tester. The environments block may contain additional fields from upstream (mcp_available, mcp_name, verified) — pass ALL fields through to SHT unchanged. SHT uses these for better error messages and skip decisions.</description>
+        <description>The spawn prompt for synthetic-human-tester must follow this exact format. This is the contract between Code mode and synthetic-human-tester. Only include GUI environments (web, desktop, native) — never CLI. The environments block may contain additional fields from upstream (mcp_available, mcp_name, verified) — pass ALL fields through to SHT unchanged.</description>
         <contract_format>
 environments:
-  web:
+  web:                                   # optional — omit if not configured
     base_url: "http://localhost:3000"
-    auth:                              # optional
+    auth:                                # optional
       method: "login_form"
       login_url: "/login"
       credentials: { email: "...", password: "..." }
-  cli:
-    binary: "npm run"
-    working_dir: "./"                  # optional
-  native:                              # optional — omit or set to null if not used
+  desktop:                               # optional — omit if not configured
+    executable_path: "C:/Program Files/MyApp/app.exe"
+    window_title: "My Application"       # optional — used to verify correct window launched
+    launch_args: ""                      # optional — additional CLI args for the executable
+  native:                                # optional — omit if not configured
     app_id: "com.example.app"
     appium_endpoint: "http://localhost:4723"  # optional
-  desktop:                             # optional — omit or set to null if not used
-    executable_path: "C:/Program Files/MyApp/app.exe"
-    window_title: "My Application"    # optional — used to verify correct window launched
-    launch_args: ""                   # optional — additional CLI args for the executable
 
 test_plan:
   - environment: web
-    given: "I am on the signup page"  # optional
+    given: "I am on the signup page"     # optional
     when: "I type 'test@test.com' into Email and click Sign Up"
     then: "I should see 'Check your email'"
-  - environment: cli
-    when: "I run 'npm test'"
-    then: "exit code is 0 and output contains 'passed'"
+  - environment: desktop
+    when: "I click the 'File' menu and click 'Save'"
+    then: "I should see 'Document saved successfully'"
 
-options:                               # optional
+options:                                 # optional
   timeout_seconds: 30
   stop_on_first_failure: false
         </contract_format>

@@ -4,7 +4,7 @@
       <name>Functional Testing Uses Accessibility Trees, Never Pixels</name>
       <description>
         Every functional UI interaction and assertion must be driven by structured intermediate
-        representations: accessibility tree snapshots for web/native/desktop, text buffers for CLI.
+        representations: accessibility tree snapshots for web/desktop/native.
         Never use screenshots, pixel coordinates, or visual layout for functional verification
         (deciding pass/fail of a test step). This is non-negotiable.
       </description>
@@ -101,13 +101,6 @@
       <practice>Handle SPAs: after clicking a link/button in a single-page app, the URL may not change. Verify the expected content appears in the snapshot, not just the URL.</practice>
       <practice>Form filling: type into fields one at a time, verifying each field accepts input before moving to the next.</practice>
       <practice>Auth flows: log in once at the start of the web test block, then reuse the authenticated session for all web steps.</practice>
-    </environment>
-
-    <environment name="cli">
-      <practice>Always check exit codes. A command may produce expected output but exit with an error code — this is a failure.</practice>
-      <practice>For commands with large output, use the "then" assertion to specify the relevant portion to check, not the entire output.</practice>
-      <practice>Handle stderr separately from stdout. Some tools write normal output to stderr — don't assume stderr means error.</practice>
-      <practice>For commands that may take time, use the configured timeout rather than assuming instant completion.</practice>
     </environment>
 
     <environment name="native">

@@ -67,7 +67,7 @@
 - **Automated Testing:** [Specify which tests must be run, e.g., `npm test`, and what new unit tests need to be written. Unit tests MUST be placed in `tests/unit/` directory with the naming convention `tests/unit/{feature-name}.test.{ext}`.]
 - **Live Smoke Test (Mandatory):** [Explain EXACTLY what the developer needs to do to verify this step. Choose the format that matches the target environment:
   *Web UI:* "Navigate to /dashboard, click 'Add', ensure modal opens."
-  *CLI:* "Run `my-tool --validate` and verify exit code 0 and output contains 'Valid'."
+  *CLI/Backend:* "Verified by Code mode directly via automated tests and exit code checks — no manual smoke test needed."
   *Desktop:* "Launch the app, click File → Save, verify the status bar shows 'Saved successfully'."
   *Backend/API:* "Run `curl http://localhost:3000/api/users` and ensure it returns a 200 JSON response."]
 - **Suggested Commit Message:** `feat: [descriptive message]`

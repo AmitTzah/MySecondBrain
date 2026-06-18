@@ -28,11 +28,6 @@
         3. The MCP must expose tools matching the browser_* pattern (browser_navigate, browser_click, browser_snapshot, browser_type)
         4. Once configured, re-run the smoke tests
       </guidance>
-      <guidance environment="cli">
-        CLI testing uses the built-in command group (always available). For interactive terminal programs
-        (TUI apps, REPLs), install a Terminal MCP that exposes tools matching terminal_* (terminal_spawn,
-        terminal_send, terminal_read). Without a Terminal MCP, interactive CLI steps will be skipped.
-      </guidance>
       <guidance environment="native">
         Native app testing requires an Appium MCP or equivalent that exposes tools matching appium_*
         or accessibility_* (appium_find_element, appium_click, appium_get_page_source). Set up an
@@ -68,12 +63,6 @@
         2. Confirm the base_url is correct (e.g., http://localhost:3000, not https or wrong port)
         3. Check for port conflicts or firewall blocking
         4. If using a different port than configured, update the base_url in your test plan
-      </guidance>
-      <guidance environment="cli">
-        The CLI binary is not found or not executable. Troubleshooting:
-        1. Verify the binary is installed (run 'which [binary]' or check your PATH)
-        2. Confirm the working_dir is correct and the binary exists there
-        3. Check that the binary has execute permissions
       </guidance>
       <guidance environment="native">
         The native app is not reachable via Appium. Troubleshooting:

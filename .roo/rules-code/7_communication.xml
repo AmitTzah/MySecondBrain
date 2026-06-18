@@ -103,7 +103,7 @@
     </avoid>
     <critical_rule>
       attempt_completion is ONLY called after verification passes AND the final automated test
-      run passes. Verification may be: (a) user confirms manual testing, OR (b) synthetic-human-tester
+      run passes. Verification may be: (a) self-verification confirmed all changes with no GUI escalation needed, (b) user confirms manual GUI testing, OR (c) synthetic-human-tester
       reports all_passed or partial_passed. Never call attempt_completion before the verification
       gate resolves.
     </critical_rule>

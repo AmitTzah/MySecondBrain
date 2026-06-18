@@ -24,20 +24,25 @@
 
   <subtask_decision_framework>
     <overview>
-      Four delegation scenarios exist. Two are automatic (QA review, synthetic-human-tester smoke test
-      when smoke_test_automation is enabled), two require user consent (UI design polish via UI Designer subtask,
-      stuck resolution via Debug subtask).
+      Four delegation scenarios exist. Two are automatic (QA review, UI/design polish via UI Designer subtask),
+      one is automatic when configured (synthetic-human-tester GUI smoke test — only for GUI environments),
+      one requires user consent (stuck resolution via Debug subtask).
+
+      SHT is only spawned for GUI verification that Code cannot self-verify. CLI, build, launch,
+      and integration test verification are self-verified — never escalated.
     </overview>
 
     <scenario name="synthetic_human_smoke_test" type="automatic_when_configured">
-      <description>When smoke_test_automation.enabled is true, Code mode automatically spawns a synthetic-human-tester subtask at the verification gate to perform live smoke tests against the running application. This replaces manual user verification. If smoke_test_automation is absent, Code mode asks the user once whether to enable it. If disabled (enabled: false), Code mode proceeds with manual verification.</description>
+      <description>When smoke_test_automation.enabled is true AND at least one GUI environment (web, desktop, native) is configured AND the self-verification tier identified unverified GUI interactions, Code mode automatically spawns a synthetic-human-tester subtask to perform GUI-only live smoke tests. This replaces manual GUI verification only — never for CLI or programmatically verifiable items. If smoke_test_automation is absent, Code mode asks the user once whether to enable it (for GUI testing). If disabled, Code mode proceeds with manual GUI verification.</description>
       <decision_criteria>
         <trigger>
-          <condition>smoke_test_automation.enabled is true AND smoke_test_automation.environments is non-empty</condition>
+          <condition>smoke_test_automation.enabled is true AND smoke_test_automation.environments has at least one GUI environment (web, desktop, or native) configured AND self-verification identified unverified GUI interactions</condition>
         </trigger>
         <when_not_to_offer>
-          <condition>smoke_test_automation.enabled is false — use manual verification</condition>
-          <condition>smoke_test_automation is absent but user declined the opt-in — use manual verification</condition>
+          <condition>smoke_test_automation.enabled is false — use manual GUI verification</condition>
+          <condition>smoke_test_automation is absent but user declined the opt-in — use manual GUI verification</condition>
+          <condition>All changes were self-verified — no GUI escalation needed, proceed directly to completion</condition>
+          <condition>smoke_test_automation.enabled is true but zero GUI environments are configured — use manual GUI verification</condition>
         </when_not_to_offer>
       </decision_criteria>
     </scenario>

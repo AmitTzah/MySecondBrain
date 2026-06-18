@@ -15,10 +15,6 @@
         <examples>Playwright MCP: browser_navigate, browser_click, browser_snapshot, browser_type, browser_take_screenshot</examples>
         <matches>Any MCP with browser_navigate or browser_snapshot</matches>
       </row>
-      <row environment="cli" pattern="terminal_* or command group">
-        <examples>Terminal MCP: terminal_spawn, terminal_send, terminal_read. Command group: always available.</examples>
-        <matches>Prefer Terminal MCP if terminal_spawn exists; fall back to command group</matches>
-      </row>
       <row environment="native" pattern="appium_* or accessibility_*">
         <examples>Appium MCP: appium_find_element, appium_click, appium_type, appium_get_page_source</examples>
         <matches>Any MCP with appium_find_element or appium_get_page_source</matches>
@@ -70,38 +66,6 @@
         </action>
       </step>
     </flow>
-  </pattern>
-
-  <pattern name="cli_test_execution">
-    <description>Complete flow for executing a single CLI test step.</description>
-    <flow>
-      <step number="1">
-        <title>Execute Command</title>
-        <action>Parse the "when" clause to extract the command. Execute it with appropriate working directory and environment.</action>
-      </step>
-      <step number="2">
-        <title>Capture Results</title>
-        <action>Record exit code, stdout, and stderr separately.</action>
-      </step>
-      <step number="3">
-        <title>Verify Assertion</title>
-        <action>
-          Compare results against the "then" clause:
-          - "exit code is [N]": verify exit code matches
-          - "output contains [text]": search stdout+stderr for the text
-          - "output does not contain [text]": verify text is absent
-          - "output matches [pattern]": verify stdout matches the described pattern
-        </action>
-      </step>
-    </flow>
-    <interactive_variant>
-      <description>For interactive CLI programs (prompts, TUI). Requires Terminal MCP.</description>
-      <step>terminal_spawn to start the program in a PTY</step>
-      <step>terminal_read to capture the prompt</step>
-      <step>terminal_send to respond to the prompt</step>
-      <step>terminal_read to capture the result</step>
-      <step>Verify exit or output state</step>
-    </interactive_variant>
   </pattern>
 
   <pattern name="desktop_test_execution">
@@ -174,8 +138,6 @@ VISUAL: [🟢 No obvious issues / 🟡 Minor issues: ... / 🔴 Obvious breakage
 
 WEB:    [N]/[M] passed [✅/❌/⏭️]
   [If failed: step description, expected, actual, snapshot excerpt]
-CLI:    [N]/[M] passed [✅/❌/⏭️]
-  [If failed: step description, expected, actual, command output excerpt]
 NATIVE: [N]/[M] passed [✅/❌/⏭️]
   [If failed: step description, expected, actual, accessibility tree excerpt]
 DESKTOP: [N]/[M] passed [✅/❌/⏭️]

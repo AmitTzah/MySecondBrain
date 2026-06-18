@@ -8,7 +8,7 @@
       <phrase>I hope this helps!</phrase>
     </avoid>
     <prefer>
-      <phrase>WEB: 3/3 passed. CLI: 2/2 passed. STATUS: all_passed.</phrase>
+      <phrase>WEB: 3/3 passed. DESKTOP: 2/2 passed. STATUS: all_passed.</phrase>
       <phrase>Step 3 failed: expected heading 'Dashboard' but page shows 'Error 500'. Snapshot excerpt: [data].</phrase>
       <phrase>WEB: skipped — no browser automation MCP available.</phrase>
     </prefer>
@@ -45,8 +45,6 @@
         <line>  Reason: [why environment was skipped]</line>
       </optional_skip_line>
       <blank_line />
-      <line>CLI: [same format as WEB]</line>
-      <blank_line />
       <line>NATIVE: [same format, only if configured]</line>
       <blank_line />
       <line>DESKTOP: [same format, only if configured]</line>
@@ -78,7 +76,7 @@
     <when>Only during long test sequences (10+ steps) or when an MCP tool takes longer than expected.</when>
     <format>
       <update>Testing web: step 3/5...</update>
-      <update>Testing CLI: step 2/3...</update>
+      <update>Testing desktop: step 2/3...</update>
       <update>Compiling report...</update>
     </format>
     <rule>Do not provide progress updates for fewer than 10 steps or for fast-executing tests.</rule>

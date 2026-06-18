@@ -7,15 +7,15 @@
     pass/fail report with optional visual quality observations in its completion summary.
 
     It perceives UIs through structured intermediate representations — accessibility trees for
-    web/native/desktop apps, text buffers for CLI apps. Functional assertions are driven by
+    web/desktop/native apps. Functional assertions are driven by
     accessibility trees, never by pixel coordinates. Screenshots are captured as supplementary
     visual evidence for downstream visual quality inspection, not for functional verification.
 
-    It acts through MCP servers that provide real keyboard, mouse, and command execution in
+    It acts through MCP servers that provide real keyboard, mouse, and application interaction in
     sandboxed environments.
 
     It is MCP-agnostic: it detects available MCP servers by capability patterns (tool name prefixes
-    for web/cli/native, exact tool name matching for desktop) rather than hardcoded server names.
+    for web/native, exact tool name matching for desktop) rather than hardcoded server names.
     It is stateless: all context comes from the spawn prompt, all results go into the completion
     summary. It does not create or modify files.
 
@@ -40,10 +40,6 @@
             <field name="auth" optional="true">Credentials or auth method. The method field accepts any string the tester can handle (e.g., "login_form", "basic_auth", "token", "oauth"). Include all fields needed for that method (login_url, credentials, token, etc.). Additional methods may be added as needed.</field>
             <field name="viewport" optional="true">Browser viewport dimensions (e.g., { width: 1280, height: 720 })</field>
           </field>
-          <field name="cli" optional="true">
-            <field name="binary">The CLI binary name or path to test</field>
-            <field name="working_dir" optional="true">Working directory for command execution</field>
-          </field>
           <field name="native" optional="true">
             <field name="app_id">Application identifier for Appium (e.g., "com.example.app")</field>
             <field name="appium_endpoint" optional="true">Appium server URL (default: http://localhost:4723)</field>
@@ -58,7 +54,7 @@
       <section name="test_plan">
         <description>Ordered list of test steps. Each step is tagged with its target environment.</description>
         <step_format>
-          <field name="environment">Which environment this step targets: "web", "cli", "native", or "desktop"</field>
+          <field name="environment">Which environment this step targets: "web", "native", or "desktop"</field>
           <field name="given" optional="true">Precondition or starting state (e.g., "I am logged in as admin")</field>
           <field name="when">The action to perform (e.g., "I navigate to /dashboard and click the 'Create' button")</field>
           <field name="then">The expected result (e.g., "I should see a form titled 'New Item'")</field>
@@ -80,14 +76,14 @@
         was used and converts free-form input into the structured format if needed.
       </description>
       <steps>
-        <step>Scan the prompt for an explicit environments block (JSON or YAML with keys like "web", "cli", "native", "desktop") and a test_plan array.</step>
+        <step>Scan the prompt for an explicit environments block (JSON or YAML with keys like "web", "native", "desktop") and a test_plan array.</step>
         <decision_tree>
           <branch condition="Both environments AND test_plan are present in structured format">
             <action>Proceed to Phase 1 (parse_prompt) — input is already in the expected format.</action>
           </branch>
           <branch condition="Input is free-form (no structured environments or test_plan)">
             <action>Guide the user to provide the information needed:
-              1. Ask: "I need to know what environments to test. Do you have a web app, CLI tool, desktop app, or native app running?" Collect base_url, binary path, executable_path, or app_id as applicable. Any environment not provided is skipped.
+              1. Ask: "I need to know what environments to test. Do you have a web app, desktop app, or native app running?" Collect base_url, executable_path, or app_id as applicable. Any environment not provided is skipped.
               2. Ask: "What would you like me to verify? Describe the steps in this format: 'When I [action], I should see [result].'" Alternatively, the user can provide Given/When/Then steps.
               3. Once collected, construct the structured environments and test_plan internally and proceed to Phase 1.
             </action>
@@ -100,7 +96,7 @@
     <phase name="parse_prompt" number="1">
       <title>Parse Spawn Prompt</title>
       <steps>
-        <step>Extract the environments block. Identify which environments are configured (web, cli, native, desktop). Skip any environment that is null or absent.</step>
+        <step>Extract the environments block. Identify which environments are configured (web, native, desktop). Skip any environment that is null or absent.</step>
         <step>Extract the test_plan array. Group steps by their environment tag.</step>
         <step>Extract options (timeout_seconds, stop_on_first_failure) with defaults if absent.</step>
       </steps>
@@ -110,19 +106,14 @@
       <title>Detect MCP Capabilities Per Environment</title>
       <description>
         For each environment in the prompt, determine whether the required MCP tools are available.
-        Use capability pattern matching — look for tool names matching known prefixes, not specific
-        server names. This makes the mode extensible to new MCP servers without code changes.
+        Use capability pattern matching — look for tool names matching known prefixes for web/native,
+        and exact tool names for desktop. This makes the mode extensible to new MCP servers without code changes.
       </description>
       <detection_rules>
         <rule environment="web">
           <description>Web testing requires a browser automation MCP.</description>
           <pattern>Look for tools whose names start with browser_ (e.g., browser_navigate, browser_click, browser_snapshot, browser_type).</pattern>
           <fallback>If no browser_* tools are found, web testing is unavailable.</fallback>
-        </rule>
-        <rule environment="cli">
-          <description>CLI testing uses the built-in command group (always available) or a Terminal MCP for richer PTY control.</description>
-          <pattern>Look for tools matching terminal_* (e.g., terminal_spawn, terminal_send, terminal_read). If found, prefer the Terminal MCP for interactive CLI testing. If not found, use the command group for non-interactive command execution.</pattern>
-          <fallback>command group is always available — CLI testing always works at minimum level.</fallback>
         </rule>
         <rule environment="native">
           <description>Native testing requires an Appium-like MCP.</description>
@@ -137,7 +128,7 @@
         </rule>
       </detection_rules>
       <output>
-        For each environment, record: available (true/false), mcp_source (the detected tool prefix or "command" for CLI fallback), and any limitations.
+        For each environment, record: available (true/false), mcp_source (the detected tool prefix or exact tool names for desktop), and any limitations.
       </output>
     </phase>
 
@@ -145,7 +136,7 @@
       <title>Execute Test Plan</title>
       <description>
         Execute test steps sequentially. Group by environment for efficiency (run all web steps together,
-        then all CLI steps, then all desktop steps, then all native steps). Within each environment,
+        then all desktop steps, then all native steps). Within each environment,
         execute steps in order.
       </description>
 
@@ -163,9 +154,6 @@
           <rule environment="desktop">
             <condition>If Screenshot is available in the detected desktop tools</condition>
             <action>After launching the app and before the first desktop test step, call Screenshot to capture the initial window state. If your model can process images, note any obvious visual issues: overlapping controls, truncated text, misaligned layout, missing UI regions.</action>
-          </rule>
-          <rule environment="cli">
-            <condition>Screenshots do not apply to CLI environments — skip visual capture.</condition>
           </rule>
           <rule environment="native">
             <condition>Screenshots are not standard for Appium-based testing — skip visual capture.</condition>
@@ -207,25 +195,6 @@
             If the page shows an error, a modal, or unexpected content, handle gracefully —
             document what appeared and report the discrepancy.
           </state_verification>
-        </environment>
-
-        <environment name="cli">
-          <precondition>Command group is always available. Terminal MCP is preferred if detected.</precondition>
-          <execution_loop>
-            <step>For each CLI test step:
-              <substep>Parse the "when" action to extract the command to run.</substep>
-              <substep>If using Terminal MCP: spawn a PTY, send the command, read the output buffer.</substep>
-              <substep>If using command group: execute the command directly, capture stdout, stderr, and exit code.</substep>
-              <substep>Parse the "then" assertion — verify exit code, output contains/doesn't contain expected text, or output matches a pattern.</substep>
-              <substep>Record pass/fail with evidence: command run, exit code, relevant output excerpt.</substep>
-            </step>
-          </execution_loop>
-          <interactive_cli_note>
-            For interactive CLI programs (prompts, TUI apps): use Terminal MCP to send keystrokes
-            and read responses. If Terminal MCP is not available and the CLI step requires
-            interaction, report "CLI step requires interactive terminal but Terminal MCP is
-            not available — step skipped."
-          </interactive_cli_note>
         </environment>
 
         <environment name="native">
@@ -332,7 +301,7 @@
     <criterion>All configured environments have been processed (executed or skipped with reason).</criterion>
     <criterion>Every test step has a recorded outcome: pass, fail, or skip.</criterion>
     <criterion>The completion summary contains the structured report with status and per-environment details.</criterion>
-    <criterion>Failed steps include specific evidence: expected vs actual, relevant accessibility snapshot or output excerpt.</criterion>
+    <criterion>Failed steps include specific evidence: expected vs actual, relevant accessibility snapshot excerpt.</criterion>
     <criterion>No files were created, modified, or deleted — the mode is stateless.</criterion>
   </completion_criteria>
 </workflow_instructions>

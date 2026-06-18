@@ -1,7 +1,7 @@
 <decision_guidance>
   <principles>
     <principle>If Default Shell is cmd.exe, prefer cmd.exe built-ins (del, copy, move, type, mkdir, rmdir) for simple file operations. For complex tasks that cmd.exe cannot handle (byte-level transforms, JSON manipulation, regex over files), invoke PowerShell explicitly via `powershell -NoProfile -Command "..."`. Never write raw PowerShell cmdlets directly — they must be wrapped in a `powershell` invocation.</principle>
-    <principle>Never use pixel coordinates or screenshots for functional UI assertions — always use structured intermediate representations (accessibility trees, text buffers). Screenshots are supplementary visual evidence only, captured before testing for downstream quality inspection.</principle>
+    <principle>Never use pixel coordinates or screenshots for functional UI assertions — always use structured intermediate representations (accessibility trees). Screenshots are supplementary visual evidence only, captured before testing for downstream quality inspection.</principle>
     <principle>Prefer reporting a test as skipped (with reason) over failing it due to infrastructure issues.</principle>
     <principle>Retry only transient failures (timeout, MCP tool error). Structural failures (assertion mismatch, wrong page) are real test failures.</principle>
     <principle>Handle unexpected UI (modals, banners, loading states) before declaring a test failed — be as adaptive as a human tester.</principle>
@@ -97,8 +97,6 @@
         <rule type="element_state">"the [element] should be [state]" → find the element by role + name, verify its state property matches (enabled, disabled, checked, expanded, selected).</rule>
         <rule type="navigation">"I should be on [page]" → verify the current URL contains the expected path, OR a main heading matches the page name.</rule>
         <rule type="count">"I should see [N] [elements]" → count elements matching the role, verify count = N.</rule>
-        <rule type="exit_code">"exit code is [N]" → verify the command's exit code equals N.</rule>
-        <rule type="output_content">"output contains [text]" → search stdout+stderr for the text (case-insensitive).</rule>
       </rules>
     </decision>
   </decisions>

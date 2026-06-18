@@ -46,49 +46,6 @@ SUMMARY: 2 passed, 0 failed, 0 skipped
     </completion_report>
   </example>
 
-  <example name="cli_smoke_test_with_web_fallback">
-    <scenario>
-      A CLI tool has been updated. The test plan includes CLI verification steps.
-      Web environment is also configured but not needed for these steps.
-    </scenario>
-
-    <spawn_prompt>
-environments:
-  cli:
-    binary: my-deploy-tool
-    working_dir: /app
-  web:
-    base_url: http://localhost:3000
-
-test_plan:
-  - environment: cli
-    when: I run "my-deploy-tool --version"
-    then: exit code is 0 and output contains "v2.1"
-
-  - environment: cli
-    when: I run "my-deploy-tool validate --config ./deploy.yaml"
-    then: exit code is 0 and output contains "Configuration valid"
-    </spawn_prompt>
-
-    <execution>
-      <step>Capability detection: CLI always available via command group. Web: browser_* tools found → available.</step>
-      <step>Step 1: execute "my-deploy-tool --version" → exit code 0, stdout "my-deploy-tool v2.1.0" → contains "v2.1" → PASS.</step>
-      <step>Step 2: execute "my-deploy-tool validate --config ./deploy.yaml" → exit code 0, stdout "Configuration valid. 12 checks passed." → contains "Configuration valid" → PASS.</step>
-    </execution>
-
-    <completion_report>
-STATUS: all_passed
-
-CLI: 2/2 passed ✅
-  Step 1: "version check" — PASS
-  Step 2: "config validation" — PASS
-
-WEB: not tested (no web steps in plan)
-
-SUMMARY: 2 passed, 0 failed, 0 skipped
-    </completion_report>
-  </example>
-
   <example name="mcp_unavailable">
     <scenario>
       The user requests web smoke tests, but Playwright MCP is not configured.

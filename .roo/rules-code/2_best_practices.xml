@@ -60,7 +60,7 @@
       <name>Auto-Launch vs User-Consent Subtasks</name>
       <description>
         Three subtask types, two consent models:
-        - **Auto-launch (no consent needed):** QA review (mandatory quality gate), synthetic-human-tester smoke test (when smoke_test_automation is enabled — replaces manual verification), UI Designer (when SHT reports VISUAL: 🔴 obvious breakage, or when user explicitly expresses visual dissatisfaction with working functionality).
+        - **Auto-launch (no consent needed):** QA review (mandatory quality gate), synthetic-human-tester GUI smoke test (when smoke_test_automation is enabled — replaces manual GUI verification only; CLI/build/integration are self-verified by Code mode), UI Designer (when SHT reports VISUAL: 🔴 obvious breakage, or when user explicitly expresses visual dissatisfaction with working functionality).
         - **User consent required:** Debug subtask for stuck resolution (after 2-3 failed diagnostic→fix→verification cycles). Always use the ask tool to propose — never launch without explicit user approval.
       </description>
       <rationale>QA, SHT, and SHT-triggered UI Designer are quality gates that don't need permission. Debug subtasks are optional workflow enhancements — the user decides whether a fresh investigation is warranted.</rationale>
@@ -173,7 +173,7 @@
       <item>QA review completed and all Bugs & Issues fixed</item>
       <item>All dismissed findings have specific justifications (internal — not reported to user)</item>
       <item>All automated tests pass (including final verification run after user confirms)</item>
-      <item>User has confirmed manual verification passes</item>
+      <item>Verification has passed (self-verified all items, user confirmed GUI manually, or SHT reported all_passed/partial_passed)</item>
       <item>No code changes made after user confirmation — only tests were run</item>
       <item>Review all changes for correctness</item>
       <item>Check for edge cases and error scenarios</item>

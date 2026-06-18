@@ -75,8 +75,8 @@
   </pattern>
 
   <pattern name="design_polish_subtask">
-    <description>Auto-launching a UI Designer subtask for visual-only changes. Two triggers: (a) SHT reports VISUAL: 🔴 obvious breakage, (b) user explicitly expresses visual dissatisfaction with working functionality.</description>
-    <context>Functionality is confirmed working (via SHT all_passed or user confirmation), but visual quality needs improvement.</context>
+    <description>Auto-launching a UI Designer subtask for visual-only changes. Two triggers: (a) SHT reports VISUAL: 🔴 obvious breakage (SHT only tests GUI environments), (b) user explicitly expresses visual dissatisfaction with working functionality.</description>
+    <context>Functionality is confirmed working (via SHT all_passed for GUI tests, or user confirmation for manually verified items), but visual quality needs improvement.</context>
     <auto_launch_triggers>
       <trigger name="sht_visual_breakage">SHT report has VISUAL: 🔴 — objective visual breakage detected. Launch immediately, no consent needed.</trigger>
       <trigger name="user_visual_dissatisfaction">User says functionality works but design looks bad — explicit expression of visual dissatisfaction. Launch immediately, no consent needed.</trigger>

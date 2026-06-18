@@ -34,7 +34,7 @@
       <path>agent-workspace/external-docs/</path>
     </area>
     <area name="smoke_test_config">
-      <purpose>Persisted smoke test environment configuration shared across features. Created by PD during project setup, or by FD on first standalone use. Read by FD on subsequent features to avoid re-asking the user for URLs and binaries.</purpose>
+      <purpose>Persisted GUI smoke test environment configuration shared across features. Created by PD during project setup, or by FD on first standalone use. Read by FD on subsequent features to avoid re-asking the user for URLs and executable paths. Smoke testing is only for GUI environments (web, desktop, native) — CLI verification is self-verified by Code mode.</purpose>
       <path>agent-workspace/testing-environments.json</path>
     </area>
     <area name="mcp_server_config">
@@ -57,7 +57,6 @@
     "enabled": boolean,
     "environments": {
       "web": { "base_url": "string", "auth": "object | null", "viewport": "object | null", "mcp_available": boolean, "mcp_name": "string | null", "verified": boolean } | null,
-      "cli": { "binary": "string", "mcp_available": boolean, "mcp_name": "string | null", "verified": boolean } | null,
       "native": { "app_id": "string", "appium_endpoint": "string | null", "mcp_available": boolean, "mcp_name": "string | null", "verified": boolean } | null,
       "desktop": { "executable_path": "string", "window_title": "string", "launch_args": "string | null", "mcp_available": boolean, "mcp_name": "string | null", "verified": boolean } | null
     },
@@ -75,7 +74,7 @@
       <field name="feature_name">The human-readable name of the feature (e.g., "User Authentication").</field>
       <field name="branch_name">The git branch name, or null if git automation is disabled.</field>
       <field name="git_automation_enabled">Whether the orchestrator should run git commands.</field>
-      <field name="smoke_test_automation">Configuration for automated smoke testing via synthetic-human-tester. Received in the prompt, or asked of the user if not provided. Contains: enabled (boolean), environments (per-environment config with base_url/binary/app_id/executable_path/window_title + mcp_available/mcp_name/verified populated by MCP verification in Phase 0 Step 4), and missing_prerequisites (list of unavailable MCP names). Passed to implementation in Phase 3 as part of the prompt. Defaults to { enabled: false, environments: { web: null, cli: null, native: null, desktop: null }, missing_prerequisites: [] } if never configured.</field>
+      <field name="smoke_test_automation">Configuration for automated GUI smoke testing via synthetic-human-tester. Smoke testing is only for GUI environments (web, desktop, native) — CLI is self-verified by Code mode. Received in the prompt, or asked of the user if not provided. Contains: enabled (boolean), environments (per-environment config with base_url/app_id/executable_path/window_title + mcp_available/mcp_name/verified populated by MCP verification in Phase 0 Step 4), and missing_prerequisites (list of unavailable MCP names). Passed to implementation in Phase 3 as part of the prompt. Defaults to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] } if never configured.</field>
       <field name="current_phase">The current major checkpoint: 1 (planning), 3 (execution), 5 (complete). Phases 0, 2, and 4 are transient and not tracked as resume checkpoints.</field>
       <field name="plan_status">One of: "draft", "validated", "archived".</field>
       <field name="total_steps">Number of execution steps in the plan. Populated after Architect finishes in Phase 1. When pivot_in_progress is true, total_steps is set to 0 to signal that the Architect is re-drafting — this is NOT the same as "never drafted"; the resume routing checks pivot_in_progress to distinguish.</field>
@@ -216,7 +215,7 @@
             <!-- Check 7: testing-environments.json (Smoke Test Config) -->
             <verification_check label="testing_environments">
               <check>Does agent-workspace/testing-environments.json exist on disk?</check>
-              <check>If it exists: parse as JSON. Verify it has the smoke_test_automation structure: { smoke_test_automation: { enabled: boolean, environments: { web, cli, native, desktop } } }.</check>
+              <check>If it exists: parse as JSON. Verify it has the smoke_test_automation structure: { smoke_test_automation: { enabled: boolean, environments: { web, native, desktop } } }.</check>
               <check>If it does NOT exist: this is acceptable — the file is optional and only created when smoke testing is enabled. Status is "not_configured" rather than "missing".</check>
               <result>testing_env_status: "ok" | "not_configured" | "malformed"</result>
             </verification_check>
@@ -345,16 +344,15 @@
               <sub_branch condition="User selects Yes">
                 <action priority="high">Detect the project type from the feature context before asking. Scan plan.md Section 1 (Project Context) and the user's original request for platform indicators:
                   - Web: "web app", "React", "Next.js", "Express", "Django", "Rails", "Vue", "Svelte", "Angular", "browser", "SPA", "SSR"
-                  - CLI: "CLI", "command-line", "terminal", "Go binary", "shell", "bash script"
                   - Mobile native: "mobile", "iOS", "Android", "React Native", "Flutter", "SwiftUI", "Jetpack Compose"
                   - Desktop native: "WPF", "WinForms", "WinUI", "UWP", "Electron", "Tauri", "Qt", "Avalonia", "MAUI", "native Windows", "desktop app", "C# / WPF", "Win32"
-                  If desktop native is detected: treat as a primary environment type (like web/CLI/native). Ask: "What is the path to the executable? (e.g., C:\\Program Files\\MyApp\\app.exe) What window title should I look for? I recommend the Windows-MCP server — see https://github.com/CursorTouch/Windows-MCP for installation. Install manually: pip install uv && uvx windows-mcp serve. ⚠️ Windows-MCP is powerful (PowerShell, Registry, file system access) — I'll guide you through safety configuration." Store in the desktop environment config.
-                  If unclear: ask "What type of application is this — web, CLI, mobile, or desktop?" and use the answer.</action>
+                  If desktop native is detected: treat as a primary environment type (like web/native). Ask: "What is the path to the executable? (e.g., C:\\Program Files\\MyApp\\app.exe) What window title should I look for? I recommend the Windows-MCP server — see https://github.com/CursorTouch/Windows-MCP for installation. Install manually: pip install uv && uvx windows-mcp serve. ⚠️ Windows-MCP is powerful (PowerShell, Registry, file system access) — I'll guide you through safety configuration." Store in the desktop environment config.
+                  CLI verification is self-verified by Code mode — no smoke test configuration needed for CLI.
+                  If unclear: ask "What type of GUI application is this — web, mobile, or desktop?" and use the answer.</action>
                 <action>Ask for environment configurations — ONLY for detected project types. Offer undetected types as skippable extras:</action>
                 <action>
                   PRIMARY (required for detected type):
                   - If web: "What is the base URL for the web application? (e.g., http://localhost:3000) I recommend using the Playwright MCP server — install from the Roo Code MCP tab → Marketplace. It provides accessibility-tree-based testing." Provide a default from package.json or project conventions if discoverable.
-                  - If CLI: "What is the primary CLI binary to test? (e.g., npm run, make, ./myapp) I recommend the Terminal MCP — install from the Roo Code MCP tab → Marketplace." Provide a default if discoverable.
                   - If native: "What is the app identifier for native testing? (e.g., com.example.app) I recommend the Appium MCP — install from the Roo Code MCP tab → Marketplace. Default Appium endpoint: http://localhost:4723."
 
                   OPTIONAL (not detected — ask once as a group):
@@ -366,8 +364,7 @@
                       "enabled": true,
                       "environments": {
                         "web": { "base_url": "[user-provided or null]", "auth": null, "mcp_available": false, "mcp_name": null, "verified": false },
-                        "cli": { "binary": "[user-provided or null]", "mcp_available": false, "mcp_name": null, "verified": false },
-                        "native": { "app_id": "[user-provided or null]", "appium_endpoint": "[user-provided or http://localhost:4723]", "mcp_available": false, "mcp_name": null, "verified": false },
+                         "native": { "app_id": "[user-provided or null]", "appium_endpoint": "[user-provided or http://localhost:4723]", "mcp_available": false, "mcp_name": null, "verified": false },
                         "desktop": { "executable_path": "[user-provided or null]", "window_title": "[user-provided or null]", "mcp_available": false, "mcp_name": null, "verified": false }
                       }
                     }
@@ -375,7 +372,6 @@
                 </action>
                 <action priority="high">Verify each configured environment and populate mcp_available/mcp_name/verified:
                   - Web: Check for browser MCP tools (browser_navigate, etc.). If yes: set mcp_available=true, mcp_name to detected MCP. Navigate to base_url → set verified. Report "✅ Web — [mcp_name] connected, [URL] reachable." If no browser MCP: warn "⚠️ No browser automation MCP detected. Install Playwright from the Roo Code MCP tab → Marketplace (or manually: npx @playwright/mcp@latest, then add to Roo Code MCP settings: { \"mcpServers\": { \"playwright\": { \"command\": \"npx\", \"args\": [\"@playwright/mcp@latest\"] } } })"
-                  - CLI: Check command execution. Run test command. Set mcp_available, mcp_name ("terminal"), verified. If no terminal MCP: suggest adding a Terminal MCP server to Roo Code.
                   - Native: Check Appium MCP. Connect to endpoint. Set fields. If unavailable: provide Appium MCP install + Roo config instructions.
                   - Desktop: Check for Windows-MCP tools (Click, Type, Screenshot, App). If available: set mcp_available=true, mcp_name="windows-mcp". Verify executable exists. Report "✅ Desktop — windows-mcp connected." If no Windows-MCP: warn "⚠️ Windows-MCP not detected. Install manually (NOT in Marketplace): see https://github.com/CursorTouch/Windows-MCP. pip install uv && uvx windows-mcp serve. Add to Roo Code MCP settings: { \"mcpServers\": { \"windows-mcp\": { \"command\": \"uvx\", \"args\": [\"windows-mcp\", \"serve\"] } } }. ⚠️ For safety, consider restricting tools with --exclude-tools 'PowerShell,Registry,Process'."
                   Update testing-environments.json with populated fields. If any verification fails: warn but don't block.
@@ -500,7 +496,7 @@
             feature_name (derived from request), branch_name, git_automation_enabled,
             smoke_test_automation (if previously detected from prompt or configured in Phase 0 Step 5, use that value.
             Otherwise, read from agent-workspace/testing-environments.json if it exists.
-            If none of the above, default to { enabled: false, environments: { web: null, cli: null, native: null, desktop: null }, missing_prerequisites: [] }),
+            If none of the above, default to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] }),
             current_phase=1, plan_status="draft", total_steps=0, current_step=0, pivot_in_progress=false, phase_5_substep=null.
           </action>
           <action>Proceed to Step 2.</action>
@@ -676,7 +672,7 @@
         <action>Always include: project context (plan §1), feature context (plan §2), relevant Shared Technical
           Context (plan §6), step details (Goal, Actions, Testing, Live Smoke Test, Commit Message),
           and the reference_materials instruction to read reference.md.</action>
-        <action priority="high">Include smoke test automation configuration: read the full smoke_test_automation block from state.json. Before passing to Code, validate: (1) enabled must be a boolean, (2) if enabled is true, environments must be a non-null object with at least one non-null environment, (3) if enabled is false or environments is invalid, default to { enabled: false, environments: { web: null, cli: null, native: null, desktop: null }, missing_prerequisites: [] } and warn the user. Pass the entire valid block as literal config in the Code subtask spawn prompt — include enabled, environments with all fields (base_url/binary/app_id/executable_path/window_title/launch_args/viewport + mcp_available/mcp_name/verified). Code mode uses this at its verification gate to determine whether to spawn synthetic-human-tester. Example: "smoke_test_automation: { enabled: true, environments: { web: { base_url: \"...\", mcp_available: true, mcp_name: \"playwright\", verified: true }, ... } }"</action>
+        <action priority="high">Include smoke test automation configuration: read the full smoke_test_automation block from state.json. Before passing to Code, validate: (1) enabled must be a boolean, (2) if enabled is true, environments must be a non-null object with at least one non-null environment, (3) if enabled is false or environments is invalid, default to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] } and warn the user. Pass the entire valid block as literal config in the Code subtask spawn prompt — include enabled, environments with all fields (base_url/app_id/executable_path/window_title/launch_args/viewport + mcp_available/mcp_name/verified). CLI is not included — it is self-verified by Code mode. Code mode uses this at its verification gate to determine whether to spawn synthetic-human-tester. Example: "smoke_test_automation: { enabled: true, environments: { web: { base_url: \"...\", mcp_available: true, mcp_name: \"playwright\", verified: true }, ... } }"</action>
       </step>
     </steps>
   </phase>
