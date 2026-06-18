@@ -143,13 +143,13 @@ public partial class App : Application
         services.AddSingleton<IWikiService, WikiService>();
         services.AddSingleton<IThemeProvider, WpfThemeProvider>();
         services.AddSingleton<IGlobalHotkeyService, GlobalHotkeyService>();
-        services.AddSingleton<ISystemTrayService, SystemTrayService>();
+        services.AddSingleton<ISystemTrayService, WinFormsSystemTrayService>();
         services.AddSingleton<IToolOrchestrator, ToolOrchestrator>();
 
         // Services — scoped or transient
-        services.AddTransient<IClipboardService, ClipboardService>();
-        services.AddTransient<IAudioService, AudioService>();
-        services.AddTransient<ICameraService, CameraService>();
+        services.AddTransient<IClipboardService, WpfClipboardService>();
+        services.AddTransient<IAudioService, NaudioAudioService>();
+        services.AddTransient<ICameraService, AForgeCameraService>();
 
         // Repositories — singleton (single DbContext)
         services.AddSingleton<AppDbContext>();

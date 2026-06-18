@@ -119,10 +119,10 @@ Each component below references the approved decision from [`tech-sourcing.md`](
 - **Ref:** [tech-sourcing #20](../tech-sourcing.md#20-pdf-export-chat-export-i1)
 
 #### AutoUpdater.NET
-- **Package:** `Autoupdater.NET.Official` (or `NetSparkle`)
-- **Why:** Purpose-built for .NET desktop apps. Handles version checking against remote feed (JSON/XML), downloading MSIX/MSI installer, triggering installation, and app restart.
+- **Package:** `Autoupdater.NET.Official` (primary); MSIX App Installer auto-update (built-in Windows, fallback for MSIX-packaged deployment)
+- **Why:** Purpose-built for .NET desktop apps. Handles version checking against remote feed (JSON/XML), downloading MSIX/MSI installer, triggering installation, and app restart. MSIX App Installer is Windows-native and requires no additional NuGet dependency.
 - **Vision requirements met:** Check for updates on startup/daily/weekly/manual (A7), notify when available, download and install.
-- **Constraints:** Requires hosting an update feed (JSON/XML) at a known URL. MSIX App Installer auto-update is a Windows-native alternative if distributing via MSIX.
+- **Constraints:** Requires hosting an update feed (JSON/XML) at a known URL. Both implementations are wrapped behind `IUpdateChecker` — `AutoUpdaterDotNet` for side-loaded deployments, `MsixAppInstallerUpdater` for MSIX-packaged deployments.
 - **Ref:** [tech-sourcing #27](../tech-sourcing.md#27-auto-update-mechanism)
 
 #### LibGit2Sharp

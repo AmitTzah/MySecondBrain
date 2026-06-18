@@ -127,7 +127,7 @@ Integration points are organized into two categories:
 | **API** | `System.Security.Cryptography.ProtectedData` (DPAPI) |
 | **Scope** | `DataProtectionScope.CurrentUser` — tied to Windows user account |
 | **Used For** | API keys (ApiKey.keyValue), GCS service account key, GitHub PAT, locked chat AES key wrapping |
-| **Abstraction** | `IEncryptionService` (service-level, not in abstractions.md — thin wrapper around `ProtectedData.Protect()`/`Unprotect()`) |
+| **Abstraction** | [`IEncryptionService`](abstractions.md#iencryptionservice) — thin wrapper around `ProtectedData.Protect()`/`Unprotect()`. Full interface contract in abstractions.md §13. |
 | **Fallback** | If DPAPI fails (corrupted user profile): keys are irrecoverable. This is by design — DPAPI is tied to the Windows account. User must re-enter API keys. Clear error message: "Unable to access encrypted credentials. Your Windows user profile may be corrupted. Please re-enter your API keys." |
 | **Configuration** | None. Zero-config. |
 | **Vision Features** | B1, C31, R1, Flag #11 |

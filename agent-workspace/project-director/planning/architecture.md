@@ -270,9 +270,11 @@ Chat messages contain heterogeneous content blocks (Markdown text, code blocks w
 |----------|---------|--------|
 | `MarkdownTextRenderer` | Paragraphs, headings, bold, italic, lists, links, tables, blockquotes | WPF `FlowDocument` elements |
 | `CodeBlockRenderer` | Fenced code blocks with language declaration | Syntax-highlighted `FlowDocument` via AvalonEdit highlighting engine + copy button |
-| `ArtifactRenderer` | Artifact references | Clickable artifact card → opens in side panel |
-| `MediaRenderer` | Images, audio, video embeds | `Image`, NAudio mini player, `MediaElement` |
+| `ArtifactReferenceRenderer` | Artifact references | Clickable artifact card → opens in side panel |
+| `ImageRenderer` | Inline images (`![alt](url)`) | WPF `Image` control with click-to-enlarge |
+| `MediaRenderer` | Audio/video embeds | NAudio mini player, WPF `MediaElement` |
 | `ThinkingRenderer` | Thinking/reasoning tokens | Collapsible "Thinking…" accordion |
+| `ToolCallRenderer` | Tool call/result system messages | Styled border with tool name, parameters, result summary |
 
 Renderers are registered in `ContentRendererRegistry` at startup. The `MarkdownStreamRenderer` resolves the appropriate renderer for each AST node during progressive rendering.
 
