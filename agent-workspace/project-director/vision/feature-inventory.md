@@ -7,7 +7,7 @@ Features without which the app has no reason to exist. These MUST be present in 
 ### A. Settings & Configuration
 **Spec:** [`features/settings-configuration.md`](features/settings-configuration.md)
 
-- **A1. Global Settings Screen:** A dedicated settings screen with all global configuration options organized into sections (Providers, Profiles, Appearance, Wiki, Backup, Hotkeys, Tools, Language, Notifications, Startup, Updates, Security, Maintenance).
+- **A1. Global Settings Screen:** A dedicated settings screen with all global configuration options organized into 16 categories (Providers, Profiles, Appearance, Wiki, Backup, Text Actions, Hotkeys, Tools, Language, Notifications, Startup, Updates, Diagnostics, Pricing, Security, Maintenance).
 - **A2. Default Profile Selection:** User selects which model profile is auto-assigned when creating a new chat.
 - **A3. Appearance Settings:** At least three visual themes for chat view (Classic, Compact, Bubble). Customizable font family, size, and weight for messages.
 - **A4. Notification Settings:** Toggle sound on assistant completion. Option to disable streaming entirely. Per-chat mute toggle.
@@ -17,6 +17,7 @@ Features without which the app has no reason to exist. These MUST be present in 
 - **A8. Onboarding Wizard:** First-launch guided setup: add API key, create profile, select wiki directory, configure hotkeys. Each step skippable. Re-launchable from Settings.
 - **A9. Database Maintenance:** "Compact Database" button runs SQLite VACUUM. Displays size before/after.
 - **A10. Speech-to-Text (STT) Provider:** Configure dedicated STT provider and model for voice dictation (separate from text-generation configs). Supports OpenAI Whisper API, local Whisper, OpenAI-compatible STT endpoints.
+- **A11. Diagnostics & Debug Logging:** Structured diagnostic logging via Serilog to rolling JSON files. Log level selector (Information/Debug/Verbose). Eight per-category toggle checkboxes: LLM API Calls, Tier 1 Hotkey Pipeline, Tier 2 Command Bar, Database, Wiki & File System, WebSocket, Startup & Shutdown, System Integration. "Open Logs Folder" and "Clear Logs" buttons. API keys MUST be redacted in all log output. Full spec: [`features/diagnostics-debug-logging.md`](features/diagnostics-debug-logging.md).
 
 ### B. Model Configurations & Personas
 **Spec:** [`features/model-configurations-personas.md`](features/model-configurations-personas.md)

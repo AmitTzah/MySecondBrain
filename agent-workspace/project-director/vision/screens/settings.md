@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The Settings screen provides a single, organized interface for configuring all global application settings. It uses a sidebar + content layout: a category sidebar on the left navigates between 14 setting categories; the selected category's settings appear in the content area on the right. All settings changes take effect immediately — there is no "Save" button.
+The Settings screen provides a single, organized interface for configuring all global application settings. It uses a sidebar + content layout: a category sidebar on the left navigates between 16 setting categories; the selected category's settings appear in the content area on the right. All settings changes take effect immediately — there is no "Save" button.
 
 ## Layout
 
@@ -238,7 +238,7 @@ Scrollable area showing the active category's settings. Each category section ha
 
 ## Cross-References
 
-- Feature spec: [`features/settings-configuration.md`](../features/settings-configuration.md) A1-A10
+- Feature spec: [`features/settings-configuration.md`](../features/settings-configuration.md) A1-A11
 - API keys: [`features/model-configurations-personas.md`](../features/model-configurations-personas.md) B1
 - Personas/Models: [`features/model-configurations-personas.md`](../features/model-configurations-personas.md) B2, B3
 - Text Actions: [`features/text-actions-three-tier.md`](../features/text-actions-three-tier.md) K1
