@@ -193,6 +193,7 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **N11. Auto-Generated index.md:** Maintained at wiki root. Directory tree, all headings with links, cross-links, recently modified, orphan pages. Generated from local index. AI reads for cross-linking.
 - **N12. AI Memory:** `_memory.md` wiki file. "Update Memory" button triggers N5 pipeline. Memory-aware toggle per chat injects full file into context. Optional max token cap. Single API call per message.
 - **N13. Find & Replace Across Wiki:** Search and replace across all wiki files with preview of changes. Wiki snapshots (N6) provide undo. Regex support.
+- **N14. Git Wiki Version Control:** Initialize git repository in wiki directory. Auto-commit on file change (debounced). Optional GitHub remote push with Personal Access Token (DPAPI-encrypted). Configured in Onboarding Wizard Step 3 and Settings → Wiki.
 
 ### O. Data Model & Lifecycle
 **Spec:** [`features/data-model-lifecycle.md`](features/data-model-lifecycle.md)

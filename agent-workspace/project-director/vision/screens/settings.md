@@ -29,7 +29,8 @@ Categories listed vertically:
 5. ☁️ Backup
 6. ⌨️ Hotkeys
 7. 🔧 Tools
-8. 🔔 Notifications
+8. 🌐 Language
+9. 🔔 Notifications
 10. 🚀 Startup
 11. 🔄 Updates
 12. 💰 Pricing
@@ -201,4 +202,4 @@ Scrollable area showing the active category's settings. Each category section ha
 - Backup: [`features/backup-recovery.md`](../features/backup-recovery.md) R1-R4
 - Hotkeys: [`features/windows-os-integration.md`](../features/windows-os-integration.md) P1
 - Tools: [`features/tool-use-agents.md`](../features/tool-use-agents.md) H5
-- Git wiki: [`features/soft-delete-trash.md`](../features/soft-delete-trash.md) — not yet in settings (deferred)
+- Git wiki: [`features/personal-wiki.md`](../features/personal-wiki.md) N11
