@@ -219,7 +219,7 @@ The following items are flagged for Architect review before technical planning. 
 
 15. ⚠️ **Auto-commit on file change** via file system watcher must handle rapid successive changes (debounce) and must not commit while a file is being written. ([`screens/onboarding-wizard.md`](screens/onboarding-wizard.md) Step 3)
 
-16. ⚠️ **Language & RTL (Q) feature** — flagged as potentially out of scope per user's initial English-only preference. Re-evaluate during W3.15 implementation. ([`features/language-rtl.md`](features/language-rtl.md))
+16. ⚠️ **Language & RTL (Q) feature** — moved to Feature 9 (Studio Chat — Core Workspace). Hebrew RTL detection and bidirectional text rendering are built into the core Markdown rendering pipeline where they architecturally belong. The Settings → Language toggle for "Auto-detect RTL" is in Feature 8. ([`features/language-rtl.md`](features/language-rtl.md))
 
 ---
 

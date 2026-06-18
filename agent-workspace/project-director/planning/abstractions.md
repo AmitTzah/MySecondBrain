@@ -953,7 +953,7 @@ public enum VirtualKey { /* Windows virtual key codes */ }
 ---
 
 ### `IHwndCaptureService`
-Captures the active window handle, source app name, document title, and captured content for Tier 1 text actions. In W3.10, extended to support the graduated UIA capture pipeline: selection text (TextPattern), focused element content (ValuePattern), surrounding context (TreeWalker), full document text (DocumentRange), and screenshot capture (Win32 PrintWindow/BitBlt) — per the TextAction's captureScope flags.
+Captures the active window handle, source app name, document title, and captured content for Tier 1 text actions. The graduated UIA capture pipeline — selection text (TextPattern), focused element content (ValuePattern), surrounding context (TreeWalker), full document text (DocumentRange), and screenshot capture (Win32 PrintWindow/BitBlt) — is implemented as part of Feature 13 (Text Actions & Three-Tier System), per the TextAction's captureScope flags.
 
 ```csharp
 public interface IHwndCaptureService
@@ -1094,6 +1094,14 @@ public interface ISpellCheckService
 
 ---
 
+### `IDialogService`
+- **Purpose:** Abstract dialog/popup interactions for MVVM ViewModels (confirmation dialogs, file pickers, diff viewers).
+- **Methods:** `ShowConfirmationAsync(title, message) → bool`, `ShowDiffViewerAsync(before, after, title) → bool`, `ShowFilePickerAsync(filter) → string`.
+- **First Implementation:** `WpfDialogService` (WPF MessageBox + custom DiffViewer window).
+- **Used By:** F9a (close confirmation), F10a (delete confirmation), F12 (terminal confirmation), F14 (Write to Wiki Diff Viewer).
+
+---
+
 ### `IWikiGitService`
 Wraps LibGit2Sharp for wiki directory version control (optional GitHub push).
 
@@ -1171,7 +1179,7 @@ public record CleanupCompletedEventArgs(int TransientDeleted, int TrashPurged);
 
 ## 14. Diagnostics & Logging — Serilog Destructuring Policy
 
-Diagnostics (V) uses the existing logging infrastructure (W1.3) and [`ISettingsRepository`](#isettingsrepository) for persisting 9 log configuration keys. No new C# interfaces are required — the feature consumes `ILogger<T>` (Microsoft.Extensions.Logging) and `ISettingsRepository`.
+Diagnostics (V) uses the existing logging infrastructure (Feature 3) and [`ISettingsRepository`](#isettingsrepository) for persisting 9 log configuration keys. No new C# interfaces are required — the feature consumes `ILogger<T>` (Microsoft.Extensions.Logging) and `ISettingsRepository`.
 
 ### API Key Redaction Policy
 

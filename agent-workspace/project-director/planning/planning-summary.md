@@ -162,7 +162,7 @@ Key architectural decisions made during planning, with rationale.
 | AD-13 | **GCS backup + local folder backup** | GCS provides off-site disaster recovery. Local folder backup provides a zero-dependency alternative. Both implement IBackupProvider. Mitigates Flag #9 (single cloud provider dependency). | [tech-sourcing #26](../tech-sourcing.md#26-backup-to-google-cloud-storage) |
 | AD-14 | **Hard-delete transient threads; soft-delete permanent threads only** | Transient threads are ephemeral by design (7-day auto-cleanup). Soft-delete (30-day Trash) adds unnecessary complexity for ephemeral content. Permanent threads go through soft-delete → Trash → 30-day purge. | [data-model.md](data-model.md#soft-delete-chatthread) |
 | AD-15 | **MVVM with CommunityToolkit.Mvvm source generators** | Eliminates boilerplate (INotifyPropertyChanged, ICommand). Source generators produce compile-time code — no runtime reflection overhead. Strict MVVM: Views NEVER reference ViewModels; Messenger for cross-VM communication. | [platform-notes.md](platform-notes.md#1-mvvm-pattern--communitytoolkitmvvm) |
-| AD-16 | **Diagnostics as W1.3b — immediately after logging infrastructure** | Diagnostics (V) builds directly on Serilog (W1.3) and is placed as W1.3b so every subsequent Wave 1 feature can be built with full diagnostic logging available for debugging during development. The SettingsRepository dependency (W1.4) is soft-resolved: logging runs with in-memory defaults until W1.4 provides persistence. | [roadmap.md](../roadmap.md#feature-w13b--diagnostics--debug-logging) |
+| AD-16 | **Diagnostics bundled with Settings & Onboarding (Feature 8)** | Diagnostics (V) builds directly on Serilog (Feature 3) and shares the Settings screen with all other configuration. Bundling diagnostics with settings and onboarding keeps related UI in one feature. The SettingsRepository dependency (Feature 4) provides persistence for 9 log configuration keys. | [roadmap.md](../roadmap.md#feature-8--settings-onboarding--diagnostics) |
 
 ### Flagged Decisions Pending Architect Resolution
 
@@ -215,7 +215,7 @@ Every vision feature group (A-U) is addressed in the planning documents:
 | R. Backup & Recovery | IBackupProvider | Google.Cloud.Storage.V1 | BackupSnapshot | IBackupProvider |
 | S. Usage Dashboard | IUsageRepository | LiveCharts2, SQLite aggregation | UsageRecord | IUsageRepository |
 | U. Soft-Delete Trash | AutoCleanupService | SQLite | ChatThread (isDeleted, deletedAt) | IChatThreadRepository |
-| **V. Diagnostics & Debug Logging** | Serilog destructuring policy, Settings → Diagnostics UI | Serilog (existing W1.3), ISettingsRepository | AppSetting (9 key-value pairs) | ILogger\<T\>, ISettingsRepository, IDestructuringPolicy |
+| **V. Diagnostics & Debug Logging** | Serilog destructuring policy, Settings → Diagnostics UI | Serilog (Feature 3), ISettingsRepository | AppSetting (9 key-value pairs) | ILogger\<T\>, ISettingsRepository, IDestructuringPolicy |
 | T. Nice-to-Have | Architecture accommodates | (deferred) | (deferred) | (deferred) |
 
 ---

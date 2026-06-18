@@ -146,7 +146,7 @@ Logs Windows OS integration events.
 - If the logs folder is inaccessible or files are locked: error toast "Could not clear all log files. [N] files could not be deleted. Close other applications that may be accessing the logs and try again."
 
 ### Log File Format & Infrastructure
-- **Logging Infrastructure:** Serilog (already built in W1.3 — rolling file sink, JSON structured output)
+- **Logging Infrastructure:** Serilog (already built in Feature 3 — rolling file sink, JSON structured output)
 - **File Location:** `%LOCALAPPDATA%\MySecondBrain\logs\`
 - **File Naming:** `mysecondbrain-{Date}.json` (or as configured by Serilog rolling file sink)
 - **Format:** Structured JSON. Each log entry is a JSON object with: timestamp, level, category, message, and any structured properties

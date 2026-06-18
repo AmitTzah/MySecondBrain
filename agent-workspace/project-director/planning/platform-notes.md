@@ -576,7 +576,7 @@ If App Installer auto-update is unavailable (non-MSIX deployment), use `AutoUpda
 
 ## 12. UIA Capture Pipeline (Tier 1)
 
-The graduated UIA capture pipeline powers Tier 1 Text Action capture scope. It is a W3.10 runtime concern built on top of existing Wave 1-2 infrastructure (`IHwndCaptureService`, `ITextInjectionService`). The pipeline attempts capture methods in order of reliability, falling back progressively based on the TextAction's `captureScope` flags.
+The graduated UIA capture pipeline powers Tier 1 Text Action capture scope. It is built as part of Feature 13 (Text Actions & Three-Tier System) on top of existing Wave 1–2 infrastructure (`IHwndCaptureService`, `ITextInjectionService`). The pipeline attempts capture methods in order of reliability, falling back progressively based on the TextAction's `captureScope` flags.
 
 ### UIA Patterns Used
 
@@ -603,7 +603,7 @@ The graduated UIA capture pipeline powers Tier 1 Text Action capture scope. It i
 
 ### Log File Location
 
-Diagnostic logs are written to `%LOCALAPPDATA%\MySecondBrain\logs\` via Serilog rolling file sink (W1.3). Log files are structured JSON named `mysecondbrain-{Date}.json`, rotated daily, retained for 30 days.
+Diagnostic logs are written to `%LOCALAPPDATA%\MySecondBrain\logs\` via Serilog rolling file sink (Feature 3). Log files are structured JSON named `mysecondbrain-{Date}.json`, rotated daily, retained for 30 days.
 
 ### Folder Access Edge Cases
 
@@ -614,7 +614,7 @@ Diagnostic logs are written to `%LOCALAPPDATA%\MySecondBrain\logs\` via Serilog 
 
 ### Configuration Persistence
 
-Nine diagnostic settings are stored as `AppSetting` key-value pairs via `ISettingsRepository` (W1.4). Changes take effect immediately — no save button. Categories 1-3 ON by default, 4-8 OFF. Log level defaults to Information. See [`data-model.md §AppSetting Keys for Diagnostics`](data-model.md#appsetting-keys-for-diagnostics-v).
+Nine diagnostic settings are stored as `AppSetting` key-value pairs via `ISettingsRepository` (Feature 4). Changes take effect immediately — no save button. Categories 1-3 ON by default, 4-8 OFF. Log level defaults to Information. See [`data-model.md §AppSetting Keys for Diagnostics`](data-model.md#appsetting-keys-for-diagnostics-v).
 
 ### API Key Redaction
 
