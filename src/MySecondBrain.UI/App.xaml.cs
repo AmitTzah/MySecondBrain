@@ -38,6 +38,19 @@ public partial class App : Application
         _serviceProvider = services.BuildServiceProvider();
 
         var startupLogger = _serviceProvider.GetRequiredService<ILogger<App>>();
+
+        try
+        {
+            var db = _serviceProvider.GetRequiredService<AppDbContext>();
+            db.Database.Migrate();
+            startupLogger.LogInformation("Database migration applied successfully");
+        }
+        catch (Exception ex)
+        {
+            startupLogger.LogError(ex, "Database migration failed");
+            throw; // Re-throw — app cannot function without database
+        }
+
         startupLogger.LogInformation("MySecondBrain started");
 
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();

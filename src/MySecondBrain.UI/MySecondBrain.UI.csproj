@@ -19,6 +19,10 @@
     <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.*" />
     <PackageReference Include="WeCantSpell.Hunspell" Version="4.*" />
     <PackageReference Include="Autoupdater.NET.Official" Version="1.*" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Serilog" Version="4.*" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="8.*" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.*" />

@@ -504,4 +504,380 @@ public class DataLayerTests
             Assert.Equal("dark", retrieved!.Value);
         }
     }
+
+    // ════════════════════════════════════════════════════════════════
+    // Step 3 tests: Migration, FTS5 virtual tables, and content-sync triggers
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Creates an in-memory SQLite context and applies the full migration
+    /// (including FTS5 virtual tables and seed data).
+    /// </summary>
+    private static (AppDbContext Db, SqliteConnection Connection) CreateTestDbContextWithMigration()
+    {
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        var db = new AppDbContext(options);
+        db.Database.Migrate();
+        return (db, connection);
+    }
+
+    /// <summary>
+    /// Verifies that Migrate() succeeds and creates all 16 tables
+    /// (14 entity tables + 2 FTS5 virtual tables).
+    /// </summary>
+    [Fact]
+    public void Migration_Apply_AllTablesCreated()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            // Query sqlite_master to get all table names
+            var tables = new List<string>();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+                tables.Add(reader.GetString(0));
+
+            // Verify all expected tables exist (14 entity tables + 2 FTS5 virtual tables).
+            // Exact count varies by SQLite version due to FTS5 internal shadow tables.
+            Assert.Contains("ApiKeys", tables);
+            Assert.Contains("Settings", tables);
+            Assert.Contains("Artifacts", tables);
+            Assert.Contains("ChatThreads", tables);
+            Assert.Contains("MediaItems", tables);
+            Assert.Contains("Messages", tables);
+            Assert.Contains("MessageDrafts", tables);
+            Assert.Contains("ModelConfigurations", tables);
+            Assert.Contains("Personas", tables);
+            Assert.Contains("PromptTemplates", tables);
+            Assert.Contains("TextActions", tables);
+            Assert.Contains("UsageRecords", tables);
+            Assert.Contains("WikiFiles", tables);
+            Assert.Contains("WikiVersionSnapshots", tables);
+            Assert.Contains("MessageFts", tables);
+            Assert.Contains("WikiFileFts", tables);
+        }
+    }
+
+    /// <summary>
+    /// Verifies FTS5 virtual tables exist and are queryable.
+    /// </summary>
+    [Fact]
+    public void Migration_Fts5_VirtualTablesExist()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            // Verify FTS5 tables are registered as virtual tables
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND sql LIKE 'CREATE VIRTUAL TABLE%'";
+            var ftsTables = new List<string>();
+            using (var reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                    ftsTables.Add(reader.GetString(0));
+            }
+
+            Assert.Contains("MessageFts", ftsTables);
+            Assert.Contains("WikiFileFts", ftsTables);
+
+            // Verify tables are queryable (empty after migration)
+            cmd.CommandText = "SELECT COUNT(*) FROM MessageFts";
+            var messageCount = (long)cmd.ExecuteScalar()!;
+            Assert.Equal(0, messageCount);
+
+            cmd.CommandText = "SELECT COUNT(*) FROM WikiFileFts";
+            var wikiCount = (long)cmd.ExecuteScalar()!;
+            Assert.Equal(0, wikiCount);
+        }
+    }
+
+    /// <summary>
+    /// Verifies FTS5 content-sync triggers: inserting a Message
+    /// automatically populates the MessageFts index.
+    /// </summary>
+    [Fact]
+    public void Migration_Fts5_ContentSync_MessageInsertTrigger()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            // Create a ChatThread first (FK required)
+            var thread = new ChatThread
+            {
+                Id = "thread-fts-test-001",
+                ChatMode = "Standard",
+                Title = "FTS Test Thread"
+            };
+            db.ChatThreads.Add(thread);
+            db.SaveChanges();
+
+            // Insert a message
+            var message = new Message
+            {
+                Id = "msg-fts-test-001",
+                ThreadId = thread.Id,
+                Role = "User",
+                Content = "The quick brown fox jumps over the lazy dog",
+                BranchId = Guid.NewGuid().ToString("N")
+            };
+            db.Messages.Add(message);
+            db.SaveChanges();
+
+            // FTS5 should now contain this message
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM MessageFts WHERE MessageFts MATCH 'brown fox'";
+            var count = (long)cmd.ExecuteScalar()!;
+            Assert.Equal(1, count);
+        }
+    }
+
+    /// <summary>
+    /// Verifies FTS5 content-sync triggers: updating a Message
+    /// updates the FTS index.
+    /// </summary>
+    [Fact]
+    public void Migration_Fts5_ContentSync_MessageUpdateTrigger()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            var thread = new ChatThread
+            {
+                Id = "thread-fts-update-001",
+                ChatMode = "Standard"
+            };
+            db.ChatThreads.Add(thread);
+            db.SaveChanges();
+
+            var message = new Message
+            {
+                Id = "msg-fts-update-001",
+                ThreadId = thread.Id,
+                Role = "User",
+                Content = "Original content about cats",
+                BranchId = Guid.NewGuid().ToString("N")
+            };
+            db.Messages.Add(message);
+            db.SaveChanges();
+
+            // Verify original content is indexed
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM MessageFts WHERE MessageFts MATCH 'cats'";
+            Assert.Equal(1, (long)cmd.ExecuteScalar()!);
+
+            // Update the message content
+            message.Content = "Updated content about dogs";
+            db.SaveChanges();
+
+            // Old content should no longer match
+            cmd.CommandText = "SELECT COUNT(*) FROM MessageFts WHERE MessageFts MATCH 'cats'";
+            Assert.Equal(0, (long)cmd.ExecuteScalar()!);
+
+            // New content should match
+            cmd.CommandText = "SELECT COUNT(*) FROM MessageFts WHERE MessageFts MATCH 'dogs'";
+            Assert.Equal(1, (long)cmd.ExecuteScalar()!);
+        }
+    }
+
+    /// <summary>
+    /// Verifies FTS5 content-sync triggers: deleting a Message
+    /// removes it from the FTS index.
+    /// </summary>
+    [Fact]
+    public void Migration_Fts5_ContentSync_MessageDeleteTrigger()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            var thread = new ChatThread
+            {
+                Id = "thread-fts-delete-001",
+                ChatMode = "Standard"
+            };
+            db.ChatThreads.Add(thread);
+            db.SaveChanges();
+
+            var message = new Message
+            {
+                Id = "msg-fts-delete-001",
+                ThreadId = thread.Id,
+                Role = "User",
+                Content = "Delete me please",
+                BranchId = Guid.NewGuid().ToString("N")
+            };
+            db.Messages.Add(message);
+            db.SaveChanges();
+
+            // Verify it's in the FTS index
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM MessageFts WHERE MessageFts MATCH 'Delete'";
+            Assert.Equal(1, (long)cmd.ExecuteScalar()!);
+
+            // Delete the message
+            db.Messages.Remove(message);
+            db.SaveChanges();
+
+            // Should no longer be in FTS index
+            cmd.CommandText = "SELECT COUNT(*) FROM MessageFts WHERE MessageFts MATCH 'Delete'";
+            Assert.Equal(0, (long)cmd.ExecuteScalar()!);
+        }
+    }
+
+    /// <summary>
+    /// Verifies FTS5 content-sync triggers for WikiFiles.
+    /// </summary>
+    [Fact]
+    public void Migration_Fts5_ContentSync_WikiFileInsertTrigger()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            var wikiFile = new WikiFile
+            {
+                FilePath = "/notes/fts-test.md",
+                FileName = "fts-test.md",
+                Content = "This wiki page discusses machine learning and neural networks",
+                H1Title = "Machine Learning"
+            };
+            db.WikiFiles.Add(wikiFile);
+            db.SaveChanges();
+
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM WikiFileFts WHERE WikiFileFts MATCH 'machine learning'";
+            var count = (long)cmd.ExecuteScalar()!;
+            Assert.Equal(1, count);
+        }
+    }
+
+    /// <summary>
+    /// Verifies FTS5 content-sync triggers: updating a WikiFile
+    /// updates the FTS index.
+    /// </summary>
+    [Fact]
+    public void Migration_Fts5_ContentSync_WikiFileUpdateTrigger()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            var wikiFile = new WikiFile
+            {
+                FilePath = "/notes/fts-update-test.md",
+                FileName = "fts-update-test.md",
+                Content = "Original wiki content about Python programming",
+                H1Title = "Python"
+            };
+            db.WikiFiles.Add(wikiFile);
+            db.SaveChanges();
+
+            // Verify original content is indexed
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM WikiFileFts WHERE WikiFileFts MATCH 'Python'";
+            Assert.Equal(1, (long)cmd.ExecuteScalar()!);
+
+            // Update the wiki file content
+            wikiFile.Content = "Updated wiki content about Rust programming";
+            db.SaveChanges();
+
+            // Old content should no longer match
+            cmd.CommandText = "SELECT COUNT(*) FROM WikiFileFts WHERE WikiFileFts MATCH 'Python'";
+            Assert.Equal(0, (long)cmd.ExecuteScalar()!);
+
+            // New content should match
+            cmd.CommandText = "SELECT COUNT(*) FROM WikiFileFts WHERE WikiFileFts MATCH 'Rust'";
+            Assert.Equal(1, (long)cmd.ExecuteScalar()!);
+        }
+    }
+
+    /// <summary>
+    /// Verifies FTS5 content-sync triggers: deleting a WikiFile
+    /// removes it from the FTS index.
+    /// </summary>
+    [Fact]
+    public void Migration_Fts5_ContentSync_WikiFileDeleteTrigger()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            var wikiFile = new WikiFile
+            {
+                FilePath = "/notes/fts-delete-test.md",
+                FileName = "fts-delete-test.md",
+                Content = "Delete me from the wiki",
+                H1Title = "Delete Test"
+            };
+            db.WikiFiles.Add(wikiFile);
+            db.SaveChanges();
+
+            // Verify it's in the FTS index
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM WikiFileFts WHERE WikiFileFts MATCH 'Delete'";
+            Assert.Equal(1, (long)cmd.ExecuteScalar()!);
+
+            // Delete the wiki file
+            db.WikiFiles.Remove(wikiFile);
+            db.SaveChanges();
+
+            // Should no longer be in FTS index
+            cmd.CommandText = "SELECT COUNT(*) FROM WikiFileFts WHERE WikiFileFts MATCH 'Delete'";
+            Assert.Equal(0, (long)cmd.ExecuteScalar()!);
+        }
+    }
+
+    /// <summary>
+    /// Verifies seed data is present after migration.
+    /// </summary>
+    [Fact]
+    public void Migration_SeedData_Personas_And_TextActions_Present()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            var personas = db.Personas.Where(p => p.IsBuiltIn).ToList();
+            Assert.Equal(2, personas.Count);
+
+            var generalAssistant = personas.Single(p => p.Id == "00000000000000000000000000000001");
+            Assert.Equal("General Assistant", generalAssistant.DisplayName);
+
+            var codeHelper = personas.Single(p => p.Id == "00000000000000000000000000000002");
+            Assert.Equal("Code Helper", codeHelper.DisplayName);
+
+            var textActions = db.TextActions.Where(ta => ta.IsBuiltIn).ToList();
+            Assert.Equal(6, textActions.Count);
+            Assert.Contains(textActions, ta => ta.DisplayName == "Rewrite");
+            Assert.Contains(textActions, ta => ta.DisplayName == "Enhance Prompt");
+        }
+    }
+
+    /// <summary>
+    /// Verifies that the migration history table contains the InitialCreate entry.
+    /// </summary>
+    [Fact]
+    public void Migration_HistoryTable_HasInitialCreateEntry()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM __EFMigrationsHistory WHERE MigrationId = '20260618101823_InitialCreate'";
+            var count = (long)cmd.ExecuteScalar()!;
+            Assert.Equal(1, count);
+        }
+    }
 }
