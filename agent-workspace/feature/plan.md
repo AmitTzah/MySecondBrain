@@ -226,7 +226,7 @@ src/
 
 ---
 
-### [ ] Step 3: Create InitialCreate migration with FTS5 virtual tables and auto-apply at startup
+### [x] Step 3: Create InitialCreate migration with FTS5 virtual tables and auto-apply at startup
 - **Goal:** Database is automatically created/migrated on first launch and subsequent updates. FTS5 virtual tables exist for full-text search.
 - **Actions:**
   - Run `dotnet ef migrations add InitialCreate --project src/MySecondBrain.Data --startup-project src/MySecondBrain.UI`
