@@ -61,6 +61,8 @@ public class ModelConfiguration
     // Navigation
     public ApiKey? ApiKey { get; set; }
 
+    public ICollection<ChatThread> ChatThreads { get; set; } = new List<ChatThread>();
+
     public ICollection<Persona> Personas { get; set; } = new List<Persona>();
 
     public ICollection<Message> Messages { get; set; } = new List<Message>();

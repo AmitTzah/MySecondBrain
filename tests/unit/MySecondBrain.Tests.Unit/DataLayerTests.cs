@@ -1,10 +1,31 @@
 using System.Reflection;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using MySecondBrain.Data;
 using MySecondBrain.Data.Entities;
 
 namespace MySecondBrain.Tests.Unit;
 
 public class DataLayerTests
 {
+    /// <summary>
+    /// Creates an in-memory SQLite AppDbContext for testing.
+    /// Keeps the connection open so the database persists for the lifetime of the context.
+    /// Caller is responsible for disposing both the context and the connection.
+    /// </summary>
+    private static (AppDbContext Db, SqliteConnection Connection) CreateTestDbContext()
+    {
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        var db = new AppDbContext(options);
+        db.Database.EnsureCreated();
+        return (db, connection);
+    }
+
     /// <summary>
     /// Validates that each entity class has the correct number of scalar properties
     /// (non-navigation, non-inherited) matching the vision data spec.
@@ -187,5 +208,300 @@ public class DataLayerTests
 
         var promptTemplate = new PromptTemplate();
         Assert.NotEmpty(promptTemplate.Id);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Step 2 tests: DbContext model validation, FK relationships,
+    // indexes, and seed data
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Verifies that EnsureCreated succeeds, confirming the model is valid.
+    /// </summary>
+    [Fact]
+    public void DbContext_ModelValidation_EnsureCreatedSucceeds()
+    {
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        using var db = new AppDbContext(options);
+        using (connection)
+        {
+            db.Database.EnsureCreated();
+
+            // Verify all 14 entity types are mapped (BackupSnapshot deferred to W3.16)
+            var entityTypes = db.Model.GetEntityTypes().ToList();
+            Assert.Equal(14, entityTypes.Count);
+        }
+    }
+
+    /// <summary>
+    /// Verifies all 15 DbSet properties exist on AppDbContext.
+    /// </summary>
+    [Fact]
+    public void DbContext_AllDbSets_Present()
+    {
+        var expectedDbSets = new[]
+        {
+            "ApiKeys", "Settings", "Artifacts", "ChatThreads", "MediaItems",
+            "Messages", "MessageDrafts", "ModelConfigurations", "Personas",
+            "PromptTemplates", "TextActions", "UsageRecords",
+            "WikiFiles", "WikiVersionSnapshots"
+        };
+
+        var dbSetProperties = typeof(AppDbContext)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.PropertyType.IsGenericType
+                && p.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
+            .Select(p => p.Name)
+            .ToHashSet();
+
+        Assert.Equal(14, dbSetProperties.Count);
+
+        foreach (var expected in expectedDbSets)
+        {
+            Assert.True(dbSetProperties.Contains(expected),
+                $"AppDbContext is missing DbSet<{expected}> property.");
+        }
+    }
+
+    /// <summary>
+    /// Verifies all FK relationships have correct OnDelete behavior.
+    /// </summary>
+    [Fact]
+    public void DbContext_OnModelCreating_ForeignKeys_HaveCorrectDeleteBehavior()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var model = db.Model;
+
+            // Helper: get FK delete behavior by entity type and FK property name
+            DeleteBehavior GetDeleteBehavior(Type entityType, string fkPropertyName)
+            {
+                var entity = model.FindEntityType(entityType)!;
+                var fk = entity.GetForeignKeys()
+                    .Single(fk => fk.Properties.Any(p => p.Name == fkPropertyName));
+                return fk.DeleteBehavior;
+            }
+
+            // ChatThread → Persona: SetNull
+            Assert.Equal(DeleteBehavior.SetNull,
+                GetDeleteBehavior(typeof(ChatThread), nameof(ChatThread.PersonaId)));
+
+            // ChatThread → ModelConfiguration: SetNull
+            Assert.Equal(DeleteBehavior.SetNull,
+                GetDeleteBehavior(typeof(ChatThread), nameof(ChatThread.ModelConfigId)));
+
+            // Message → ChatThread: Cascade
+            Assert.Equal(DeleteBehavior.Cascade,
+                GetDeleteBehavior(typeof(Message), nameof(Message.ThreadId)));
+
+            // Message → Message (self): Restrict
+            Assert.Equal(DeleteBehavior.Restrict,
+                GetDeleteBehavior(typeof(Message), nameof(Message.ParentMessageId)));
+
+            // Message → Persona: SetNull
+            Assert.Equal(DeleteBehavior.SetNull,
+                GetDeleteBehavior(typeof(Message), nameof(Message.PersonaId)));
+
+            // Message → ModelConfiguration: SetNull
+            Assert.Equal(DeleteBehavior.SetNull,
+                GetDeleteBehavior(typeof(Message), nameof(Message.ModelConfigId)));
+
+            // Persona → ModelConfiguration: Restrict
+            Assert.Equal(DeleteBehavior.Restrict,
+                GetDeleteBehavior(typeof(Persona), nameof(Persona.DefaultModelConfigId)));
+
+            // ModelConfiguration → ApiKey: SetNull
+            Assert.Equal(DeleteBehavior.SetNull,
+                GetDeleteBehavior(typeof(ModelConfiguration), nameof(ModelConfiguration.ApiKeyId)));
+
+            // Artifact → ChatThread: Cascade
+            Assert.Equal(DeleteBehavior.Cascade,
+                GetDeleteBehavior(typeof(Artifact), nameof(Artifact.ThreadId)));
+
+            // MediaItem → ChatThread: Cascade
+            Assert.Equal(DeleteBehavior.Cascade,
+                GetDeleteBehavior(typeof(MediaItem), nameof(MediaItem.ThreadId)));
+
+            // MediaItem → Message: SetNull
+            Assert.Equal(DeleteBehavior.SetNull,
+                GetDeleteBehavior(typeof(MediaItem), nameof(MediaItem.MessageId)));
+
+            // UsageRecord → Message (1:1): Cascade
+            Assert.Equal(DeleteBehavior.Cascade,
+                GetDeleteBehavior(typeof(UsageRecord), nameof(UsageRecord.MessageId)));
+
+            // UsageRecord → ChatThread: Cascade
+            Assert.Equal(DeleteBehavior.Cascade,
+                GetDeleteBehavior(typeof(UsageRecord), nameof(UsageRecord.ThreadId)));
+
+            // UsageRecord → Persona: SetNull
+            Assert.Equal(DeleteBehavior.SetNull,
+                GetDeleteBehavior(typeof(UsageRecord), nameof(UsageRecord.PersonaId)));
+
+            // UsageRecord → ModelConfiguration: SetNull
+            Assert.Equal(DeleteBehavior.SetNull,
+                GetDeleteBehavior(typeof(UsageRecord), nameof(UsageRecord.ModelConfigId)));
+
+            // TextAction → ModelConfiguration: SetNull
+            Assert.Equal(DeleteBehavior.SetNull,
+                GetDeleteBehavior(typeof(TextAction), nameof(TextAction.ModelConfigId)));
+
+            // WikiVersionSnapshot → WikiFile: Cascade
+            Assert.Equal(DeleteBehavior.Cascade,
+                GetDeleteBehavior(typeof(WikiVersionSnapshot), nameof(WikiVersionSnapshot.WikiFilePath)));
+
+            // Verify total FK count across all entities
+            var totalFks = model.GetEntityTypes()
+                .SelectMany(e => e.GetForeignKeys())
+                .Count();
+            Assert.Equal(17, totalFks);
+        }
+    }
+
+    /// <summary>
+    /// Verifies indexes are configured on frequently queried columns.
+    /// </summary>
+    [Fact]
+    public void DbContext_OnModelCreating_Indexes_Configured()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var model = db.Model;
+
+            // Message.ThreadId index
+            var messageEntity = model.FindEntityType(typeof(Message))!;
+            var threadIdIndex = messageEntity.GetIndexes()
+                .Any(i => i.Properties.Any(p => p.Name == nameof(Message.ThreadId)));
+            Assert.True(threadIdIndex, "Expected index on Message.ThreadId");
+
+            // Message.CreatedAt index
+            var createdAtIndex = messageEntity.GetIndexes()
+                .Any(i => i.Properties.Any(p => p.Name == nameof(Message.CreatedAt)));
+            Assert.True(createdAtIndex, "Expected index on Message.CreatedAt");
+
+            // ChatThread indexes
+            var chatThreadEntity = model.FindEntityType(typeof(ChatThread))!;
+
+            var lastActivityAtIndex = chatThreadEntity.GetIndexes()
+                .Any(i => i.Properties.Any(p => p.Name == nameof(ChatThread.LastActivityAt)));
+            Assert.True(lastActivityAtIndex, "Expected index on ChatThread.LastActivityAt");
+
+            var isTransientIndex = chatThreadEntity.GetIndexes()
+                .Any(i => i.Properties.Any(p => p.Name == nameof(ChatThread.IsTransient)));
+            Assert.True(isTransientIndex, "Expected index on ChatThread.IsTransient");
+
+            var isDeletedIndex = chatThreadEntity.GetIndexes()
+                .Any(i => i.Properties.Any(p => p.Name == nameof(ChatThread.IsDeleted)));
+            Assert.True(isDeletedIndex, "Expected index on ChatThread.IsDeleted");
+        }
+    }
+
+    /// <summary>
+    /// Verifies seed data: 2 built-in Personas and 6 built-in TextActions.
+    /// </summary>
+    [Fact]
+    public void DbContext_SeedData_Personas_And_TextActions_Present()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var personas = db.Personas.Where(p => p.IsBuiltIn).ToList();
+            Assert.Equal(2, personas.Count);
+
+            var generalAssistant = personas.Single(p => p.Id == "00000000000000000000000000000001");
+            Assert.Equal("General Assistant", generalAssistant.DisplayName);
+            Assert.Equal("You are a helpful, thoughtful assistant.", generalAssistant.SystemPrompt);
+            Assert.Equal("Standard", generalAssistant.DefaultChatMode);
+            Assert.True(generalAssistant.IsBuiltIn);
+
+            var codeHelper = personas.Single(p => p.Id == "00000000000000000000000000000002");
+            Assert.Equal("Code Helper", codeHelper.DisplayName);
+            Assert.Contains("expert software developer", codeHelper.SystemPrompt);
+            Assert.Equal("Standard", codeHelper.DefaultChatMode);
+            Assert.True(codeHelper.IsBuiltIn);
+
+            var textActions = db.TextActions.Where(ta => ta.IsBuiltIn).ToList();
+            Assert.Equal(6, textActions.Count);
+
+            var expectedActions = new Dictionary<string, string>
+            {
+                ["a000000000000000000000000000001"] = "Rewrite",
+                ["a000000000000000000000000000002"] = "Summarize",
+                ["a000000000000000000000000000003"] = "Explain",
+                ["a000000000000000000000000000004"] = "Translate",
+                ["a000000000000000000000000000005"] = "Fix Grammar",
+                ["a000000000000000000000000000006"] = "Enhance Prompt",
+            };
+
+            foreach (var (id, displayName) in expectedActions)
+            {
+                var action = textActions.Single(ta => ta.Id == id);
+                Assert.Equal(displayName, action.DisplayName);
+                Assert.True(action.IsBuiltIn);
+                Assert.NotNull(action.SystemPrompt);
+                Assert.NotEmpty(action.SystemPrompt);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Verifies MessageDrafts entity is registered and its table is created.
+    /// </summary>
+    [Fact]
+    public void DbContext_MessageDrafts_TableExists()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var draft = new MessageDrafts
+            {
+                ThreadId = "test-thread-001",
+                Content = "Hello, world!",
+                CursorPosition = 13
+            };
+            db.MessageDrafts.Add(draft);
+            db.SaveChanges();
+
+            var retrieved = db.MessageDrafts.Find("test-thread-001");
+            Assert.NotNull(retrieved);
+            Assert.Equal("Hello, world!", retrieved!.Content);
+            Assert.Equal(13, retrieved.CursorPosition);
+        }
+    }
+
+    /// <summary>
+    /// Verifies AppSetting entity is registered and its table is created.
+    /// </summary>
+    [Fact]
+    public void DbContext_AppSettings_TableExists()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var setting = new AppSetting
+            {
+                Key = "theme",
+                Value = "dark",
+                ValueType = "String"
+            };
+            db.Settings.Add(setting);
+            db.SaveChanges();
+
+            var retrieved = db.Settings.Find("theme");
+            Assert.NotNull(retrieved);
+            Assert.Equal("dark", retrieved!.Value);
+        }
     }
 }

@@ -1,11 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
 
 namespace MySecondBrain.Data.Entities;
 
-[Index(nameof(ThreadId))]
-[Index(nameof(CreatedAt))]
 public class Message
 {
     [Key]

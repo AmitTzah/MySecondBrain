@@ -40,4 +40,6 @@ public class Persona
     public ICollection<ChatThread> ChatThreads { get; set; } = new List<ChatThread>();
 
     public ICollection<Message> Messages { get; set; } = new List<Message>();
+
+    public ICollection<UsageRecord> UsageRecords { get; set; } = new List<UsageRecord>();
 }
