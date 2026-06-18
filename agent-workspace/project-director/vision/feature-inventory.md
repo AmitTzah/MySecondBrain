@@ -267,7 +267,7 @@ Features that are part of the long-term vision but can wait indefinitely. Archit
 
 ## Secondary Features
 
-Not applicable — all features in Sections A through S are considered core and required for the complete initial vision. The Nice-to-Have section (T) captures future features.
+Not applicable — all features in Sections A through V (excluding T, Nice-to-Have) are considered core and required for the complete initial vision. The Nice-to-Have section (T) captures future features.
 
 ## Explicitly Out of Scope
 
