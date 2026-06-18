@@ -297,7 +297,7 @@ src/
 
 ---
 
-### [ ] Step 5: Implement PersonaRepository, ModelConfigurationRepository, and ApiKeyRepository
+### [x] Step 5: Implement PersonaRepository, ModelConfigurationRepository, and ApiKeyRepository
 - **Goal:** Three settings/config repositories are fully functional, replacing their stubs.
 - **Actions:**
   - **PersonaRepository:** Implement all 6 methods — `GetAllAsync`, `GetByIdAsync`, `GetDefaultAsync` (first IsBuiltIn or first available), `CreateAsync`, `UpdateAsync`, `DeleteAsync`
