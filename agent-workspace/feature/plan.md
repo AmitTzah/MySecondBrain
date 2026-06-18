@@ -266,7 +266,7 @@ src/
 
 ---
 
-### [ ] Step 4: Implement ChatThreadRepository and MessageRepository with real EF Core queries
+### [x] Step 4: Implement ChatThreadRepository and MessageRepository with real EF Core queries
 - **Goal:** The two most complex repositories are fully functional with real SQLite queries, replacing their stubs.
 - **Actions:**
   - **ChatThreadRepository:** Implement all 11 methods:

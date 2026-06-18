@@ -3,26 +3,19 @@
   "branch_name": "feature/data-layer",
   "git_automation_enabled": true,
   "smoke_test_automation": {
-    "enabled": true,
+    "enabled": false,
     "environments": {
       "web": null,
       "cli": null,
       "native": null,
-      "desktop": {
-        "executable_path": ".\\MySecondBrain.exe",
-        "window_title": "MySecondBrain",
-        "launch_args": null,
-        "mcp_available": true,
-        "mcp_name": "windows-mcp",
-        "verified": true
-      }
+      "desktop": null
     },
     "missing_prerequisites": []
   },
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 6,
-  "current_step": 3,
+  "current_step": 4,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }
