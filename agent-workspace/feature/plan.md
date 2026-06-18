@@ -123,7 +123,7 @@ The 3 chat visual themes (Classic/Compact/Bubble) are `DataTemplate` variants se
 
 ## 5. Execution Steps
 
-### Step 1: Dark & Light Theme ResourceDictionaries + App.xaml wiring
+### [x] Step 1: Dark & Light Theme ResourceDictionaries + App.xaml wiring
 
 **Goal:** Create `Dark.xaml` and `Light.xaml` ResourceDictionaries with 25+ color/brush resources, merge `Dark.xaml` into `Application.Resources` in `App.xaml`, and apply `DynamicResource` to MainWindow background.
 
