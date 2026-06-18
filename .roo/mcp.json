@@ -8,9 +8,13 @@
 				"C:/Users/Amit/Projects/MySecondBrain"
 			],
 			"alwaysAllow": [
-				"git_add",
 				"git_commit",
-				"git_status"
+				"git_status",
+				"git_add",
+				"git_diff_unstaged",
+				"git_diff_staged",
+				"git_log",
+				"git_diff"
 			]
 		},
 		"windows-mcp": {

@@ -1,7 +1,26 @@
+using System.IO;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Windows;
 // Resolves ambiguity with System.Windows.Forms.Application from UseWindowsForms=true
 using Application = System.Windows.Application;
+using MySecondBrain.Core.Interfaces;
+using MySecondBrain.Data;
+using MySecondBrain.Data.Repositories;
+using MySecondBrain.Services.Audio;
+using MySecondBrain.Services.Backup;
+using MySecondBrain.Services.Chat;
+using MySecondBrain.Services.Chat.Import;
+using MySecondBrain.Services.Encryption;
+using MySecondBrain.Services.LLM;
+using MySecondBrain.Services.Search;
+using MySecondBrain.Services.Tools;
+using MySecondBrain.Services.Update;
+using MySecondBrain.Services.Wiki;
+using MySecondBrain.UI.Controls;
+using MySecondBrain.UI.Services;
+using MySecondBrain.UI.ViewModels;
 
 namespace MySecondBrain.UI;
 
@@ -25,10 +44,123 @@ public partial class App : Application
         base.OnExit(e);
     }
 
-    private void ConfigureServices(IServiceCollection services)
+    public static void ConfigureServices(IServiceCollection services)
     {
-        // Services, repositories, and ViewModels will be registered here
-        // by subsequent features. Empty for now — just the window.
+        // === Database ===
+        var dbPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "MySecondBrain", "msb.db");
+        Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+
+        services.AddSingleton(_ =>
+        {
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseSqlite($"Data Source={dbPath}")
+                .Options;
+            return new AppDbContext(options);
+        });
+
+        // === Repositories (Singleton) ===
+        services.AddSingleton<IChatThreadRepository, ChatThreadRepository>();
+        services.AddSingleton<IMessageRepository, MessageRepository>();
+        services.AddSingleton<IPersonaRepository, PersonaRepository>();
+        services.AddSingleton<IModelConfigurationRepository, ModelConfigurationRepository>();
+        services.AddSingleton<IApiKeyRepository, ApiKeyRepository>();
+        services.AddSingleton<IWikiIndexRepository, WikiIndexRepository>();
+        services.AddSingleton<IUsageRepository, UsageRepository>();
+        services.AddSingleton<ISettingsRepository, SettingsRepository>();
+
+        // === Application Services (Singleton) ===
+        services.AddSingleton<ILLMProviderService, LLMProviderService>();
+        services.AddSingleton<IChatThreadService, ChatThreadService>();
+        services.AddSingleton<IWikiService, WikiService>();
+        services.AddSingleton<ILLMProviderFactory, LLMProviderFactory>();
+        services.AddSingleton<ITokenizerFactory, TokenizerFactory>();
+        services.AddSingleton<IToolOrchestrator, ToolOrchestrator>();
+        services.AddSingleton<IChatSearchService, Fts5ChatSearchService>();
+        services.AddSingleton<IAutoCleanupService, PeriodicAutoCleanupService>();
+        services.AddSingleton<IEncryptionService, DpapiEncryptionService>();
+        services.AddSingleton<IChatEncryptionService, AesGcmChatEncryptionService>();
+        services.AddSingleton<IWikiFileWatcher, FileSystemWatcherAdapter>();
+        services.AddSingleton<ILocalWebSocketServer, KestrelWebSocketServer>();
+        services.AddSingleton<ISystemTrayService, WinFormsSystemTrayService>();
+        services.AddSingleton<IGlobalHotkeyService, GlobalHotkeyService>();
+        services.AddSingleton<IHwndCaptureService, Win32HwndCaptureService>();
+        services.AddSingleton<ITextInjectionService, UiaTextInjectionService>();
+        services.AddSingleton<ISpellCheckService, HunspellSpellCheckService>();
+        services.AddSingleton<IWikiGitService, LibGit2SharpGitService>();
+        services.AddSingleton<IThemeProvider, WpfThemeProvider>();
+
+        // === Transient Services ===
+        services.AddTransient<IClipboardService, WpfClipboardService>();
+        services.AddTransient<IAudioService, NaudioAudioService>();
+        services.AddTransient<ICameraService, AForgeCameraService>();
+        services.AddTransient<IVideoPlayerService, WpfVideoPlayerService>();
+
+        // === Multi-Implementation Providers (Singleton) ===
+        services.AddSingleton<ILLMProvider, OpenAIProvider>();
+        services.AddSingleton<ILLMProvider, AnthropicProvider>();
+        services.AddSingleton<ILLMProvider, GoogleProvider>();
+        services.AddSingleton<ILLMProvider, OpenAICompatibleProvider>();
+
+        services.AddSingleton<ISTTProvider, OpenAIWhisperProvider>();
+        services.AddSingleton<ISTTProvider, LocalWhisperProvider>();
+        services.AddSingleton<ISTTProvider, WindowsSpeechProvider>();
+
+        services.AddSingleton<IBackupProvider, GcsBackupProvider>();
+        services.AddSingleton<IBackupProvider, LocalFolderBackupProvider>();
+
+        services.AddSingleton<ISearchProvider, GoogleCustomSearchProvider>();
+        services.AddSingleton<ISearchProvider, BingSearchProvider>();
+
+        services.AddSingleton<ITokenizer, SharpTokenTokenizer>();
+        services.AddSingleton<ITokenizer, AnthropicTokenizer>();
+        services.AddSingleton<ITokenizer, FallbackTokenizer>();
+
+        services.AddSingleton<IChatImporter, ChatGPTImporter>();
+        services.AddSingleton<IChatImporter, ClaudeImporter>();
+
+        services.AddSingleton<IToolExecutor, WebSearchToolExecutor>();
+        services.AddSingleton<IToolExecutor, TerminalToolExecutor>();
+        services.AddSingleton<IToolExecutor, FileGenerateToolExecutor>();
+        services.AddSingleton<IToolExecutor, FileEditToolExecutor>();
+        services.AddSingleton<IToolExecutor, WikiSearchToolExecutor>();
+
+        services.AddSingleton<IUpdateChecker, AutoUpdaterDotNet>();
+        services.AddSingleton<IUpdateChecker, MsixAppInstallerUpdater>();
+
+        // === Content Block Renderers (Singleton) ===
+        services.AddSingleton<IContentRendererRegistry, ContentRendererRegistry>();
+        services.AddSingleton<IContentBlockRenderer, MarkdownTextRenderer>();
+        services.AddSingleton<IContentBlockRenderer, CodeBlockRenderer>();
+        services.AddSingleton<IContentBlockRenderer, ArtifactReferenceRenderer>();
+        services.AddSingleton<IContentBlockRenderer, ImageRenderer>();
+        services.AddSingleton<IContentBlockRenderer, MediaRenderer>();
+        services.AddSingleton<IContentBlockRenderer, ThinkingRenderer>();
+        services.AddSingleton<IContentBlockRenderer, ToolCallRenderer>();
+
+        // === ViewModels (Transient) ===
+        services.AddTransient<MainWindowViewModel>();
+        services.AddTransient<ChatThreadViewModel>();
+        services.AddTransient<SettingsViewModel>();
+        services.AddTransient<WikiBrowserViewModel>();
+        services.AddTransient<UsageDashboardViewModel>();
+        services.AddTransient<MediaLibraryViewModel>();
+        services.AddTransient<GlobalArtifactsBrowserViewModel>();
+        services.AddTransient<Tier1OverlayViewModel>();
+        services.AddTransient<Tier2CommandBarViewModel>();
+        services.AddTransient<ModelComparisonViewModel>();
+        services.AddTransient<OnboardingWizardViewModel>();
+
+        // === MainWindow (Singleton — one main window) ===
         services.AddSingleton<MainWindow>();
+
+        // === Logging ===
+        services.AddLogging(builder =>
+        {
+            builder.AddConsole();
+            builder.AddDebug();
+            builder.SetMinimumLevel(LogLevel.Information);
+        });
     }
 }

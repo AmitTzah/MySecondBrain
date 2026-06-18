@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <RootNamespace>MySecondBrain.Services</RootNamespace>
     <AssemblyName>MySecondBrain.Services</AssemblyName>
     <Description>Business logic services, LLM provider adapters, and integration wrappers</Description>
