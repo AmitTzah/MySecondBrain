@@ -33,5 +33,5 @@
     "flagged_concerns": ["Auto-Summarize context overflow requires separate API call costing tokens", "Text completion APIs being deprecated by some providers", "Artifact generation mechanism needs architectural decision", "Terminal execution security model needs review", "WebSocket server security model needs review", "Global keyboard hooks may trigger antivirus false positives", "VACUUM requires temporary free disk space equal to database size", "Rich text bidirectional text rendering complexity", "Google Cloud Storage dependency for backups", "Locked chat encryption — permanent lockout risk must be communicated", "Git wiki version control — GitHub token storage requires DPAPI encryption", "Model comparison — per-panel multi-turn conversations = N independent API streams", "Model comparison M spec simplified — Accept auto-saves branches, per-panel mini-chats", "Language & RTL (Q) feature may be out of scope — user chose English-only", "TextAction entity (TextAction.cs) needs captureScope and applyMode columns added to match updated vision spec — code entity predates this vision update"]
   },
   "spawn_count": 3,
-  "last_commit": "c58f991"
+  "last_commit": "89f5b11"
 }
