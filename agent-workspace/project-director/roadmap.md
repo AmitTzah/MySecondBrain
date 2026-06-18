@@ -1,6 +1,8 @@
-# Roadmap — MySecondBrain Consolidated Wave Map
+# Roadmap — MySecondBrain Wave Map
 
-Lightweight feature decomposition. 245 original features consolidated into 34 features across 4 waves. Each Wave 3 feature is a vertical slice (DB → service → UI) that **adds** new code to pre-built Wave 1-2 infrastructure — Wave 3 features do NOT modify Wave 1-2 code.
+Lightweight feature decomposition. 34 features across 4 waves. Each Wave 3 feature is a vertical slice (DB → service → UI) that **adds** new code to pre-built Wave 1-2 infrastructure — Wave 3 features do NOT modify Wave 1-2 code.
+
+> **Revision note:** Originally planned at 245 features. Consolidated to 34 after Feature 3 (2026-06-18) based on efficiency analysis — each feature now represents a coherent functional domain built in one FD spawn.
 
 Source documents:
 - Vision: [`vision/vision-summary.md`](vision/vision-summary.md), [`vision/feature-inventory.md`](vision/feature-inventory.md)
@@ -353,13 +355,13 @@ Consolidates original features: 243–245. All final polish as one feature.
 
 ## Feature Count Summary
 
-| Wave | Description | Feature Count | Original Features Consolidated |
-|------|-------------|---------------|-------------------------------|
-| Wave 1 | Foundation — Infrastructure, data model, abstractions | 8 (3 built) | 1–40 |
-| Wave 2 | Skeleton — App shell, navigation, theming, Windows infra | 3 | 41–61 |
-| Wave 3 | Vertical Slices — All user-facing features (A-U) | 18 | 62–225 |
-| Wave 4 | Cross-Cutting — Perf, a11y, i18n, E2E, security, polish | 5 | 226–245 |
-| **Total** | | **34** | **1–245** |
+| Wave | Description | Features |
+|------|-------------|----------|
+| Wave 1 | Foundation — Infrastructure, data model, abstractions | 8 (3 built) |
+| Wave 2 | Skeleton — App shell, navigation, theming, Windows infra | 3 |
+| Wave 3 | Vertical Slices — All user-facing features (A-U) | 18 |
+| Wave 4 | Cross-Cutting — Perf, a11y, i18n, E2E, security, polish | 5 |
+| **Total** | | **34** |
 
 ---
 
@@ -418,61 +420,6 @@ Wave 4 (Cross-Cutting) — 5 Features
 
 ---
 
-## Consolidation Map: Original → Consolidated
-
-| Consolidated Feature | Original Features Merged |
-|----------------------|--------------------------|
-| **W1.1** Solution Scaffold & CI/CD ✅ | 1 |
-| **W1.2** DI Container ✅ | 2 |
-| **W1.3** Logging ✅ | 3 |
-| **W1.4** Data Layer | 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 35 |
-| **W1.5** LLM Provider Layer | 20, 21, 22, 23, 24, 25 |
-| **W1.6** Platform Services | 26, 27, 28, 29, 30, 31, 32, 33, 34 |
-| **W1.7** Core Services | 36, 37, 38 |
-| **W1.8** Testing Infrastructure | 39, 40 |
-| **W2.1** App Shell & Theming | 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 55, 56, 57 |
-| **W2.2** Windows Infra | 52, 53, 54, 58, 59 |
-| **W2.3** MSIX & CI/CD Hardening | 60, 61 |
-| **W3.1** Model Configs & Personas (B) | 62, 63, 64, 65, 66, 68, 74, 75, 76, 77 |
-| **W3.2** Settings & Onboarding (A) | 67, 69, 70, 71, 72, 73, 138, 205 |
-| **W3.3** Studio Chat Core + Modes (C/E) | 78, 79, 80, 81, 82, 83, 84, 85, 86, 97, 98, 99, 100, 101, 103, 104, 105, 106, 107, 206, 207, 208, 209, 210, 211, 212, 213, 217, 218, 219, 220, 221 |
-| **W3.4** Studio Chat Input & Workspace (C) | 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 102, 214, 215, 216 |
-| **W3.5** Message Branching (D) | 108, 109, 110, 111, 112, 113, 114, 115, 116 |
-| **W3.6** Artifacts (F) | 147, 148, 149, 150, 151, 152, 153 |
-| **W3.7** Media Library (G) | 154, 155, 156, 157, 158, 159 |
-| **W3.8** Tool Use & Agents (H) | 160, 161, 162, 163, 164, 165, 166 |
-| **W3.9** Import/Export & Prompts (I+J) | 145, 146, 171, 172 |
-| **W3.10** Text Actions & Three-Tier (K) | 139, 140, 141, 142, 143, 144 |
-| **W3.11** Chat Org, Search & Lifecycle (L+O+U) | 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 222 |
-| **W3.12** Model Comparison (M) | 167, 168, 169, 170 |
-| **W3.13** Personal Wiki (N) | 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185 |
-| **W3.14** Windows Integration (P) | 186, 187, 188, 189, 190, 191 |
-| **W3.15** Language & RTL (Q) | 202, 203, 204 |
-| **W3.16** Backup & Recovery (R) | 192, 193, 194, 195 |
-| **W3.17** Usage Dashboard (S) | 196, 197, 198, 199, 200, 201 |
-| **W3.18** Wave 3 Testing | 223, 224, 225 |
-| **W4.1** Search & Perf | 226, 227, 228, 229 |
-| **W4.2** Accessibility & i18n | 230, 231, 232, 233, 234, 235 |
-| **W4.3** E2E & Visual Testing | 236, 237 |
-| **W4.4** Security & DevOps | 238, 239, 240, 241, 242 |
-| **W4.5** Final Polish | 243, 244, 245 |
-
 ---
 
-## Key Consolidation Decisions
-
-| Merge | Rationale |
-|-------|-----------|
-| **L + O + U → W3.11** | Chat organization (L), data lifecycle (O), and soft-delete (U) all govern chat visibility, state transitions, and cleanup. They share the same entities (ChatThread, Message) and background tasks (AutoCleanupService). |
-| **I + J → W3.9** | Import/export and prompt library are both about content transfer — bringing external content in and reusing internal content. Both are relatively small feature groups. |
-| **C split into W3.3 + W3.4** | Studio Chat (C1-C37) is too large for one FD spawn. Split into "Messaging/Rendering/Modes" and "Input/Media/Workspace" — both coherent domains. |
-| **A + A8 → W3.2** | Settings and onboarding wizard share the same configuration entities. Onboarding is essentially a guided settings flow. |
-| **E merged into W3.3** | Chat modes (E, 5 items) are small and tightly coupled with chat messaging — the modes control how messages are sent and rendered. |
-| **Data Layer as one (W1.4)** | 17 original features (F4-F19, F35) consolidated into one: all entities, DbContext, repositories, and migrations. An FD can build the complete data layer in one pass. |
-| **All LLM providers as one (W1.5)** | 6 original features (F20-F25): common interface + 4 adapters + tokenizer. Built together because adapters share the StreamChunk contract. |
-| **All platform services as one (W1.6)** | 9 original features (F26-F34): STT, backup, search, tools, import, renderers, theme, update, encryption. All follow the same adapter pattern. |
-| **T (Nice-to-Have) excluded** | Deferred indefinitely per vision. Architecture accommodates without rework. Not in the roadmap. |
-
----
-
-*Roadmap — Consolidated wave map. 245 original features consolidated into 34 features across 4 waves. Acceptance criteria are derived by the FD Architect from vision docs. DO NOT implement from this file alone — use [`vision/feature-inventory.md`](vision/feature-inventory.md) and individual feature specs in [`vision/features/`](vision/features/) for detailed behavioral requirements.*
+*Acceptance criteria are derived by the FD Architect from vision docs. DO NOT implement from this file alone — use [`vision/feature-inventory.md`](vision/feature-inventory.md) and individual feature specs in [`vision/features/`](vision/features/) for detailed behavioral requirements.*

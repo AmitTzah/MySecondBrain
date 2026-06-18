@@ -1,7 +1,7 @@
 # Architecture Knowledge — MySecondBrain
 
 > **Global architectural patterns, design decisions, and system-level concerns.**  
-> Source: Feature 1/245 — .NET 8.0 WPF Solution Scaffold.
+> Source: Features W1.1–W1.3 — Solution Scaffold, DI Container, Logging.
 
 ---
 

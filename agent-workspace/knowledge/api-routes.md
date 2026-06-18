@@ -1,7 +1,7 @@
 # API Routes Knowledge — MySecondBrain
 
 > **Global API endpoints, route definitions, middleware patterns, and protocol-level details.**  
-> Source: Feature 1/245 — .NET 8.0 WPF Solution Scaffold.
+> Source: Features W1.1–W1.3 — Solution Scaffold, DI Container, Logging.
 
 ---
 

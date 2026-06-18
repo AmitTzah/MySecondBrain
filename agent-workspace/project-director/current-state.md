@@ -2,9 +2,9 @@
 
 ## 1. What the App Can Currently Do
 
-- **F1:** .NET 8.0 WPF solution scaffold — 7-project layered architecture, 15 OSS NuGet packages, MSIX, GitHub Actions CI/CD
-- **F2:** Dependency Injection container — 76 registrations, 42+ interfaces, all provider stubs, 8 DI tests
-- **F3:** Logging infrastructure — Serilog with rolling file sink (%LOCALAPPDATA%\MySecondBrain\logs\), JSON structured output, console sink (debug), thread/machine enrichment, 10 tests total
+- **W1.1:** .NET 8.0 WPF solution scaffold — 7-project layered architecture, 15 OSS NuGet packages, MSIX, GitHub Actions CI/CD
+- **W1.2:** Dependency Injection container — 76 registrations, 42+ interfaces, all provider stubs, 8 DI tests
+- **W1.3:** Logging infrastructure — Serilog with rolling file sink (%LOCALAPPDATA%\MySecondBrain\logs\), JSON structured output, console sink (debug), thread/machine enrichment, 10 tests total
 
 ## 2. UI Map
 
