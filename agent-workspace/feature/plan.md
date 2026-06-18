@@ -149,7 +149,7 @@ The 3 chat visual themes (Classic/Compact/Bubble) are `DataTemplate` variants se
 
 ---
 
-### Step 2: MainWindow Three-Region Grid Shell with GridSplitters & Sidebar Nav
+### [x] Step 2: MainWindow Three-Region Grid Shell with GridSplitters & Sidebar Nav
 
 **Goal:** Replace the empty `<Grid>` in MainWindow.xaml with a three-column Grid layout containing: (a) sidebar column with 6 nav items (Chats/Wiki/Media/Artifacts/Usage/Settings), (b) center content column with a `ContentControl`, (c) right panel column with two-section placeholder structure (Artifacts header + Chat Navigation header with a resizable divider) — all separated by `GridSplitter` controls.
 
