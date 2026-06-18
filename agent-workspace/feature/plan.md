@@ -347,7 +347,7 @@ MySecondBrain/
 
 ---
 
-### [ ] Step 3: Unit Tests for DI Container Resolution + Final Verification
+### [x] Step 3: Unit Tests for DI Container Resolution + Final Verification
 
 - **Goal:** Write xUnit tests that build the same `ServiceCollection` as `App.ConfigureServices`, call `BuildServiceProvider` with `ValidateOnBuild = true`, and verify every registered type resolves. Then run the full solution build in Release configuration and run all tests.
 
