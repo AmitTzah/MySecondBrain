@@ -1,29 +1,91 @@
+using Microsoft.EntityFrameworkCore;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
+using Entities = MySecondBrain.Data.Entities;
 
 namespace MySecondBrain.Data.Repositories;
 
 public class ApiKeyRepository : IApiKeyRepository
 {
-    private readonly AppDbContext _db; // Reserved for EF Core implementation
+    private readonly AppDbContext _db;
 
     public ApiKeyRepository(AppDbContext db)
     {
         _db = db;
     }
 
-    public Task<IReadOnlyList<ApiKey>> GetAllAsync() =>
-        Task.FromResult<IReadOnlyList<ApiKey>>(Array.Empty<ApiKey>());
+    public async Task<IReadOnlyList<ApiKey>> GetAllAsync()
+    {
+        var entities = await _db.ApiKeys
+            .AsNoTracking()
+            .ToListAsync();
+        return entities.Select(MapToDomain).ToList();
+    }
 
-    public Task<ApiKey?> GetByIdAsync(string id) =>
-        Task.FromResult<ApiKey?>(null);
+    public async Task<ApiKey?> GetByIdAsync(string id)
+    {
+        var entity = await _db.ApiKeys.FindAsync(id);
+        return entity is null ? null : MapToDomain(entity);
+    }
 
-    public Task<ApiKey> CreateAsync(ApiKey key) =>
-        Task.FromResult<ApiKey>(default!);
+    public async Task<ApiKey> CreateAsync(ApiKey key)
+    {
+        var entity = MapToEntity(key);
+        _db.ApiKeys.Add(entity);
+        await _db.SaveChangesAsync();
+        return MapToDomain(entity);
+    }
 
-    public Task UpdateAsync(ApiKey key) =>
-        Task.CompletedTask;
+    public async Task UpdateAsync(ApiKey key)
+    {
+        var entity = await _db.ApiKeys.FindAsync(key.Id);
+        if (entity is null) return;
 
-    public Task DeleteAsync(string id) =>
-        Task.CompletedTask;
+        entity.DisplayName = key.Label ?? string.Empty;
+        entity.Provider = key.ProviderType.ToString();
+        entity.KeyValue = key.EncryptedValue;
+
+        _db.Entry(entity).State = EntityState.Modified;
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(string id)
+    {
+        var entity = await _db.ApiKeys
+            .Include(k => k.ModelConfigurations)
+            .FirstOrDefaultAsync(k => k.Id == id);
+
+        if (entity is null) return;
+
+        // Nullify FK on ModelConfigurations referencing this key (SetNull behavior)
+        foreach (var mc in entity.ModelConfigurations)
+            mc.ApiKeyId = null;
+
+        _db.ApiKeys.Remove(entity);
+        await _db.SaveChangesAsync();
+    }
+
+    // ── Mapping helpers ──
+
+    private static ApiKey MapToDomain(Entities.ApiKey entity)
+    {
+        return new ApiKey
+        {
+            Id = entity.Id,
+            ProviderType = Enum.TryParse<ProviderType>(entity.Provider, out var pt) ? pt : ProviderType.OpenAI,
+            EncryptedValue = entity.KeyValue,
+            Label = entity.DisplayName,
+        };
+    }
+
+    private static Entities.ApiKey MapToEntity(ApiKey model)
+    {
+        return new Entities.ApiKey
+        {
+            Id = model.Id,
+            DisplayName = model.Label ?? string.Empty,
+            Provider = model.ProviderType.ToString(),
+            KeyValue = model.EncryptedValue,
+        };
+    }
 }

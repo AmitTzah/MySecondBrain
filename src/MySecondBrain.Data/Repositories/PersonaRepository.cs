@@ -1,32 +1,96 @@
+using Microsoft.EntityFrameworkCore;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
+using Entities = MySecondBrain.Data.Entities;
 
 namespace MySecondBrain.Data.Repositories;
 
 public class PersonaRepository : IPersonaRepository
 {
-    private readonly AppDbContext _db; // Reserved for EF Core implementation
+    private readonly AppDbContext _db;
 
     public PersonaRepository(AppDbContext db)
     {
         _db = db;
     }
 
-    public Task<IReadOnlyList<Persona>> GetAllAsync() =>
-        Task.FromResult<IReadOnlyList<Persona>>(Array.Empty<Persona>());
+    public async Task<IReadOnlyList<Persona>> GetAllAsync()
+    {
+        var entities = await _db.Personas
+            .AsNoTracking()
+            .ToListAsync();
+        return entities.Select(MapToDomain).ToList();
+    }
 
-    public Task<Persona?> GetByIdAsync(string id) =>
-        Task.FromResult<Persona?>(null);
+    public async Task<Persona?> GetByIdAsync(string id)
+    {
+        var entity = await _db.Personas.FindAsync(id);
+        return entity is null ? null : MapToDomain(entity);
+    }
 
-    public Task<Persona?> GetDefaultAsync() =>
-        Task.FromResult<Persona?>(null);
+    public async Task<Persona?> GetDefaultAsync()
+    {
+        var entity = await _db.Personas
+            .OrderBy(p => p.Id)
+            .FirstOrDefaultAsync(p => p.IsBuiltIn)
+            ?? await _db.Personas
+                .OrderBy(p => p.Id)
+                .FirstOrDefaultAsync();
+        return entity is null ? null : MapToDomain(entity);
+    }
 
-    public Task<Persona> CreateAsync(Persona persona) =>
-        Task.FromResult<Persona>(default!);
+    public async Task<Persona> CreateAsync(Persona persona)
+    {
+        var entity = MapToEntity(persona);
+        _db.Personas.Add(entity);
+        await _db.SaveChangesAsync();
+        return MapToDomain(entity);
+    }
 
-    public Task UpdateAsync(Persona persona) =>
-        Task.CompletedTask;
+    public async Task UpdateAsync(Persona persona)
+    {
+        var entity = await _db.Personas.FindAsync(persona.Id);
+        if (entity is null) return;
 
-    public Task DeleteAsync(string id) =>
-        Task.CompletedTask;
+        entity.DisplayName = persona.Name;
+        entity.SystemPrompt = persona.SystemPrompt;
+        entity.IsBuiltIn = persona.IsDefault;
+        entity.UpdatedAt = DateTimeOffset.UtcNow;
+
+        _db.Entry(entity).State = EntityState.Modified;
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(string id)
+    {
+        var entity = await _db.Personas.FindAsync(id);
+        if (entity is null) return;
+
+        _db.Personas.Remove(entity);
+        await _db.SaveChangesAsync();
+    }
+
+    // ── Mapping helpers ──
+
+    private static Persona MapToDomain(Entities.Persona entity)
+    {
+        return new Persona
+        {
+            Id = entity.Id,
+            Name = entity.DisplayName,
+            SystemPrompt = entity.SystemPrompt,
+            IsDefault = entity.IsBuiltIn,
+        };
+    }
+
+    private static Entities.Persona MapToEntity(Persona model)
+    {
+        return new Entities.Persona
+        {
+            Id = model.Id,
+            DisplayName = model.Name,
+            SystemPrompt = model.SystemPrompt,
+            IsBuiltIn = model.IsDefault,
+        };
+    }
 }

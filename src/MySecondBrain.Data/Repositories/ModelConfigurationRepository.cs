@@ -1,29 +1,105 @@
+using Microsoft.EntityFrameworkCore;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
+using Entities = MySecondBrain.Data.Entities;
 
 namespace MySecondBrain.Data.Repositories;
 
 public class ModelConfigurationRepository : IModelConfigurationRepository
 {
-    private readonly AppDbContext _db; // Reserved for EF Core implementation
+    private readonly AppDbContext _db;
 
     public ModelConfigurationRepository(AppDbContext db)
     {
         _db = db;
     }
 
-    public Task<IReadOnlyList<ModelConfiguration>> GetAllAsync() =>
-        Task.FromResult<IReadOnlyList<ModelConfiguration>>(Array.Empty<ModelConfiguration>());
+    public async Task<IReadOnlyList<ModelConfiguration>> GetAllAsync()
+    {
+        var entities = await _db.ModelConfigurations
+            .AsNoTracking()
+            .ToListAsync();
+        return entities.Select(MapToDomain).ToList();
+    }
 
-    public Task<ModelConfiguration?> GetByIdAsync(string id) =>
-        Task.FromResult<ModelConfiguration?>(null);
+    public async Task<ModelConfiguration?> GetByIdAsync(string id)
+    {
+        var entity = await _db.ModelConfigurations.FindAsync(id);
+        return entity is null ? null : MapToDomain(entity);
+    }
 
-    public Task<ModelConfiguration> CreateAsync(ModelConfiguration config) =>
-        Task.FromResult<ModelConfiguration>(default!);
+    public async Task<ModelConfiguration> CreateAsync(ModelConfiguration config)
+    {
+        var entity = MapToEntity(config);
+        _db.ModelConfigurations.Add(entity);
+        await _db.SaveChangesAsync();
+        return MapToDomain(entity);
+    }
 
-    public Task UpdateAsync(ModelConfiguration config) =>
-        Task.CompletedTask;
+    public async Task UpdateAsync(ModelConfiguration config)
+    {
+        var entity = await _db.ModelConfigurations.FindAsync(config.Id);
+        if (entity is null) return;
 
-    public Task DeleteAsync(string id) =>
-        Task.CompletedTask;
+        entity.DisplayName = config.Name;
+        entity.Provider = config.ProviderType.ToString();
+        entity.ModelIdentifier = config.ModelId;
+        entity.Temperature = config.Temperature;
+        entity.MaxOutputTokens = config.MaxTokens;
+        entity.ThinkingEnabled = config.ThinkingEnabled;
+        entity.MaxContextWindow = config.ThinkingTokens ?? entity.MaxContextWindow;
+        entity.UpdatedAt = DateTimeOffset.UtcNow;
+
+        _db.Entry(entity).State = EntityState.Modified;
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(string id)
+    {
+        var entity = await _db.ModelConfigurations
+            .Include(mc => mc.Personas)
+            .FirstOrDefaultAsync(mc => mc.Id == id);
+
+        if (entity is null) return;
+
+        if (entity.Personas.Count > 0)
+            throw new InvalidOperationException(
+                $"Cannot delete ModelConfiguration '{entity.DisplayName}' — " +
+                $"it is referenced by {entity.Personas.Count} Persona(s).");
+
+        _db.ModelConfigurations.Remove(entity);
+        await _db.SaveChangesAsync();
+    }
+
+    // ── Mapping helpers ──
+
+    private static ModelConfiguration MapToDomain(Entities.ModelConfiguration entity)
+    {
+        return new ModelConfiguration
+        {
+            Id = entity.Id,
+            Name = entity.DisplayName,
+            ProviderType = Enum.TryParse<ProviderType>(entity.Provider, out var pt) ? pt : ProviderType.OpenAI,
+            ModelId = entity.ModelIdentifier ?? string.Empty,
+            Temperature = entity.Temperature,
+            MaxTokens = entity.MaxOutputTokens,
+            ThinkingEnabled = entity.ThinkingEnabled,
+            ThinkingTokens = entity.MaxContextWindow,
+        };
+    }
+
+    private static Entities.ModelConfiguration MapToEntity(ModelConfiguration model)
+    {
+        return new Entities.ModelConfiguration
+        {
+            Id = model.Id,
+            DisplayName = model.Name,
+            Provider = model.ProviderType.ToString(),
+            ModelIdentifier = model.ModelId,
+            Temperature = model.Temperature,
+            MaxOutputTokens = model.MaxTokens,
+            ThinkingEnabled = model.ThinkingEnabled,
+            MaxContextWindow = model.ThinkingTokens ?? 128000,
+        };
+    }
 }
