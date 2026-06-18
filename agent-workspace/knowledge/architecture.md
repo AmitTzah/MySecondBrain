@@ -317,3 +317,172 @@ Core uses `UseWPF=true` solely to access `Markdig.Syntax.MarkdownObject` for the
 | Test packages | `X.*` wildcard | `xunit` `2.*`, `Moq` `4.*`, `coverlet.collector` `6.*` |
 
 Feature Developer must verify no version conflicts at build time when using `*` wildcards.
+
+---
+
+## 14. Logging Infrastructure — Serilog via Microsoft.Extensions.Logging Bridge
+
+All logging uses Serilog as the backing provider, integrated through the `Microsoft.Extensions.Logging` abstraction (`Serilog.Extensions.Logging` bridge). This follows the same Provider Swap pattern used for LLM adapters and backup providers: consumers depend on `ILogger<T>` (the abstraction), and the underlying engine can be replaced with zero consumer changes.
+
+### 14.1 Provider Swap Pattern
+
+```mermaid
+graph TD
+    Consumers["42+ Services/ViewModels/Repos\ninject ILogger T"]
+    MELF["Microsoft.Extensions.Logging\nILoggerFactory / ILoggerProvider"]
+    SerilogBridge["Serilog.Extensions.Logging\nSerilogLoggerProvider"]
+    SerilogCore["Serilog\nLoggerConfiguration"]
+    FileSink["Serilog.Sinks.File\nRolling File: msb-.log"]
+    ConsoleSink["Serilog.Sinks.Console\nDEBUG only"]
+    Enrichers["Serilog Enrichers\nThreadId, MachineName, AppVersion"]
+
+    Consumers --> MELF
+    MELF --> SerilogBridge
+    SerilogBridge --> SerilogCore
+    SerilogCore --> FileSink
+    SerilogCore --> ConsoleSink
+    SerilogCore --> Enrichers
+```
+
+**Key principle:** `Microsoft.Extensions.Logging` is the facade. Serilog is the engine. Consumers never reference Serilog types — they only use `ILogger<T>` from `Microsoft.Extensions.Logging`.
+
+### 14.2 Serilog Configuration Pattern
+
+```csharp
+var appVersion = Assembly.GetEntryAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0";
+
+var logPath = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+    "MySecondBrain", "logs", "msb-.log");
+
+var loggerConfig = new LoggerConfiguration()
+#if DEBUG
+    .MinimumLevel.Debug()
+#else
+    .MinimumLevel.Information()
+#endif
+    .Enrich.WithThreadId()
+    .Enrich.WithMachineName()
+    .Enrich.WithProperty("AppVersion", appVersion)
+    .WriteTo.File(logPath,
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30);
+
+#if DEBUG
+loggerConfig = loggerConfig.WriteTo.Console();
+#endif
+
+Log.Logger = loggerConfig.CreateLogger();
+
+services.AddLogging(builder =>
+{
+    builder.ClearProviders();
+    builder.AddSerilog(dispose: true);
+});
+```
+
+### 14.3 Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| `Serilog.Extensions.Logging` (not `Serilog.AspNetCore`) | WPF app, not ASP.NET Core. `Serilog.AspNetCore` depends on ASP.NET hosting abstractions. |
+| NuGet packages in `UI.csproj` (not `Services.csproj`) | Serilog configuration lives in `App.xaml.cs` (UI project). Infrastructure packages go where DI setup happens. |
+| `ClearProviders()` before `AddSerilog()` | Removes default Console, Debug, EventSource, EventLog providers that `AddLogging()` adds. Serilog becomes the sole provider. |
+| Static `Log.Logger` assignment + parameterless `AddSerilog()` | `Log.CloseAndFlush()` in `OnExit` must flush the same logger instance. Static assignment ensures this. |
+| `dispose: true` on `AddSerilog()` | Serilog logger is disposed when the `IServiceProvider` is disposed. |
+| `#if DEBUG` for console sink + `MinimumLevel.Debug()` | Production builds have no console window and should log at Information. Debug builds get console output for developer visibility. |
+| `JsonFormatter` for file sink | Default text formatter omits enriched properties. `new JsonFormatter()` writes structured JSON with all properties per log line. |
+| `Assembly.GetEntryAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0"` | Auto-resolves version from the built assembly. Falls back to `"0.0.0"` in test contexts where `GetEntryAssembly()` returns null. |
+| Startup log message | `startupLogger.LogInformation("MySecondBrain started")` in `OnStartup` after DI build ensures lazy file sink creates the log file on first launch. |
+
+### 14.4 Log Lifecycle
+
+```
+OnStartup:
+  1. ConfigureServices → Create LoggerConfiguration → Log.Logger = config.CreateLogger()
+  2. Build IServiceProvider
+  3. Resolve ILogger<T> → LogInformation("MySecondBrain started")  [creates log file if not exists]
+
+OnExit:
+  1. Log.CloseAndFlush()          [flush all buffered log entries]
+  2. (_serviceProvider as IDisposable)?.Dispose()
+  3. base.OnExit(e)
+```
+
+`Log.CloseAndFlush()` is also called by `dispose: true` when the service provider is disposed, but calling it explicitly in `OnExit` provides double-safety for the case where `Dispose` is skipped.
+
+### 14.5 Log File Convention
+
+| Property | Value |
+|----------|-------|
+| Base directory | `%LOCALAPPDATA%\MySecondBrain\logs\` |
+| File name pattern | `msb-YYYYMMDD.log` (e.g., `msb-20260618.log`) |
+| Rolling interval | Daily (`RollingInterval.Day`) |
+| Retention | 30 days (`retainedFileCountLimit: 30`) |
+| Format | One JSON object per line: `Timestamp`, `Level`, `MessageTemplate`, `Properties` (including `SourceContext`, `ThreadId`, `MachineName`, `AppVersion`) |
+| Full path resolution | `Path.Combine(Environment.GetFolderPath(SpecialFolder.LocalApplicationData), "MySecondBrain", "logs", "msb-.log")` |
+
+### 14.6 Structured Enrichment (Standard)
+
+These three enrichment properties are always present on every log event:
+
+| Enricher | Property | NuGet Package |
+|----------|----------|---------------|
+| `WithThreadId()` | `ThreadId` (int) | `Serilog.Enrichers.Thread` |
+| `WithMachineName()` | `MachineName` (string) | `Serilog.Enrichers.Environment` |
+| `WithProperty("AppVersion", ...)` | `AppVersion` (string) | Core Serilog (built-in) |
+
+Additional enrichers may be added by future features (e.g., `WithProcessId()`, `WithEnvironmentUserName()`, custom enrichers for user ID or session ID).
+
+### 14.7 NuGet Package Catalog (Logging)
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `Serilog` | `4.*` | Core structured logging engine |
+| `Serilog.Extensions.Logging` | `8.*` | Bridge: `AddSerilog()` on `ILoggingBuilder` |
+| `Serilog.Sinks.File` | `6.*` | Rolling file sink (`retainedFileCountLimit: 30`) |
+| `Serilog.Sinks.Console` | `6.*` | Console sink (DEBUG only — separate NuGet required) |
+| `Serilog.Enrichers.Thread` | `4.*` | `WithThreadId()` enricher |
+| `Serilog.Enrichers.Environment` | `3.*` | `WithMachineName()` enricher |
+
+### 14.8 Testing Serilog Configuration
+
+DI resolution tests validate Serilog is correctly wired:
+
+```csharp
+public class LoggingInfrastructureTests : IDisposable
+{
+    private readonly IServiceProvider _provider;
+    private readonly string _logDir;
+
+    public LoggingInfrastructureTests()
+    {
+        var services = new ServiceCollection();
+        App.ConfigureServices(services);
+        _provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true
+        });
+        _logDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "MySecondBrain", "logs");
+    }
+
+    public void Dispose()
+    {
+        Log.CloseAndFlush();
+        (_provider as IDisposable)?.Dispose();
+        // Clean up test log file
+        var today = DateTime.Now.ToString("yyyyMMdd");
+        var logFile = Path.Combine(_logDir, $"msb-{today}.log");
+        if (File.Exists(logFile))
+            File.Delete(logFile);
+    }
+}
+```
+
+**Test patterns:**
+- Resolve `ILogger<T>` from DI and verify its type name contains "Serilog" (proves Serilog, not Console/Debug, is the provider)
+- Write a log message, call `Log.CloseAndFlush()`, then assert the log file exists and contains the test message with structured properties
+- Existing `DiContainerTests.CanResolve_Logger` continues to pass unchanged — same interface, different backing provider
+

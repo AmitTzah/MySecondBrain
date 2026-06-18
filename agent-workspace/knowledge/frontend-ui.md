@@ -151,6 +151,23 @@ public partial class ChatThreadViewModel : ObservableObject
 
 ViewModels are initially created as stubs (no properties, no commands) following the stub pattern in [Architecture §4](architecture.md#4-stub-pattern-parallelizable-feature-development). Properties and commands are added by the feature that owns each ViewModel.
 
+### 3.3 OnExit Lifecycle — Log Flush Before DI Dispose
+
+`App.xaml.cs` must override `OnExit` to flush the Serilog logger before the DI container is disposed. Order matters: flush must happen before dispose, because `Log.CloseAndFlush()` is a static call on the Serilog pipeline while the dispose path tears down the service provider (which may trigger `SerilogLoggerProvider.Dispose()` via `dispose: true`).
+
+```csharp
+protected override void OnExit(ExitEventArgs e)
+{
+    Log.CloseAndFlush();                              // 1. Flush all buffered log entries
+    (_serviceProvider as IDisposable)?.Dispose();     // 2. Dispose DI container
+    base.OnExit(e);                                   // 3. Call base
+}
+```
+
+**Why explicit `Log.CloseAndFlush()`:** `AddSerilog(dispose: true)` also calls `Log.CloseAndFlush()` when the service provider is disposed, but the explicit call in `OnExit` provides double-safety for edge cases where `Dispose` might be skipped or an unhandled exception occurs before disposal.
+
+**General pattern:** Any infrastructure that uses static singletons or requires explicit shutdown (loggers, caches, file watchers, WebSocket servers) should be flushed/stopped in `OnExit` before `(_serviceProvider as IDisposable)?.Dispose()`.
+
 
 ---
 
