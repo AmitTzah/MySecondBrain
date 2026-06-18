@@ -93,6 +93,21 @@ public partial class App : Application
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
 
+        // Auto-apply EF Core migrations on startup
+        try
+        {
+            var db = _serviceProvider.GetRequiredService<AppDbContext>();
+            db.Database.Migrate();
+            var startupLogger = _serviceProvider.GetRequiredService<ILogger<App>>();
+            startupLogger.LogInformation("Database migration applied successfully");
+        }
+        catch (Exception ex)
+        {
+            var startupLogger = _serviceProvider.GetRequiredService<ILogger<App>>();
+            startupLogger.LogError(ex, "Database migration failed");
+            throw; // App cannot function without database
+        }
+
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
     }
@@ -110,6 +125,7 @@ public partial class App : Application
 - `StartupUri` is intentionally omitted from `App.xaml`. WPF would auto-create a second, non-DI `MainWindow` instance if `StartupUri` were set.
 - `ConfigureServices` is `public static` — not `private` — so unit tests can build the same `ServiceCollection` via `App.ConfigureServices(services)`.
 - ViewModels are registered as **Transient** (fresh state per window/tab). All services, repositories, and providers are **Singleton**. See [Architecture §3.1](architecture.md#31-di-lifetime-conventions).
+- `db.Database.Migrate()` runs after DI build and before `MainWindow.Show()`. Uses `Migrate()` (not `EnsureCreated`) to support incremental schema evolution. On failure, the exception is re-thrown — the app cannot function without its database. See [Architecture §15](architecture.md#15-startup-lifecycle--database-auto-migration).
 
 ### 3.1 ViewModel Catalog (11 ViewModels)
 

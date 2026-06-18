@@ -24,14 +24,16 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    // 12 DbSet<T> properties — one per entity
+    // 14 DbSet<T> properties — one per entity
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
-    public DbSet<Persona> Personas => Set<Persona>();
-    public DbSet<ModelConfiguration> ModelConfigurations => Set<ModelConfiguration>();
-    public DbSet<ChatThread> ChatThreads => Set<ChatThread>();
-    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<AppSetting> Settings => Set<AppSetting>();
     public DbSet<Artifact> Artifacts => Set<Artifact>();
+    public DbSet<ChatThread> ChatThreads => Set<ChatThread>();
     public DbSet<MediaItem> MediaItems => Set<MediaItem>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<MessageDrafts> MessageDrafts => Set<MessageDrafts>();
+    public DbSet<ModelConfiguration> ModelConfigurations => Set<ModelConfiguration>();
+    public DbSet<Persona> Personas => Set<Persona>();
     public DbSet<PromptTemplate> PromptTemplates => Set<PromptTemplate>();
     public DbSet<TextAction> TextActions => Set<TextAction>();
     public DbSet<UsageRecord> UsageRecords => Set<UsageRecord>();
@@ -52,22 +54,20 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // FK configuration for entities where the FK property name
-        // doesn't follow EF Core convention, or for composite keys
-        modelBuilder.Entity<WikiVersionSnapshot>()
-            .HasOne<WikiFile>()
-            .WithMany()
-            .HasForeignKey(s => s.WikiFilePath)
-            .HasPrincipalKey(f => f.FilePath);
+        // All FK relationships, indexes, unique constraints, and seed data
+        // configured via Fluent API. See §8 (FK Delete Behavior) and §9 (Seed Data).
+        // WikiVersionSnapshot → WikiFile uses HasPrincipalKey/HasForeignKey
+        // because WikiFile uses FilePath (string) as its natural primary key.
     }
 }
 ```
 
 **Key design decisions:**
-- Single `DbContext` singleton for single-user desktop app (no concurrency concerns)
+- Single `DbContext` singleton for single-user desktop app (no concurrency concerns). See [Architecture §16](architecture.md#16-singleton-appdbcontext--lifetime-rationale).
 - **Runtime DI registration:** Factory delegate in `App.xaml.cs` creates `DbContextOptions<AppDbContext>` with SQLite path at `%LOCALAPPDATA%\MySecondBrain\msb.db`, auto-creating directory if missing. See [Architecture §3.3](architecture.md#33-appdbcontext-factory-delegate-registration).
 - **Design-time fallback:** `OnConfiguring` fallback resolves the same `%LOCALAPPDATA%` path for EF Core tooling (migrations, scaffolding) when no DI-provided options exist.
-- **`OnModelCreating`:** Used only for FK relationships that deviate from EF Core conventions (e.g., `WikiVersionSnapshot` references `WikiFile` by `FilePath` rather than a generated integer key).
+- **`OnModelCreating`:** Configures all 17 FK relationships, indexes on frequently-queried columns, unique constraints, and seed data via Fluent API. All configuration lives in `OnModelCreating` (no separate `IEntityTypeConfiguration<T>` files).
+- **Auto-migration:** `db.Database.Migrate()` is called in `App.xaml.cs` `OnStartup` after DI build. See [Architecture §15](architecture.md#15-startup-lifecycle--database-auto-migration).
 
 ### 2.1 Database File Path Convention
 
@@ -81,26 +81,32 @@ public class AppDbContext : DbContext
 
 ---
 
-## 3. Entity Catalog — 12 Entities with FK Relationships
+## 3. Entity Catalog — 14 Entities, 17 FK Relationships
 
-All entities are defined in `MySecondBrain.Data/Entities/` as EF Core entity classes. Each uses `[Key]` attribute on its primary key and `string` GUIDs for PKs (see §3.1).
+All entities are defined in `MySecondBrain.Data/Entities/` as EF Core entity classes. Each uses `[Key]` attribute on its primary key and `string` GUIDs for PKs (see §3.1). The `InitialCreate` migration creates all 14 tables plus 2 FTS5 virtual tables.
 
-> **Note:** The full vision and planning data model defines 13 entities. The 13th entity, `BackupSnapshot`, is planned for W3.16 (Backup & Recovery) and has not yet been implemented. It will be added as a standalone entity (no FK relationships) when that feature is built.
+| # | Entity | PK | FK Relationships | Notes |
+|---|--------|----|-----------------|-------|
+| 1 | `ApiKey` | `Id` (string GUID) | ← referenced by `ModelConfiguration.ApiKeyId` | CreatedAt timestamp. KeyValue stored encrypted (encryption is service-layer). |
+| 2 | `AppSetting` | `Key` (string, MaxLength 200) | — (standalone key-value) | Backs `SettingsRepository`. Value column holds plain strings or JSON-serialized objects. |
+| 3 | `Artifact` | `Id` (string GUID) | `ThreadId` → `ChatThread.Id` (required, Cascade) | CreatedAt, UpdatedAt timestamps. |
+| 4 | `ChatThread` | `Id` (string GUID) | `PersonaId` → `Persona.Id` (optional, SetNull); `ModelConfigId` → `ModelConfiguration.Id` (optional, SetNull) | 25 properties. Soft-delete via `IsDeleted` + `DeletedAt`. `IsTransient` for auto-cleanup. |
+| 5 | `MediaItem` | `Id` (string GUID) | `ThreadId` → `ChatThread.Id` (required, Cascade); `MessageId` → `Message.Id` (optional, SetNull) | Soft-delete via `IsDeleted` + `DeletedAt`. |
+| 6 | `Message` | `Id` (string GUID) | `ThreadId` → `ChatThread.Id` (required, Cascade); `PersonaId` → `Persona.Id` (optional, SetNull); `ModelConfigId` → `ModelConfiguration.Id` (optional, SetNull); `ParentMessageId` → `Message.Id` (self-ref, optional, Restrict) | 18 properties. Branching via `BranchId`, `VersionNumber`, `IsActiveBranch`. |
+| 7 | `MessageDrafts` | `ThreadId` (string, PK) | — (standalone, one draft per thread) | Lightweight auto-save: `Content`, `CursorPosition`, `SavedAt`. No separate repository. |
+| 8 | `ModelConfiguration` | `Id` (string GUID) | `ApiKeyId` → `ApiKey.Id` (optional, SetNull) | CreatedAt, UpdatedAt timestamps. Unique `DisplayName`. Restrict delete if referenced by Personas. |
+| 9 | `Persona` | `Id` (string GUID) | `DefaultModelConfigId` → `ModelConfiguration.Id` (optional, Restrict) | CreatedAt, UpdatedAt timestamps. Unique `DisplayName`. 2 built-in personas seeded. |
+| 10 | `PromptTemplate` | `Id` (string GUID) | — (standalone) | UpdatedAt timestamp. |
+| 11 | `TextAction` | `Id` (string GUID) | `ModelConfigId` → `ModelConfiguration.Id` (optional, SetNull) | UpdatedAt timestamp. 6 built-in text actions seeded. |
+| 12 | `UsageRecord` | `Id` (string GUID) | `MessageId` → `Message.Id` (required, Cascade); `ThreadId` → `ChatThread.Id` (required, Cascade); `PersonaId` → `Persona.Id` (optional, SetNull); `ModelConfigId` → `ModelConfiguration.Id` (optional, SetNull) | Token/cost tracking per message. |
+| 13 | `WikiFile` | `FilePath` (string — natural key) | — (referenced by WikiVersionSnapshot) | Content, headings, cross-links. FTS5-indexed for full-text search. |
+| 14 | `WikiVersionSnapshot` | `Id` (string GUID) | `WikiFilePath` → `WikiFile.FilePath` (HasPrincipalKey, Cascade) | Snapshot pruning: 30-per-file, 50MB global cap. |
 
-| # | Entity | PK | Key FK Relationships |
-|---|--------|----|---------------------|
-| 1 | `ApiKey` | `Id` (string GUID) | `ModelConfigurationId` → `ModelConfiguration.Id` |
-| 2 | `Persona` | `Id` (string GUID) | `DefaultModelConfigId` → `ModelConfiguration.Id` |
-| 3 | `ModelConfiguration` | `Id` (string GUID) | — (referenced by ApiKey, Persona, ChatThread) |
-| 4 | `ChatThread` | `Id` (string GUID) | `PersonaId` → `Persona.Id`; `ModelConfigId` → `ModelConfiguration.Id`; `ICollection<Message>` (1:many) |
-| 5 | `Message` | `Id` (string GUID) | `ThreadId` → `ChatThread.Id`; `ParentMessageId` → `Message.Id` (self-ref, nullable, for branching); `ICollection<Artifact>` (1:many) |
-| 6 | `Artifact` | `Id` (string GUID) | `MessageId` → `Message.Id` |
-| 7 | `MediaItem` | `Id` (string GUID) | `MessageId` → `Message.Id` (nullable) |
-| 8 | `PromptTemplate` | `Id` (string GUID) | — (standalone) |
-| 9 | `TextAction` | `Id` (string GUID) | — (standalone) |
-| 10 | `UsageRecord` | `Id` (string GUID) | `ModelConfigId` → `ModelConfiguration.Id` (nullable) |
-| 11 | `WikiFile` | `FilePath` (string — natural key) | `ICollection<WikiVersionSnapshot>` (1:many) |
-| 12 | `WikiVersionSnapshot` | `Id` (string GUID) | `WikiFilePath` → `WikiFile.FilePath` (non-standard FK, configured in `OnModelCreating`) |
+> **Note:** `BackupSnapshot` is planned for W3.16 (Backup & Recovery) and is not yet implemented. It will be a standalone entity (no FK relationships).
+
+### FK Relationship Count: 17
+
+The 17 foreign key relationships are configured in `OnModelCreating` via Fluent API. See §8 for the complete OnDelete behavior reference.
 
 ### 3.1 Primary Key Convention: String GUIDs
 
@@ -219,3 +225,282 @@ Beyond SQLite, wiki content is stored as plain `.md` files:
 - Wiki metadata (path, title, tags) stored in SQLite via `WikiFile` entity
 - Version snapshots tracked in `WikiVersionSnapshot` entity
 - Full-text search via SQLite FTS5 (`Microsoft.Data.Sqlite`)
+
+---
+
+## 8. FK Delete Behavior — Complete Reference
+
+All 17 foreign key relationships are configured in `OnModelCreating` with explicit `OnDelete()` behavior. The three behaviors used:
+
+| Behavior | When Applied | Entities |
+|----------|-------------|----------|
+| **Cascade** | Child has no meaning without parent | Message→ChatThread, Artifact→ChatThread, MediaItem→ChatThread, UsageRecord→Message, UsageRecord→ChatThread, WikiVersionSnapshot→WikiFile |
+| **SetNull** | Child can exist independently; FK becomes null | ChatThread→Persona, ChatThread→ModelConfiguration, Message→Persona, Message→ModelConfiguration, ModelConfiguration→ApiKey, MediaItem→Message, UsageRecord→Persona, UsageRecord→ModelConfiguration, TextAction→ModelConfiguration |
+| **Restrict** | Delete blocked; must be handled in application code | Message→Message (self-ref, branching), Persona→ModelConfiguration |
+
+### 8.1 Restrict Delete — Application-Level Handling
+
+When `Restrict` is configured, the repository throws `InvalidOperationException` with a descriptive message. Example from `ModelConfigurationRepository.DeleteAsync`:
+
+```csharp
+if (config.Personas.Count > 0)
+    throw new InvalidOperationException(
+        $"Cannot delete ModelConfiguration '{config.DisplayName}' — " +
+        $"it is referenced by {config.Personas.Count} Persona(s).");
+```
+
+The UI layer catches this exception and shows a warning dialog before attempting the delete, so the user sees a friendly message instead of a crash.
+
+---
+
+## 9. Seed Data — Fixed GUIDs via HasData()
+
+Built-in data is seeded in `OnModelCreating` using `HasData()` with **fixed string GUIDs** (not `Guid.NewGuid()`). Fixed GUIDs ensure deterministic migrations — the migration SQL is identical across all developer machines.
+
+### 9.1 Seeded Personas (2)
+
+| Fixed GUID | DisplayName | SystemPrompt |
+|------------|-------------|-------------|
+| `00000000000000000000000000000001` | General Assistant | "You are a helpful, thoughtful assistant." |
+| `00000000000000000000000000000002` | Code Helper | "You are an expert software developer. Provide clean, well-documented code." |
+
+Both have `DefaultChatMode = "Standard"`, `IsBuiltIn = true`, `CreatedAt = 2026-01-01T00:00:00+00:00`.
+
+### 9.2 Seeded TextActions (6)
+
+| Fixed GUID | DisplayName | SystemPrompt (abbreviated) |
+|------------|-------------|---------------------------|
+| `a000000000000000000000000000001` | Rewrite | "Rewrite the following text to improve clarity, flow, and impact..." |
+| `a000000000000000000000000000002` | Summarize | "Summarize the following text concisely, capturing the key points." |
+| `a000000000000000000000000000003` | Explain | "Explain the following text clearly and thoroughly..." |
+| `a000000000000000000000000000004` | Translate | "Translate the following text to English. Preserve formatting and tone." |
+| `a000000000000000000000000000005` | Fix Grammar | "Fix grammar, spelling, and punctuation errors..." |
+| `a000000000000000000000000000006` | Enhance Prompt | "Improve the following prompt to be more specific, detailed, and effective..." |
+
+All have `IsBuiltIn = true`, `CreatedAt = 2026-01-01T00:00:00+00:00`.
+
+### 9.3 Seed Data Pattern
+
+```csharp
+modelBuilder.Entity<Persona>().HasData(
+    new Persona
+    {
+        Id = "00000000000000000000000000000001",  // FIXED — not Guid.NewGuid()
+        DisplayName = "General Assistant",
+        SystemPrompt = "You are a helpful, thoughtful assistant.",
+        DefaultChatMode = "Standard",
+        IsBuiltIn = true,
+        CreatedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero)
+    },
+    // ...
+);
+```
+
+**Rule:** Every seed entity must have an explicit, fixed `Id`. Using `Guid.NewGuid()` in `HasData()` would produce a different migration SQL on every run, breaking determinism.
+
+---
+
+## 10. FTS5 Full-Text Search — Virtual Tables with Content-Sync Triggers
+
+Full-text search is powered by SQLite FTS5 virtual tables created in the `InitialCreate` migration via raw SQL in `migrationBuilder.Sql()`.
+
+### 10.1 FTS5 Virtual Tables
+
+Two FTS5 virtual tables, each with `content=` pointing to the source table:
+
+| Virtual Table | Content Table | Indexed Column |
+|---------------|---------------|----------------|
+| `MessageFts` | `Messages` | `Content` |
+| `WikiFileFts` | `WikiFiles` | `Content` |
+
+### 10.2 Content-Sync Triggers (6 total)
+
+Each content table gets three triggers that keep the FTS5 index in sync:
+
+| Trigger | Fires On | Action |
+|---------|----------|--------|
+| `Messages_AI` / `WikiFiles_AI` | AFTER INSERT | Insert new rowid + Content into FTS5 |
+| `Messages_AD` / `WikiFiles_AD` | AFTER DELETE | Delete old rowid from FTS5 |
+| `Messages_AU` / `WikiFiles_AU` | AFTER UPDATE | Delete old + insert new (replace semantics) |
+
+### 10.3 FTS5 Creation SQL (in Migration Up())
+
+```csharp
+migrationBuilder.Sql(@"
+    CREATE VIRTUAL TABLE IF NOT EXISTS MessageFts USING fts5(
+        Content,
+        content=Messages,
+        content_rowid=rowid
+    );
+    CREATE TRIGGER IF NOT EXISTS Messages_AI AFTER INSERT ON Messages BEGIN
+        INSERT INTO MessageFts(rowid, Content) VALUES (new.rowid, new.Content);
+    END;
+    -- ... AD, AU triggers ...
+", suppressTransaction: true);
+```
+
+`suppressTransaction: true` is required because `CREATE VIRTUAL TABLE` cannot run inside a transaction.
+
+### 10.4 FTS5 Search Query Pattern
+
+FTS5 queries use `FromSqlRaw` with parameterized queries to prevent FTS5 query injection:
+
+```csharp
+var results = await _db.Messages
+    .FromSqlRaw(@"
+        SELECT m.* FROM Messages m
+        INNER JOIN MessageFts fts ON m.rowid = fts.rowid
+        WHERE MessageFts MATCH {0}
+        ORDER BY rank
+        LIMIT {1}", query, maxResults)
+    .AsNoTracking()
+    .ToListAsync();
+```
+
+The JOIN on `rowid` links the FTS5 virtual table back to the content table. `ORDER BY rank` returns the most relevant results first.
+
+---
+
+## 11. Soft-Delete Pattern — ChatThread & MediaItem
+
+Two entities support soft-delete (mark as deleted without removing data). Both use the same column pattern:
+
+```csharp
+public bool IsDeleted { get; set; }
+public DateTimeOffset? DeletedAt { get; set; }
+```
+
+### 11.1 Soft-Delete in Repository
+
+```csharp
+public async Task SoftDeleteAsync(string id)
+{
+    var thread = await _db.ChatThreads.FindAsync(id);
+    if (thread == null) return;
+    thread.IsDeleted = true;
+    thread.DeletedAt = DateTimeOffset.UtcNow;
+    await _db.SaveChangesAsync();
+}
+```
+
+### 11.2 Query Filtering
+
+All list queries that return "active" items must filter out soft-deleted records:
+
+```csharp
+// Get all permanent (non-transient, non-deleted) threads
+_db.ChatThreads.Where(t => !t.IsTransient && !t.IsDeleted)
+```
+
+Trash queries filter the inverse:
+
+```csharp
+_db.ChatThreads.Where(t => t.IsDeleted).OrderBy(t => t.DeletedAt)
+```
+
+---
+
+## 12. SQLite DateTimeOffset Limitations
+
+SQLite has no native `DateTimeOffset` type. EF Core stores `DateTimeOffset` as a string in ISO 8601 format. This has two consequences:
+
+### 12.1 No Server-Side DateTimeOffset Filtering
+
+LINQ queries that filter on `DateTimeOffset` properties (e.g., `.Where(t => t.CreatedAt > cutoff)`) may not translate to SQL correctly in all EF Core + SQLite versions. When EF Core cannot translate the expression, it falls back to **client-side evaluation**, which downloads the entire table and filters in memory.
+
+**Mitigation:** For performance-critical date queries on large tables, consider storing Unix timestamps (long) alongside DateTimeOffset, or using raw SQL with string comparison on ISO 8601 values.
+
+### 12.2 UTC Convention
+
+All `DateTimeOffset` values must be stored in UTC (`DateTimeOffset.UtcNow`). The application layer converts to local time for display. This avoids ambiguity when the user changes time zones.
+
+---
+
+## 13. WikiVersionSnapshot Pruning — 30-per-file, 50MB Cap
+
+Snapshot storage is bounded to prevent unbounded disk usage:
+
+### 13.1 Per-File Limit (30 snapshots)
+
+```csharp
+var snapshots = await _db.WikiVersionSnapshots
+    .Where(s => s.WikiFilePath == filePath)
+    .OrderByDescending(s => s.CreatedAt)
+    .ToListAsync();
+
+if (snapshots.Count > 30)
+{
+    var toRemove = snapshots.Skip(30);  // Keep newest 30
+    _db.WikiVersionSnapshots.RemoveRange(toRemove);
+}
+```
+
+### 13.2 Global Storage Cap (50 MB)
+
+```csharp
+var totalBytes = await _db.WikiVersionSnapshots
+    .SumAsync(s => (long)s.Content.Length);
+
+if (totalBytes > 50_000_000)  // 50 MB
+{
+    var oldest = await _db.WikiVersionSnapshots
+        .OrderBy(s => s.CreatedAt)
+        .Take(/* estimate how many to remove */)
+        .ToListAsync();
+    _db.WikiVersionSnapshots.RemoveRange(oldest);
+}
+```
+
+Both checks run inside `PruneSnapshotsAsync()` in `WikiIndexRepository`. The method is called after each new snapshot is created.
+
+---
+
+## 14. MessageDrafts — Per-Thread Auto-Save Entity
+
+`MessageDrafts` is a lightweight entity with no FK relationships and no separate repository. It stores a single draft per thread (thread ID is the PK):
+
+```csharp
+public class MessageDrafts
+{
+    [Key]
+    public string ThreadId { get; set; } = string.Empty;  // PK = thread ID
+
+    public string Content { get; set; } = string.Empty;    // Current textbox content
+    public int CursorPosition { get; set; }                  // Cursor position in textbox
+    public DateTimeOffset SavedAt { get; set; } = DateTimeOffset.UtcNow;
+}
+```
+
+**Access pattern:** Read/write directly via `AppDbContext.MessageDrafts` (no repository). A future `DraftService` will manage auto-save timing and debouncing. One row per chat thread — upsert on save (find-then-add-or-update).
+
+---
+
+## 15. AppSetting Entity — Key-Value Settings Store
+
+`AppSetting` backs `SettingsRepository` with a simple key-value model:
+
+```csharp
+public class AppSetting
+{
+    [Key]
+    [MaxLength(200)]
+    public string Key { get; set; } = string.Empty;
+
+    public string Value { get; set; } = string.Empty;
+}
+```
+
+Exposed via `public DbSet<AppSetting> Settings => Set<AppSetting>();` on `AppDbContext`.
+
+### 15.1 SettingsRepository — JSON Serialization
+
+`SettingsRepository` wraps `AppSetting` with typed get/set operations:
+
+- `GetAsync(string key)` → returns raw `Value` string or null
+- `GetAsync<T>(string key)` → deserializes `Value` JSON to `T`
+- `SetAsync(string key, string value)` → upserts `AppSetting` row
+- `SetAsync<T>(string key, T value)` → serializes `T` to JSON, then upserts
+
+Uses `System.Text.Json` for serialization. Find-then-add-or-update pattern via `_db.Settings.FindAsync(key)` followed by `_db.Settings.Add()` or `_db.Entry(existing).CurrentValues.SetValues()`.
+
+No raw SQL needed — standard EF Core CRUD operations on the `AppSetting` entity.

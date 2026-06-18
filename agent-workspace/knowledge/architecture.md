@@ -71,6 +71,7 @@ Adding a new provider requires only: (a) create adapter class in `Services/LLM/`
 - **Implementation** in `Data/Repositories/` using `AppDbContext`
 - Services depend on repository interfaces (in Core), not on EF Core directly
 - Single `AppDbContext` singleton for the single-user desktop application
+- **Domain-Entity Mapping:** Repositories map between EF Core entity types (`Data/Entities/`) and domain DTOs (`Core/Models/DomainModels.cs`) at the repository boundary. Entities carry navigation properties and EF Core attributes; DTOs are flat records with no EF Core references. Repositories expose DTOs to services and accept DTOs on write operations, converting internally via `MapToDomain()` / `MapToEntity()` helper methods.
 
 ### 2.4 Plugin/Registry Pattern (Content Block Renderers)
 
@@ -485,4 +486,93 @@ public class LoggingInfrastructureTests : IDisposable
 - Resolve `ILogger<T>` from DI and verify its type name contains "Serilog" (proves Serilog, not Console/Debug, is the provider)
 - Write a log message, call `Log.CloseAndFlush()`, then assert the log file exists and contains the test message with structured properties
 - Existing `DiContainerTests.CanResolve_Logger` continues to pass unchanged — same interface, different backing provider
+
+---
+
+## 15. Startup Lifecycle — Database Auto-Migration
+
+After the DI container is built and before the main window is shown, `App.xaml.cs` `OnStartup` applies pending EF Core migrations automatically:
+
+```csharp
+// After _serviceProvider = services.BuildServiceProvider();
+try
+{
+    var db = _serviceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+    var startupLogger = _serviceProvider.GetRequiredService<ILogger<App>>();
+    startupLogger.LogInformation("Database migration applied successfully");
+}
+catch (Exception ex)
+{
+    var startupLogger = _serviceProvider.GetRequiredService<ILogger<App>>();
+    startupLogger.LogError(ex, "Database migration failed");
+    throw; // Re-throw — app cannot function without database
+}
+```
+
+### 15.1 Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| `db.Database.Migrate()` (not `EnsureCreated`) | Supports incremental schema evolution. `EnsureCreated` would skip the migrations table and prevent future migrations from applying. |
+| Re-throw on failure | The application cannot function without its database. A crash with a logged error is better than silently operating with missing tables. |
+| After DI build, before `MainWindow.Show()` | All services (including `ILogger<App>`) are available for logging. MainWindow never loads with a broken database. |
+| Single `InitialCreate` migration for all 14 tables + FTS5 | Future schema changes add incremental migrations via `dotnet ef migrations add`. |
+
+### 15.2 Full Startup Sequence (Post-W1.4)
+
+```
+OnStartup:
+  1. ConfigureServices → Create LoggerConfiguration → Log.Logger = config.CreateLogger()
+  2. Build IServiceProvider
+  3. db.Database.Migrate()                    [auto-create/update SQLite schema]
+  4. Resolve ILogger<T> → LogInformation("MySecondBrain started")
+  5. Resolve MainWindow → Show()
+
+OnExit:
+  1. Log.CloseAndFlush()
+  2. (_serviceProvider as IDisposable)?.Dispose()
+  3. base.OnExit(e)
+```
+
+---
+
+## 16. Singleton AppDbContext — Lifetime Rationale
+
+`AppDbContext` is registered as a **Singleton** (not Scoped or Transient):
+
+| Factor | Rationale |
+|--------|-----------|
+| **Single-user desktop app** | No concurrent requests, no request/response cycle. One user = one DbContext. |
+| **SQLite serializes writes** | SQLite itself serializes all write operations internally. Multiple DbContext instances would contend on the same file lock without benefit. |
+| **ChangeTracker coherence** | A single ChangeTracker means `SaveChanges()` sees all pending changes. Multiple DbContexts could lead to stale reads or missed updates across repositories. |
+| **Startup performance** | A single DbContext instance is created once at startup. Transient DbContexts would incur connection overhead on every injection. |
+| **Repository compatibility** | All 8 repositories are Singletons receiving the same `AppDbContext` instance. If DbContext were Transient, repositories would need to be Transient too, breaking the Singleton service model. |
+
+All repositories, services, and factories that depend on `AppDbContext` are also registered as Singletons, forming a consistent lifetime chain:
+```
+AppDbContext (Singleton) → Repositories (Singleton) → Services (Singleton)
+```
+
+---
+
+## 17. Core Layer Isolation from EF Core
+
+The `MySecondBrain.Core` project has **zero reference to EF Core** or any data-access NuGet package. This is enforced by the `.csproj` file:
+
+```xml
+<!-- Core.csproj: NO EF Core reference -->
+<ProjectReference Include="..\MySecondBrain.Data\MySecondBrain.Data.csproj" />  <!-- NOT present -->
+```
+
+All repository interfaces in `Core/Interfaces/` accept and return plain C# DTOs/records (from `Core/Models/DomainModels.cs`). The EF Core entity types in `Data/Entities/` are never exposed to services or ViewModels. This means:
+
+| Layer | Sees | Does NOT see |
+|-------|------|-------------|
+| Core | Plain DTOs, interfaces | EF Core, `DbSet<T>`, SQLite, entity classes |
+| Data | EF Core entities, Core DTOs, Core interfaces | — |
+| Services | Core DTOs, Core interfaces | EF Core entities (consumed only via repository interfaces) |
+| UI | Core DTOs, Core interfaces, ViewModels | EF Core, raw SQL |
+
+This isolation allows the data layer to be swapped (e.g., SQLite → PostgreSQL) without touching any service or UI code.
 
