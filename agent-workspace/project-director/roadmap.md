@@ -23,7 +23,6 @@ Dependencies: none.
 
 Status: **Built and merged to master.**
 
-Consolidates original features: 1.
 
 ### Feature W1.2 — Dependency Injection Container ✅
 
@@ -33,7 +32,6 @@ Dependencies: W1.1.
 
 Status: **Built and merged to master.**
 
-Consolidates original features: 2.
 
 ### Feature W1.3 — Logging Infrastructure ✅
 
@@ -43,7 +41,6 @@ Dependencies: W1.2.
 
 Status: **Built and merged to master.**
 
-Consolidates original features: 3.
 
 ### Feature W1.4 — Data Layer: All Entities, DbContext & Repositories
 
@@ -51,7 +48,6 @@ Consolidates original features: 3.
 
 Dependencies: W1.2.
 
-Consolidates original features: 4–19, 35. One feature for the entire data layer — entities, DbContext configuration, all repository implementations, and all migrations.
 
 ### Feature W1.5 — LLM Provider Abstraction Layer
 
@@ -59,7 +55,6 @@ Consolidates original features: 4–19, 35. One feature for the entire data laye
 
 Dependencies: none (abstractions); W1.4 (persistence of model configs).
 
-Consolidates original features: 20–25. All LLM provider contracts and implementations as one feature.
 
 ### Feature W1.6 — Platform Services & Abstractions
 
@@ -67,7 +62,6 @@ Consolidates original features: 20–25. All LLM provider contracts and implemen
 
 Dependencies: none (abstractions); W1.4 (persistence).
 
-Consolidates original features: 26–34. All platform abstractions and their implementations in one feature, grouped by category.
 
 ### Feature W1.7 — Core Application Services
 
@@ -75,7 +69,6 @@ Consolidates original features: 26–34. All platform abstractions and their imp
 
 Dependencies: W1.4, W1.5, W1.6.
 
-Consolidates original features: 36–38. Three core services that all UI tiers consume.
 
 ### Feature W1.8 — Testing Infrastructure
 
@@ -83,7 +76,6 @@ Consolidates original features: 36–38. Three core services that all UI tiers c
 
 Dependencies: W1.1, W1.4.
 
-Consolidates original features: 39, 40. Unit test and integration test setup as one feature.
 
 ---
 
@@ -97,7 +89,6 @@ App shell, navigation, empty screens, theming, Windows infrastructure. All 8 scr
 
 Dependencies: W1.2, W1.7.
 
-Consolidates original features: 41–51, 55–57. App shell + all empty screen shells + theming as one skeletal feature. (Original features 41–51 = screen shells + shell layout; 55–57 = theming.)
 
 ### Feature W2.2 — Windows OS Infrastructure
 
@@ -105,7 +96,6 @@ Consolidates original features: 41–51, 55–57. App shell + all empty screen s
 
 Dependencies: W1.2, W2.1.
 
-Consolidates original features: 52–54, 58–59. All Windows-specific infrastructure as one feature.
 
 ### Feature W2.3 — MSIX Packaging & CI/CD Hardening
 
@@ -113,7 +103,6 @@ Consolidates original features: 52–54, 58–59. All Windows-specific infrastru
 
 Dependencies: W1.1.
 
-Consolidates original features: 60, 61. MSIX packaging hardening and CI/CD pipeline completion as one feature — builds on W1.1 skeleton.
 
 ---
 
@@ -129,7 +118,6 @@ API key management (add, edit, delete, test, DPAPI encryption, 8 provider types)
 
 Dependencies: W1.4–W1.7, W2.1.
 
-Consolidates original features: 62–66, 68, 74–77. All of vision group B plus the model/persona-related settings slices from group A.
 
 ### Feature W3.2 — Settings & Configuration
 
@@ -141,7 +129,6 @@ Full Settings screen with 14 categories (Providers, Profiles, Appearance, Wiki, 
 
 Dependencies: W1.4, W1.7, W2.1, W2.2, W3.1. (*Soft dependency on W3.13 for wiki-related UI functionality.*)
 
-Consolidates original features: 67, 69–73, 138, 205. Settings screen, onboarding wizard, and database maintenance as one feature.
 
 ### Feature W3.3 — Studio Chat: Messaging, Rendering & Modes
 
@@ -153,7 +140,6 @@ Conversation view with `VirtualizingStackPanel`. Full Markdown rendering (Markdi
 
 Dependencies: W1.4–W1.7, W2.1, W3.1.
 
-Consolidates original features: 78–86, 97–101, 103–107, 206–213, 217–221. Core chat messaging, rendering, and mode controls in one feature.
 
 ### Feature W3.4 — Studio Chat: Input, Media & Workspace
 
@@ -163,7 +149,6 @@ Drag & drop files/media into textbox. Paste image from clipboard (Ctrl+V). Model
 
 Dependencies: W1.4–W1.7, W2.1, W3.3.
 
-Consolidates original features: 87–96, 102, 214–216. Chat input, media handling, and multi-tab workspace as one feature.
 
 ### Feature W3.5 — Message Branching & Manipulation
 
@@ -173,7 +158,6 @@ Edit any past message (Edit in Place or Edit as Branch). Delete any past message
 
 Dependencies: W1.4, W1.7, W2.1, W3.3.
 
-Consolidates original features: 108–116. All message branching and manipulation as one feature.
 
 ### Feature W3.6 — Artifacts System
 
@@ -183,7 +167,6 @@ AI-generated named artifacts (code, docs, config files) with type inference. Sid
 
 Dependencies: W1.4, W1.7, W2.1.
 
-Consolidates original features: 147–153. All artifact functionality as one feature.
 
 ### Feature W3.7 — Media Library
 
@@ -193,7 +176,6 @@ Browsable gallery grid of all media across chats (virtualized). Filtering by typ
 
 Dependencies: W1.4, W1.7, W2.1, W3.4.
 
-Consolidates original features: 154–159. All media library and multi-modal functionality as one feature.
 
 ### Feature W3.8 — Tool Use & Agents
 
@@ -203,7 +185,6 @@ Web search tool (AI requests → execute via Google/Bing → results fed back). 
 
 Dependencies: W1.4–W1.7, W2.1, W3.3.
 
-Consolidates original features: 160–166. All tool use and agent capabilities as one feature.
 
 ### Feature W3.9 — Import/Export & Prompt Library
 
@@ -213,7 +194,6 @@ Export chat as Markdown (QuestPDF for PDF, JSON). Import from ChatGPT export JSO
 
 Dependencies: W1.4, W1.7, W2.1.
 
-Consolidates original features: 145–146, 171–172. Import/export and prompt library merged — both are about content transfer into/out of the app.
 
 ### Feature W3.10 — Text Actions & Three-Tier System
 
@@ -223,7 +203,6 @@ Text Actions CRUD (name + system prompt + Model Configuration). Built-in default
 
 Dependencies: W1.4–W1.7, W2.1, W2.2, W3.1.
 
-Consolidates original features: 139–144. All text actions and the three-tier interaction model as one feature.
 
 ### Feature W3.11 — Chat Organization, Search & Data Lifecycle
 
@@ -233,7 +212,6 @@ Sidebar chat list (sorted, grouped by date, pinned section). Chat favoriting (st
 
 Dependencies: W1.4, W1.7, W2.1.
 
-Consolidates original features: 117–128, 129–137, 222. Chat organization, soft-delete/trash, and data lifecycle merged — all govern chat visibility, state transitions, and cleanup.
 
 ### Feature W3.12 — Model Comparison
 
@@ -243,7 +221,6 @@ Model comparison mode (send same prompt to 2-4 Personas). Comparison setup (Pers
 
 Dependencies: W1.4–W1.7, W2.1, W3.1.
 
-Consolidates original features: 167–170. All model comparison functionality as one feature.
 
 ### Feature W3.13 — Personal Wiki / Second Brain
 
@@ -253,7 +230,6 @@ Wiki directory configuration (FileSystemWatcher + polling fallback). Wiki indexi
 
 Dependencies: W1.4, W1.7, W2.1.
 
-Consolidates original features: 173–185. All personal wiki functionality as one feature.
 
 ### Feature W3.14 — Windows OS Integration
 
@@ -265,7 +241,6 @@ Session restore (P7: reopen all chats/tabs from previous session on launch, resp
 
 Dependencies: W1.4, W1.7, W2.1, W2.2, W3.10.
 
-Consolidates original features: 186–191. All Windows-specific integration features as one feature.
 
 ### Feature W3.15 — Language & RTL Support
 
@@ -275,7 +250,6 @@ English LTR (default language, all UI labels, Hunspell English dictionary). Hebr
 
 Dependencies: W2.1, W3.3, W3.4.
 
-Consolidates original features: 202–204. All language and bidirectional text support as one feature.
 
 ### Feature W3.16 — Backup & Recovery
 
@@ -285,7 +259,6 @@ Google Cloud Storage backup (zip SQLite DB + wiki + artifacts, upload via GCS SD
 
 Dependencies: W1.4, W1.6, W2.1.
 
-Consolidates original features: 192–195. All backup and recovery functionality as one feature.
 
 ### Feature W3.17 — Usage & Pricing Dashboard
 
@@ -295,7 +268,6 @@ Usage overview screen (summary cards: total tokens, total cost, active models). 
 
 Dependencies: W1.4, W1.7, W2.1.
 
-Consolidates original features: 196–201. All usage dashboard and pricing functionality as one feature.
 
 ### Feature W3.18 — Wave 3 Testing
 
@@ -303,7 +275,6 @@ Consolidates original features: 196–201. All usage dashboard and pricing funct
 
 Dependencies: W1.8, W3.1–W3.17.
 
-Consolidates original features: 223–225. All Wave 3 testing as one feature.
 
 ---
 
@@ -317,7 +288,6 @@ Features that span across all vertical slices. Optimization, hardening, and poli
 
 Dependencies: all Wave 3 features.
 
-Consolidates original features: 226–229. All performance optimization as one feature.
 
 ### Feature W4.2 — Accessibility & Internationalization
 
@@ -325,7 +295,6 @@ Consolidates original features: 226–229. All performance optimization as one f
 
 Dependencies: all Wave 3 features.
 
-Consolidates original features: 230–235. Accessibility and internationalization as one feature.
 
 ### Feature W4.3 — E2E Testing & Visual Regression
 
@@ -333,7 +302,6 @@ Consolidates original features: 230–235. Accessibility and internationalizatio
 
 Dependencies: all Wave 3 features, W1.8.
 
-Consolidates original features: 236–237. E2E testing and visual regression as one feature.
 
 ### Feature W4.4 — Security Hardening & DevOps
 
@@ -341,7 +309,6 @@ Consolidates original features: 236–237. E2E testing and visual regression as 
 
 Dependencies: all Wave 3 features, W1.1, W2.3.
 
-Consolidates original features: 238–242. Security hardening and DevOps as one feature.
 
 ### Feature W4.5 — Final Polish: Empty States, Error States & Edge Cases
 
@@ -349,7 +316,6 @@ Consolidates original features: 238–242. Security hardening and DevOps as one 
 
 Dependencies: all Wave 3 features.
 
-Consolidates original features: 243–245. All final polish as one feature.
 
 ---
 
