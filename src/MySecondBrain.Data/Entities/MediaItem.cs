@@ -57,6 +57,10 @@ public class MediaItem
 
     public bool IsSavedToWiki { get; set; }
 
+    public bool IsDeleted { get; set; }
+
+    public DateTimeOffset? DeletedAt { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     // Navigation

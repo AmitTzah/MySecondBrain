@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MySecondBrain.Data.Entities;
 
@@ -19,6 +20,11 @@ public class ChatThread
     /// FK to Persona.
     /// </summary>
     public string? PersonaId { get; set; }
+
+    /// <summary>
+    /// FK to ModelConfiguration.
+    /// </summary>
+    public string? ModelConfigId { get; set; }
 
     /// <summary>
     /// Per-chat system message override.
@@ -87,7 +93,11 @@ public class ChatThread
 
     // Navigation
 
+    [ForeignKey(nameof(PersonaId))]
     public Persona? Persona { get; set; }
+
+    [ForeignKey(nameof(ModelConfigId))]
+    public ModelConfiguration? ModelConfig { get; set; }
 
     public ICollection<Message> Messages { get; set; } = new List<Message>();
 

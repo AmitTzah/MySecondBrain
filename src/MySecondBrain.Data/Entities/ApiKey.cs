@@ -31,6 +31,8 @@ public class ApiKey
 
     public DateTimeOffset? LastTestedAt { get; set; }
 
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+
     // Navigation
     public ICollection<ModelConfiguration> ModelConfigurations { get; set; } = new List<ModelConfiguration>();
 }

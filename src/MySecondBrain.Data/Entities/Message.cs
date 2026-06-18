@@ -1,7 +1,11 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace MySecondBrain.Data.Entities;
 
+[Index(nameof(ThreadId))]
+[Index(nameof(CreatedAt))]
 public class Message
 {
     [Key]
@@ -10,6 +14,7 @@ public class Message
     /// <summary>
     /// FK to ChatThread.
     /// </summary>
+    [ForeignKey(nameof(Thread))]
     public string ThreadId { get; set; } = string.Empty;
 
     /// <summary>
@@ -31,11 +36,13 @@ public class Message
     /// <summary>
     /// FK to Persona (assistant messages only).
     /// </summary>
+    [ForeignKey(nameof(Persona))]
     public string? PersonaId { get; set; }
 
     /// <summary>
     /// FK to ModelConfiguration (assistant messages only).
     /// </summary>
+    [ForeignKey(nameof(ModelConfig))]
     public string? ModelConfigId { get; set; }
 
     /// <summary>
@@ -64,6 +71,7 @@ public class Message
     /// <summary>
     /// FK to self — previous message in conversation chain.
     /// </summary>
+    [ForeignKey(nameof(ParentMessage))]
     public string? ParentMessageId { get; set; }
 
     /// <summary>

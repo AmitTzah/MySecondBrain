@@ -54,6 +54,10 @@ public class ModelConfiguration
     [MaxLength(50)]
     public string ContextOverflowStrategy { get; set; } = "SlidingWindow";
 
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+
     // Navigation
     public ApiKey? ApiKey { get; set; }
 

@@ -30,6 +30,10 @@ public class Persona
 
     public bool IsBuiltIn { get; set; }
 
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+
     // Navigation
     public ModelConfiguration? DefaultModelConfig { get; set; }
 
