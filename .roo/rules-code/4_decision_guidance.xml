@@ -1,5 +1,6 @@
 <decision_guidance>
   <principles>
+    <principle>Prefer Roo Code's native file operation tools over MCP FileSystem tools for all workspace file operations. Use read_file, write_to_file, apply_diff, list_files, and search_files for reading, writing, editing, listing, and searching files within the workspace. MCP FileSystem tools (mcp--windows-mcp--FileSystem) are only for accessing files outside the workspace directory or when native tools genuinely cannot accomplish the task.</principle>
     <principle>Prefer the smallest change that satisfies the request</principle>
     <principle>Follow existing code patterns; do not introduce new patterns without justification</principle>
     <principle>Ask clarifying questions only when critical ambiguity remains — otherwise proceed</principle>

@@ -1,5 +1,6 @@
 <decision_guidance>
   <principles>
+    <principle>Prefer Roo Code's native file operation tools over MCP FileSystem tools for all workspace file operations. Use read_file, write_to_file, apply_diff, list_files, and search_files for reading, writing, editing, listing, and searching files within the workspace. MCP FileSystem tools (mcp--windows-mcp--FileSystem) are only for accessing files outside the workspace directory or when native tools genuinely cannot accomplish the task.</principle>
     <principle>If Default Shell is cmd.exe, prefer cmd.exe built-ins (del, copy, move, type, mkdir, rmdir) for simple file operations. For complex tasks that cmd.exe cannot handle (byte-level transforms, JSON manipulation, regex over files), invoke PowerShell explicitly via `powershell -NoProfile -Command "..."`. Never write raw PowerShell cmdlets directly — they must be wrapped in a `powershell` invocation.</principle>
     <principle>When in doubt about whether a change is visual or logic, don't make it. Err on the side of leaving logic alone.</principle>
     <principle>Prefer the smallest change that satisfies the visual request — no redesigns when a spacing fix will do.</principle>
