@@ -14,7 +14,8 @@
 				"git_diff_unstaged",
 				"git_diff_staged",
 				"git_log",
-				"git_diff"
+				"git_diff",
+				"git_create_branch"
 			]
 		},
 		"windows-mcp": {
