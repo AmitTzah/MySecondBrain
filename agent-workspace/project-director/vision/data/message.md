@@ -39,7 +39,7 @@ A Message is a single entry in a ChatThread conversation. Messages can be from t
 - **User sends message:** Content = textbox input. role = User. Created via Enter/Send button (C5).
 - **AI responds:** Content = streaming tokens. role = Assistant. personaId + modelConfigId set.
 - **System message:** role = System. Set at chat creation or via E5.
-- **Tier 1 action:** User message = original highlighted text. Assistant message = AI transformation. isDirectTransformation=true.
+- **Tier 1 action:** User message = original captured content (text and/or screenshot description). Assistant message = AI transformation. isDirectTransformation=true.
 - **Tier 2 query:** User message = Command Bar input. Assistant message = AI response.
 
 ### Update

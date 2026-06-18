@@ -27,15 +27,16 @@ Categories listed vertically:
 3. 🎨 Appearance
 4. 📝 Wiki
 5. ☁️ Backup
-6. ⌨️ Hotkeys
-7. 🔧 Tools
-8. 🌐 Language
-9. 🔔 Notifications
-10. 🚀 Startup
-11. 🔄 Updates
-12. 💰 Pricing
-13. 🔒 Security
-14. 🛠️ Maintenance
+6. ⚡ Text Actions
+7. ⌨️ Hotkeys
+8. 🔧 Tools
+9. 🌐 Language
+10. 🔔 Notifications
+11. 🚀 Startup
+12. 🔄 Updates
+13. 💰 Pricing
+14. 🔒 Security
+15. 🛠️ Maintenance
 
 Active category highlighted. Clicking a category changes the content area.
 
@@ -83,11 +84,33 @@ Scrollable area showing the active category's settings. Each category section ha
 - **Last Backup:** Date/time of last successful backup.
 - **Restore (R4):** "Restore from Backup" button with confirmation.
 
+### ⚡ Text Actions
+- **Text Actions Table:** All defined Text Actions. Columns: Name, System Prompt (truncated first line), Capture Scope (flags as badges), Apply Mode, Model Config, Hotkey. Actions: Edit, Duplicate, Delete.
+- **"New Text Action" button:** Opens Text Action creation form with:
+  - **Display Name:** Text input (max 100 chars, required)
+  - **System Prompt:** Multi-line text area (max ~8K chars, required)
+  - **Model Configuration:** Dropdown of all Model Configurations (required)
+  - **Capture Scope:** Multi-select checkboxes. Options: `selection`, `focusedElement`, `surroundingContext`, `fullDocument`, `screenshot`. Any combination valid. Default: `selection`.
+  - **Apply Mode:** Radio button group. Options: `replaceSelection`, `insertAtCursor`, `replaceFocusedElement`, `appendToFocusedElement`, `prependToFocusedElement`, `clipboardOnly`, `showOnly`. Default: `replaceSelection`.
+  - **Hotkey:** Optional. "Assign Hotkey" button opens key recorder overlay.
+  - **[Save]** and **[Cancel]** buttons.
+- **Edit:** Opens same form pre-filled. Changes take effect immediately.
+- **Delete:** Confirmation dialog: "Delete '[Action Name]'? If a hotkey is assigned, it will be unassigned."
+- Built-in defaults (isBuiltIn=true): Rewrite, Summarize, Explain, Translate, Fix Grammar, Enhance Prompt, Continue Writing, Improve Flow, Summarize Page, Explain Screen. User can edit or delete them.
+
 ### ⌨️ Hotkeys
-- **Hotkey Table:** Same as onboarding wizard Step 4. Action | Hotkey | Change button.
-- Defaults: Alt+Q (Rewrite), Alt+W (Summarize), Alt+E (Explain), Alt+R (Translate), Alt+Space (Command Bar).
-- "Change" opens key recorder overlay.
-- "Reset to Defaults" link.
+- **Hotkey Table:** Lists all Text Actions and Command Bar with their assigned hotkeys. Columns: Action Name, Capture Scope, Apply Mode, Hotkey, [Change] button.
+- Defaults:
+  | Action | Hotkey | Capture Scope | Apply Mode |
+  |--------|--------|---------------|------------|
+  | Rewrite | Alt+Q | selection | replaceSelection |
+  | Summarize | Alt+W | selection | showOnly |
+  | Explain | Alt+E | selection | showOnly |
+  | Translate | Alt+R | selection | replaceSelection |
+  | Continue Writing | Alt+C | focusedElement | insertAtCursor |
+  | Command Bar | Alt+Space | — | — |
+- Actions without assigned hotkeys listed with blank hotkey column and "Assign" button.
+- "Change" opens key recorder overlay. "Reset to Defaults" link.
 
 ### 🔧 Tools
 - **Tool Auto-Approval Defaults (H5):** Per-tool toggles: Browser Search, Terminal/Script, File Generation, File Editing. Each: Ask (default) | Auto-Approve | Disabled.
@@ -132,6 +155,7 @@ Scrollable area showing the active category's settings. Each category section ha
 - API keys: [`data/api-key.md`](../data/api-key.md)
 - Personas: [`data/persona.md`](../data/persona.md)
 - Model Configurations: [`data/model-configuration.md`](../data/model-configuration.md)
+- Text Actions: [`data/text-action.md`](../data/text-action.md)
 - Settings stored in SQLite database
 
 ## Actions
@@ -144,6 +168,9 @@ Scrollable area showing the active category's settings. Each category section ha
 | Test API Key | "Test Key" button | Validates against provider API. |
 | New Persona / Model Config | Button | Opens creation form. |
 | Edit / Delete Persona or Config | Table action | Opens edit form or confirmation dialog. |
+| New Text Action | "+ New Text Action" button | Opens creation form with: name, system prompt, model config dropdown, capture scope checkboxes, apply mode radio buttons, optional hotkey assigner. |
+| Edit Text Action | "Edit" in table row | Opens same form pre-filled. Changes take effect immediately. |
+| Delete Text Action | "Delete" in table row | Confirmation dialog. If hotkey assigned, it becomes unassigned. |
 | Change Wiki Directory | "Change" button | Opens folder picker. |
 | Re-index Wiki | "Re-index Now" button | Rebuilds wiki index. Shows progress. |
 | Backup Now | Button | Triggers immediate GCS backup. |
@@ -198,8 +225,10 @@ Scrollable area showing the active category's settings. Each category section ha
 - Feature spec: [`features/settings-configuration.md`](../features/settings-configuration.md) A1-A10
 - API keys: [`features/model-configurations-personas.md`](../features/model-configurations-personas.md) B1
 - Personas/Models: [`features/model-configurations-personas.md`](../features/model-configurations-personas.md) B2, B3
+- Text Actions: [`features/text-actions-three-tier.md`](../features/text-actions-three-tier.md) K1
 - Wiki: [`features/personal-wiki.md`](../features/personal-wiki.md) N1
 - Backup: [`features/backup-recovery.md`](../features/backup-recovery.md) R1-R4
 - Hotkeys: [`features/windows-os-integration.md`](../features/windows-os-integration.md) P1
 - Tools: [`features/tool-use-agents.md`](../features/tool-use-agents.md) H5
 - Git wiki: [`features/personal-wiki.md`](../features/personal-wiki.md) N11
+- Data entity: [`data/text-action.md`](../data/text-action.md) — TextAction attributes

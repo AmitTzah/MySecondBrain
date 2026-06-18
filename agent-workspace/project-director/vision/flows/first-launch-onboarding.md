@@ -82,13 +82,14 @@ User clicks **"Next"** → advances to Step 4.
 
 A table displays the five default global hotkeys:
 
-| Text Action | Default Hotkey |
-|-------------|---------------|
-| Rewrite | Alt+Q |
-| Summarize | Alt+W |
-| Explain | Alt+E |
-| Translate | Alt+R |
-| Command Bar | Alt+Space |
+| Text Action | Default Hotkey | Capture Scope | Apply Mode |
+|-------------|---------------|---------------|------------|
+| Rewrite | Alt+Q | selection | replaceSelection |
+| Summarize | Alt+W | selection | showOnly |
+| Explain | Alt+E | selection | showOnly |
+| Translate | Alt+R | selection | replaceSelection |
+| Continue Writing | Alt+C | focusedElement | insertAtCursor |
+| Command Bar | Alt+Space | — | — |
 
 The user may click **[Change]** on any row → key recorder overlay opens: "Press new key combination..." → next key combo captured → conflict detection runs. If a conflict is detected, a warning appears: "⚠️ [combo] may conflict with [app/function]. Use anyway?" with Confirm/Cancel. On confirm, the table updates.
 
@@ -218,7 +219,7 @@ At any time, the user navigates to [`screens/settings.html`](../screens/settings
 ## Completion
 The user lands on [`screens/studio-chat.html`](../screens/studio-chat.html) with:
 - A new chat tab open, pre-configured with the selected (or default) Persona
-- Global hotkeys active system-wide (Alt+Q/W/E/R for text actions, Alt+Space for Command Bar)
+- Global hotkeys active system-wide (Alt+Q/W/E/R/C for text actions, Alt+Space for Command Bar)
 - Wiki directory configured (or a banner prompting setup after first chat)
 - API keys validated and ready for use
 - The full Studio workspace available: sidebar, chat list, conversation view, right panel

@@ -26,23 +26,23 @@ The app deeply integrates with Windows to provide system-wide hotkeys, spatial a
 - Captured HWND stored with ChatThread for spatial anchoring (P3)
 
 ### P3. Spatial Anchoring
-When a Tier 1 hotkey action captures highlighted text from a source application, the app saves:
+When a Tier 1 hotkey action captures content from a source application, the app saves:
 - Captured HWND
 - Source application name (e.g., "Word", "VS Code")
 - Source document/window title (if detectable, e.g., "chapter3.docx")
-- Original highlighted text
+- Original captured content (text and/or screenshot, depending on capture scope)
 
 **Chat Header Source Indicator (in Studio):**
 - Small non-intrusive banner: "[Source: {App Name} — '{Document Title}']"
 - Next to it: **[Apply Latest]** button — pushes most recent assistant message back to source
 
 **Per-Message [Apply] Button:**
-- On each assistant message that was a direct transformation of captured text
+- On each assistant message that was a direct transformation of captured content
 - NOT on messages from follow-up questions (new queries, not transformations)
 - Clicking pushes that specific message's content to source
 
 **Apply Mechanism:**
-1. First attempt: direct HWND text injection into source window (replaces originally highlighted text)
+1. First attempt: direct HWND text injection into source window (replaces captured content per the Text Action's applyMode)
 2. Fallback (if injection fails): result placed on clipboard (format preserved per P4), Ctrl+V simulated into source window
 3. Confirmation toast: "Text applied to {App Name}" with [Undo] option
 

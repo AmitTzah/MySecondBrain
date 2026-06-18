@@ -196,13 +196,14 @@ Each card shows:
 - Subtitle: "These global shortcuts work from any Windows application — no need to switch windows."
 
 **Hotkey Table:**
-| Text Action | Default Hotkey | |
-|-------------|---------------|---|
-| Rewrite | Alt+Q | [Change] |
-| Summarize | Alt+W | [Change] |
-| Explain | Alt+E | [Change] |
-| Translate | Alt+R | [Change] |
-| Command Bar | Alt+Space | [Change] |
+| Text Action | Default Hotkey | Capture Scope | Apply Mode | |
+|-------------|---------------|---------------|------------|---|
+| Rewrite | Alt+Q | selection | replaceSelection | [Change] |
+| Summarize | Alt+W | selection | showOnly | [Change] |
+| Explain | Alt+E | selection | showOnly | [Change] |
+| Translate | Alt+R | selection | replaceSelection | [Change] |
+| Continue Writing | Alt+C | focusedElement | insertAtCursor | [Change] |
+| Command Bar | Alt+Space | — | — | [Change] |
 
 - "Change" button on each row opens a key recorder overlay: "Press new key combination..." 
 - The recorder captures the next key combination pressed and displays it

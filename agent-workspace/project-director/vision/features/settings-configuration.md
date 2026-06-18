@@ -15,6 +15,7 @@ A dedicated screen containing all global configuration options, organized into c
 - **Appearance:** Visual themes, fonts (A3, A5)
 - **Wiki:** Directory selection, indexing status (N1)
 - **Backup:** Google Cloud Storage config, schedule (R)
+- **Text Actions:** Create, edit, delete, reorder Text Actions with capture scope and apply mode (K1). Hotkey assignment table (K, P1).
 - **Hotkeys:** Global hotkey assignments for Text Actions and Command Bar (K, P1)
 - **Tools:** Tool auto-approval defaults (H5), STT provider (A10)
 - **Language:** UI language preferences (Q)

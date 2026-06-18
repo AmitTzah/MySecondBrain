@@ -103,6 +103,7 @@
         <div class="cat-item" onclick="showCategory('appearance')" data-tooltip="Dark/Light mode, chat visual theme, font family, size, and weight."><span class="cat-icon">🎨</span> Appearance</div>
         <div class="cat-item" onclick="showCategory('wiki')" data-tooltip="Wiki directory, indexing status, git version control."><span class="cat-icon">📝</span> Wiki</div>
         <div class="cat-item" onclick="showCategory('backup')" data-tooltip="Google Cloud Storage backup configuration, schedule, and restore."><span class="cat-icon">☁️</span> Backup</div>
+        <div class="cat-item" onclick="showCategory('textactions')" data-tooltip="Create, edit, and delete Text Actions. Configure capture scope and apply mode for each action."><span class="cat-icon">⚡</span> Text Actions</div>
         <div class="cat-item" onclick="showCategory('hotkeys')" data-tooltip="Global hotkey assignments for Text Actions and Command Bar."><span class="cat-icon">⌨️</span> Hotkeys</div>
         <div class="cat-item" onclick="showCategory('tools')" data-tooltip="Tool auto-approval defaults per tool type. STT provider configuration."><span class="cat-icon">🔧</span> Tools</div>
         <div class="cat-item" onclick="showCategory('notifications')" data-tooltip="Sound on completion, disable streaming, cross-tab alerts."><span class="cat-icon">🔔</span> Notifications</div>
@@ -271,9 +272,98 @@
         </div>
       </div>
 
+      <!-- Text Actions -->
+      <div class="category-content" id="cat-textactions">
+        <h2>⚡ Text Actions</h2>
+        <div class="setting-group">
+          <h4>All Text Actions</h4>
+          <table class="key-table">
+            <thead><tr><th>Name</th><th>System Prompt</th><th>Capture Scope</th><th>Apply Mode</th><th>Model</th><th>Hotkey</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Rewrite</strong> <span class="status-badge" style="background:#e8f0fe;color:#2563eb">built-in</span></td>
+                <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Rewrite the following text to improve clarity and flow...</td>
+                <td><span class="status-badge status-valid">selection</span></td>
+                <td>replaceSelection</td>
+                <td>GPT-4o — Fast</td>
+                <td><code>Alt+Q</code></td>
+                <td><button class="btn btn-sm" data-tooltip="Would open edit form pre-filled with Rewrite action: name, system prompt, model config, capture scope checkboxes, apply mode radio buttons, hotkey assigner.">Edit</button> <button class="btn btn-sm" data-tooltip="Would duplicate Rewrite as a new custom action with '(Copy)' suffix.">Dup</button></td>
+              </tr>
+              <tr>
+                <td><strong>Summarize</strong> <span class="status-badge" style="background:#e8f0fe;color:#2563eb">built-in</span></td>
+                <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Summarize the following text concisely...</td>
+                <td><span class="status-badge status-valid">selection</span></td>
+                <td>showOnly</td>
+                <td>GPT-4o — Fast</td>
+                <td><code>Alt+W</code></td>
+                <td><button class="btn btn-sm">Edit</button> <button class="btn btn-sm">Dup</button></td>
+              </tr>
+              <tr>
+                <td><strong>Continue Writing</strong> <span class="status-badge" style="background:#e8f0fe;color:#2563eb">built-in</span></td>
+                <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Continue writing from where the text ends, matching style...</td>
+                <td><span class="status-badge" style="background:#dcfce7;color:#16a34a">focusedElement</span></td>
+                <td>insertAtCursor</td>
+                <td>GPT-4o — Fast</td>
+                <td><code>Alt+C</code></td>
+                <td><button class="btn btn-sm">Edit</button> <button class="btn btn-sm">Dup</button></td>
+              </tr>
+              <tr>
+                <td><strong>Summarize Page</strong> <span class="status-badge" style="background:#e8f0fe;color:#2563eb">built-in</span></td>
+                <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Summarize all accessible text on the current page...</td>
+                <td><span class="status-badge" style="background:#fff8e8;color:#a80">fullDocument</span></td>
+                <td>showOnly</td>
+                <td>GPT-4o — Fast</td>
+                <td>—</td>
+                <td><button class="btn btn-sm">Edit</button> <button class="btn btn-sm">Dup</button></td>
+              </tr>
+              <tr>
+                <td><strong>Explain Screen</strong> <span class="status-badge" style="background:#e8f0fe;color:#2563eb">built-in</span></td>
+                <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Explain what's on screen using both text content and visual layout...</td>
+                <td><span class="status-badge" style="background:#fff8e8;color:#a80">fullDocument</span> <span class="status-badge" style="background:#fce4ec;color:#c44">screenshot</span></td>
+                <td>showOnly</td>
+                <td>GPT-4o — Fast</td>
+                <td>—</td>
+                <td><button class="btn btn-sm">Edit</button> <button class="btn btn-sm">Dup</button></td>
+              </tr>
+              <tr>
+                <td><strong>Fix Grammar</strong> <span class="status-badge" style="background:#e8f0fe;color:#2563eb">built-in</span></td>
+                <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Fix grammar and spelling errors...</td>
+                <td><span class="status-badge status-valid">selection</span></td>
+                <td>replaceSelection</td>
+                <td>Claude 3.5 — Creative</td>
+                <td>—</td>
+                <td><button class="btn btn-sm">Edit</button> <button class="btn btn-sm">Dup</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <button class="btn btn-primary" data-tooltip="Would open Text Action creation form: Display Name, System Prompt (multi-line), Model Configuration dropdown, Capture Scope multi-select checkboxes (selection, focusedElement, surroundingContext, fullDocument, screenshot), Apply Mode radio buttons (replaceSelection, insertAtCursor, replaceFocusedElement, appendToFocusedElement, prependToFocusedElement, clipboardOnly, showOnly), optional Hotkey assigner, Save and Cancel buttons.">+ New Text Action</button>
+        </div>
+      </div>
+
+      <!-- Hotkeys -->
+      <div class="category-content" id="cat-hotkeys">
+        <h2>⌨️ Hotkeys</h2>
+        <div class="setting-group">
+          <h4>Global Hotkey Assignments</h4>
+          <table class="key-table">
+            <thead><tr><th>Action</th><th>Capture Scope</th><th>Apply Mode</th><th>Hotkey</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>Rewrite</td><td>selection</td><td>replaceSelection</td><td><code>Alt+Q</code></td><td><button class="btn btn-sm" data-tooltip="Would open key recorder overlay: 'Press new key combination...' Captures next key press, runs conflict detection.">Change</button></td></tr>
+              <tr><td>Summarize</td><td>selection</td><td>showOnly</td><td><code>Alt+W</code></td><td><button class="btn btn-sm">Change</button></td></tr>
+              <tr><td>Explain</td><td>selection</td><td>showOnly</td><td><code>Alt+E</code></td><td><button class="btn btn-sm">Change</button></td></tr>
+              <tr><td>Translate</td><td>selection</td><td>replaceSelection</td><td><code>Alt+R</code></td><td><button class="btn btn-sm">Change</button></td></tr>
+              <tr><td>Continue Writing</td><td>focusedElement</td><td>insertAtCursor</td><td><code>Alt+C</code></td><td><button class="btn btn-sm">Change</button></td></tr>
+              <tr><td>Command Bar</td><td>—</td><td>—</td><td><code>Alt+Space</code></td><td><button class="btn btn-sm">Change</button></td></tr>
+              <tr><td>Fix Grammar</td><td>selection</td><td>replaceSelection</td><td>—</td><td><button class="btn btn-sm" data-tooltip="Would open key recorder overlay to assign a hotkey to this action.">Assign</button></td></tr>
+              <tr><td>Summarize Page</td><td>fullDocument</td><td>showOnly</td><td>—</td><td><button class="btn btn-sm">Assign</button></td></tr>
+            </tbody>
+          </table>
+          <p style="font-size:11px;color:#999;margin-top:8px"><a href="#" style="color:#2563eb" data-tooltip="Would restore all hotkeys to their default assignments. Shows confirmation dialog.">Reset to Defaults</a></p>
+        </div>
+      </div>
+
       <!-- Placeholder categories (shown when selected) -->
       <div class="category-content" id="cat-backup"><h2>☁️ Backup</h2><p style="color:#999">Google Cloud Storage backup configuration, schedule, and restore. See features/backup-recovery.md R1-R4.</p></div>
-      <div class="category-content" id="cat-hotkeys"><h2>⌨️ Hotkeys</h2><p style="color:#999">Global hotkey assignments for Text Actions and Command Bar. Same as onboarding wizard Step 4.</p></div>
       <div class="category-content" id="cat-tools"><h2>🔧 Tools</h2><p style="color:#999">Tool auto-approval defaults (Browser Search, Terminal, File Gen, File Edit) and STT provider configuration.</p></div>
       <div class="category-content" id="cat-language"><h2>🌐 Language</h2><p style="color:#999">UI language (English, Hebrew) and RTL auto-detection settings.</p></div>
       <div class="category-content" id="cat-notifications"><h2>🔔 Notifications</h2><p style="color:#999">Sound on completion, disable streaming toggle, cross-tab completion alerts.</p></div>
