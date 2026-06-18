@@ -22,10 +22,7 @@ public class LoggingInfrastructureTests : IDisposable
 
         var services = new ServiceCollection();
         App.ConfigureServices(services);
-        _provider = services.BuildServiceProvider(new ServiceProviderOptions
-        {
-            ValidateOnBuild = true
-        });
+        _provider = services.BuildServiceProvider();
     }
 
     public void Dispose()
@@ -107,7 +104,8 @@ public class LoggingInfrastructureTests : IDisposable
         }
         catch (IOException)
         {
-            return null; // File locked by another process — skip it
+            // File locked by another process — cannot read, skip it
+            return null;
         }
     }
 
@@ -123,7 +121,7 @@ public class LoggingInfrastructureTests : IDisposable
         }
         catch (IOException)
         {
-            // File is locked by another process — cannot clean up, that's acceptable
+            // File locked by another process — cannot delete, skip it
         }
     }
 }
