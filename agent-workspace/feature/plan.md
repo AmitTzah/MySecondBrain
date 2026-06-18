@@ -171,7 +171,7 @@ src/
 
 ## 5. Execution Steps
 
-### [ ] Step 1: Complete all 13 entity classes with vision-aligned attributes, add MessageDrafts entity, and add AppSetting entity
+### [x] Step 1: Complete all 13 entity classes with vision-aligned attributes, add MessageDrafts entity, and add AppSetting entity
 - **Goal:** Every entity class in `Data/Entities/` matches its vision data spec. New `MessageDrafts` entity for auto-save drafts. New `AppSetting` entity for key-value settings storage backing `SettingsRepository`.
 - **Actions:**
   - Add missing attributes to `ApiKey`: `CreatedAt` timestamp
