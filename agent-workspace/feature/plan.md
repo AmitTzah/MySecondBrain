@@ -152,7 +152,7 @@ MySecondBrain/
 
 ---
 
-### [ ] Step 2: Add Unit Tests for Serilog Configuration
+### [x] Step 2: Add Unit Tests for Serilog Configuration
 
 - **Goal:** Write xUnit tests that verify `ILogger<T>` resolves from DI with Serilog as the provider and that a log file is created at the expected path when logging occurs.
 
