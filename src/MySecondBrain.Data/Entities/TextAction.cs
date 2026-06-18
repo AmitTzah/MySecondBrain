@@ -13,7 +13,7 @@ public class TextAction
     /// <summary>
     /// Instructs how to transform text.
     /// </summary>
-    public string? SystemPrompt { get; set; }
+    public string SystemPrompt { get; set; } = string.Empty;
 
     /// <summary>
     /// FK to ModelConfiguration.
@@ -25,6 +25,18 @@ public class TextAction
     /// </summary>
     [MaxLength(50)]
     public string? Hotkey { get; set; }
+
+    /// <summary>
+    /// Comma-separated capture scope flags: selection, focusedElement, surroundingContext, fullDocument, screenshot.
+    /// </summary>
+    [MaxLength(100)]
+    public string CaptureScope { get; set; } = "selection";
+
+    /// <summary>
+    /// Where to put the AI result: replaceSelection, insertAtCursor, replaceFocusedElement, appendToFocusedElement, prependToFocusedElement, clipboardOnly, showOnly.
+    /// </summary>
+    [MaxLength(50)]
+    public string ApplyMode { get; set; } = "replaceSelection";
 
     public bool IsBuiltIn { get; set; }
 

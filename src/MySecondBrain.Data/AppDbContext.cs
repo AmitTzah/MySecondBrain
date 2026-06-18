@@ -257,6 +257,9 @@ public class AppDbContext : DbContext
                 Id = "a000000000000000000000000000001",
                 DisplayName = "Rewrite",
                 SystemPrompt = "Rewrite the following text to improve clarity, flow, and impact while preserving the original meaning.",
+                Hotkey = "Alt+Q",
+                CaptureScope = "selection",
+                ApplyMode = "replaceSelection",
                 IsBuiltIn = true,
                 CreatedAt = seedDate,
                 UpdatedAt = seedDate
@@ -266,6 +269,9 @@ public class AppDbContext : DbContext
                 Id = "a000000000000000000000000000002",
                 DisplayName = "Summarize",
                 SystemPrompt = "Summarize the following text concisely, capturing the key points.",
+                Hotkey = "Alt+W",
+                CaptureScope = "selection",
+                ApplyMode = "showOnly",
                 IsBuiltIn = true,
                 CreatedAt = seedDate,
                 UpdatedAt = seedDate
@@ -275,6 +281,9 @@ public class AppDbContext : DbContext
                 Id = "a000000000000000000000000000003",
                 DisplayName = "Explain",
                 SystemPrompt = "Explain the following text clearly and thoroughly, as if teaching someone new to the topic.",
+                Hotkey = "Alt+E",
+                CaptureScope = "selection",
+                ApplyMode = "showOnly",
                 IsBuiltIn = true,
                 CreatedAt = seedDate,
                 UpdatedAt = seedDate
@@ -284,6 +293,9 @@ public class AppDbContext : DbContext
                 Id = "a000000000000000000000000000004",
                 DisplayName = "Translate",
                 SystemPrompt = "Translate the following text to English. Preserve formatting and tone.",
+                Hotkey = "Alt+R",
+                CaptureScope = "selection",
+                ApplyMode = "replaceSelection",
                 IsBuiltIn = true,
                 CreatedAt = seedDate,
                 UpdatedAt = seedDate
@@ -293,6 +305,8 @@ public class AppDbContext : DbContext
                 Id = "a000000000000000000000000000005",
                 DisplayName = "Fix Grammar",
                 SystemPrompt = "Fix grammar, spelling, and punctuation errors in the following text. Preserve the original meaning and style.",
+                CaptureScope = "selection",
+                ApplyMode = "replaceSelection",
                 IsBuiltIn = true,
                 CreatedAt = seedDate,
                 UpdatedAt = seedDate
@@ -302,6 +316,53 @@ public class AppDbContext : DbContext
                 Id = "a000000000000000000000000000006",
                 DisplayName = "Enhance Prompt",
                 SystemPrompt = "Improve the following prompt to be more specific, detailed, and effective. Add relevant context and constraints.",
+                CaptureScope = "selection",
+                ApplyMode = "replaceSelection",
+                IsBuiltIn = true,
+                CreatedAt = seedDate,
+                UpdatedAt = seedDate
+            },
+            new TextAction
+            {
+                Id = "a000000000000000000000000000007",
+                DisplayName = "Continue Writing",
+                SystemPrompt = "Continue writing from where the text left off. Match the existing tone, style, and formatting. Maintain coherence with the preceding content.",
+                Hotkey = "Alt+C",
+                CaptureScope = "focusedElement",
+                ApplyMode = "insertAtCursor",
+                IsBuiltIn = true,
+                CreatedAt = seedDate,
+                UpdatedAt = seedDate
+            },
+            new TextAction
+            {
+                Id = "a000000000000000000000000000008",
+                DisplayName = "Improve Flow",
+                SystemPrompt = "Rewrite the following text to improve logical flow, transitions between ideas, and overall readability while preserving the original meaning.",
+                CaptureScope = "focusedElement",
+                ApplyMode = "replaceFocusedElement",
+                IsBuiltIn = true,
+                CreatedAt = seedDate,
+                UpdatedAt = seedDate
+            },
+            new TextAction
+            {
+                Id = "a000000000000000000000000000009",
+                DisplayName = "Summarize Page",
+                SystemPrompt = "Summarize the following content concisely, capturing the key points and overall structure.",
+                CaptureScope = "fullDocument",
+                ApplyMode = "showOnly",
+                IsBuiltIn = true,
+                CreatedAt = seedDate,
+                UpdatedAt = seedDate
+            },
+            new TextAction
+            {
+                Id = "a000000000000000000000000000010",
+                DisplayName = "Explain Screen",
+                SystemPrompt = "Explain what is shown in the provided content. Describe the layout, key elements, and purpose clearly.",
+                CaptureScope = "fullDocument,screenshot",
+                ApplyMode = "showOnly",
                 IsBuiltIn = true,
                 CreatedAt = seedDate,
                 UpdatedAt = seedDate

@@ -46,7 +46,7 @@ public class DataLayerTests
             [typeof(ModelConfiguration)] = 14,   // Id, DisplayName, Provider, ApiKeyId?, ModelIdentifier?, Temperature, MaxOutputTokens, MaxContextWindow, ThinkingEnabled, PricingInputPer1K?, PricingOutputPer1K?, ContextOverflowStrategy, CreatedAt, UpdatedAt
             [typeof(Persona)] = 8,               // Id, DisplayName, SystemPrompt?, DefaultModelConfigId?, DefaultChatMode, IsBuiltIn, CreatedAt, UpdatedAt
             [typeof(PromptTemplate)] = 7,        // Id, Name, Text, Tags?, FolderId?, CreatedAt, UpdatedAt
-            [typeof(TextAction)] = 8,            // Id, DisplayName, SystemPrompt?, ModelConfigId?, Hotkey?, IsBuiltIn, CreatedAt, UpdatedAt
+            [typeof(TextAction)] = 10,           // Id, DisplayName, SystemPrompt, ModelConfigId?, Hotkey?, CaptureScope, ApplyMode, IsBuiltIn, CreatedAt, UpdatedAt
             [typeof(UsageRecord)] = 12,          // Id, MessageId, ThreadId, PersonaId?, ModelConfigId?, Provider, ModelIdentifier, PromptTokens, CompletionTokens, TotalTokens, EstimatedCost?, CreatedAt
             [typeof(WikiFile)] = 9,              // FilePath (PK), FileName, H1Title?, Headings?, Content?, WordCount?, LastModifiedAt?, CrossLinksOut?, CrossLinksIn?
             [typeof(WikiVersionSnapshot)] = 5,   // Id, WikiFilePath, Content, Source, CreatedAt
@@ -210,6 +210,11 @@ public class DataLayerTests
 
         var promptTemplate = new PromptTemplate();
         Assert.NotEmpty(promptTemplate.Id);
+
+        var textAction = new TextAction();
+        Assert.Equal("selection", textAction.CaptureScope);
+        Assert.Equal("replaceSelection", textAction.ApplyMode);
+        Assert.Equal(string.Empty, textAction.SystemPrompt);
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -408,7 +413,7 @@ public class DataLayerTests
     }
 
     /// <summary>
-    /// Verifies seed data: 2 built-in Personas and 6 built-in TextActions.
+    /// Verifies seed data: 2 built-in Personas and 10 built-in TextActions.
     /// </summary>
     [Fact]
     public void DbContext_SeedData_Personas_And_TextActions_Present()
@@ -433,22 +438,30 @@ public class DataLayerTests
             Assert.True(codeHelper.IsBuiltIn);
 
             var textActions = db.TextActions.Where(ta => ta.IsBuiltIn).ToList();
-            Assert.Equal(6, textActions.Count);
+            Assert.Equal(10, textActions.Count);
 
-            var expectedActions = new Dictionary<string, string>
+            // Verify each action by ID, DisplayName, CaptureScope, ApplyMode, and Hotkey
+            var expectedActions = new (string Id, string DisplayName, string CaptureScope, string ApplyMode, string? Hotkey)[]
             {
-                ["a000000000000000000000000000001"] = "Rewrite",
-                ["a000000000000000000000000000002"] = "Summarize",
-                ["a000000000000000000000000000003"] = "Explain",
-                ["a000000000000000000000000000004"] = "Translate",
-                ["a000000000000000000000000000005"] = "Fix Grammar",
-                ["a000000000000000000000000000006"] = "Enhance Prompt",
+                ("a000000000000000000000000000001", "Rewrite",             "selection",       "replaceSelection",       "Alt+Q"),
+                ("a000000000000000000000000000002", "Summarize",           "selection",       "showOnly",               "Alt+W"),
+                ("a000000000000000000000000000003", "Explain",             "selection",       "showOnly",               "Alt+E"),
+                ("a000000000000000000000000000004", "Translate",           "selection",       "replaceSelection",       "Alt+R"),
+                ("a000000000000000000000000000005", "Fix Grammar",         "selection",       "replaceSelection",       null),
+                ("a000000000000000000000000000006", "Enhance Prompt",      "selection",       "replaceSelection",       null),
+                ("a000000000000000000000000000007", "Continue Writing",    "focusedElement",  "insertAtCursor",         "Alt+C"),
+                ("a000000000000000000000000000008", "Improve Flow",        "focusedElement",  "replaceFocusedElement",  null),
+                ("a000000000000000000000000000009", "Summarize Page",      "fullDocument",    "showOnly",               null),
+                ("a000000000000000000000000000010", "Explain Screen",      "fullDocument,screenshot", "showOnly",         null),
             };
 
-            foreach (var (id, displayName) in expectedActions)
+            foreach (var (id, displayName, captureScope, applyMode, hotkey) in expectedActions)
             {
                 var action = textActions.Single(ta => ta.Id == id);
                 Assert.Equal(displayName, action.DisplayName);
+                Assert.Equal(captureScope, action.CaptureScope);
+                Assert.Equal(applyMode, action.ApplyMode);
+                Assert.Equal(hotkey, action.Hotkey);
                 Assert.True(action.IsBuiltIn);
                 Assert.NotNull(action.SystemPrompt);
                 Assert.NotEmpty(action.SystemPrompt);
@@ -860,9 +873,30 @@ public class DataLayerTests
             Assert.Equal("Code Helper", codeHelper.DisplayName);
 
             var textActions = db.TextActions.Where(ta => ta.IsBuiltIn).ToList();
-            Assert.Equal(6, textActions.Count);
+            Assert.Equal(10, textActions.Count);
             Assert.Contains(textActions, ta => ta.DisplayName == "Rewrite");
             Assert.Contains(textActions, ta => ta.DisplayName == "Enhance Prompt");
+
+            // Verify CaptureScope, ApplyMode, and Hotkey on a representative sample
+            var rewrite = textActions.Single(ta => ta.DisplayName == "Rewrite");
+            Assert.Equal("selection", rewrite.CaptureScope);
+            Assert.Equal("replaceSelection", rewrite.ApplyMode);
+            Assert.Equal("Alt+Q", rewrite.Hotkey);
+
+            var continueWriting = textActions.Single(ta => ta.DisplayName == "Continue Writing");
+            Assert.Equal("focusedElement", continueWriting.CaptureScope);
+            Assert.Equal("insertAtCursor", continueWriting.ApplyMode);
+            Assert.Equal("Alt+C", continueWriting.Hotkey);
+
+            var explainScreen = textActions.Single(ta => ta.DisplayName == "Explain Screen");
+            Assert.Equal("fullDocument,screenshot", explainScreen.CaptureScope);
+            Assert.Equal("showOnly", explainScreen.ApplyMode);
+            Assert.Null(explainScreen.Hotkey);
+
+            var fixGrammar = textActions.Single(ta => ta.DisplayName == "Fix Grammar");
+            Assert.Equal("selection", fixGrammar.CaptureScope);
+            Assert.Equal("replaceSelection", fixGrammar.ApplyMode);
+            Assert.Null(fixGrammar.Hotkey);
         }
     }
 

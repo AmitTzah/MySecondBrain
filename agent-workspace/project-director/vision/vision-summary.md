@@ -248,4 +248,4 @@ All planned artifacts are complete. No placeholders remain. No "[TODO]" or "TBD"
 
 ---
 
-*Vision last updated: 2026-06-17. Interactive mocks at `screens/*.html` — open in browser for clickable simulation.*
+*Vision last updated: 2026-06-18 (Tier 1 generalized: captureScope + applyMode added to TextAction). Interactive mocks at `screens/*.html` — open in browser for clickable simulation.*

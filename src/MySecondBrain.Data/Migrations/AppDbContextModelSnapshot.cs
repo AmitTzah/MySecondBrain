@@ -526,6 +526,16 @@ namespace MySecondBrain.Data.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ApplyMode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CaptureScope")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -545,6 +555,7 @@ namespace MySecondBrain.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SystemPrompt")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
@@ -560,8 +571,11 @@ namespace MySecondBrain.Data.Migrations
                         new
                         {
                             Id = "a000000000000000000000000000001",
+                            ApplyMode = "replaceSelection",
+                            CaptureScope = "selection",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             DisplayName = "Rewrite",
+                            Hotkey = "Alt+Q",
                             IsBuiltIn = true,
                             SystemPrompt = "Rewrite the following text to improve clarity, flow, and impact while preserving the original meaning.",
                             UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
@@ -569,8 +583,11 @@ namespace MySecondBrain.Data.Migrations
                         new
                         {
                             Id = "a000000000000000000000000000002",
+                            ApplyMode = "showOnly",
+                            CaptureScope = "selection",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             DisplayName = "Summarize",
+                            Hotkey = "Alt+W",
                             IsBuiltIn = true,
                             SystemPrompt = "Summarize the following text concisely, capturing the key points.",
                             UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
@@ -578,8 +595,11 @@ namespace MySecondBrain.Data.Migrations
                         new
                         {
                             Id = "a000000000000000000000000000003",
+                            ApplyMode = "showOnly",
+                            CaptureScope = "selection",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             DisplayName = "Explain",
+                            Hotkey = "Alt+E",
                             IsBuiltIn = true,
                             SystemPrompt = "Explain the following text clearly and thoroughly, as if teaching someone new to the topic.",
                             UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
@@ -587,8 +607,11 @@ namespace MySecondBrain.Data.Migrations
                         new
                         {
                             Id = "a000000000000000000000000000004",
+                            ApplyMode = "replaceSelection",
+                            CaptureScope = "selection",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             DisplayName = "Translate",
+                            Hotkey = "Alt+R",
                             IsBuiltIn = true,
                             SystemPrompt = "Translate the following text to English. Preserve formatting and tone.",
                             UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
@@ -596,6 +619,8 @@ namespace MySecondBrain.Data.Migrations
                         new
                         {
                             Id = "a000000000000000000000000000005",
+                            ApplyMode = "replaceSelection",
+                            CaptureScope = "selection",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             DisplayName = "Fix Grammar",
                             IsBuiltIn = true,
@@ -605,10 +630,57 @@ namespace MySecondBrain.Data.Migrations
                         new
                         {
                             Id = "a000000000000000000000000000006",
+                            ApplyMode = "replaceSelection",
+                            CaptureScope = "selection",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             DisplayName = "Enhance Prompt",
                             IsBuiltIn = true,
                             SystemPrompt = "Improve the following prompt to be more specific, detailed, and effective. Add relevant context and constraints.",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = "a000000000000000000000000000007",
+                            ApplyMode = "insertAtCursor",
+                            CaptureScope = "focusedElement",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            DisplayName = "Continue Writing",
+                            Hotkey = "Alt+C",
+                            IsBuiltIn = true,
+                            SystemPrompt = "Continue writing from where the text left off. Match the existing tone, style, and formatting. Maintain coherence with the preceding content.",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = "a000000000000000000000000000008",
+                            ApplyMode = "replaceFocusedElement",
+                            CaptureScope = "focusedElement",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            DisplayName = "Improve Flow",
+                            IsBuiltIn = true,
+                            SystemPrompt = "Rewrite the following text to improve logical flow, transitions between ideas, and overall readability while preserving the original meaning.",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = "a000000000000000000000000000009",
+                            ApplyMode = "showOnly",
+                            CaptureScope = "fullDocument",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            DisplayName = "Summarize Page",
+                            IsBuiltIn = true,
+                            SystemPrompt = "Summarize the following content concisely, capturing the key points and overall structure.",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        },
+                        new
+                        {
+                            Id = "a000000000000000000000000000010",
+                            ApplyMode = "showOnly",
+                            CaptureScope = "fullDocument,screenshot",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            DisplayName = "Explain Screen",
+                            IsBuiltIn = true,
+                            SystemPrompt = "Explain what is shown in the provided content. Describe the layout, key elements, and purpose clearly.",
                             UpdatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
                         });
                 });

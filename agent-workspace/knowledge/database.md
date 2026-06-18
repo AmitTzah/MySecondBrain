@@ -97,7 +97,7 @@ All entities are defined in `MySecondBrain.Data/Entities/` as EF Core entity cla
 | 8 | `ModelConfiguration` | `Id` (string GUID) | `ApiKeyId` → `ApiKey.Id` (optional, SetNull) | CreatedAt, UpdatedAt timestamps. Unique `DisplayName`. Restrict delete if referenced by Personas. |
 | 9 | `Persona` | `Id` (string GUID) | `DefaultModelConfigId` → `ModelConfiguration.Id` (optional, Restrict) | CreatedAt, UpdatedAt timestamps. Unique `DisplayName`. 2 built-in personas seeded. |
 | 10 | `PromptTemplate` | `Id` (string GUID) | — (standalone) | UpdatedAt timestamp. |
-| 11 | `TextAction` | `Id` (string GUID) | `ModelConfigId` → `ModelConfiguration.Id` (optional, SetNull) | UpdatedAt timestamp. 6 built-in text actions seeded. |
+| 11 | `TextAction` | `Id` (string GUID) | `ModelConfigId` → `ModelConfiguration.Id` (optional, SetNull) | CaptureScope + ApplyMode for three-tier capture/transform/apply system. 10 built-in text actions seeded. |
 | 12 | `UsageRecord` | `Id` (string GUID) | `MessageId` → `Message.Id` (required, Cascade); `ThreadId` → `ChatThread.Id` (required, Cascade); `PersonaId` → `Persona.Id` (optional, SetNull); `ModelConfigId` → `ModelConfiguration.Id` (optional, SetNull) | Token/cost tracking per message. |
 | 13 | `WikiFile` | `FilePath` (string — natural key) | — (referenced by WikiVersionSnapshot) | Content, headings, cross-links. FTS5-indexed for full-text search. |
 | 14 | `WikiVersionSnapshot` | `Id` (string GUID) | `WikiFilePath` → `WikiFile.FilePath` (HasPrincipalKey, Cascade) | Snapshot pruning: 30-per-file, 50MB global cap. |
@@ -266,16 +266,20 @@ Built-in data is seeded in `OnModelCreating` using `HasData()` with **fixed stri
 
 Both have `DefaultChatMode = "Standard"`, `IsBuiltIn = true`, `CreatedAt = 2026-01-01T00:00:00+00:00`.
 
-### 9.2 Seeded TextActions (6)
+### 9.2 Seeded TextActions (10)
 
-| Fixed GUID | DisplayName | SystemPrompt (abbreviated) |
-|------------|-------------|---------------------------|
-| `a000000000000000000000000000001` | Rewrite | "Rewrite the following text to improve clarity, flow, and impact..." |
-| `a000000000000000000000000000002` | Summarize | "Summarize the following text concisely, capturing the key points." |
-| `a000000000000000000000000000003` | Explain | "Explain the following text clearly and thoroughly..." |
-| `a000000000000000000000000000004` | Translate | "Translate the following text to English. Preserve formatting and tone." |
-| `a000000000000000000000000000005` | Fix Grammar | "Fix grammar, spelling, and punctuation errors..." |
-| `a000000000000000000000000000006` | Enhance Prompt | "Improve the following prompt to be more specific, detailed, and effective..." |
+| Fixed GUID | DisplayName | CaptureScope | ApplyMode | Hotkey | SystemPrompt (abbreviated) |
+|------------|-------------|-------------|-----------|--------|---------------------------|
+| `a000000000000000000000000000001` | Rewrite | selection | replaceSelection | Alt+Q | "Rewrite the following text to improve clarity, flow, and impact..." |
+| `a000000000000000000000000000002` | Summarize | selection | showOnly | Alt+W | "Summarize the following text concisely, capturing the key points." |
+| `a000000000000000000000000000003` | Explain | selection | showOnly | Alt+E | "Explain the following text clearly and thoroughly..." |
+| `a000000000000000000000000000004` | Translate | selection | replaceSelection | Alt+R | "Translate the following text to English. Preserve formatting and tone." |
+| `a000000000000000000000000000005` | Fix Grammar | selection | replaceSelection | — | "Fix grammar, spelling, and punctuation errors..." |
+| `a000000000000000000000000000006` | Enhance Prompt | selection | replaceSelection | — | "Improve the following prompt to be more specific, detailed, and effective..." |
+| `a000000000000000000000000000007` | Continue Writing | focusedElement | insertAtCursor | Alt+C | "Continue writing from where the text left off..." |
+| `a000000000000000000000000000008` | Improve Flow | focusedElement | replaceFocusedElement | — | "Rewrite the following text to improve logical flow, transitions..." |
+| `a000000000000000000000000000009` | Summarize Page | fullDocument | showOnly | — | "Summarize the following content concisely, capturing the key points and overall structure." |
+| `a000000000000000000000000000010` | Explain Screen | fullDocument,screenshot | showOnly | — | "Explain what is shown in the provided content..." |
 
 All have `IsBuiltIn = true`, `CreatedAt = 2026-01-01T00:00:00+00:00`.
 
