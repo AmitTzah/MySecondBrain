@@ -206,16 +206,16 @@ Integration points are organized into two categories:
 | **Vision Features** | K3, P1, P3, Flag #6 |
 | **Tech-Sourcing** | [#5](tech-sourcing.md#5-global-keyboard-hooks) |
 
-### 16. HWND Capture & UI Automation (Text Injection)
+### 16. HWND Capture & UI Automation (Text Capture & Injection)
 
 | Aspect | Detail |
 |--------|--------|
-| **API** | `GetForegroundWindow`, `GetWindowText`, `GetWindowThreadProcessId` (P/Invoke Win32). `System.Windows.Automation` (UIA). `SendMessage` with `WM_SETTEXT`. `SendInput` for Ctrl+V. |
-| **Used For** | Tier 1: capture active window handle + source app name + document title + highlighted text. Tier 1 Apply: push AI-transformed text back into source window. |
+| **API** | `GetForegroundWindow`, `GetWindowText`, `GetWindowThreadProcessId` (P/Invoke Win32). `System.Windows.Automation` (UIA): `TextPattern`, `ValuePattern`, `TreeWalker`, `DocumentRange`. `SendMessage` with `WM_SETTEXT`. `SendInput` for Ctrl+V. Win32 `PrintWindow`/`BitBlt` for screenshot capture. |
+| **Used For** | Tier 1: multi-scope capture per TextAction's `captureScope` flags (selection, focused element, surrounding context, full document, screenshot) + HWND/source app name/document title. Tier 1 Apply: push AI-transformed text back into source window per TextAction's `applyMode`. |
 | **Abstraction** | `IHwndCaptureService` + `ITextInjectionService` (service-level) |
-| **Fallback** | **Capture:** UIA `TextPattern.GetSelection()` → `GetWindowText()` → clipboard (last resort). **Apply:** UIA `ValuePattern.SetValue()` (primary, validated by Windows-MCP) → `WM_SETTEXT` or `EM_REPLACESEL` (Win32 controls) → `SendInput` Ctrl+V (final fallback). If all injection methods fail: copy result to clipboard, show "Could not inject text — copied to clipboard" toast. |
-| **Configuration** | None. Text injection method auto-detected per target window. |
-| **Vision Features** | K3, P2, P3 |
+| **Fallback** | **Capture Pipeline (graduated, per captureScope flags):** (1) TextPattern for `selection` → clipboard fallback. (2) ValuePattern for `focusedElement`. (3) TreeWalker for `surroundingContext` (parent/sibling elements). (4) DocumentRange/full tree traversal for `fullDocument`. (5) Win32 PrintWindow/BitBlt for `screenshot`. Clipboard restored after clipboard-based capture. **Apply:** per applyMode — `replaceSelection`: HWND injection → clipboard+Ctrl+V. `insertAtCursor`: UIA TextPattern → clipboard. `replaceFocusedElement`: UIA ValuePattern → clipboard+Ctrl+A, Ctrl+V. `appendToFocusedElement`/`prependToFocusedElement`: UIA ValuePattern → clipboard. `clipboardOnly`: clipboard only. `showOnly`: no injection. |
+| **Configuration** | None. Capture scope and apply mode are per-TextAction configuration. Injection method auto-detected per target window. |
+| **Vision Features** | K3, P2, P3, P9 |
 | **Tech-Sourcing** | [#6](tech-sourcing.md#6-hwnd-capture--text-injection-spatial-anchoring) |
 
 ### 17. Local Tokenizer (SharpToken)
@@ -326,7 +326,7 @@ FileSystemWatcher ────► IWikiFileWatcher
 Kestrel ──────────────► ILocalWebSocketServer
 NotifyIcon ───────────► ISystemTrayService
 RegisterHotKey ───────► IGlobalHotkeyService
-UIA/Win32 ────────────► IHwndCaptureService + ITextInjectionService
+UIA/Win32 (TextPattern, ValuePattern, TreeWalker, DocumentRange, PrintWindow/BitBlt) ──► IHwndCaptureService + ITextInjectionService
 SharpToken ───────────► ITokenizer / ITokenizerFactory
 Whisper API/.net ─────► ISTTProvider
 NAudio ───────────────► IAudioService

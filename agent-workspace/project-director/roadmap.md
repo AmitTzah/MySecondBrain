@@ -199,7 +199,9 @@ Dependencies: W1.4, W1.7, W2.1.
 
 **Vision groups: K (Text Actions & Three-Tier Interaction).**
 
-Text Actions CRUD (name + system prompt + Model Configuration). Built-in defaults: Rewrite, Summarize, Explain, Translate, Fix Grammar, Enhance Prompt. Textbox toolbar with all controls. Tier 1 — Global hotkey text actions (three-phase: Capture → Result Popup → Apply, UIA ValuePattern → WM_SETTEXT → clipboard fallback, confirmation toast + Undo). Tier 2 — Command Bar (Alt+Space, Spotlight-style overlay, inline state + popped-out floating mini-window, elevation to Studio). Tier 3 — Studio Chat (full workspace). Tier 1/2 elevation to permanent Studio thread.
+Text Actions CRUD with three-dimensional configuration: **captureScope** (flags: `selection`, `focusedElement`, `surroundingContext`, `fullDocument`, `screenshot` — any combination), **systemPrompt + modelConfigId** (transform), and **applyMode** (single choice: `replaceSelection`, `insertAtCursor`, `replaceFocusedElement`, `appendToFocusedElement`, `prependToFocusedElement`, `clipboardOnly`, `showOnly`). 10 built-in defaults spanning all capture/apply combinations. Textbox toolbar with all controls including Text Actions dropdown with preview popup.
+
+Tier 1 — Global hotkey text actions with graduated UIA capture pipeline (TextPattern → ValuePattern → TreeWalker → DocumentRange → screenshot with Win32 PrintWindow/BitBlt), three-phase flow (Capture → Result Popup → Apply per applyMode), clipboard restoration on fallback. Tier 2 — Command Bar (Alt+Space, Spotlight-style overlay, inline state + popped-out floating mini-window, elevation to Studio). Tier 3 — Studio Chat (full workspace). Tier 1/2 elevation to permanent Studio thread. Orthogonal elevation actions (Open in Studio, Save to Wiki) available regardless of apply mode.
 
 Dependencies: W1.4–W1.7, W2.1, W2.2, W3.1.
 
@@ -237,7 +239,7 @@ Dependencies: W1.4, W1.7, W2.1.
 
 Session restore (P7: reopen all chats/tabs from previous session on launch, respects A6 setting). System tray refinements (full context menu actions including Open Studio, New Chat, Command Bar, Recent Chats, Settings, Exit; minimize-to-tray behavior; generation progress indicator overlay). WebSocket server refinements (configurable port beyond default, operational health check). Per-monitor DPI refinements (overlay positioning accounts for DPI scaling when moved between monitors, ensuring Tier 1/2 overlays render at correct size and position). HWND validation for [Apply] button state (grayed out when source window closed — builds on HWND capture already implemented in W3.10).
 
-**Note:** HWND capture, spatial anchoring, and clipboard format preservation (P2/P3/P4) are built by W3.10 as part of the Tier 1 three-phase flow. W3.14 adds session restore and refines the Windows integration infrastructure established in W2.2 and W3.10.
+**Note:** HWND capture, spatial anchoring, clipboard format preservation (P2/P3/P4), and the graduated UIA capture pipeline (P9) are built by W3.10 as part of the Tier 1 three-phase flow. W3.14 adds session restore and refines the Windows integration infrastructure established in W2.2 and W3.10.
 
 Dependencies: W1.4, W1.7, W2.1, W2.2, W3.10.
 

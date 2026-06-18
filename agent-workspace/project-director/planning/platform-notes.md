@@ -574,4 +574,29 @@ If App Installer auto-update is unavailable (non-MSIX deployment), use `AutoUpda
 
 ---
 
+## 12. UIA Capture Pipeline (Tier 1)
+
+The graduated UIA capture pipeline powers Tier 1 Text Action capture scope. It is a W3.10 runtime concern built on top of existing Wave 1-2 infrastructure (`IHwndCaptureService`, `ITextInjectionService`). The pipeline attempts capture methods in order of reliability, falling back progressively based on the TextAction's `captureScope` flags.
+
+### UIA Patterns Used
+
+| Pattern | Scope Flag | Purpose | Fallback |
+|---------|-----------|---------|----------|
+| `TextPattern` | `selection` | Read highlighted/selected text | Simulate Ctrl+C, read clipboard, restore original |
+| `ValuePattern` | `focusedElement` | Read entire focused textbox/editor content | Skip flag if pattern unavailable |
+| `TreeWalker` | `surroundingContext` | Navigate from focused element to capture parent (2 levels up) + sibling text | Skip flag if navigation fails |
+| `DocumentRange` | `fullDocument` | Read all accessible text in active window | Full UIA tree traversal collecting text |
+| Win32 `PrintWindow`/`BitBlt` | `screenshot` | Capture visual screenshot of active window client area | Proceed without screenshot; fail if sole flag |
+
+### Key Implementation Notes
+
+- **Additive capture:** All flags run, each successful capture adds to total content. Order: selection → focusedElement → surroundingContext → fullDocument → screenshot.
+- **Clipboard restoration:** When clipboard fallback is used (Ctrl+C simulation), original clipboard content and format info is saved before capture and restored after. Prevents user clipboard corruption.
+- **UIA permissions:** Standard desktop app — no elevation required. Some legacy Win32/custom-drawn apps may not expose full UIA patterns. Pipeline handles this gracefully.
+- **Screenshot limitations:** Minimized or fully occluded windows produce incomplete captures. Warning shown in result popup: "Screenshot may be incomplete."
+- **Vision-only input:** When `screenshot` is the sole capture flag, the image is sent as a vision attachment. AI prompt should account for vision-only input.
+- **Forward reference:** Full spec in [`../vision/features/windows-os-integration.md`](../vision/features/windows-os-integration.md) P9 and [`../vision/flows/tier1-hotkey-rewrite.md`](../vision/flows/tier1-hotkey-rewrite.md).
+
+---
+
 *Platform notes document — Batch 2 of planning/ directory. See also: [`architecture.md`](architecture.md), [`tech-stack.md`](tech-stack.md).*

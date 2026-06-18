@@ -236,22 +236,65 @@ All 13 data entities are stored in a single SQLite database via Entity Framework
 ---
 
 ### 9. TextAction
-**Description:** Named AI-powered text transformation — a system prompt paired with a Model Configuration. Defined once and available everywhere: as global hotkeys (Tier 1) and toolbar dropdown options (Studio).
+**Description:** A Text Action is a named AI-powered text transformation defined across three independent dimensions: **what to capture** (captureScope — flags like `selection`, `focusedElement`, `fullDocument`, `screenshot`), **how to transform it** (systemPrompt + modelConfigId), and **where to put the result** (applyMode — `replaceSelection`, `insertAtCursor`, `replaceFocusedElement`, `appendToFocusedElement`, `prependToFocusedElement`, `clipboardOnly`, `showOnly`). Defined once and available everywhere: as global hotkeys (Tier 1) and toolbar dropdown options (Studio).
 
 | Key Attribute | Type | Notes |
 |---------------|------|-------|
 | id | UUID (PK) | Primary identifier |
-| displayName | string (≤100, unique) | e.g., "Rewrite", "Summarize" |
+| displayName | string (≤100, unique) | e.g., "Rewrite", "Summarize", "Continue Writing" |
 | systemPrompt | string (≤~8K) | Instructs how to transform text |
-| modelConfigId | UUID (FK) | References ModelConfiguration |
-| hotkey | string? | e.g., "Alt+Q" |
-| isBuiltIn | boolean | Shipped defaults |
+| modelConfigId | UUID? (FK) | References ModelConfiguration. Nullable until ModelConfiguration seed data exists. |
+| captureScope | string (flags) | Comma-separated combination: `selection`, `focusedElement`, `surroundingContext`, `fullDocument`, `screenshot`. Default: `selection`. |
+| applyMode | string (enum) | One of: `replaceSelection`, `insertAtCursor`, `replaceFocusedElement`, `appendToFocusedElement`, `prependToFocusedElement`, `clipboardOnly`, `showOnly`. Default: `replaceSelection`. |
+| hotkey | string? | e.g., "Alt+Q", "Alt+C" |
+| isBuiltIn | boolean | Shipped defaults (10 built-in actions) |
+| createdAt | datetime | Auto-set on creation |
+| updatedAt | datetime | Auto-updated on modification |
+
+**Built-in Defaults (10, shipped with isBuiltIn=true):**
+
+| Display Name | Capture Scope | Apply Mode | Default Hotkey |
+|-------------|---------------|------------|----------------|
+| Rewrite | `selection` | `replaceSelection` | Alt+Q |
+| Summarize | `selection` | `showOnly` | Alt+W |
+| Explain | `selection` | `showOnly` | Alt+E |
+| Translate | `selection` | `replaceSelection` | Alt+R |
+| Fix Grammar | `selection` | `replaceSelection` | — |
+| Enhance Prompt | `selection` | `replaceSelection` | — |
+| Continue Writing | `focusedElement` | `insertAtCursor` | Alt+C |
+| Improve Flow | `focusedElement` | `replaceFocusedElement` | — |
+| Summarize Page | `fullDocument` | `showOnly` | — |
+| Explain Screen | `fullDocument,screenshot` | `showOnly` | — |
+
+**Capture Scope Flags (any combination valid):**
+
+| Flag | What It Grabs | UIA Pattern |
+|------|---------------|-------------|
+| `selection` | Highlighted text in the active window | TextPattern or clipboard fallback |
+| `focusedElement` | Entire content of the focused textbox/editor | ValuePattern |
+| `surroundingContext` | Focused element + parent/sibling elements | TreeWalker |
+| `fullDocument` | All accessible text in the active window | DocumentRange or full tree traversal |
+| `screenshot` | Visual capture of the active window (last resort) | Win32 PrintWindow/BitBlt |
+
+**Apply Modes (single choice per action):**
+
+| Mode | What Happens on Accept | Injection Method |
+|------|------------------------|-----------------|
+| `replaceSelection` | Replace highlighted text in source application | HWND injection → clipboard + Ctrl+V fallback |
+| `insertAtCursor` | Insert result at current cursor position | UIA TextPattern → clipboard fallback |
+| `replaceFocusedElement` | Replace entire textbox/editor content | UIA ValuePattern → clipboard + Ctrl+A, Ctrl+V fallback |
+| `appendToFocusedElement` | Append result to end of focused textbox | UIA ValuePattern append → clipboard fallback |
+| `prependToFocusedElement` | Insert result at beginning of focused textbox | UIA ValuePattern prepend → clipboard fallback |
+| `clipboardOnly` | Copy result to clipboard, do not modify source | Clipboard write |
+| `showOnly` | Display in result popup only; user handles result manually | None (no injection) |
 
 **Relationships:**
-- `references` → ModelConfiguration (via modelConfigId)
+- `references` → ModelConfiguration (via modelConfigId, nullable)
 - `used by` → ChatThread/Messages (when action is triggered, transient)
+- Capture scope flags dictate which UIA patterns are invoked (see [`../vision/features/windows-os-integration.md`](../vision/features/windows-os-integration.md) P9)
+- Apply mode dictates which text injection method is used (see [`integration-points.md`](integration-points.md) #16)
 
-**Consumed by feature groups:** K1, K2, K3
+**Consumed by feature groups:** K1, K2, K3, P9
 
 ---
 

@@ -6,7 +6,7 @@ This file is the index of the `planning/` directory. It is what the Feature Deve
 
 ---
 
-## Directory Map — All 8 Planning Files
+## Directory Map — All 7 Planning Files
 
 | # | File | Batch | Summary |
 |---|------|-------|---------|
@@ -105,7 +105,7 @@ This file is the index of the `planning/` directory. It is what the Feature Deve
 | Artifact | → ChatThread | can be saved to WikiFile |
 | MediaItem | → ChatThread, → Message? | can be saved to WikiFile |
 | PromptTemplate | — | independent (transient use) |
-| TextAction | → ModelConfiguration | independent (transient use) |
+| TextAction | → ModelConfiguration (nullable) | independent (transient use); three-dimensional: captureScope (flags) + systemPrompt/modelConfigId + applyMode (enum) |
 | UsageRecord | → Message, → ChatThread, → Persona?, → ModelConfiguration | append-only |
 | WikiFile | — (index, not source of truth) | has many WikiVersionSnapshot |
 | WikiVersionSnapshot | → WikiFile | retention: 30/file, 50MB cap |
@@ -130,7 +130,7 @@ This file is the index of the `planning/` directory. It is what the Feature Deve
 | 13 | Kestrel WebSocket | Platform | ILocalWebSocketServer |
 | 14 | System Tray (NotifyIcon) | Platform | ISystemTrayService |
 | 15 | Global Keyboard Hooks | Platform | IGlobalHotkeyService |
-| 16 | HWND Capture + UIA | Platform | IHwndCaptureService, ITextInjectionService |
+| 16 | HWND Capture + UIA (graduated pipeline) | Platform | IHwndCaptureService, ITextInjectionService |
 | 17 | SharpToken | OSS | ITokenizer |
 | 18 | Whisper API / Whisper.net | SaaS/OSS | ISTTProvider |
 | 19 | NAudio | OSS | IAudioService |
@@ -167,9 +167,9 @@ Key architectural decisions made during planning, with rationale.
 
 | Flag | Issue | Options | Source |
 |------|-------|---------|--------|
-| **Persona FK on Delete** | When a Persona is deleted, what happens to ChatThread.personaId? | (a) Nullify FK — threads retain persona name as string, lose reference. (b) Restrict — prevent deletion if referenced. | data/api-key.md, data/persona.md |
-| **ModelConfiguration FK on Delete** | When a ModelConfiguration is deleted, what happens to Personas referencing it? | (a) Restrict — warn and block. (b) Nullify — Persona loses default config, must reassign. | data/model-configuration.md |
-| **MediaItem Soft-Delete** | When user deletes from Media Library (G3), soft-delete or hard-delete? | (a) Soft-delete — 30-day Trash, reversible. (b) Hard-delete — media file deleted from disk if not saved elsewhere. | data/media-item.md, feature G3 |
+| **Persona FK on Delete** | When a Persona is deleted, what happens to ChatThread.personaId? | (a) Nullify FK — threads retain persona name as string, lose reference. (b) Restrict — prevent deletion if referenced. | [data-model.md](data-model.md#architect-decision-flags) |
+| **ModelConfiguration FK on Delete** | When a ModelConfiguration is deleted, what happens to Personas referencing it? | (a) Restrict — warn and block. (b) Nullify — Persona loses default config, must reassign. | [data-model.md](data-model.md#architect-decision-flags) |
+| **MediaItem Soft-Delete** | When user deletes from Media Library (G3), soft-delete or hard-delete? | (a) Soft-delete — 30-day Trash, reversible. (b) Hard-delete — media file deleted from disk if not saved elsewhere. | [data-model.md](data-model.md#architect-decision-flags) |
 | **Auto-Summarize Cost Transparency** | B8 Auto-Summarize strategy makes a separate API call costing tokens. How to inform user? | (a) Silent — summarize with no warning. (b) Toast notification — "Summarizing older messages (est. N tokens)." (c) Confirmation dialog. | Flag #1, feature B8 |
 | **Text Completion Deprecation** | OpenAI deprecating text completion endpoint. What is E2's future? | (a) Remove E2 — standard mode only. (b) Emulate via chat completions API with system prompt. (c) Keep for providers that still support it. | Flag #2, feature E2 |
 | **MessageDrafts Table Schema** | Referenced in architecture/abstractions but not defined as vision entity. | Add lightweight schema: threadId, content, cursorPosition, savedAt. | architecture.md, abstractions.md |
@@ -204,7 +204,7 @@ Every vision feature group (A-U) is addressed in the planning documents:
 | H. Tool Use | Tool Orchestrator | System.Diagnostics.Process, HttpClient | ChatThread, Message | IToolOrchestrator, IToolExecutor |
 | I. Import/Export | ChatImportService | System.Text.Json, QuestPDF | ChatThread, Message | IChatImporter |
 | J. Prompt Library | — | SQLite | PromptTemplate | — |
-| K. Text Actions & Three-Tier | Three window types + ChatThreadService | P/Invoke, UIA, Clipboard | TextAction, ChatThread, Message | IGlobalHotkeyService, IHwndCaptureService |
+| K. Text Actions & Three-Tier | Three window types + ChatThreadService + graduated UIA capture pipeline | P/Invoke, UIA (TextPattern, ValuePattern, TreeWalker, DocumentRange), Clipboard, Win32 GDI | TextAction (captureScope + applyMode), ChatThread, Message | IGlobalHotkeyService, IHwndCaptureService, ITextInjectionService |
 | L. Chat Organization | ChatThreadService | SQLite FTS5 | ChatThread, Message | IChatThreadRepository |
 | M. Model Comparison | Multi-stream orchestration | ILLMProvider (parallel streams) | Persona, ModelConfig, ChatThread | ILLMProviderService |
 | N. Personal Wiki | Wiki Indexing Engine | Markdig, FileSystemWatcher, LibGit2Sharp | WikiFile, WikiVersionSnapshot | IWikiService |

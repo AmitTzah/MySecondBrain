@@ -953,7 +953,7 @@ public enum VirtualKey { /* Windows virtual key codes */ }
 ---
 
 ### `IHwndCaptureService`
-Captures the active window handle, source app name, and document title for Tier 1 text actions.
+Captures the active window handle, source app name, document title, and captured content for Tier 1 text actions. In W3.10, extended to support the graduated UIA capture pipeline: selection text (TextPattern), focused element content (ValuePattern), surrounding context (TreeWalker), full document text (DocumentRange), and screenshot capture (Win32 PrintWindow/BitBlt) — per the TextAction's captureScope flags.
 
 ```csharp
 public interface IHwndCaptureService
@@ -979,7 +979,7 @@ public record HwndCaptureResult(
 ---
 
 ### `ITextInjectionService`
-Injects transformed text back into the source window for Tier 1 Apply.
+Injects AI-transformed text back into the source window for Tier 1 Apply, supporting all seven apply modes: `replaceSelection` (HWND injection), `insertAtCursor` (UIA TextPattern), `replaceFocusedElement` (UIA ValuePattern), `appendToFocusedElement`, `prependToFocusedElement`, `clipboardOnly`, and `showOnly` (no injection). Each mode has its own layered fallback chain.
 
 ```csharp
 public interface ITextInjectionService

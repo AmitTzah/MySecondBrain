@@ -74,7 +74,7 @@ The system is organized into six major component groups. Arrows indicate depende
 
 | Component | Description | Sourcing Ref |
 |-----------|-------------|-------------|
-| **Tier1OverlayWindow** | Transparent, topmost pill overlay near cursor. Captures HWND, displays "Thinking…" spinner, then result popup with Accept/Discard/Open in Studio/Retry + Additional Instructions field. Three-phase flow: Capture → Result → Apply. | [tech-sourcing #32](../tech-sourcing.md#32-three-tier-interaction-architecture) |
+| **Tier1OverlayWindow** | Transparent, topmost pill overlay near cursor. Three-phase flow per TextAction configuration: Capture (graduated UIA pipeline per captureScope flags: selection→TextPattern, focusedElement→ValuePattern, surroundingContext→TreeWalker, fullDocument→DocumentRange, screenshot→PrintWindow/BitBlt) → Result (editable AI response with Accept/Discard/Open in Studio/Save to Wiki/Retry + Additional Instructions) → Apply (per applyMode: replaceSelection, insertAtCursor, replaceFocusedElement, appendToFocusedElement, prependToFocusedElement, clipboardOnly, showOnly). | [tech-sourcing #32](../tech-sourcing.md#32-three-tier-interaction-architecture) |
 | **Tier2CommandBarWindow** | Spotlight-style centered overlay (Alt+Space). Inline state: input + expandable Q&A display. Popped-out state: floating resizable mini-window. Elevation to Studio creates permanent ChatThread. Dismissal saves as transient. | [tech-sourcing #32](../tech-sourcing.md#32-three-tier-interaction-architecture) |
 | **MainWindow (Tier 3 Studio)** | Full workspace: multi-tab chat, resizable panels, sidebar chat list, right panel (Artifacts + Chat Nav), streaming Markdown rendering, model comparison, wiki browser, all settings screens. | [tech-sourcing #1](../tech-sourcing.md#1-ui-framework--wpf-net-application-shell) |
 
@@ -194,26 +194,34 @@ User types in textbox
 ### Tier 1 Hotkey Flow (abbreviated)
 
 ```
-User highlights text in any app → presses Alt+Q/W/E/R
+User presses assigned hotkey in any app (e.g., Alt+Q for Rewrite)
         │
         ▼
-[1] GlobalKeyboardHook receives hotkey
+[1] GlobalKeyboardHook receives hotkey → resolves active TextAction
+    (captureScope flags + systemPrompt + modelConfigId + applyMode)
         │
         ▼
-[2] Tier1OverlayWindow opens
-    - Capture: clipboard text + HWND + source app name + clipboard formats
+[2] Tier1OverlayWindow opens — Capture Phase
+    - Graduated UIA pipeline per captureScope flags:
+      selection → TextPattern; focusedElement → ValuePattern;
+      surroundingContext → TreeWalker; fullDocument → DocumentRange;
+      screenshot → PrintWindow/BitBlt
+    - Captures HWND + source app name + document title + clipboard formats
     - "Thinking…" pill overlay shown near cursor
         │
         ▼
 [3] Same as Studio flow steps [2]→[5] (LLM call + streaming)
     - TextAction's system prompt applied
-    - Captured text = user message
+    - Captured content (text + optional screenshot) = user message
         │
         ▼
 [4] Result popup shown with Accept/Discard/Open in Studio/Retry
         │
         ▼
-[5] On Accept: HWND text injection (UIA ValuePattern → WM_SETTEXT → clipboard fallback)
+[5] On Accept: apply per TextAction's applyMode
+    (replaceSelection → HWND injection; insertAtCursor → UIA TextPattern;
+     replaceFocusedElement → UIA ValuePattern; append/prepend;
+     clipboardOnly → clipboard; showOnly → no injection)
     On Open in Studio: MainWindow opens, ChatThread elevated (IsTransient=false)
     On Discard: overlay closes, transient ChatThread saved
 ```
@@ -240,13 +248,13 @@ Used for all external integrations where multiple implementations exist:
 | Interface | Adapters | Sourcing Ref |
 |-----------|----------|-------------|
 | `ILLMProvider` | OpenAI, Anthropic, Google, OpenAICompatible | [tech-sourcing #3](../tech-sourcing.md#3-llm-provider-http-client) |
-| `ISTTProvider` | OpenAI Whisper API, Whisper.net (local) | [tech-sourcing #21](../tech-sourcing.md#21-speech-to-text-stt) |
+| `ISTTProvider` | OpenAI Whisper API, Whisper.net (local), Windows Speech (System.Speech) | [tech-sourcing #21](../tech-sourcing.md#21-speech-to-text-stt) |
 | `IBackupProvider` | Google Cloud Storage, Local Folder | [tech-sourcing #26](../tech-sourcing.md#26-backup-to-google-cloud-storage) |
 | `ISearchProvider` | Google Custom Search, Bing Web Search | [tech-sourcing #16](../tech-sourcing.md#16-web-search-integration-tool-use-h1) |
-| `ITokenizer` | SharpToken (OpenAI models), per-model tokenizer selection | [tech-sourcing #10](../tech-sourcing.md#10-local-tokenization-real-time-token-counting) |
+| `ITokenizer` | SharpToken (OpenAI), AnthropicTokenizer, FallbackTokenizer (chars/4) | [tech-sourcing #10](../tech-sourcing.md#10-local-tokenization-real-time-token-counting) |
 | `IChatImporter` | ChatGPT JSON parser, Claude JSON parser | [tech-sourcing #29](../tech-sourcing.md#29-chat-import-parsing-chatgpt--claude) |
-| `IThemeProvider` | Dark mode, Light mode resource dictionaries | [tech-sourcing #33](../tech-sourcing.md#33-theming--darklight-mode) |
-| `IUpdateChecker` | AutoUpdater.NET | [tech-sourcing #27](../tech-sourcing.md#27-auto-update-mechanism) |
+| `IThemeProvider` | Dark mode, Light mode; 3 chat themes (Classic, Compact, Bubble) | [tech-sourcing #33](../tech-sourcing.md#33-theming--darklight-mode) |
+| `IUpdateChecker` | AutoUpdater.NET, MsixAppInstallerUpdater | [tech-sourcing #27](../tech-sourcing.md#27-auto-update-mechanism) |
 
 Full interface contracts are defined in [`abstractions.md`](abstractions.md).
 
