@@ -318,7 +318,7 @@ MySecondBrain/
 
 ---
 
-### [ ] Step 2: Wire Full DI Container in App.xaml.cs
+### [x] Step 2: Wire Full DI Container in App.xaml.cs
 
 - **Goal:** Expand [`App.xaml.cs`](../../src/MySecondBrain.UI/App.xaml.cs) `ConfigureServices` with all 70+ registrations per lifetime rules. Register `AppDbContext` as singleton with `%LOCALAPPDATA%` path via factory delegate. Register all multi-implementation interfaces. Make `ConfigureServices` `public static` for testability. Add `Microsoft.Extensions.Logging`.
 
