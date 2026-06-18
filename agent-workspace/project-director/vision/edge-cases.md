@@ -264,7 +264,11 @@ For every feature group in [`feature-inventory.md`](feature-inventory.md), edge 
 - **Tier 2 Command Bar resized to <350×250px (minimum):** Window snaps to minimum dimensions.
 - **Tier 2 Command Bar dismissed with Escape when input has text:** First Escape clears input. Second Escape dismisses.
 - **Text Action deleted but still assigned to a hotkey:** Hotkey assignment is cleared. Settings → Hotkeys shows "⚠️ Text Action deleted — reassign hotkey."
-- **Custom Text Action with system prompt that exceeds model's context when combined with highlighted text:** The highlighted text is truncated. Popup shows: "⚠️ Text was truncated — the original was [N] characters. Open in Studio for full context."
+- **Custom Text Action with system prompt that exceeds model's context when combined with captured content:** The captured content is truncated. Popup shows: "⚠️ Content was truncated — original was [N] characters. Open in Studio for full context."
+- **Capture scope `screenshot` combined with a non-vision model:** The screenshot flag is silently ignored. Only text content is sent to the AI. Settings → Text Actions should indicate which models support vision.
+- **Apply mode `replaceSelection` used with non-`selection` capture scope (e.g., `focusedElement` only):** Degrades gracefully: `replaceSelection` behaves as `replaceFocusedElement` when no highlighted text exists.
+- **`focusedElement` capture on a non-text field (e.g., focused button, slider):** Capture returns empty string for that flag. Action proceeds with other flags if set; fails if `focusedElement` was the only flag.
+- **`fullDocument` capture on a window with 100+ pages of text:** Text may be truncated to model's context window. Warning shown in popup. User can elevate to Studio for chunked processing.
 
 **Affected screens:** Tier 1/2 are overlays (no dedicated screen). Settings: [`screens/settings.html`](screens/settings.html).
 

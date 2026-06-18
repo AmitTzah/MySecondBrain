@@ -90,7 +90,7 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | Flow | Persona | Goal | Screens Involved |
 |------|---------|------|-----------------|
 | [`first-launch-onboarding`](flows/first-launch-onboarding.md) | Hybrid Developer/Knowledge Worker | Complete initial setup and arrive at Studio | Onboarding Wizard → Studio Chat |
-| [`tier1-hotkey-rewrite`](flows/tier1-hotkey-rewrite.md) | Hybrid Developer/Knowledge Worker | Rewrite highlighted text in any app via global hotkey | Tier 1 overlay → (optional) Studio Chat |
+| [`tier1-hotkey-rewrite`](flows/tier1-hotkey-rewrite.md) | Hybrid Developer/Knowledge Worker | Trigger AI text actions in any Windows app via global hotkey — configurable capture scope (selection, focused element, full document, screenshot) and apply mode | Tier 1 overlay → (optional) Studio Chat |
 | [`tier2-command-bar-query`](flows/tier2-command-bar-query.md) | Hybrid Developer/Knowledge Worker | Quick AI Q&A via Spotlight-style overlay | Tier 2 Command Bar → (optional) Studio Chat |
 | [`write-to-wiki`](flows/write-to-wiki.md) | Hybrid Developer/Knowledge Worker | Transform chat conversation into permanent .md wiki file | Studio Chat → Wiki Browser |
 | [`deep-research`](flows/deep-research.md) | Hybrid Developer/Knowledge Worker | Autonomous multi-source research with cited report | Studio Chat |
@@ -169,7 +169,7 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | File | Flow |
 |------|------|
 | [`flows/first-launch-onboarding.md`](flows/first-launch-onboarding.md) | First-launch onboarding |
-| [`flows/tier1-hotkey-rewrite.md`](flows/tier1-hotkey-rewrite.md) | Tier 1 hotkey text rewrite |
+| [`flows/tier1-hotkey-rewrite.md`](flows/tier1-hotkey-rewrite.md) | Tier 1 hotkey text action — general flow covering all capture scopes + apply modes |
 | [`flows/tier2-command-bar-query.md`](flows/tier2-command-bar-query.md) | Tier 2 Command Bar query |
 | [`flows/write-to-wiki.md`](flows/write-to-wiki.md) | Write to Wiki |
 | [`flows/deep-research.md`](flows/deep-research.md) | Deep Research |
