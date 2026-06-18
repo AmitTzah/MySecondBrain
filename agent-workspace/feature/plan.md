@@ -309,7 +309,7 @@ src/
 
 ---
 
-### [ ] Step 6: Implement WikiIndexRepository, UsageRepository, and SettingsRepository
+### [x] Step 6: Implement WikiIndexRepository, UsageRepository, and SettingsRepository
 - **Goal:** The three remaining repositories are fully functional, replacing their stubs.
 - **Actions:**
   - **WikiIndexRepository:** Implement all 12 methods — `GetAllAsync`, `GetByPathAsync`, `SearchAsync` (FTS5 via raw SQL against `WikiFileFts`), `UpsertAsync` (find-then-add-or-update), `DeleteAsync`, `GetBacklinksAsync`, `GetRelatedSectionsAsync`, `GetOrphansAsync`, `GetSnapshotsAsync`, `CreateSnapshotAsync`, `PruneSnapshotsAsync` (enforce 30-per-file, 50MB cap), `GetSnapshotAsync`
