@@ -1,7 +1,10 @@
 using System.IO;
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Serilog;
+using Serilog.Formatting.Json;
 using System.Windows;
 // Resolves ambiguity with System.Windows.Forms.Application from UseWindowsForms=true
 using Application = System.Windows.Application;
@@ -34,12 +37,16 @@ public partial class App : Application
         ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
 
+        var startupLogger = _serviceProvider.GetRequiredService<ILogger<App>>();
+        startupLogger.LogInformation("MySecondBrain started");
+
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        Log.CloseAndFlush();
         (_serviceProvider as IDisposable)?.Dispose();
         base.OnExit(e);
     }
@@ -156,11 +163,36 @@ public partial class App : Application
         services.AddSingleton<MainWindow>();
 
         // === Logging ===
+        var appVersion = Assembly.GetEntryAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0";
+        var logPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "MySecondBrain", "logs", "msb-.log");
+
+        var loggerConfig = new LoggerConfiguration()
+#if DEBUG
+            .MinimumLevel.Debug()
+#else
+            .MinimumLevel.Information()
+#endif
+            .Enrich.WithThreadId()
+            .Enrich.WithMachineName()
+            .Enrich.WithProperty("AppVersion", appVersion)
+            .WriteTo.File(
+                formatter: new JsonFormatter(),
+                logPath,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 30);
+
+#if DEBUG
+        loggerConfig = loggerConfig.WriteTo.Console();
+#endif
+
+        Log.Logger = loggerConfig.CreateLogger();
+
         services.AddLogging(builder =>
         {
-            builder.AddConsole();
-            builder.AddDebug();
-            builder.SetMinimumLevel(LogLevel.Information);
+            builder.ClearProviders();
+            builder.AddSerilog();
         });
     }
 }
