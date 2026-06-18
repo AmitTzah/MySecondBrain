@@ -1,0 +1,45 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- ===== Backgrounds ===== -->
+    <SolidColorBrush x:Key="AppBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="SidebarBackground" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="ContentBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="PanelBackground" Color="#FAFAFA"/>
+    <SolidColorBrush x:Key="TabBarBackground" Color="#EEEEEE"/>
+    <SolidColorBrush x:Key="TabActiveBackground" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="TabInactiveBackground" Color="#EEEEEE"/>
+    <SolidColorBrush x:Key="HeaderBackground" Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="InputBackground" Color="#FFFFFF"/>
+
+    <!-- ===== Foregrounds ===== -->
+    <SolidColorBrush x:Key="AppForeground" Color="#1A1A1A"/>
+    <SolidColorBrush x:Key="SidebarForeground" Color="#333333"/>
+    <SolidColorBrush x:Key="ContentForeground" Color="#1A1A1A"/>
+    <SolidColorBrush x:Key="PanelForeground" Color="#333333"/>
+
+    <!-- ===== Accent (same as Dark) ===== -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#2563EB"/>
+    <SolidColorBrush x:Key="AccentForeground" Color="#FFFFFF"/>
+
+    <!-- ===== Borders & Misc ===== -->
+    <SolidColorBrush x:Key="BorderBrush" Color="#DDDDDD"/>
+    <SolidColorBrush x:Key="SubtleBrush" Color="#999999"/>
+    <SolidColorBrush x:Key="ScrollBarBrush" Color="#CCCCCC"/>
+    <SolidColorBrush x:Key="GridSplitterBrush" Color="#DDDDDD"/>
+
+    <!-- ===== Semantic (same as Dark) ===== -->
+    <SolidColorBrush x:Key="SuccessBrush" Color="#22C55E"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#F59E0B"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="#EF4444"/>
+
+    <!-- ===== Navigation ===== -->
+    <SolidColorBrush x:Key="NavActiveBackground" Color="#2563EB"/>
+    <SolidColorBrush x:Key="NavInactiveForeground" Color="#666666"/>
+
+    <!-- ===== Typography ===== -->
+    <FontFamily x:Key="FontFamily">Segoe UI</FontFamily>
+    <sys:Double x:Key="FontSize">14</sys:Double>
+
+</ResourceDictionary>
