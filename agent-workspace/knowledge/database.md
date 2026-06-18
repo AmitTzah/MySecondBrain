@@ -85,6 +85,8 @@ public class AppDbContext : DbContext
 
 All entities are defined in `MySecondBrain.Data/Entities/` as EF Core entity classes. Each uses `[Key]` attribute on its primary key and `string` GUIDs for PKs (see §3.1).
 
+> **Note:** The full vision and planning data model defines 13 entities. The 13th entity, `BackupSnapshot`, is planned for W3.16 (Backup & Recovery) and has not yet been implemented. It will be added as a standalone entity (no FK relationships) when that feature is built.
+
 | # | Entity | PK | Key FK Relationships |
 |---|--------|----|---------------------|
 | 1 | `ApiKey` | `Id` (string GUID) | `ModelConfigurationId` → `ModelConfiguration.Id` |

@@ -204,7 +204,7 @@ The following items are flagged for Architect review before technical planning. 
 
 8. ⚠️ **Rich text bidirectional text rendering complexity** — mixing LTR and RTL in chat messages with code blocks requires careful implementation. (Q2-Q3, [`features/language-rtl.md`](features/language-rtl.md))
 
-9. ⚠️ **Google Cloud Storage dependency for backups** — single cloud provider dependency. (R1, [`features/backup-recovery.md`](features/backup-recovery.md))
+9. ⚠️ **Google Cloud Storage dependency for backups** — single cloud provider dependency. Resolved: local folder backup alternative added (AD-13). (R1, [`features/backup-recovery.md`](features/backup-recovery.md))
 
 10. ⚠️ **Locked chat encryption — permanent lockout risk** must be clearly communicated to the user. No recovery mechanism. (C31, [`features/studio-chat-workspace.md`](features/studio-chat-workspace.md))
 
@@ -212,9 +212,13 @@ The following items are flagged for Architect review before technical planning. 
 
 12. ⚠️ **Model comparison — per-panel multi-turn conversations** = N independent API streams that may run for extended periods. Cost and connection management implications. ([`screens/model-comparison.md`](screens/model-comparison.md), [`features/model-comparison.md`](features/model-comparison.md))
 
-13. ⚠️ **Git wiki version control** is a new feature discovered during screen design. Must be added to [`feature-inventory.md`](feature-inventory.md) as a Core Feature. N6 (Automatic Wiki Versioning snapshots) may become redundant if git is adopted — Architect should evaluate consolidation.
+13. ⚠️ **Model comparison M spec simplified** — Accept auto-saves branches; per-panel mini-chats. Resolved in planning. ([`screens/model-comparison.md`](screens/model-comparison.md), [`features/model-comparison.md`](features/model-comparison.md))
 
-14. ⚠️ **Auto-commit on file change** via file system watcher must handle rapid successive changes (debounce) and must not commit while a file is being written. ([`screens/onboarding-wizard.md`](screens/onboarding-wizard.md) Step 3)
+14. ⚠️ **Git wiki version control** — resolved during planning. Git VC added as N14 in [`feature-inventory.md`](feature-inventory.md). N6 snapshots + git coexist as complementary version control (AD-10: snapshots for instant undo, git for cross-session history).
+
+15. ⚠️ **Auto-commit on file change** via file system watcher must handle rapid successive changes (debounce) and must not commit while a file is being written. ([`screens/onboarding-wizard.md`](screens/onboarding-wizard.md) Step 3)
+
+16. ⚠️ **Language & RTL (Q) feature** — flagged as potentially out of scope per user's initial English-only preference. Re-evaluate during W3.15 implementation. ([`features/language-rtl.md`](features/language-rtl.md))
 
 ---
 
@@ -236,8 +240,8 @@ The following items are flagged for Architect review before technical planning. 
 | Phase 2: Screens | ✅ Complete | 8 screen .md specs + 8 interactive .html mocks |
 | Phase 3: Flows | ✅ Complete | 8 flow documents |
 | Phase 4: Edge Cases | ✅ Complete | edge-cases.md — 16 global + 22 feature-specific |
-| Phase 5: Wire-Up | 🔄 In Progress | vision-summary.md generated; HTML regeneration pending |
-| Phase 6: Report Back | ⬜ Pending | Final report to orchestrator |
+| Phase 5: Wire-Up | ✅ Complete | vision-summary.md generated; all screen HTML consistent; no placeholders |
+| Phase 6: Report Back | ✅ Complete | Final report delivered to orchestrator |
 
 ### No Deferred or Incomplete Sections
 All planned artifacts are complete. No placeholders remain. No "[TODO]" or "TBD" in any file.
