@@ -46,11 +46,6 @@ The user views comprehensive usage statistics — token counts and estimated cos
 - **Filter:** Time range filter applies to feedback data (same as S2)
 - **Empty State:** "No feedback recorded yet. Use 👍/👎 on AI responses to track what works best."
 - **Data Source:** Message feedback field (D8). Purely local — no data sent to providers.
-- **Monthly Budget:** User sets a monthly spending limit in Settings → Pricing (in USD)
-- **Warning Threshold:** Configurable percentage (default: 80%). When reached: non-intrusive warning in Studio: "You've used 80% of your monthly budget ($[spent] of $[limit])."
-- **Block Threshold:** Optional. When 100% reached: block further API calls. "Monthly budget reached. API calls are blocked until [1st of next month]. Adjust budget in Settings."
-- **Reset:** Budget resets on 1st of each month
-- **Disable:** Budget alerts can be disabled entirely
 
 ## Data
 - [`data/usage-record.md`](data/usage-record.md) — token counts, costs per message

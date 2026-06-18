@@ -135,7 +135,9 @@ Consolidates original features: 62–66, 68, 74–77. All of vision group B plus
 
 Full Settings screen with 14 categories (Providers, Profiles, Appearance, Wiki, Backup, Hotkeys, Tools, Language, Notifications, Startup, Updates, Pricing, Security, Maintenance). Appearance settings (chat themes, font). Dark/Light mode toggle. Notification & streaming settings. Startup behavior (launch on startup, session restore). Auto-update settings. Database maintenance (VACUUM, size display). Onboarding wizard — five-step guided setup on first launch (Welcome → API Keys → Persona → Wiki → Hotkeys → Finish), skippable steps, re-launchable from Settings.
 
-Dependencies: W1.4, W1.7, W2.1, W2.2, W3.1.
+**Note:** Onboarding wizard Step 3 (Wiki directory selection) and Settings → Wiki category display wiki directory, indexing status, and git version control UI — these sections are non-functional until W3.13 builds the wiki infrastructure. The UI controls can be built now; backend wiki functionality activates when W3.13 is complete.
+
+Dependencies: W1.4, W1.7, W2.1, W2.2, W3.1. (*Soft dependency on W3.13 for wiki-related UI functionality.*)
 
 Consolidates original features: 67, 69–73, 138, 205. Settings screen, onboarding wizard, and database maintenance as one feature.
 
@@ -255,7 +257,9 @@ Consolidates original features: 173–185. All personal wiki functionality as on
 
 **Vision groups: P (Windows OS Integration).**
 
-HWND capture & spatial anchoring (capture active window, app name, document title before Tier 1 overlay, [Apply] back to source, grayed out if window closed). Clipboard format preservation (detect HTML/RTF/plain text, return in richest available format). Local WebSocket server operational (Kestrel, token auth, configurable port). System tray full integration (all context menu actions, generation indicator, minimize to tray). Session restore (restore chats/tabs on launch). Per-monitor DPI awareness (adapt when moved between monitors, overlay positioning accounts for DPI).
+Session restore (P7: reopen all chats/tabs from previous session on launch, respects A6 setting). System tray refinements (full context menu actions including Open Studio, New Chat, Command Bar, Recent Chats, Settings, Exit; minimize-to-tray behavior; generation progress indicator overlay). WebSocket server refinements (configurable port beyond default, operational health check). Per-monitor DPI refinements (overlay positioning accounts for DPI scaling when moved between monitors, ensuring Tier 1/2 overlays render at correct size and position). HWND validation for [Apply] button state (grayed out when source window closed — builds on HWND capture already implemented in W3.10).
+
+**Note:** HWND capture, spatial anchoring, and clipboard format preservation (P2/P3/P4) are built by W3.10 as part of the Tier 1 three-phase flow. W3.14 adds session restore and refines the Windows integration infrastructure established in W2.2 and W3.10.
 
 Dependencies: W1.4, W1.7, W2.1, W2.2, W3.10.
 

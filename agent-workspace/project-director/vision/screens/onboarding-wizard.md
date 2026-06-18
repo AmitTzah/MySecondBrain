@@ -333,11 +333,11 @@ Each card shows:
 - Hotkeys: [`features/windows-os-integration.md`](../features/windows-os-integration.md) P1
 - Import: [`features/import-export.md`](../features/import-export.md) I2
 - Wiki versioning: [`features/personal-wiki.md`](../features/personal-wiki.md) N6
-- Git version control for wiki: ⚠️ NEW FEATURE — not yet in feature inventory. Described in this spec under Step 3. Architect must add to feature-inventory.md as a new Core Feature before implementation.
+- Git wiki version control: [`features/personal-wiki.md`](../features/personal-wiki.md) N14 (Core Feature)
 
 ## Flagged Concerns
 
-1. ⚠️ FLAGGED: Git version control for wiki is a new feature discovered during screen design. It must be added to [`feature-inventory.md`](../feature-inventory.md) as a Core Feature. N6 (Automatic Wiki Versioning snapshots) may become redundant if git is adopted — Architect should evaluate consolidation.
+1. ⚠️ FLAGGED: N6 (Automatic Wiki Versioning snapshots) may become partially redundant if git is adopted — Architect should evaluate consolidation. Both can coexist: N6 for fast in-app undo, git for cross-session history and remote backup.
 
 2. ⚠️ FLAGGED: GitHub Personal Access Token storage requires encryption (Windows DPAPI, consistent with B1 API key encryption). Token scope should be minimal (repo-only).
 

@@ -57,11 +57,6 @@ See [`features/windows-os-integration.md`](features/windows-os-integration.md) P
 - **Grayed Out State:** If source window closed: "[Apply] — Source application is no longer available"
 - **No HWND Context:** Chats created directly in Studio or elevated from Tier 2 never show [Apply]
 
-### C6. Copy
-- Per-message Copy button: places BOTH raw Markdown and Rich Text (HTML/RTF) on clipboard simultaneously
-- Destination app auto-selects best format on paste
-- Menu option: "Copy Entire Conversation" → copies as Markdown or plain text (user choice)
-
 ### C7. Chat Titling
 - **Auto-Generation:** When first user message is sent, AI generates a title (3-7 words summarizing the topic). Title appears after assistant responds.
 - **Manual Edit:** Click title in sidebar or chat header → inline edit → Enter to save
