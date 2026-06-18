@@ -22,9 +22,9 @@ A dedicated screen containing all global configuration options, organized into c
 - **Notifications:** Sound, streaming, per-chat mute defaults (A4)
 - **Startup:** Launch on boot, session restore (A6)
 - **Updates:** Auto-update configuration (A7)
-- **Diagnostics:** Debug logging configuration — log level, 8 per-category toggles, open logs folder, clear logs (A11)
 - **Pricing:** Budget alerts, cost tracking (S5)
 - **Security:** API key encryption status
+- **Diagnostics:** Debug logging configuration — log level, 8 per-category toggles, open logs folder, clear logs (A11)
 - **Maintenance:** Database compaction (A9)
 
 ### A2. Default Profile Selection
