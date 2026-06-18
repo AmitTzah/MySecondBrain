@@ -1,7 +1,7 @@
 # Settings & Configuration — Feature Spec
 
 ## What the User Accomplishes
-The user configures all global application settings from a single, organized settings screen. This includes AI providers, model profiles, appearance, wiki directory, backup, hotkeys, tools, language, notifications, startup behavior, updates, and maintenance.
+The user configures all global application settings from a single, organized settings screen. This includes AI providers, model profiles, appearance, wiki directory, backup, hotkeys, tools, language, notifications, startup behavior, updates, diagnostics, and maintenance.
 
 ## Trigger
 User clicks "Settings" from the Studio sidebar, system tray context menu, or the onboarding wizard on first launch.
@@ -22,6 +22,7 @@ A dedicated screen containing all global configuration options, organized into c
 - **Notifications:** Sound, streaming, per-chat mute defaults (A4)
 - **Startup:** Launch on boot, session restore (A6)
 - **Updates:** Auto-update configuration (A7)
+- **Diagnostics:** Debug logging configuration — log level, 8 per-category toggles, open logs folder, clear logs (A11)
 - **Pricing:** Budget alerts, cost tracking (S5)
 - **Security:** API key encryption status
 - **Maintenance:** Database compaction (A9)
@@ -79,6 +80,22 @@ A dedicated screen containing all global configuration options, organized into c
 - **Model:** Model identifier for the selected provider
 - **API Key:** Can reuse a text-generation key or specify a dedicated key
 - **Test Microphone:** Button to verify STT is working with a short test recording
+
+### A11. Diagnostics & Debug Logging
+Configures structured diagnostic logging written via Serilog to rolling JSON files in `%LOCALAPPDATA%\MySecondBrain\logs\`. Full behavioral spec: [`features/diagnostics-debug-logging.md`](diagnostics-debug-logging.md).
+
+- **Log Level Selector:** Dropdown: Information (default), Debug, Verbose. Applies globally across all enabled categories. Changes take effect immediately.
+- **Per-Category Toggles:** Eight checkbox toggles controlling which subsystems are logged:
+  1. **LLM API Calls** (default ON) — Full request/response payloads, token counts, latency, HTTP errors. API keys redacted.
+  2. **Tier 1 Hotkey Pipeline** (default ON) — Full pipeline: hotkey detected → TextAction loaded → capture scope execution → UIA pattern → content captured → AI call → apply mode outcome.
+  3. **Tier 2 Command Bar** (default ON) — Trigger, query text, AI call, state transitions, dismissal.
+  4. **Database** (default OFF) — Slow queries (>100ms), migration execution, VACUUM operations, FTS5 searches.
+  5. **Wiki & File System** (default OFF) — File watcher events, indexing runs, git auto-commit, backup operations.
+  6. **WebSocket** (default OFF) — Client connections/disconnections, message counts, auth attempts (token redacted).
+  7. **Startup & Shutdown** (default OFF) — DI container build time, migration application, service initialization order/timing, shutdown sequence.
+  8. **System Integration** (default OFF) — Global hotkey registration, system tray interactions, clipboard operations, DPI changes, screenshot operations.
+- **"Open Logs Folder" Button:** Opens `%LOCALAPPDATA%\MySecondBrain\logs\` in Windows Explorer. Creates folder if it doesn't exist.
+- **"Clear Logs" Button:** Deletes all log files with confirmation dialog. Serilog creates a new log file on the next loggable event.
 
 ## Data
 - All settings stored in local SQLite database

@@ -37,6 +37,7 @@ Categories listed vertically:
 13. 💰 Pricing
 14. 🔒 Security
 15. 🛠️ Maintenance
+16. 🩺 Diagnostics
 
 Active category highlighted. Clicking a category changes the content area.
 
@@ -149,6 +150,21 @@ Scrollable area showing the active category's settings. Each category section ha
 - **"Compact Database" button (A9):** Runs VACUUM. Shows before/after size.
 - **Reclaimable Space:** Estimated space that can be reclaimed.
 - **Last Compaction:** Date/time.
+
+### 🩺 Diagnostics
+- **Log Level (A11a):** Dropdown: Information (default), Debug, Verbose. Applies globally to all enabled categories. Changes take effect immediately.
+- **Per-Category Toggles (A11b):** Eight checkboxes with labels and descriptions:
+  1. ☑ **LLM API Calls** — Full request/response payloads, token counts, latency, HTTP errors. API keys redacted. (Default: ON)
+  2. ☑ **Tier 1 Hotkey Pipeline** — Hotkey detected → TextAction loaded → capture scope → UIA pattern → content captured → AI call → apply mode outcome. (Default: ON)
+  3. ☑ **Tier 2 Command Bar** — Trigger, query text, AI call, state transitions, dismissal. (Default: ON)
+  4. ☐ **Database** — Slow queries (>100ms), migration execution, VACUUM, FTS5 searches. (Default: OFF)
+  5. ☐ **Wiki & File System** — File watcher events, indexing runs, git auto-commit, backup operations. (Default: OFF)
+  6. ☐ **WebSocket** — Client connections/disconnections, message counts, auth attempts (token redacted). (Default: OFF)
+  7. ☐ **Startup & Shutdown** — DI container build, migration application, service initialization timing, shutdown sequence. (Default: OFF)
+  8. ☐ **System Integration** — Hotkey registration, system tray, clipboard, DPI changes, screenshots. (Default: OFF)
+- **"Open Logs Folder" Button (A11c):** Opens `%LOCALAPPDATA%\MySecondBrain\logs\` in Windows Explorer. Creates folder if it doesn't exist.
+- **"Clear Logs" Button (A11d):** Deletes all log files with confirmation: "Delete all log files? This cannot be undone." On confirm: all files deleted, toast: "All log files cleared."
+- Full behavioral spec: [`features/diagnostics-debug-logging.md`](../features/diagnostics-debug-logging.md)
 
 ## Data Displayed
 

@@ -112,6 +112,7 @@
         <div class="cat-item" onclick="showCategory('pricing')" data-tooltip="Monthly budget limits, warning thresholds, API call blocking."><span class="cat-icon">💰</span> Pricing</div>
         <div class="cat-item" onclick="showCategory('security')" data-tooltip="API key encryption status, locked chat global password."><span class="cat-icon">🔒</span> Security</div>
         <div class="cat-item" onclick="showCategory('maintenance')" data-tooltip="Database compaction (VACUUM), file size, reclaimable space."><span class="cat-icon">🛠️</span> Maintenance</div>
+        <div class="cat-item" onclick="showCategory('diagnostics')" data-tooltip="Debug logging configuration: log level, per-category toggles (8 subsystems), open logs folder, clear logs."><span class="cat-icon">🩺</span> Diagnostics</div>
       </div>
       <div class="settings-footer">
         <a href="onboarding-wizard.html" data-tooltip="Re-launch the first-time setup wizard to add API keys, choose a Persona, set up wiki, and configure hotkeys.">🔄 Re-run Onboarding Wizard</a>
@@ -371,6 +372,63 @@
       <div class="category-content" id="cat-pricing"><h2>💰 Pricing</h2><p style="color:#999">Monthly budget limit, warning threshold, and API call blocking when exceeded.</p></div>
       <div class="category-content" id="cat-security"><h2>🔒 Security</h2><p style="color:#999">API key encryption status, locked chat global password, hide locked chats toggle.</p></div>
       <div class="category-content" id="cat-maintenance"><h2>🛠️ Maintenance</h2><p style="color:#999">Database file size, Compact Database (VACUUM), reclaimable space.</p></div>
+      <div class="category-content" id="cat-diagnostics">
+        <h2>🩺 Diagnostics</h2>
+        <div class="setting-group">
+          <h4>Log Level</h4>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Minimum Log Level</div><div class="sl-desc">Controls verbosity across all enabled categories. Information (normal events), Debug (detailed troubleshooting), Verbose (full internal tracing — may impact performance).</div></div>
+            <div class="setting-control"><select class="form-select" data-tooltip="Would change the minimum log level immediately. All enabled categories use this level. 'Verbose' may slow down the app."><option>Information</option><option>Debug</option><option>Verbose</option></select></div>
+          </div>
+        </div>
+        <div class="setting-group">
+          <h4>Logging Categories</h4>
+          <p style="font-size:11px;color:#999;margin-bottom:12px">Toggle which subsystems produce log output. Changes take effect immediately. Defaults shown below.</p>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">LLM API Calls</div><div class="sl-desc">Full request payload (system prompt, messages, model, temp, max tokens — API keys REDACTED), response content, finish reason, token counts, latency (ms), streaming chunk count, HTTP error bodies and status codes.</div></div>
+            <div class="setting-control"><label class="toggle" data-tooltip="Would enable/disable logging of all LLM API request/response details. Default: ON. API keys always redacted."><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Tier 1 Hotkey Pipeline</div><div class="sl-desc">Hotkey detected → TextAction loaded → capture scope → UIA pattern → content captured (first 200 chars) → AI call dispatched → apply mode outcome (HWND injection vs clipboard fallback) → success/failure with reason.</div></div>
+            <div class="setting-control"><label class="toggle" data-tooltip="Would enable/disable logging of the full Tier 1 hotkey pipeline from press to apply completion. Default: ON."><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Tier 2 Command Bar</div><div class="sl-desc">Alt+Space triggered → query text → AI call dispatched → pop-out/inline state transitions → elevation to Studio → dismissal (saved as transient thread).</div></div>
+            <div class="setting-control"><label class="toggle" data-tooltip="Would enable/disable logging of Tier 2 Command Bar lifecycle events. Default: ON."><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Database</div><div class="sl-desc">Slow queries (>100ms threshold: SQL + duration), EF Core migration execution (name + ms), VACUUM timing and space reclaimed, FTS5 search terms and result counts.</div></div>
+            <div class="setting-control"><label class="toggle" data-tooltip="Would enable/disable logging of database performance events. Default: OFF."><input type="checkbox"><span class="toggle-slider"></span></label></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Wiki & File System</div><div class="sl-desc">File watcher events (create/modify/delete with path), indexing runs (files scanned, duration, errors), git auto-commit (files changed, commit hash), backup operations (file count, total size, duration).</div></div>
+            <div class="setting-control"><label class="toggle" data-tooltip="Would enable/disable logging of wiki file system and indexing events. Default: OFF."><input type="checkbox"><span class="toggle-slider"></span></label></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">WebSocket</div><div class="sl-desc">Client connections/disconnections, message counts (sent/received), auth attempts (success/failure — token redacted).</div></div>
+            <div class="setting-control"><label class="toggle" data-tooltip="Would enable/disable logging of local WebSocket server events. Default: OFF."><input type="checkbox"><span class="toggle-slider"></span></label></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Startup & Shutdown</div><div class="sl-desc">DI container build time, migration application (name + ms), key service initialization order and per-service timing, graceful shutdown sequence (services stopped in order).</div></div>
+            <div class="setting-control"><label class="toggle" data-tooltip="Would enable/disable logging of application startup and shutdown sequencing. Default: OFF."><input type="checkbox"><span class="toggle-slider"></span></label></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">System Integration</div><div class="sl-desc">Global hotkey registration (success/failure, conflicts), system tray interactions (left-click, menu selection), clipboard capture/restoration, DPI change events, screenshot operations.</div></div>
+            <div class="setting-control"><label class="toggle" data-tooltip="Would enable/disable logging of Windows OS integration events. Default: OFF."><input type="checkbox"><span class="toggle-slider"></span></label></div>
+          </div>
+        </div>
+        <div class="setting-group">
+          <h4>Log Files</h4>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Log Location</div><div class="sl-desc" style="font-family:monospace;font-size:12px">%LOCALAPPDATA%\MySecondBrain\logs\</div></div>
+            <div class="setting-control"><button class="btn btn-sm" data-tooltip="Would open the logs folder in Windows Explorer. Creates the folder if it doesn't exist yet.">Open Logs Folder</button></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-label"><div class="sl-title">Clear All Logs</div><div class="sl-desc">Deletes all .json log files in the logs folder. This action cannot be undone.</div></div>
+            <div class="setting-control"><button class="btn btn-sm btn-danger" data-tooltip="Would show confirmation: 'Delete all log files? This action cannot be undone.' On confirm: all log files deleted, toast 'All log files cleared.' New log file created on next event.">Clear Logs</button></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

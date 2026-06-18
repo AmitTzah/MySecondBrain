@@ -29,7 +29,7 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | **Studio Chat** | Tier 3 primary workspace — multi-tab AI conversations, Markdown rendering, streaming, artifacts, branching, model comparison | [`screens/studio-chat.html`](screens/studio-chat.html) | [`screens/studio-chat.md`](screens/studio-chat.md) | C (Studio Chat), D (Branching), E (Chat Modes), F (Artifacts), H (Tools), J (Prompts), K (Text Actions), L (Organization), M (Comparison), N (Wiki) |
 | **Onboarding Wizard** | First-launch guided setup — API keys, Persona, wiki directory, hotkeys | [`screens/onboarding-wizard.html`](screens/onboarding-wizard.html) | [`screens/onboarding-wizard.md`](screens/onboarding-wizard.md) | A8 (Onboarding), B1 (API Keys), B3 (Personas), N1 (Wiki Dir), P1 (Hotkeys), I2 (Import) |
 | **Model Comparison** | Side-by-side multi-Persona comparison with independent mini-chats, broadcast mode, auto-branching | [`screens/model-comparison.html`](screens/model-comparison.html) | [`screens/model-comparison.md`](screens/model-comparison.md) | M1-M4 (Model Comparison), B3 (Personas), D3 (Branching), E3 (Thinking) |
-| **Settings** | Global configuration — 14 categories: Providers, Profiles, Appearance, Wiki, Backup, Hotkeys, Tools, Language, Notifications, Startup, Updates, Pricing, Security, Maintenance | [`screens/settings.html`](screens/settings.html) | [`screens/settings.md`](screens/settings.md) | A1-A10 (Settings), B (Model Configs), N1 (Wiki Dir), R (Backup), H5 (Tool Auto-Approval) |
+| **Settings** | Global configuration — 15 categories: Providers, Profiles, Appearance, Wiki, Backup, Hotkeys, Tools, Language, Notifications, Startup, Updates, Diagnostics, Pricing, Security, Maintenance | [`screens/settings.html`](screens/settings.html) | [`screens/settings.md`](screens/settings.md) | A1-A11 (Settings), B (Model Configs), N1 (Wiki Dir), R (Backup), H5 (Tool Auto-Approval) |
 | **Wiki Browser** | Three-region browser for personal wiki — file tree, Markdown viewer, info panel (related sections, backlinks, file info) | [`screens/wiki-browser.html`](screens/wiki-browser.html) | [`screens/wiki-browser.md`](screens/wiki-browser.md) | N4 (Wiki Browser), N2 (Indexing), N6 (Snapshots), N10 (Cross-Linking) |
 | **Usage Dashboard** | Token/cost analytics — summary cards, charts, per-chat breakdown, AI feedback summary | [`screens/usage-dashboard.html`](screens/usage-dashboard.html) | [`screens/usage-dashboard.md`](screens/usage-dashboard.md) | S1-S6 (Usage Dashboard) |
 | **Media Library** | Browsable gallery of all media across chats — images, audio, video, webcam captures | [`screens/media-library.html`](screens/media-library.html) | [`screens/media-library.md`](screens/media-library.md) | G1-G6 (Media Library) |
@@ -41,7 +41,7 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 
 | Feature Group | Tier | Screens Used | Key Data Entities |
 |---------------|------|-------------|-------------------|
-| **A. Settings & Configuration** (A1-A10) | Core | Settings, Onboarding Wizard, Studio Chat | api-key, persona, model-configuration |
+| **A. Settings & Configuration** (A1-A11) | Core | Settings, Onboarding Wizard, Studio Chat | api-key, persona, model-configuration |
 | **B. Model Configurations & Personas** (B1-B8) | Core | Settings, Studio Chat, Model Comparison, Onboarding Wizard | api-key, model-configuration, persona |
 | **C. Studio Chat Workspace** (C1-C37) | Core | Studio Chat | chat-thread, message, persona, usage-record |
 | **D. Message Manipulation & Branching** (D1-D9) | Core | Studio Chat | message, chat-thread |
@@ -61,6 +61,7 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | **R. Backup & Recovery** (R1-R4) | Core | Settings | backup-snapshot |
 | **S. Usage & Pricing Dashboard** (S1-S6) | Core | Usage Dashboard | usage-record |
 | **U. Soft-Delete Trash** (U1-U6) | Core | Studio Chat | chat-thread |
+| **V. Diagnostics & Debug Logging** (A11a-A11d) | Core | Settings | (logging — no data entity) |
 | **T. Nice-to-Have (Future)** (T1-T6) | Nice-to-Have | (deferred) | (deferred) |
 
 ---
@@ -107,10 +108,10 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 |------|-------------|
 | [`app-overview.md`](app-overview.md) | Core purpose, elevator pitch, differentiators, platform, success metrics |
 | [`personas.md`](personas.md) | Primary persona: Hybrid Developer/Knowledge Worker/Creative Writer |
-| [`feature-inventory.md`](feature-inventory.md) | All 22 feature groups (A-U) cataloged by tier |
-| [`edge-cases.md`](edge-cases.md) | 16 global scenarios + per-feature edge cases for all 22 feature groups |
+| [`feature-inventory.md`](feature-inventory.md) | All 23 feature groups (A-V) cataloged by tier |
+| [`edge-cases.md`](edge-cases.md) | 16 global scenarios + per-feature edge cases for all 23 feature groups |
 
-### Features (22 files)
+### Features (23 files)
 | File | Feature Group |
 |------|---------------|
 | [`features/settings-configuration.md`](features/settings-configuration.md) | A. Settings & Configuration |
@@ -133,8 +134,8 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | [`features/backup-recovery.md`](features/backup-recovery.md) | R. Backup & Recovery |
 | [`features/usage-pricing-dashboard.md`](features/usage-pricing-dashboard.md) | S. Usage & Pricing Dashboard |
 | [`features/soft-delete-trash.md`](features/soft-delete-trash.md) | U. Soft-Delete Trash |
+| [`features/diagnostics-debug-logging.md`](features/diagnostics-debug-logging.md) | V. Diagnostics & Debug Logging |
 | [`features/nice-to-have-future.md`](features/nice-to-have-future.md) | T. Nice-to-Have Features (Future) |
-| [`features/studio-chat-workspace.md`](features/studio-chat-workspace.md) | C9b/C9c — Attach File + Model-Aware Compatibility (added mid-Phase 3) |
 
 ### Data Entities (13 files)
 | File | Entity |
@@ -227,7 +228,7 @@ The following items are flagged for Architect review before technical planning. 
 ### Metrics
 | Metric | Count |
 |--------|-------|
-| Features documented | 22 feature groups (A-U), 174 individual feature items |
+| Features documented | 23 feature groups (A-V), 178 individual feature items |
 | Screens designed | 8 screens with canonical .md specs + interactive .html mocks |
 | Data entities | 13 entities with attributes, lifecycle, relationships, UI visibility |
 | User flows | 8 end-to-end journeys documented |
@@ -248,4 +249,4 @@ All planned artifacts are complete. No placeholders remain. No "[TODO]" or "TBD"
 
 ---
 
-*Vision last updated: 2026-06-18 (Tier 1 generalized: captureScope + applyMode added to TextAction). Interactive mocks at `screens/*.html` — open in browser for clickable simulation.*
+*Vision last updated: 2026-06-18 (Diagnostics & Debug Logging feature added — A11, 8 logging categories, Serilog integration). Interactive mocks at `screens/*.html` — open in browser for clickable simulation.*
