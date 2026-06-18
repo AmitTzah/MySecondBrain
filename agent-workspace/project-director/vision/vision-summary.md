@@ -29,7 +29,7 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | **Studio Chat** | Tier 3 primary workspace — multi-tab AI conversations, Markdown rendering, streaming, artifacts, branching, model comparison | [`screens/studio-chat.html`](screens/studio-chat.html) | [`screens/studio-chat.md`](screens/studio-chat.md) | C (Studio Chat), D (Branching), E (Chat Modes), F (Artifacts), H (Tools), J (Prompts), K (Text Actions), L (Organization), M (Comparison), N (Wiki) |
 | **Onboarding Wizard** | First-launch guided setup — API keys, Persona, wiki directory, hotkeys | [`screens/onboarding-wizard.html`](screens/onboarding-wizard.html) | [`screens/onboarding-wizard.md`](screens/onboarding-wizard.md) | A8 (Onboarding), B1 (API Keys), B3 (Personas), N1 (Wiki Dir), P1 (Hotkeys), I2 (Import) |
 | **Model Comparison** | Side-by-side multi-Persona comparison with independent mini-chats, broadcast mode, auto-branching | [`screens/model-comparison.html`](screens/model-comparison.html) | [`screens/model-comparison.md`](screens/model-comparison.md) | M1-M4 (Model Comparison), B3 (Personas), D3 (Branching), E3 (Thinking) |
-| **Settings** | Global configuration — 15 categories: Providers, Profiles, Appearance, Wiki, Backup, Hotkeys, Tools, Language, Notifications, Startup, Updates, Diagnostics, Pricing, Security, Maintenance | [`screens/settings.html`](screens/settings.html) | [`screens/settings.md`](screens/settings.md) | A1-A11 (Settings), B (Model Configs), N1 (Wiki Dir), R (Backup), H5 (Tool Auto-Approval) |
+| **Settings** | Global configuration — 16 categories: Providers, Profiles, Appearance, Wiki, Backup, Text Actions, Hotkeys, Tools, Language, Notifications, Startup, Updates, Diagnostics, Pricing, Security, Maintenance | [`screens/settings.html`](screens/settings.html) | [`screens/settings.md`](screens/settings.md) | A1-A11 (Settings), B (Model Configs), N1 (Wiki Dir), R (Backup), H5 (Tool Auto-Approval) |
 | **Wiki Browser** | Three-region browser for personal wiki — file tree, Markdown viewer, info panel (related sections, backlinks, file info) | [`screens/wiki-browser.html`](screens/wiki-browser.html) | [`screens/wiki-browser.md`](screens/wiki-browser.md) | N4 (Wiki Browser), N2 (Indexing), N6 (Snapshots), N10 (Cross-Linking) |
 | **Usage Dashboard** | Token/cost analytics — summary cards, charts, per-chat breakdown, AI feedback summary | [`screens/usage-dashboard.html`](screens/usage-dashboard.html) | [`screens/usage-dashboard.md`](screens/usage-dashboard.md) | S1-S6 (Usage Dashboard) |
 | **Media Library** | Browsable gallery of all media across chats — images, audio, video, webcam captures | [`screens/media-library.html`](screens/media-library.html) | [`screens/media-library.md`](screens/media-library.md) | G1-G6 (Media Library) |
@@ -108,10 +108,10 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 |------|-------------|
 | [`app-overview.md`](app-overview.md) | Core purpose, elevator pitch, differentiators, platform, success metrics |
 | [`personas.md`](personas.md) | Primary persona: Hybrid Developer/Knowledge Worker/Creative Writer |
-| [`feature-inventory.md`](feature-inventory.md) | All 23 feature groups (A-V) cataloged by tier |
-| [`edge-cases.md`](edge-cases.md) | 16 global scenarios + per-feature edge cases for all 23 feature groups |
+| [`feature-inventory.md`](feature-inventory.md) | All 22 feature groups (A-V) cataloged by tier |
+| [`edge-cases.md`](edge-cases.md) | 16 global scenarios + per-feature edge cases for all 22 feature groups |
 
-### Features (23 files)
+### Features (22 files)
 | File | Feature Group |
 |------|---------------|
 | [`features/settings-configuration.md`](features/settings-configuration.md) | A. Settings & Configuration |
@@ -228,7 +228,7 @@ The following items are flagged for Architect review before technical planning. 
 ### Metrics
 | Metric | Count |
 |--------|-------|
-| Features documented | 23 feature groups (A-V), 178 individual feature items |
+| Features documented | 22 feature groups (A-V), 178 individual feature items |
 | Screens designed | 8 screens with canonical .md specs + interactive .html mocks |
 | Data entities | 13 entities with attributes, lifecycle, relationships, UI visibility |
 | User flows | 8 end-to-end journeys documented |

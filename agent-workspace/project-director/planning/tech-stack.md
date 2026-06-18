@@ -8,6 +8,7 @@
 | **UI Framework** | WPF | Native Windows presentation framework |
 | **MVVM Toolkit** | CommunityToolkit.Mvvm | Latest stable (NuGet) |
 | **DI Container** | Microsoft.Extensions.DependencyInjection | Built into .NET |
+| **Logging** | Serilog | Rolling file sink, structured JSON output to `%LOCALAPPDATA%\MySecondBrain\logs\`. Categories controlled via diagnostics settings (V). |
 | **Local Database** | SQLite + EF Core + FTS5 | Microsoft.Data.Sqlite + EF Core 8.x |
 | **Markdown Parsing** | Markdig | Latest stable (NuGet) |
 | **Syntax Highlighting** | AvalonEdit highlighting engine | Code block coloring |
@@ -39,7 +40,7 @@ Each component below references the approved decision from [`tech-sourcing.md`](
 
 ---
 
-### 🟢 Open-Source Libraries (15 components)
+### 🟢 Open-Source Libraries (16 components)
 
 #### SQLite + EF Core
 - **Packages:** `Microsoft.Data.Sqlite`, `Microsoft.EntityFrameworkCore.Sqlite`, `Microsoft.EntityFrameworkCore.Design`
@@ -198,6 +199,7 @@ Each component below references the approved decision from [`tech-sourcing.md`](
 | Dependency | Type | Approx. Size | Required |
 |-----------|------|-------------|----------|
 | .NET 8.0 Runtime | Platform | ~200MB (shared) | Yes |
+| Serilog | OSS NuGet | ~3MB | Yes |
 | SQLite (via Microsoft.Data.Sqlite) | OSS NuGet | <5MB | Yes |
 | EF Core | OSS NuGet | ~5MB | Yes |
 | Markdig | OSS NuGet | <1MB | Yes |

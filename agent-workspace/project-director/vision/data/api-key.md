@@ -12,7 +12,7 @@ An API key is a credential for accessing an AI provider's API. Keys are encrypte
 | provider | string | Yes | One of: OpenAI, Anthropic, Google, DeepSeek, MiMo, Moonshot, Mistral, OpenAICompatible | Provider type |
 | customProviderName | string | Conditional | Required if provider=OpenAICompatible | User-chosen provider display name |
 | customEndpointUrl | string | Conditional | Required if provider=OpenAICompatible | Full API endpoint URL |
-| keyValue | string | Yes | Encrypted via DPAPI at rest. Never displayed in full after save | The API key secret |
+| keyValue | string | Yes | Encrypted via DPAPI at rest. Never displayed in full after save. Must be redacted (`[REDACTED]`) in all diagnostic log output via Serilog destructuring policy (V1). | The API key secret |
 | createdAt | datetime | Yes | Auto-set | Creation timestamp |
 | lastTestedAt | datetime | No | Updated when "Test Key" is used | Last successful validation |
 | isValid | boolean | No | Set by Test Key validation | Whether key is currently valid |

@@ -302,9 +302,51 @@ Integration points are organized into two categories:
 | **Vision Features** | Onboarding Step 3, Flag #11, #13, #14 |
 | **Tech-Sourcing** | [#28](tech-sourcing.md#28-git-integration-wiki-version-control) |
 
+### 24. Serilog Destructuring Policy (API Key Redaction)
+
+| Aspect | Detail |
+|--------|--------|
+| **API** | Serilog `IDestructuringPolicy` |
+| **Used For** | Globally redact `ApiKey` string values in all structured JSON log output. Applies across all 8 log categories (V). |
+| **Abstraction** | `ApiKeyDestructuringPolicy` — registered in Serilog `LoggerConfiguration` at startup. No separate C# interface needed (part of Serilog API). |
+| **Fallback** | If destructuring policy is not registered or fails: API keys could appear in log files. This is a security violation. The policy registration is mandatory and verified at startup — if registration fails, the app logs a warning and continues, but the security risk must be addressed in a follow-up release. |
+| **Configuration** | None. Registered once in `Program.cs` / `App.xaml.cs` startup. Policy checks if a `string` value matches API key patterns (length, entropy) and replaces with `"[REDACTED]"`. |
+| **Vision Features** | V (Diagnostics & Debug Logging — all 8 categories), B1 (API key management) |
+| **Tech-Sourcing** | N/A — thin Serilog configuration concern. See [`abstractions.md §14`](abstractions.md#14-diagnostics--logging--serilog-destructuring-policy). |
+
 ---
 
 ## Integration Dependency Map
+
+```
+External World                            MySecondBrain
+─────────────                            ─────────────
+                                        
+OpenAI API ───────────► ILLMProvider (OpenAIProvider)
+Anthropic API ────────► ILLMProvider (AnthropicProvider)
+Google Gemini ────────► ILLMProvider (GoogleProvider)
+OpenAI-Compatible ────► ILLMProvider (OpenAICompatibleProvider)
+Google GCS ───────────► IBackupProvider (GcsBackupProvider)
+Google/Bing Search ───► ISearchProvider (GoogleCustomSearch / BingSearchProvider)
+GitHub ───────────────► IWikiGitService (LibGit2Sharp)
+Update Feed ──────────► IUpdateChecker (AutoUpdaterDotNet)
+                                        
+Windows DPAPI ─────────► IEncryptionService (ProtectedData)
+AES-256-GCM (.NET) ───► IChatEncryptionService
+Clipboard (.NET) ─────► IClipboardService
+FileSystemWatcher ────► IWikiFileWatcher
+Kestrel ──────────────► ILocalWebSocketServer
+NotifyIcon ───────────► ISystemTrayService
+RegisterHotKey ───────► IGlobalHotkeyService
+UIA/Win32 (TextPattern, ValuePattern, TreeWalker, DocumentRange, PrintWindow/BitBlt) ──► IHwndCaptureService + ITextInjectionService
+SharpToken ───────────► ITokenizer / ITokenizerFactory
+Whisper API/.net ─────► ISTTProvider
+NAudio ───────────────► IAudioService
+AForge.NET ───────────► ICameraService
+MediaElement/VLC ─────► IVideoPlayerService
+Hunspell ─────────────► ISpellCheckService
+LibGit2Sharp ─────────► IWikiGitService
+Serilog Destructuring ─► ApiKeyDestructuringPolicy (IDestructuringPolicy)
 
 ```
 External World                            MySecondBrain
@@ -354,6 +396,7 @@ LibGit2Sharp ─────────► IWikiGitService
 | Global Hotkeys | Tier 1/2 hotkeys non-functional | AV whitelist guidance. App usable via Studio. |
 | SharpToken | Pre-send token counts inaccurate | Fallback to chars/4 estimation. API counts still authoritative. |
 | STT Provider | Voice dictation unavailable | Button grayed out. Switch provider option. |
+| Serilog Destructuring Policy | API keys may appear in log files | Policy registration verified at startup. Warning logged if missing. Security review required. |
 
 ---
 

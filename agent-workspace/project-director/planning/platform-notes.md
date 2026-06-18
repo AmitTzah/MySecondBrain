@@ -599,4 +599,27 @@ The graduated UIA capture pipeline powers Tier 1 Text Action capture scope. It i
 
 ---
 
+## 13. Diagnostics Logging — Logs Folder & Configuration
+
+### Log File Location
+
+Diagnostic logs are written to `%LOCALAPPDATA%\MySecondBrain\logs\` via Serilog rolling file sink (W1.3). Log files are structured JSON named `mysecondbrain-{Date}.json`, rotated daily, retained for 30 days.
+
+### Folder Access Edge Cases
+
+- **First launch (folder doesn't exist):** The "Open Logs Folder" button (A11c) creates the folder if it doesn't exist before opening Explorer.
+- **Folder inaccessible (permissions, disk error):** Logging falls back to an in-memory buffer (last 1000 events). A warning is shown in Settings → Diagnostics: "⚠️ Log directory is not accessible. Logging to memory buffer only."
+- **Files locked during Clear:** If other applications hold file handles to log files during "Clear Logs" (A11d), some files may not be deletable. Error toast: "Could not clear all log files. [N] files could not be deleted."
+- **MSIX app data isolation:** The virtualized `%LOCALAPPDATA%` is preserved across updates but not across uninstall. Logs are user-local and do not require admin privileges.
+
+### Configuration Persistence
+
+Nine diagnostic settings are stored as `AppSetting` key-value pairs via `ISettingsRepository` (W1.4). Changes take effect immediately — no save button. Categories 1-3 ON by default, 4-8 OFF. Log level defaults to Information. See [`data-model.md §AppSetting Keys for Diagnostics`](data-model.md#appsetting-keys-for-diagnostics-v).
+
+### API Key Redaction
+
+A Serilog `IDestructuringPolicy` (`ApiKeyDestructuringPolicy`) is registered at startup to globally redact `ApiKey` string values as `"[REDACTED]"` in all structured log output. This applies across all 8 log categories. See [`abstractions.md §14`](abstractions.md#14-diagnostics--logging--serilog-destructuring-policy).
+
+---
+
 *Platform notes document — Batch 2 of planning/ directory. See also: [`architecture.md`](architecture.md), [`tech-stack.md`](tech-stack.md).*

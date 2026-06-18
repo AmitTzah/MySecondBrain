@@ -186,5 +186,5 @@ Logs Windows OS integration events.
 - **Wiki & File System (Category 5)** interacts with Personal Wiki (N1-N14), Backup & Recovery (R)
 - **WebSocket (Category 6)** interacts with Local WebSocket Server (P5)
 - **Startup & Shutdown (Category 7)** interacts with Startup Behavior (A6), DI container, all service initialization
-- **System Integration (Category 8)** interacts with Global Hotkeys (P1), System Tray (P6), Clipboard (P4), DPI Awareness (P8), Screenshots (T4)
+- **System Integration (Category 8)** interacts with Global Hotkeys (P1), System Tray (P6), Clipboard (P4), DPI Awareness (P8), Screenshots (P9)
 - **Settings:** Diagnostics settings are part of the Settings screen (A1, A11)

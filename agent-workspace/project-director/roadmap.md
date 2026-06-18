@@ -1,8 +1,8 @@
 # Roadmap — MySecondBrain Wave Map
 
-Lightweight feature decomposition. 34 features across 4 waves. Each Wave 3 feature is a vertical slice (DB → service → UI) that **adds** new code to pre-built Wave 1-2 infrastructure — Wave 3 features do NOT modify Wave 1-2 code.
+Lightweight feature decomposition. 35 features across 4 waves. Each Wave 3 feature is a vertical slice (DB → service → UI) that **adds** new code to pre-built Wave 1-2 infrastructure — Wave 3 features do NOT modify Wave 1-2 code.
 
-> **Revision note:** Originally planned at 245 features. Consolidated to 34 after Feature 3 (2026-06-18) based on efficiency analysis — each feature now represents a coherent functional domain built in one FD spawn.
+> **Revision note:** Originally planned at 245 features. Consolidated to 34 after Feature 3 (2026-06-18) based on efficiency analysis — each feature now represents a coherent functional domain built in one FD spawn. Updated to 35 with W1.3b Diagnostics (2026-06-18).
 
 Source documents:
 - Vision: [`vision/vision-summary.md`](vision/vision-summary.md), [`vision/feature-inventory.md`](vision/feature-inventory.md)
@@ -11,7 +11,7 @@ Source documents:
 
 ---
 
-## Wave 1: Foundation — 8 Features
+## Wave 1: Foundation — 9 Features
 
 Infrastructure that everything else depends on. Core abstractions, data model, project scaffolding. Built first, extended by all subsequent waves.
 
@@ -40,6 +40,15 @@ Status: **Built and merged to master.**
 Dependencies: W1.2.
 
 Status: **Built and merged to master.**
+
+
+### Feature W1.3b — Diagnostics & Debug Logging
+
+**Vision groups: V (Diagnostics & Debug Logging).**
+
+Settings → Diagnostics category with global log level selector (Information/Debug/Verbose) and 8 per-category logging toggles: (1) LLM API Calls, (2) Tier 1 Hotkey Pipeline, (3) Tier 2 Command Bar — ON by default; (4) Database, (5) Wiki & File System, (6) WebSocket, (7) Startup & Shutdown, (8) System Integration — OFF by default. "Open Logs Folder" button opens `%LOCALAPPDATA%\MySecondBrain\logs\` in Explorer. "Clear Logs" button deletes all log files with confirmation. Serilog `IDestructuringPolicy` enforces API key redaction (`[REDACTED]`) across all categories. Nine settings persisted as `AppSetting` key-value pairs via `ISettingsRepository`. Uses existing Serilog infrastructure from W1.3.
+
+Dependencies: W1.2, W1.3. (*Soft dependency on W1.4 for settings persistence — defaults used until W1.4 is built.*)
 
 
 ### Feature W1.4 — Data Layer: All Entities, DbContext & Repositories
@@ -325,22 +334,23 @@ Dependencies: all Wave 3 features.
 
 | Wave | Description | Features |
 |------|-------------|----------|
-| Wave 1 | Foundation — Infrastructure, data model, abstractions | 8 (3 built) |
+| Wave 1 | Foundation — Infrastructure, data model, abstractions | 9 (3 built) |
 | Wave 2 | Skeleton — App shell, navigation, theming, Windows infra | 3 |
 | Wave 3 | Vertical Slices — All user-facing features (A-U) | 18 |
 | Wave 4 | Cross-Cutting — Perf, a11y, i18n, E2E, security, polish | 5 |
-| **Total** | | **34** |
+| **Total** | | **35** |
 
 ---
 
 ## Dependency Flow Diagram
 
 ```
-Wave 1 (Foundation) — 8 Features
+Wave 1 (Foundation) — 9 Features
     │
     ├── W1.1 Solution Scaffold & CI/CD ✅
     ├── W1.2 DI Container ✅
     ├── W1.3 Logging ✅
+    ├── W1.3b Diagnostics & Debug Logging (V)
     ├── W1.4 Data Layer (all entities, DbContext, repos)
     ├── W1.5 LLM Provider Layer (ILLMProvider × 4, ITokenizer)
     ├── W1.6 Platform Services (STT, Backup, Search, Tools, Import, Renderers, Theme, Update, Encryption)

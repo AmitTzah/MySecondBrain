@@ -162,6 +162,7 @@ Key architectural decisions made during planning, with rationale.
 | AD-13 | **GCS backup + local folder backup** | GCS provides off-site disaster recovery. Local folder backup provides a zero-dependency alternative. Both implement IBackupProvider. Mitigates Flag #9 (single cloud provider dependency). | [tech-sourcing #26](../tech-sourcing.md#26-backup-to-google-cloud-storage) |
 | AD-14 | **Hard-delete transient threads; soft-delete permanent threads only** | Transient threads are ephemeral by design (7-day auto-cleanup). Soft-delete (30-day Trash) adds unnecessary complexity for ephemeral content. Permanent threads go through soft-delete → Trash → 30-day purge. | [data-model.md](data-model.md#soft-delete-chatthread) |
 | AD-15 | **MVVM with CommunityToolkit.Mvvm source generators** | Eliminates boilerplate (INotifyPropertyChanged, ICommand). Source generators produce compile-time code — no runtime reflection overhead. Strict MVVM: Views NEVER reference ViewModels; Messenger for cross-VM communication. | [platform-notes.md](platform-notes.md#1-mvvm-pattern--communitytoolkitmvvm) |
+| AD-16 | **Diagnostics as W1.3b — immediately after logging infrastructure** | Diagnostics (V) builds directly on Serilog (W1.3) and is placed as W1.3b so every subsequent Wave 1 feature can be built with full diagnostic logging available for debugging during development. The SettingsRepository dependency (W1.4) is soft-resolved: logging runs with in-memory defaults until W1.4 provides persistence. | [roadmap.md](../roadmap.md#feature-w13b--diagnostics--debug-logging) |
 
 ### Flagged Decisions Pending Architect Resolution
 
@@ -214,8 +215,9 @@ Every vision feature group (A-U) is addressed in the planning documents:
 | R. Backup & Recovery | IBackupProvider | Google.Cloud.Storage.V1 | BackupSnapshot | IBackupProvider |
 | S. Usage Dashboard | IUsageRepository | LiveCharts2, SQLite aggregation | UsageRecord | IUsageRepository |
 | U. Soft-Delete Trash | AutoCleanupService | SQLite | ChatThread (isDeleted, deletedAt) | IChatThreadRepository |
+| **V. Diagnostics & Debug Logging** | Serilog destructuring policy, Settings → Diagnostics UI | Serilog (existing W1.3), ISettingsRepository | AppSetting (9 key-value pairs) | ILogger\<T\>, ISettingsRepository, IDestructuringPolicy |
 | T. Nice-to-Have | Architecture accommodates | (deferred) | (deferred) | (deferred) |
 
 ---
 
-*Planning summary document — the index for the complete `planning/` directory. Batch 2 of 2. Planning directory is now complete (7 files). See [`tech-sourcing.md`](../tech-sourcing.md) for upstream sourcing decisions.*
+*Planning summary document — the index for the complete `planning/` directory. Batch 2 of 2. Planning directory is now complete (7 files). Updated 2026-06-18 with V. Diagnostics & Debug Logging. See [`tech-sourcing.md`](../tech-sourcing.md) for upstream sourcing decisions.*

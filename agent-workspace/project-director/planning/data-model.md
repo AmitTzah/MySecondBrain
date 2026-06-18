@@ -4,6 +4,8 @@
 
 All 13 data entities are stored in a single SQLite database via Entity Framework Core. The model is relational with foreign keys, cascading rules, and soft-delete. Wiki files are **not** stored in SQLite — the `.md` files on disk are the source of truth; the database holds a read-optimized **index**.
 
+> **Note:** The `AppSetting` key-value table (already part of the EF Core model) stores application settings including 9 diagnostics log settings (V). No new entity is required for the Diagnostics feature — see [AppSetting Keys for Diagnostics](#appsetting-keys-for-diagnostics-v) below.
+
 ---
 
 ## Entity Catalog
@@ -552,6 +554,28 @@ The `threadId` is denormalized onto UsageRecord to avoid JOIN through Message fo
 | ApiKey | ModelConfigurations referencing it break (restrict with warning). |
 | WikiFile (disk deletion) | Index entry removed. WikiVersionSnapshots for that file deleted. |
 | Message (soft delete, D2) | Removed from active conversation history. Branch data preserved. |
+
+---
+
+## AppSetting Keys for Diagnostics (V)
+
+The Diagnostics feature (V, A11a-A11d) stores 9 settings in the existing `AppSetting` key-value table via `ISettingsRepository`. No new entity is required.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `LogLevel` | string | `"Information"` | Global minimum log level: Information, Debug, Verbose |
+| `LogCategory_LLMApiCalls` | bool | `true` | Toggle LLM API request/response logging (Category 1) |
+| `LogCategory_Tier1HotkeyPipeline` | bool | `true` | Toggle Tier 1 hotkey pipeline logging (Category 2) |
+| `LogCategory_Tier2CommandBar` | bool | `true` | Toggle Tier 2 Command Bar logging (Category 3) |
+| `LogCategory_Database` | bool | `false` | Toggle database slow query/migration/VACUUM/FTS5 logging (Category 4) |
+| `LogCategory_WikiFileSystem` | bool | `false` | Toggle wiki file watcher/indexing/git logging (Category 5) |
+| `LogCategory_WebSocket` | bool | `false` | Toggle WebSocket connection/message/auth logging (Category 6) |
+| `LogCategory_StartupShutdown` | bool | `false` | Toggle startup DI/migration/service init/shutdown logging (Category 7) |
+| `LogCategory_SystemIntegration` | bool | `false` | Toggle hotkey/tray/clipboard/DPI/screenshot logging (Category 8) |
+
+**Categories 1-3 ON by default** (user-facing, high-value for support). **Categories 4-8 OFF by default** (performance-sensitive or verbose internal operations).
+
+**Consumed by feature groups:** V (Diagnostics & Debug Logging), A11 (Settings → Diagnostics).
 
 ---
 

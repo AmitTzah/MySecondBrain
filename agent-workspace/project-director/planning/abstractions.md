@@ -1169,6 +1169,46 @@ public record CleanupCompletedEventArgs(int TransientDeleted, int TrashPurged);
 
 ---
 
+## 14. Diagnostics & Logging — Serilog Destructuring Policy
+
+Diagnostics (V) uses the existing logging infrastructure (W1.3) and [`ISettingsRepository`](#isettingsrepository) for persisting 9 log configuration keys. No new C# interfaces are required — the feature consumes `ILogger<T>` (Microsoft.Extensions.Logging) and `ISettingsRepository`.
+
+### API Key Redaction Policy
+
+A Serilog `IDestructuringPolicy` must be registered to redact `ApiKey` property values in structured log output. This applies globally across ALL log categories:
+
+```csharp
+// Registration in Serilog configuration (Program.cs / App.xaml.cs startup)
+Log.Logger = new LoggerConfiguration()
+    .Destructure.With<ApiKeyDestructuringPolicy>()  // Redacts ApiKey values
+    .WriteTo.File(...)
+    .CreateLogger();
+
+// Destructuring policy
+public class ApiKeyDestructuringPolicy : IDestructuringPolicy
+{
+    public bool TryDestructure(
+        object value,
+        ILogEventPropertyValueFactory propertyValueFactory,
+        out LogEventPropertyValue? result)
+    {
+        if (value is string s && LooksLikeApiKey(s))
+        {
+            result = new ScalarValue("[REDACTED]");
+            return true;
+        }
+        result = null;
+        return false;
+    }
+}
+```
+
+**Security requirement:** Under no circumstances may the raw API key appear in any log file. This destructuring policy is the enforcement mechanism. It applies to all log categories (LLM API Calls, Tier 1/2, Database, etc.) — any log event that includes an `ApiKey` property is automatically redacted.
+
+**Ref:** [Vision V — Diagnostics & Debug Logging](../vision/features/diagnostics-debug-logging.md), [Vision Data — ApiKey](../vision/data/api-key.md)
+
+---
+
 ## Interface Dependency Map
 
 ```

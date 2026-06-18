@@ -315,6 +315,7 @@ Renderers are registered in `ContentRendererRegistry` at startup. The `MarkdownS
 | **Spell Check** | WeCantSpell.Hunspell with English dictionary. Custom WPF adorner for red squiggly underlines. Right-click suggestions. | [tech-sourcing #25](../tech-sourcing.md#25-spell-checking) |
 | **Encryption** | API keys: DPAPI (`ProtectedData`). Locked chats: AES-256-GCM with PBKDF2 key derivation (`.NET 8 AesGcm` + `Rfc2898DeriveKey`). | [tech-sourcing #30](../tech-sourcing.md#30-encryption--api-keys--chat-locking) |
 | **Auto-Save Drafts** | `PeriodicTimer` (5-second tick) → serialize textbox content + cursor position to SQLite `MessageDrafts` table. Recovery dialog on tab open. | [tech-sourcing #35](../tech-sourcing.md#35-auto-save-drafts) |
+| **Diagnostics Logging** | Serilog rolling file sink → `%LOCALAPPDATA%\MySecondBrain\logs\`. Structured JSON output. 8 per-category toggles + global log level (Information/Debug/Verbose) persisted via `ISettingsRepository`. API key redaction via `IDestructuringPolicy`. "Open Logs Folder" + "Clear Logs" buttons in Settings → Diagnostics. | [Vision V](../vision/features/diagnostics-debug-logging.md), [abstractions §14](abstractions.md#14-diagnostics--logging--serilog-destructuring-policy) |
 
 ---
 
