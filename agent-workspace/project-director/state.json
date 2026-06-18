@@ -9,7 +9,7 @@
   "phase_4_substep": null,
   "git_automation_enabled": true,
   "smoke_test_automation": {
-    "enabled": true,
+    "enabled": false,
     "environments": {
       "web": null,
       "cli": null,
