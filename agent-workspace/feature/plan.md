@@ -192,7 +192,7 @@ src/
 
 ---
 
-### [ ] Step 2: Complete AppDbContext with OnModelCreating Fluent API, indexes, and seed data
+### [x] Step 2: Complete AppDbContext with OnModelCreating Fluent API, indexes, and seed data
 - **Goal:** `AppDbContext` has complete `OnModelCreating` configuration with all FK relationships, indexes, unique constraints, and built-in seed data. All Fluent API configuration lives in `OnModelCreating` (no separate `IEntityTypeConfiguration<T>` files needed — the Configurations/ directory is unused, kept as a future extension point).
 - **Actions:**
   - Add `DbSet<MessageDrafts>` property
