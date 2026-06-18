@@ -5,7 +5,160 @@
         WindowStartupLocation="CenterScreen"
         MinHeight="600" MinWidth="800"
         Background="{DynamicResource AppBackground}">
+    <Window.Resources>
+        <Style x:Key="NavButtonStyle" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource NavInactiveForeground}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="NavBorder"
+                                Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}"
+                                CornerRadius="0">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="NavBorder" Property="Background"
+                                        Value="{DynamicResource BorderBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="NavBorder" Property="Background"
+                                        Value="{DynamicResource NavActiveBackground}"/>
+                                <Setter Property="Foreground"
+                                        Value="{DynamicResource AccentForeground}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid>
-        <!-- Studio layout added by subsequent features -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="280" MinWidth="150" MaxWidth="500"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="320" MinWidth="200" MaxWidth="500"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Column 0: Sidebar -->
+        <StackPanel Grid.Column="0" Background="{DynamicResource SidebarBackground}"
+                    Margin="0,20,0,0">
+            <RadioButton Content="💬 Chats"
+                         Command="{Binding NavigateCommand}"
+                         CommandParameter="Chats"
+                         Style="{StaticResource NavButtonStyle}"
+                         IsChecked="True"/>
+            <RadioButton Content="📝 Wiki"
+                         Command="{Binding NavigateCommand}"
+                         CommandParameter="Wiki"
+                         Style="{StaticResource NavButtonStyle}"/>
+            <RadioButton Content="🖼️ Media"
+                         Command="{Binding NavigateCommand}"
+                         CommandParameter="Media"
+                         Style="{StaticResource NavButtonStyle}"/>
+            <RadioButton Content="📄 Artifacts"
+                         Command="{Binding NavigateCommand}"
+                         CommandParameter="Artifacts"
+                         Style="{StaticResource NavButtonStyle}"/>
+            <RadioButton Content="📊 Usage"
+                         Command="{Binding NavigateCommand}"
+                         CommandParameter="Usage"
+                         Style="{StaticResource NavButtonStyle}"/>
+            <RadioButton Content="⚙️ Settings"
+                         Command="{Binding NavigateCommand}"
+                         CommandParameter="Settings"
+                         Style="{StaticResource NavButtonStyle}"/>
+        </StackPanel>
+
+        <!-- Column 1: Vertical GridSplitter -->
+        <GridSplitter Grid.Column="1"
+                      Width="4"
+                      Background="{DynamicResource GridSplitterBrush}"
+                      ResizeBehavior="PreviousAndNext"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"/>
+
+        <!-- Column 2: Center Content Area -->
+        <ContentControl Grid.Column="2"
+                        Content="{Binding SelectedScreen}"
+                        Background="{DynamicResource ContentBackground}">
+            <!-- ScreenTemplateSelector will be wired in Step 3 -->
+        </ContentControl>
+
+        <!-- Column 3: Vertical GridSplitter -->
+        <GridSplitter Grid.Column="3"
+                      Width="4"
+                      Background="{DynamicResource GridSplitterBrush}"
+                      ResizeBehavior="PreviousAndNext"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch"/>
+
+        <!-- Column 4: Right Panel -->
+        <Grid Grid.Column="4" Background="{DynamicResource PanelBackground}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Row 0: Artifacts Section -->
+            <Grid Grid.Row="0" Margin="12,8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0"
+                           Text="📄 Artifacts"
+                           Foreground="{DynamicResource PanelForeground}"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,8"/>
+                <TextBlock Grid.Row="1"
+                           Text="No artifacts in this chat yet"
+                           Foreground="{DynamicResource SubtleBrush}"
+                           FontSize="12"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+            </Grid>
+
+            <!-- Horizontal GridSplitter -->
+            <GridSplitter Grid.Row="1"
+                          Height="4"
+                          Background="{DynamicResource GridSplitterBrush}"
+                          ResizeBehavior="PreviousAndNext"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"/>
+
+            <!-- Row 2: Chat Navigation Section -->
+            <Grid Grid.Row="2" Margin="12,8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0"
+                           Text="🧭 Chat Navigation"
+                           Foreground="{DynamicResource PanelForeground}"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,8"/>
+                <TextBlock Grid.Row="1"
+                           Text="No messages to navigate"
+                           Foreground="{DynamicResource SubtleBrush}"
+                           FontSize="12"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Grid>
     </Grid>
 </Window>

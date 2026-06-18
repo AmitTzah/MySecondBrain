@@ -45,6 +45,16 @@ public enum ToolRiskLevel
     High
 }
 
+public enum ScreenType
+{
+    Chats,
+    Wiki,
+    Media,
+    Artifacts,
+    Usage,
+    Settings
+}
+
 public enum AppTheme
 {
     Dark,
