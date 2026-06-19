@@ -106,7 +106,7 @@ src/
 - **Live Smoke Test (Mandatory):** Launch the app. Verify a MySecondBrain icon appears in the Windows system tray (notification area, may be in the overflow menu — click ^ arrow if not visible). Right-click the tray icon — verify context menu appears with "Open Studio" and "Exit". Click "Open Studio" — verify the main window comes to foreground. Double-click the tray icon — verify the main window restores/comes to foreground. Click "Exit" — verify the app fully closes (check Task Manager — no MySecondBrain.UI.exe process).
 - **Suggested Commit Message:** `feat: implement WinFormsSystemTrayService with NotifyIcon and basic Show/Exit context menu`
 
-### [ ] Step 6: WinFormsSystemTrayService — full context menu with all events
+### [x] Step 6: WinFormsSystemTrayService — full context menu with all events
 - **Goal:** Add remaining context menu items: New Chat, Command Bar, Recent Chats (placeholder submenu), Settings. Wire up all five events.
 - **Actions:**
   - Add menu items: "New Chat" (fires `NewChatRequested`), "Command Bar" (fires `CommandBarRequested`), separator, "Recent Chats" (submenu with placeholder "No recent chats" disabled item), "Settings" (fires `SettingsRequested`), separator, "Exit" (fires `ExitRequested`).
