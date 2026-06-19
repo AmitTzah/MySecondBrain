@@ -93,7 +93,7 @@ src/
 - **Live Smoke Test (Mandatory):** Launch the app. Connect via WebSocket client to `ws://127.0.0.1:{port}/ws?token={token}`. Send a JSON message: `{"type":"ping"}`. Verify the app log file shows the received message. (The server logs the message but doesn't respond yet — the Word Add-in protocol is defined in Feature 13.) Close the WebSocket client connection. Verify the log shows "WebSocket client disconnected".
 - **Suggested Commit Message:** `feat: implement JSON message protocol for Kestrel WebSocket server`
 
-### [ ] Step 5: Fill WinFormsSystemTrayService stub — NotifyIcon with basic Show/Hide/Exit
+### [x] Step 5: Fill WinFormsSystemTrayService stub — NotifyIcon with basic Show/Hide/Exit
 - **Goal:** Replace the stub in [`WinFormsSystemTrayService.cs`](src/MySecondBrain.UI/Services/WinFormsSystemTrayService.cs:5) with a working system tray icon using `System.Windows.Forms.NotifyIcon`. The icon appears on startup with a basic context menu (Show Studio, Exit).
 - **Actions:**
   - Create `NotifyIcon` in constructor with app icon (use a placeholder `.ico` file in `Resources/` — a simple solid-color icon is fine for now; the design team provides final icon later).
