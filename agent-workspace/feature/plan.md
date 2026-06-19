@@ -249,7 +249,7 @@ The 3 chat visual themes (Classic/Compact/Bubble) are `DataTemplate` variants se
 
 ---
 
-### Step 4: WpfThemeProvider Implementation + Theme Toggle Button Wiring
+### [x] Step 4: WpfThemeProvider Implementation + Theme Toggle Button Wiring
 
 **Goal:** Fill in the `WpfThemeProvider` stub with a full implementation: `SetAppTheme()` swaps the `ResourceDictionary` at runtime via `MergedDictionaries.Clear()` + `Add()`, `SetFontSettings()` updates font DynamicResource values, events fire on theme changes, and all settings persist via `ISettingsRepository`. Wire the existing ☀ button in ChatView's chat header bar to `MainWindowViewModel.ToggleThemeCommand`.
 
