@@ -102,9 +102,13 @@ public partial class App : Application
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
 
-        // Show the system tray icon and wire basic events
+        // Show the system tray icon and wire all 5 tray events to MainWindow actions
         var trayService = _serviceProvider.GetRequiredService<ISystemTrayService>();
+        var mainWindowViewModel = mainWindow.DataContext as MainWindowViewModel;
+        if (mainWindowViewModel is null)
+            startupLogger.LogWarning("MainWindow.DataContext is not a MainWindowViewModel");
         trayService.Show();
+
         trayService.OpenStudioRequested += (s, args) =>
         {
             mainWindow.Dispatcher.Invoke(() =>
@@ -114,6 +118,29 @@ public partial class App : Application
                 mainWindow.Activate();
             });
         };
+
+        trayService.NewChatRequested += (s, args) =>
+        {
+            startupLogger.LogInformation("New chat requested — not yet implemented");
+        };
+
+        trayService.CommandBarRequested += (s, args) =>
+        {
+            startupLogger.LogInformation("Command bar requested — not yet implemented");
+        };
+
+        trayService.SettingsRequested += (s, args) =>
+        {
+            mainWindow.Dispatcher.Invoke(() =>
+            {
+                mainWindow.Show();
+                mainWindow.WindowState = WindowState.Normal;
+                mainWindow.Activate();
+                if (mainWindowViewModel is not null)
+                    mainWindowViewModel.SelectedScreen = ScreenType.Settings;
+            });
+        };
+
         trayService.ExitRequested += (s, args) => App.Current.Shutdown();
 
         // Start the embedded Kestrel WebSocket server (non-blocking)

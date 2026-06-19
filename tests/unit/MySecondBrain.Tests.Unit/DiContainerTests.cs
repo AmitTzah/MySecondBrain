@@ -167,6 +167,7 @@ public class DiContainerTests
     {
         var mainWindow = _provider.GetRequiredService<MainWindow>();
         Assert.NotNull(mainWindow);
+        Assert.IsType<MainWindowViewModel>(mainWindow.DataContext);
     }
 
     [Fact]
@@ -481,5 +482,55 @@ public class DiContainerTests
 
         service.Show();
         Assert.True(service.IsVisible);
+    }
+
+    [StaFact]
+    public void SystemTray_ExitRequested_DisposesAndClearsEvents()
+    {
+        var service = (WinFormsSystemTrayService)_provider.GetRequiredService<ISystemTrayService>();
+        var contextMenuField = typeof(WinFormsSystemTrayService).GetField("_contextMenu",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var contextMenu = (ContextMenuStrip)contextMenuField.GetValue(service)!;
+        var exitItem = (ToolStripMenuItem)contextMenu.Items[7];
+
+        // Subscribe to ExitRequested and fire it
+        var exitFired = false;
+        service.ExitRequested += (_, _) => exitFired = true;
+        exitItem.PerformClick();
+        Assert.True(exitFired, "ExitRequested should fire on Exit click");
+
+        // Dispose — verify cleanup
+        service.Dispose();
+        Assert.False(service.IsVisible, "IsVisible should be false after Dispose");
+
+        // Verify all event backing fields are nulled after Dispose
+        var eventNames = new[] { "OpenStudioRequested", "NewChatRequested", "CommandBarRequested",
+            "SettingsRequested", "ExitRequested" };
+        foreach (var evt in eventNames)
+        {
+            var field = typeof(WinFormsSystemTrayService).GetField(evt,
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            var delegateValue = (Delegate?)field!.GetValue(service);
+            Assert.Null(delegateValue);
+        }
+    }
+
+    [StaFact]
+    public void SystemTray_UpdateRecentChats_SequentialUpdates_NoDuplicateEntries()
+    {
+        var service = (WinFormsSystemTrayService)_provider.GetRequiredService<ISystemTrayService>();
+        var recentChatsField = typeof(WinFormsSystemTrayService).GetField("_recentChatsMenu",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var recentChats = (ToolStripMenuItem)recentChatsField.GetValue(service)!;
+
+        // Show must be called before UpdateRecentChats works in real flow
+        service.Show();
+
+        service.UpdateRecentChats(["Test A"]);
+        service.UpdateRecentChats(["Test B"]);
+
+        // After two sequential updates, only the last set should remain (no double entries)
+        var item = Assert.IsType<ToolStripMenuItem>(Assert.Single(recentChats.DropDownItems));
+        Assert.Equal("Test B", item.Text);
     }
 }
