@@ -136,7 +136,7 @@ src/
   2. **Generation indicator:** Add a temporary test hotkey in `App.xaml.cs` that toggles `ISystemTrayService.SetGenerationIndicator`. Verify the tray icon changes to include a green dot when toggled on, and reverts to the normal icon when toggled off.
 - **Suggested Commit Message:** `feat: implement minimize-to-tray on close and generation indicator icon`
 
-### [ ] Step 8: Wire system tray events to MainWindow + App startup lifecycle
+### [x] Step 8: Wire system tray events to MainWindow + App startup lifecycle
 - **Goal:** Wire the five system tray events to actual MainWindow/MainWindowViewModel actions. Integrate system tray startup into `App.xaml.cs`.
 - **Actions:**
   - In `App.xaml.cs` `OnStartup`, after `mainWindow.Show()`: resolve `ISystemTrayService`, call `Show()`, subscribe to events.
