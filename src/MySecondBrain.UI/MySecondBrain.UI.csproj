@@ -32,6 +32,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\MySecondBrain.Core\MySecondBrain.Core.csproj" />
     <ProjectReference Include="..\MySecondBrain.Data\MySecondBrain.Data.csproj" />
     <ProjectReference Include="..\MySecondBrain.Services\MySecondBrain.Services.csproj" />
