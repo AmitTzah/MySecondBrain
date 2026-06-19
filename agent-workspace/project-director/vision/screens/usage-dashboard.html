@@ -99,6 +99,8 @@
       </table>
 
       <div class="section-title">AI Feedback Summary</div>
+
+      <h4 style="font-size:12px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:8px">Feedback Per Persona</h4>
       <table class="feedback-table">
         <thead><tr><th>Persona</th><th>Rated</th><th>👍</th><th>👎</th><th>Approval</th></tr></thead>
         <tbody>
@@ -107,6 +109,47 @@
           <tr><td>✍️ Writing Coach</td><td>18</td><td>14</td><td>4</td><td><div class="approval-bar-wrap"><div class="approval-bar" style="width:78%"></div></div>78%</td></tr>
         </tbody>
       </table>
+
+      <h4 style="font-size:12px;font-weight:700;color:#666;text-transform:uppercase;margin:20px 0 8px">Feedback Per Model</h4>
+      <table class="feedback-table">
+        <thead><tr><th>Model</th><th>Rated</th><th>👍</th><th>👎</th><th>Approval</th></tr></thead>
+        <tbody>
+          <tr><td>GPT-4o</td><td>35</td><td>30</td><td>5</td><td><div class="approval-bar-wrap"><div class="approval-bar" style="width:86%"></div></div>86%</td></tr>
+          <tr><td>Claude 3.5 Sonnet</td><td>22</td><td>18</td><td>4</td><td><div class="approval-bar-wrap"><div class="approval-bar" style="width:82%"></div></div>82%</td></tr>
+          <tr><td>DeepSeek V3</td><td>13</td><td>11</td><td>2</td><td><div class="approval-bar-wrap"><div class="approval-bar" style="width:85%"></div></div>85%</td></tr>
+        </tbody>
+      </table>
+
+      <div style="display:flex;gap:20px;margin:20px 0">
+        <div style="flex:1;border:2px dashed #ddd;border-radius:6px;padding:16px;background:#fafafa">
+          <h4 style="font-size:12px;font-weight:700;color:#666;margin-bottom:10px">🏆 Top 5 Most 👍 Personas</h4>
+          <table style="width:100%;border-collapse:collapse">
+            <tr><th style="text-align:left;font-size:10px;color:#999;text-transform:uppercase;padding:4px 6px;border-bottom:1px dashed #ddd">#</th><th style="text-align:left;font-size:10px;color:#999;text-transform:uppercase;padding:4px 6px;border-bottom:1px dashed #ddd">Persona</th><th style="text-align:right;font-size:10px;color:#999;text-transform:uppercase;padding:4px 6px;border-bottom:1px dashed #ddd">👍</th></tr>
+            <tr><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee">1</td><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee">🐍 Python Expert</td><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee;text-align:right">26</td></tr>
+            <tr><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee">2</td><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee">💻 Code Helper</td><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee;text-align:right">19</td></tr>
+            <tr><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee">3</td><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee">✍️ Writing Coach</td><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee;text-align:right">14</td></tr>
+            <tr><td style="padding:4px 6px;font-size:13px;color:#bbb;border-bottom:1px dashed #eee">4</td><td style="padding:4px 6px;font-size:13px;color:#bbb;border-bottom:1px dashed #eee">—</td><td style="padding:4px 6px;font-size:13px;color:#bbb;border-bottom:1px dashed #eee;text-align:right">—</td></tr>
+            <tr><td style="padding:4px 6px;font-size:13px;color:#bbb">5</td><td style="padding:4px 6px;font-size:13px;color:#bbb">—</td><td style="padding:4px 6px;font-size:13px;color:#bbb;text-align:right">—</td></tr>
+          </table>
+        </div>
+        <div style="flex:1;border:2px dashed #ddd;border-radius:6px;padding:16px;background:#fafafa">
+          <h4 style="font-size:12px;font-weight:700;color:#666;margin-bottom:10px">💔 Top 5 Most 👎 Personas</h4>
+          <table style="width:100%;border-collapse:collapse">
+            <tr><th style="text-align:left;font-size:10px;color:#999;text-transform:uppercase;padding:4px 6px;border-bottom:1px dashed #ddd">#</th><th style="text-align:left;font-size:10px;color:#999;text-transform:uppercase;padding:4px 6px;border-bottom:1px dashed #ddd">Persona</th><th style="text-align:right;font-size:10px;color:#999;text-transform:uppercase;padding:4px 6px;border-bottom:1px dashed #ddd">👎</th></tr>
+            <tr><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee">1</td><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee">✍️ Writing Coach</td><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee;text-align:right">4</td></tr>
+            <tr><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee">2</td><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee">🐍 Python Expert</td><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee;text-align:right">4</td></tr>
+            <tr><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee">3</td><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee">💻 Code Helper</td><td style="padding:4px 6px;font-size:13px;color:#333;border-bottom:1px dashed #eee;text-align:right">3</td></tr>
+            <tr><td style="padding:4px 6px;font-size:13px;color:#bbb;border-bottom:1px dashed #eee">4</td><td style="padding:4px 6px;font-size:13px;color:#bbb;border-bottom:1px dashed #eee">—</td><td style="padding:4px 6px;font-size:13px;color:#bbb;border-bottom:1px dashed #eee;text-align:right">—</td></tr>
+            <tr><td style="padding:4px 6px;font-size:13px;color:#bbb">5</td><td style="padding:4px 6px;font-size:13px;color:#bbb">—</td><td style="padding:4px 6px;font-size:13px;color:#bbb;text-align:right">—</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="chart-box" style="margin-bottom:20px">
+        <div class="chart-title">Approval Trend</div>
+        <div class="chart-placeholder">📈</div>
+        <span style="font-size:11px;color:#999">Line chart: approval percentage over time (daily/weekly)</span>
+      </div>
     </div>
   </div>
   <div class="tooltip-toast" id="tooltip-toast"></div>

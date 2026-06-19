@@ -148,6 +148,6 @@ Replaces the Studio's main content area (center column). Sidebar and right panel
 
 1. ⚠️ FLAGGED: Per-panel independent conversations mean each panel maintains its own message history. Accepting one panel appends its ENTIRE multi-turn conversation to the main chat — this could be surprising if the main chat had a different context. Architect should ensure the transition is clean.
 
-2. ⚠️ FLAGGED: M spec originally described single-prompt comparison. This spec adds per-panel multi-turn chatting — a significant expansion. The feature spec M1-M4 should be updated to reflect this simplified Accept flow and per-panel text inputs.
+2. ✅ RESOLVED: M feature spec has been updated to reflect per-panel multi-turn chatting with simplified Accept flow and per-panel text inputs. The screen spec and feature spec are now aligned.
 
 3. ⚠️ FLAGGED: Simultaneous multi-turn conversations with N Personas = N independent API connection streams that may run for extended periods. Cost and connection management implications.

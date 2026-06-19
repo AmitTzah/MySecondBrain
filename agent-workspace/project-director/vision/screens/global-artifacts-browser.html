@@ -57,15 +57,16 @@
         <input type="text" placeholder="🔍 Search artifacts..." data-tooltip="Would search all artifacts by name across all chats.">
         <select data-tooltip="Would filter artifacts by file type."><option>All Types</option><option>Python</option><option>JavaScript</option><option>Markdown</option><option>JSON</option><option>YAML</option><option>Other</option></select>
         <select data-tooltip="Would filter artifacts by the source chat they were generated in."><option>All Chats</option><option>Python Async Patterns</option><option>Website Redesign</option></select>
+        <select data-tooltip="Would filter by date range."><option>All Time</option><option>Today</option><option>This Week</option><option>This Month</option><option>Custom Range</option></select>
         <select data-tooltip="Would sort artifacts. Default: newest first."><option>Newest</option><option>Name A-Z</option><option>Type</option></select>
       </div>
       <table class="data-table">
-        <thead><tr><th data-tooltip="Click to sort by name.">Name</th><th>Type</th><th>Source Chat</th><th>Created</th><th>Versions</th></tr></thead>
+        <thead><tr><th data-tooltip="Click to sort by name.">Name</th><th>Type</th><th>Source Chat</th><th>Created</th><th>Last Modified</th><th>Versions</th></tr></thead>
         <tbody>
-          <tr><td style="font-weight:600;cursor:pointer" data-tooltip="Would open this artifact in the Studio side panel with syntax highlighting, version dropdown, and Save to Disk/Save to Wiki buttons.">async_examples.py</td><td><span class="type-badge">Python</span></td><td><span class="chat-link" data-tooltip="Would open Python Async Patterns chat in Studio.">Python Async Patterns</span></td><td>Jun 15, 2026</td><td>3</td></tr>
-          <tr><td style="font-weight:600;cursor:pointer" data-tooltip="Would open this artifact in the Studio side panel.">README.md</td><td><span class="type-badge">Markdown</span></td><td><span class="chat-link">Python Async Patterns</span></td><td>Jun 15, 2026</td><td>1</td></tr>
-          <tr><td style="font-weight:600;cursor:pointer">config.yaml</td><td><span class="type-badge">YAML</span></td><td><span class="chat-link">Website Redesign</span></td><td>Jun 14, 2026</td><td>2</td></tr>
-          <tr><td style="font-weight:600;cursor:pointer">styles.css</td><td><span class="type-badge">Other</span></td><td><span class="chat-link">Website Redesign</span></td><td>Jun 14, 2026</td><td>5</td></tr>
+          <tr><td style="font-weight:600;cursor:pointer" data-tooltip="Would open this artifact in the Studio side panel with syntax highlighting, version dropdown, and Save to Disk/Save to Wiki buttons.">async_examples.py</td><td><span class="type-badge">Python</span></td><td><span class="chat-link" data-tooltip="Would open Python Async Patterns chat in Studio.">Python Async Patterns</span></td><td>Jun 15, 2026</td><td>Jun 15, 2026</td><td>3</td></tr>
+          <tr><td style="font-weight:600;cursor:pointer" data-tooltip="Would open this artifact in the Studio side panel.">README.md</td><td><span class="type-badge">Markdown</span></td><td><span class="chat-link">Python Async Patterns</span></td><td>Jun 15, 2026</td><td>Jun 15, 2026</td><td>1</td></tr>
+          <tr><td style="font-weight:600;cursor:pointer">config.yaml</td><td><span class="type-badge">YAML</span></td><td><span class="chat-link">Website Redesign</span></td><td>Jun 14, 2026</td><td>Jun 15, 2026</td><td>2</td></tr>
+          <tr><td style="font-weight:600;cursor:pointer">styles.css</td><td><span class="type-badge">Other</span></td><td><span class="chat-link">Website Redesign</span></td><td>Jun 14, 2026</td><td>Jun 15, 2026</td><td>5</td></tr>
         </tbody>
       </table>
     </div>

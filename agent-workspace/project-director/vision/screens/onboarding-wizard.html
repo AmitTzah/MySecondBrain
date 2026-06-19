@@ -842,32 +842,49 @@
 
         <table class="hotkey-table">
           <thead>
-            <tr><th>Text Action</th><th>Default Hotkey</th><th></th></tr>
+            <tr><th>Text Action</th><th>Default Hotkey</th><th>Capture Scope</th><th>Apply Mode</th><th></th></tr>
           </thead>
           <tbody>
             <tr>
               <td>Rewrite</td>
               <td><span class="hk-combo">Alt+Q</span></td>
+              <td><span style="font-size:11px;color:#666">selection</span></td>
+              <td><span style="font-size:11px;color:#666">replaceSelection</span></td>
               <td><button class="btn btn-sm" onclick="openKeyRecorder('rewrite')" data-tooltip="Would open a key recorder overlay: 'Press new key combination...' Captures the next key combo, checks for conflicts with Windows or other apps.">Change</button></td>
             </tr>
             <tr>
               <td>Summarize</td>
               <td><span class="hk-combo">Alt+W</span></td>
+              <td><span style="font-size:11px;color:#666">selection</span></td>
+              <td><span style="font-size:11px;color:#666">showOnly</span></td>
               <td><button class="btn btn-sm" onclick="openKeyRecorder('summarize')" data-tooltip="Would open a key recorder overlay to capture a new hotkey combination for Summarize.">Change</button></td>
             </tr>
             <tr>
               <td>Explain</td>
               <td><span class="hk-combo">Alt+E</span></td>
+              <td><span style="font-size:11px;color:#666">selection</span></td>
+              <td><span style="font-size:11px;color:#666">showOnly</span></td>
               <td><button class="btn btn-sm" onclick="openKeyRecorder('explain')" data-tooltip="Would open a key recorder overlay to capture a new hotkey combination for Explain.">Change</button></td>
             </tr>
             <tr>
               <td>Translate</td>
               <td><span class="hk-combo">Alt+R</span></td>
+              <td><span style="font-size:11px;color:#666">selection</span></td>
+              <td><span style="font-size:11px;color:#666">replaceSelection</span></td>
               <td><button class="btn btn-sm" onclick="openKeyRecorder('translate')" data-tooltip="Would open a key recorder overlay to capture a new hotkey combination for Translate.">Change</button></td>
+            </tr>
+            <tr>
+              <td>Continue Writing</td>
+              <td><span class="hk-combo">Alt+C</span></td>
+              <td><span style="font-size:11px;color:#666">focusedElement</span></td>
+              <td><span style="font-size:11px;color:#666">insertAtCursor</span></td>
+              <td><button class="btn btn-sm" onclick="openKeyRecorder('continue')" data-tooltip="Would open a key recorder overlay to capture a new hotkey combination for Continue Writing.">Change</button></td>
             </tr>
             <tr>
               <td>Command Bar</td>
               <td><span class="hk-combo">Alt+Space</span></td>
+              <td><span style="font-size:11px;color:#999">—</span></td>
+              <td><span style="font-size:11px;color:#999">—</span></td>
               <td><button class="btn btn-sm" onclick="openKeyRecorder('cmdbar')" data-tooltip="Would open a key recorder overlay to capture a new hotkey combination for the Command Bar (Alt+Space default).">Change</button></td>
             </tr>
           </tbody>

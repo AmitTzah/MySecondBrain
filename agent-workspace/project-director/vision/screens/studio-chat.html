@@ -20,6 +20,10 @@
     .sidebar-tabs{display:flex;border-bottom:2px dashed #ddd}
     .sidebar-tab{flex:1;text-align:center;padding:8px;font-size:12px;font-weight:600;color:#999;cursor:pointer;border-bottom:2px solid transparent}
     .sidebar-tab.active{color:#2563eb;border-bottom-color:#2563eb}
+    .sidebar-sort{padding:4px 8px;border-bottom:1px dashed #eee;display:flex;align-items:center;gap:4px}
+    .sidebar-sort select{padding:3px 6px;border:1px dashed #bbb;border-radius:3px;font-size:10px;background:#fff;color:#666;font-family:system-ui,sans-serif;width:100%}
+    .chat-entry-tags{display:flex;gap:2px;margin-top:3px;flex-wrap:wrap}
+    .chat-entry-tag{font-size:9px;padding:1px 5px;border-radius:3px;background:#e8f0fe;color:#2563eb;border:1px dashed #93c5fd}
     .sidebar-chatlist{flex:1;overflow-y:auto;padding:4px 0}
     .chat-group-label{padding:8px 12px 4px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:1px}
     .chat-entry{padding:10px 12px;border-bottom:1px dashed #eee;cursor:pointer;position:relative}
@@ -84,6 +88,15 @@
     .thinking-block.streaming .thinking-header{background:#fffbf0}
     .scroll-bottom{position:sticky;bottom:8px;text-align:center}
     .scroll-bottom button{background:#333;color:#ffd700;padding:8px 14px;border-radius:20px;font-size:11px;cursor:pointer;border:2px dashed #ffd700}
+    /* Message Selection and Bulk Actions */
+    .msg-select{position:absolute;left:-24px;top:50%;transform:translateY(-50%);opacity:0;transition:opacity .15s;cursor:pointer;width:16px;height:16px}
+    .msg:hover .msg-select,.msg-select:checked{opacity:1}
+    .bulk-actions-bar{display:none;align-items:center;gap:8px;padding:8px 16px;background:#f0f5ff;border:2px dashed #2563eb;border-radius:6px;margin:0 16px 8px;font-size:12px;color:#333}
+    .bulk-actions-bar.visible{display:flex}
+    .bulk-actions-bar .bulk-btn{padding:4px 10px;border:1px dashed #bbb;border-radius:3px;font-size:11px;cursor:pointer;background:#fff;color:#666}
+    .bulk-actions-bar .bulk-btn:hover{background:#e8f0fe;color:#2563eb}
+    .continue-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;margin:0 16px 16px;border:2px dashed #2563eb;border-radius:6px;font-size:13px;cursor:pointer;background:#f0f5ff;color:#2563eb;font-weight:500}
+    .continue-btn:hover{background:#dbeafe;border-style:solid}
     /* Input */
     .input-area{border-top:2px dashed #bbb;background:#fafafa}
     .input-toolbar{display:flex;align-items:center;padding:6px 12px;gap:6px;border-bottom:1px dashed #eee;flex-wrap:wrap}
@@ -151,6 +164,14 @@
         <div class="sidebar-tab active">Chats</div>
         <div class="sidebar-tab">Timeline</div>
       </div>
+      <div class="sidebar-sort">
+        <select data-tooltip="Would re-order the chat list. Default: Most Recent.">
+          <option>Most Recent</option>
+          <option>Name A-Z</option>
+          <option>Date Created</option>
+          <option>Last Activity</option>
+        </select>
+      </div>
       <div class="sidebar-chatlist">
         <div style="padding:6px 12px">
           <button class="toolbar-btn active" style="width:100%;text-align:center;font-weight:600" data-tooltip="Would open the Persona picker. Selecting a Persona creates a new chat tab with that Persona's system prompt, model, and mode.">+ New Chat</button>
@@ -159,6 +180,7 @@
         <div class="chat-entry active">
           <div class="chat-entry-title">Python Async Patterns</div>
           <div class="chat-entry-preview">Here's a summary of the key async patterns we discussed...</div>
+          <div class="chat-entry-tags"><span class="chat-entry-tag" data-tooltip="Tag: Python">Python</span><span class="chat-entry-tag" data-tooltip="Tag: async">async</span></div>
           <div class="chat-entry-meta">Python Expert · 2m ago</div>
           <div class="chat-entry-star">★</div>
           <span class="chat-entry-dots" data-tooltip="Would open context menu: Rename, Delete, Archive, Duplicate, Export, Pin, Tags, Move to Folder, Color Label, Lock Chat. Also accessible via right-click.">⋯</span>
@@ -167,6 +189,7 @@
         <div class="chat-entry" style="padding-left:20px">
           <div class="chat-entry-title">Debugging Memory Leak</div>
           <div class="chat-entry-preview">The memory profiler shows the leak is in the event loop...</div>
+          <div class="chat-entry-tags"><span class="chat-entry-tag" data-tooltip="Tag: debugging">debugging</span><span class="chat-entry-tag" data-tooltip="Tag: C#">C#</span><span class="chat-entry-tag" data-tooltip="Tag: memory">memory</span></div>
           <div class="chat-entry-meta">Python Expert · 2h ago</div>
           <span class="chat-entry-dots" data-tooltip="Would open context menu: Rename, Delete, Archive, Duplicate, Export, Pin, Tags, Move to Folder, Color Label, Lock Chat.">⋯</span>
         </div>
@@ -174,6 +197,7 @@
         <div class="chat-entry" style="padding-left:20px">
           <div class="chat-entry-title">Chapter 3 Outline 🔒</div>
           <div class="chat-entry-preview">🔒 Locked</div>
+          <div class="chat-entry-tags"><span class="chat-entry-tag" data-tooltip="Tag: writing">writing</span><span class="chat-entry-tag" data-tooltip="Tag: locked">locked</span></div>
           <div class="chat-entry-meta">Writing Coach · 1d ago</div>
           <span class="chat-entry-dots" data-tooltip="Would open context menu: Rename, Delete, Archive, Duplicate, Export, Pin, Tags, Move to Folder, Color Label, Lock Chat.">⋯</span>
         </div>
@@ -182,12 +206,14 @@
         <div class="chat-entry">
           <div class="chat-entry-title">Website Redesign Ideas</div>
           <div class="chat-entry-preview">Let me suggest some modern design approaches...</div>
+          <div class="chat-entry-tags"><span class="chat-entry-tag" data-tooltip="Tag: design">design</span><span class="chat-entry-tag" data-tooltip="Tag: web">web</span></div>
           <div class="chat-entry-meta">Writing Coach · 45m ago</div>
           <span class="chat-entry-dots" data-tooltip="Would open context menu: Rename, Delete, Archive, Duplicate, Export, Pin, Tags, Move to Folder, Color Label, Lock Chat.">⋯</span>
         </div>
         <div class="chat-entry">
           <div class="chat-entry-title">Chapter 3 Outline 🔒</div>
           <div class="chat-entry-preview">🔒 Locked</div>
+          <div class="chat-entry-tags"><span class="chat-entry-tag" data-tooltip="Tag: writing">writing</span><span class="chat-entry-tag" data-tooltip="Tag: locked">locked</span></div>
           <div class="chat-entry-meta">Writing Coach · 1d ago</div>
           <span class="chat-entry-dots" data-tooltip="Would open context menu: Rename, Delete, Archive, Duplicate, Export, Pin, Tags, Move to Folder, Color Label, Lock Chat.">⋯</span>
         </div>
@@ -223,8 +249,16 @@
         <button class="chat-header-btn" data-tooltip="Would open menu: Clear Conversation, Export Chat, Duplicate Chat, Chat Tree, Edit System Message, Summarize Chat, Make Temporary.">⋯</button>
       </div>
 
+      <div class="bulk-actions-bar" id="bulkActionsBar">
+        <span id="bulkCount" style="font-weight:600">0 selected</span>
+        <span class="bulk-btn" data-tooltip="Would copy selected messages as Markdown to clipboard.">📋 Copy Selected</span>
+        <span class="bulk-btn" data-tooltip="Would delete selected messages from the conversation history.">🗑️ Delete Selected</span>
+        <span class="bulk-btn" data-tooltip="Would quote selected messages in a new reply.">💬 Quote Selected</span>
+      </div>
+
       <div class="conversation">
         <div class="msg msg-user">
+          <input type="checkbox" class="msg-select" onchange="updateBulkActions()" data-tooltip="Would select this message. When at least one message is selected, a bulk actions bar appears above the conversation.">
           <div class="msg-role">You · 2 min ago</div>
           <div class="msg-content">Can you explain Python async patterns and when to use asyncio vs threading?</div>
           <div class="msg-actions">
@@ -280,6 +314,7 @@
         </div>
 
         <div class="msg msg-user">
+          <input type="checkbox" class="msg-select" onchange="updateBulkActions()">
           <div class="msg-role">You · 1 min ago</div>
           <div class="msg-content">What about using both together?</div>
           <div class="msg-actions">
@@ -294,6 +329,7 @@
         </div>
 
         <div class="msg msg-assistant">
+          <input type="checkbox" class="msg-select" onchange="updateBulkActions()">
           <div class="msg-role">🤖 Python Expert · streaming... ▌</div>
           <!-- Thinking Block (streaming - in progress) -->
           <div class="thinking-block streaming" data-tooltip="AI is currently thinking. The counter shows elapsed seconds. Click to expand and see the streaming reasoning in real time. The final response will appear below once thinking completes.">
@@ -320,6 +356,8 @@
             <button class="msg-action-btn" data-tooltip="Would remove this message from history. Undo with Ctrl+Z.">🗑️</button>
           </div>
         </div>
+
+        <div class="continue-btn" data-tooltip="Would send a continuation request to the AI, picking up where the last response left off.">➕ Continue</div>
 
         <div class="scroll-bottom">
           <button data-tooltip="Would smoothly scroll to the latest message.">↓ Scroll to bottom</button>
@@ -419,6 +457,19 @@
   <div id="tooltip-toast" class="tooltip-toast"></div>
 
   <script>
+    function updateBulkActions() {
+      var checkboxes = document.querySelectorAll('.msg-select:checked');
+      var count = checkboxes.length;
+      var bar = document.getElementById('bulkActionsBar');
+      var label = document.getElementById('bulkCount');
+      if (count > 0) {
+        bar.classList.add('visible');
+        label.textContent = count + ' selected';
+      } else {
+        bar.classList.remove('visible');
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
       var toast = document.getElementById('tooltip-toast');
       if (!toast) {
