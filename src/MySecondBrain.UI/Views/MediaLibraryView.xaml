@@ -1,8 +1,9 @@
 <UserControl x:Class="MySecondBrain.UI.Views.MediaLibraryView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="{DynamicResource ContentBackground}">
-    <Grid>
+             Background="{DynamicResource ContentBackground}"
+             AutomationProperties.AutomationId="MediaLibraryView">
+    <Grid AutomationProperties.AutomationId="MediaLibraryView">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>

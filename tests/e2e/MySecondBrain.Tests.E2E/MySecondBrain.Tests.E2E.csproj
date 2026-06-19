@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows10.0.17763</TargetFramework>
+    <RootNamespace>MySecondBrain.Tests.E2E</RootNamespace>
+    <AssemblyName>MySecondBrain.Tests.E2E</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <WindowsSdkPackageVersion>10.0.17763.56</WindowsSdkPackageVersion>
+    <UseWPF>true</UseWPF>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <Description>E2E tests for MySecondBrain using FlaUI.UIA3 + xUnit — WPF desktop automation</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit" Version="2.*" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
+    <PackageReference Include="coverlet.collector" Version="6.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="FlaUI.UIA3" Version="4.*" />
+    <PackageReference Include="FlaUI.Core" Version="4.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\MySecondBrain.UI\MySecondBrain.UI.csproj" />
+  </ItemGroup>
+</Project>

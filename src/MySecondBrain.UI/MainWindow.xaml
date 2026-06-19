@@ -6,7 +6,8 @@
         Title="MySecondBrain" Height="900" Width="1400"
         WindowStartupLocation="CenterScreen"
         MinHeight="600" MinWidth="800"
-        Background="{DynamicResource AppBackground}">
+        Background="{DynamicResource AppBackground}"
+        AutomationProperties.AutomationId="MainWindow">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <conv:BoolToGridLengthConverter x:Key="BoolToGridLengthConverter"/>
@@ -74,7 +75,7 @@
             SettingsTemplate="{StaticResource SettingsTemplate}"/>
     </Window.Resources>
 
-    <Grid>
+    <Grid AutomationProperties.AutomationId="RootLayout">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="280" MinWidth="150" MaxWidth="500"/>
             <ColumnDefinition Width="Auto"/>
@@ -84,7 +85,8 @@
         </Grid.ColumnDefinitions>
 
         <!-- Column 0: Sidebar -->
-        <Grid Grid.Column="0" Background="{DynamicResource SidebarBackground}">
+        <Grid Grid.Column="0" Background="{DynamicResource SidebarBackground}"
+              AutomationProperties.AutomationId="SidebarPanel">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -96,27 +98,33 @@
                              Command="{Binding NavigateCommand}"
                              CommandParameter="Chats"
                              Style="{StaticResource NavButtonStyle}"
-                             IsChecked="True"/>
+                             IsChecked="True"
+                             AutomationProperties.AutomationId="NavChats"/>
                 <RadioButton Content="📝 Wiki"
                              Command="{Binding NavigateCommand}"
                              CommandParameter="Wiki"
-                             Style="{StaticResource NavButtonStyle}"/>
+                             Style="{StaticResource NavButtonStyle}"
+                             AutomationProperties.AutomationId="NavWiki"/>
                 <RadioButton Content="🖼️ Media"
                              Command="{Binding NavigateCommand}"
                              CommandParameter="Media"
-                             Style="{StaticResource NavButtonStyle}"/>
+                             Style="{StaticResource NavButtonStyle}"
+                             AutomationProperties.AutomationId="NavMedia"/>
                 <RadioButton Content="📄 Artifacts"
                              Command="{Binding NavigateCommand}"
                              CommandParameter="Artifacts"
-                             Style="{StaticResource NavButtonStyle}"/>
+                             Style="{StaticResource NavButtonStyle}"
+                             AutomationProperties.AutomationId="NavArtifacts"/>
                 <RadioButton Content="📊 Usage"
                              Command="{Binding NavigateCommand}"
                              CommandParameter="Usage"
-                             Style="{StaticResource NavButtonStyle}"/>
+                             Style="{StaticResource NavButtonStyle}"
+                             AutomationProperties.AutomationId="NavUsage"/>
                 <RadioButton Content="⚙️ Settings"
                              Command="{Binding NavigateCommand}"
                              CommandParameter="Settings"
-                             Style="{StaticResource NavButtonStyle}"/>
+                             Style="{StaticResource NavButtonStyle}"
+                             AutomationProperties.AutomationId="NavSettings"/>
             </StackPanel>
 
             <!-- Chat List Section -->
@@ -189,10 +197,12 @@
                       Background="{DynamicResource GridSplitterBrush}"
                       ResizeBehavior="PreviousAndNext"
                       HorizontalAlignment="Stretch"
-                      VerticalAlignment="Stretch"/>
+                      VerticalAlignment="Stretch"
+                      AutomationProperties.AutomationId="SidebarSplitter"/>
 
         <!-- Column 2: Center Content Area -->
-        <Grid Grid.Column="2">
+        <Grid Grid.Column="2"
+              AutomationProperties.AutomationId="ContentArea">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -234,12 +244,14 @@
                       ResizeBehavior="PreviousAndNext"
                       HorizontalAlignment="Stretch"
                       VerticalAlignment="Stretch"
-                      Visibility="{Binding IsRightPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                      Visibility="{Binding IsRightPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"
+                      AutomationProperties.AutomationId="RightPanelSplitter"/>
 
         <!-- Column 4: Right Panel -->
         <Grid Grid.Column="4" Background="{DynamicResource PanelBackground}"
               MinWidth="320"
-              Visibility="{Binding IsRightPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+              Visibility="{Binding IsRightPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"
+              AutomationProperties.AutomationId="RightPanel">
             <Grid.RowDefinitions>
                 <RowDefinition Height="2*"/>
                 <RowDefinition Height="Auto"/>
