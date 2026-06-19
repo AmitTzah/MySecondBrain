@@ -18,6 +18,16 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private bool _isRightPanelVisible = true;
 
+    [ObservableProperty]
+    private string _themeToggleIcon = "☀";
+
+    [ObservableProperty]
+    private string _fontSizeDisplay = string.Empty;
+
+    public AppTheme CurrentAppTheme => _themeProvider.CurrentAppTheme;
+
+    public ChatTheme CurrentChatTheme => _themeProvider.CurrentChatTheme;
+
     partial void OnSelectedScreenChanged(ScreenType value)
     {
         // Right panel (Artifacts + Chat Nav) is only for Studio Chat screen
@@ -33,6 +43,7 @@ public partial class MainWindowViewModel : ObservableObject
         _themeProvider = themeProvider;
         _systemTray = systemTray;
         _logger = logger;
+        FontSizeDisplay = _themeProvider.FontSize.ToString("F0");
     }
 
     [RelayCommand]
@@ -46,5 +57,27 @@ public partial class MainWindowViewModel : ObservableObject
         {
             _logger.LogWarning("Unrecognized screen name in Navigate: {ScreenName}", screenName);
         }
+    }
+
+    [RelayCommand]
+    private void ToggleTheme()
+    {
+        var newTheme = _themeProvider.CurrentAppTheme == AppTheme.Light
+            ? AppTheme.Dark : AppTheme.Light;
+        _themeProvider.SetAppTheme(newTheme);
+        ThemeToggleIcon = newTheme == AppTheme.Dark ? "🌙" : "☀";
+        OnPropertyChanged(nameof(CurrentAppTheme));
+    }
+
+    [RelayCommand]
+    private void IncreaseFont()
+    {
+        // Stub — wired in Step 6
+    }
+
+    [RelayCommand]
+    private void DecreaseFont()
+    {
+        // Stub — wired in Step 6
     }
 }
