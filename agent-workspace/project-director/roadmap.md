@@ -51,6 +51,8 @@ App shell, navigation, all empty screens, theming, and Windows platform infrastr
 
 MainWindow three-region shell (sidebar + content + right panel), tabbed navigation with drag-drop reorder, screen routing, and sidebar shell with chat list/Trash/Timeline tabs. All 8 empty screen shells: Studio Chat, Onboarding Wizard, Model Comparison, Settings, Wiki Browser, Usage Dashboard, Media Library, and Global Artifacts Browser. Dark/Light theme system with `DynamicResource` instant toggle, 3 chat visual themes (Classic, Compact, Bubble), and font settings (family, size 10–24px, weight).
 
+HTML mock reference: [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html) (shell layout: sidebar, tab bar, right panel).
+
 Dependencies: 2, 4.
 Vision groups: none (infrastructure — enables all screens).
 
@@ -60,6 +62,15 @@ System tray integration (`NotifyIcon` with context menu, minimize-to-tray, gener
 
 Dependencies: 2, 5.
 Vision groups: P (P1, P2, P5, P6, P8 — core platform infrastructure).
+
+### Feature 5b — Visual Design System: Colors, Typography & Spacing
+
+Define a comprehensive design token system — color palette (brand, semantic, neutral), font ramp (10–24px with line heights), spacing scale (4px base unit), corner radius tokens, shadow definitions, and transition durations. Produces an updated WPF `ResourceDictionary` with all tokens consumable via `DynamicResource` by every screen built in Wave 3. Covers both Dark and Light themes. Includes a "Design System" page in Settings → Appearance showing all tokens with live preview.
+
+HTML mock reference: (cross-cutting — applies to all 8 vision screens; tokens designed to match the visual language implied by [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html) color scheme).
+
+Dependencies: 5.
+Vision groups: cross-cutting (affects all screens).
 
 ---
 
@@ -78,6 +89,8 @@ Vision groups: B, A2, A10.
 
 Full Settings screen with 16 categories (Providers, Profiles, Appearance, Wiki, Backup, Text Actions, Hotkeys, Tools, Language, Notifications, Startup, Updates, Pricing, Security, Diagnostics, Maintenance). Appearance settings (chat themes, font). Dark/Light mode toggle. Notification and streaming settings (sound, disable streaming, per-chat mute defaults). Startup behavior (launch on Windows startup, session restore). Auto-update settings. Database maintenance (VACUUM with before/after size display). Onboarding Wizard — five-step guided first-launch setup (Welcome → API Keys → Persona → Wiki Directory → Hotkeys → Finish), each step skippable, re-launchable from Settings. Onboarding Finish screen's "Import from ChatGPT or Claude" button is present but non-functional until Feature 18 builds the import infrastructure. Diagnostics & Debug Logging — global log level selector (Information/Debug/Verbose) and 8 per-category toggles (LLM API Calls, Tier 1 Hotkey Pipeline, Tier 2 Command Bar, Database, Wiki & File System, WebSocket, Startup & Shutdown, System Integration), "Open Logs Folder" and "Clear Logs" buttons, API key redaction via Serilog `IDestructuringPolicy`.
 
+HTML mock references: [`vision/screens/settings.html`](vision/screens/settings.html), [`vision/screens/onboarding-wizard.html`](vision/screens/onboarding-wizard.html).
+
 Dependencies: 4, 5, 6, 7. (Soft dependency on 18 for onboarding import button functionality.)
 Vision groups: A (A1, A3–A9, A11), A8, V.
 
@@ -89,6 +102,8 @@ Conversation view with VirtualizingStackPanel. Full Markdown rendering (Markdig 
 
 Chat Modes (E): Standard chat mode. Text Completion mode. Thinking toggle with reasoning display. Mute notifications per chat. Dynamic system message editing from Persona header popover.
 
+HTML mock reference: [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html) (conversation area, thinking blocks, message actions, right panel artifacts + chat nav).
+
 Dependencies: 4, 5, 7.
 Vision groups: C (core messaging/rendering), E, Q.
 
@@ -98,6 +113,8 @@ Drag & drop files/media into textbox. Paste image from clipboard (Ctrl+V) with t
 
 Prompt Library (J): Saved reusable prompts with dynamic variables ({{clipboard}}, {{selected_text}}, {{date}}, {{current_wiki_file}}). Organize with tags and folders. Select to insert from textbox toolbar.
 
+HTML mock reference: [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html) (input area, toolbar, attachment row, textbox + send, token count).
+
 Dependencies: 4, 5, 7, 9.
 Vision groups: C (input/media), J.
 
@@ -106,6 +123,8 @@ Vision groups: C (input/media), J.
 Message Branching (D): Edit any past message (Edit in Place or Edit as Branch). **Quick Branch (↳ Branch) button** on each assistant message — creates a branch instantly without opening the editor, separate from the edit-then-branch flow. Delete any past message (branch data preserved). Branch navigation with indicator ("2/3") and cycle arrows. Chat tree visualization (nodes = messages, edges = parentMessageId). Quote from chat (selected text → quoted block in input). Chat navigation bar (collapsible scrollable message list, click to jump). Duplicate/Fork chat from any message point. Message feedback (thumbs-up/down). Undo/Redo message edits (Ctrl+Z/Y, per-chat stack, depth 50).
 
 Chat Organization (L): Sidebar chat list with sort options, date grouping, pinned section. Chat favoriting with filter. Full-text chat search via SQLite FTS5 (snippets, highlights, click to open). Sidebar filtering (permanent vs. Timeline transient). Chat tags/labels with autocomplete. Pin chats. Chat folders/collections. Chat archiving. Bulk operations. Right-click context menu. Chat color labels. Timeline tab (chronological Tier 1/2 transient action feed).
+
+HTML mock reference: [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html) (sidebar chat list with tags, folders, sort; branching UI with indicators; message action buttons).
 
 Dependencies: 4, 5, 9.
 Vision groups: D, L.
@@ -124,6 +143,8 @@ Vision groups: O, U.
 **Artifacts (F):** AI-generated named artifacts (code, docs, config files) with type inferred from language/extension. Side panel artifact list in right panel (click to view content). Version history per artifact (v1, v2, v3…). Diff view between any two versions (DiffPlex, side-by-side or unified). Version switching with branching on revert. Artifact viewer (syntax highlighting for code, rendered view for Markdown). "Save to Disk" and "Save to Wiki" buttons. Global Artifacts Browser screen (cross-chat listing with search, sort, and filter).
 
 **Media Library (G):** Browsable gallery grid of all media across chats (virtualized). Filtering by type (image, audio, video), source chat, and date range. Search by filename. Media actions (view/play, download, copy to clipboard, open in system app, delete, navigate to source chat). AI image generation inline in chat. AI audio generation with inline player. Inline media rendering in messages (images clickable for full resolution, audio mini player with play/pause/seek, video with embedded player). "Save to Disk" and "View in Library" buttons on all media.
+
+HTML mock references: [`vision/screens/global-artifacts-browser.html`](vision/screens/global-artifacts-browser.html), [`vision/screens/media-library.html`](vision/screens/media-library.html).
 
 Dependencies: 4, 5, 9.
 Vision groups: F, G.
@@ -145,6 +166,8 @@ Text Actions CRUD with three-dimensional configuration: capture scope (any combi
 
 **Tier 3 — Studio Chat:** Full workspace (built in Feature 9). All three tiers share the same ChatThreadService and data model. Elevation from Tier 1/2 flips IsTransient to false.
 
+HTML mock reference: (no dedicated screen mock — Tier 1/2 are overlay windows; Text Actions configuration lives in [`vision/screens/settings.html`](vision/screens/settings.html) categories ⚡ Text Actions and ⌨️ Hotkeys).
+
 Dependencies: 4, 5, 6, 7, 9.
 Vision groups: K, P9.
 
@@ -158,20 +181,24 @@ Wiki directory configuration (user selects directory of .md files, FileSystemWat
 
 **Knowledge Features:** @ mentions for wiki files (type @ in textbox → quick-search dropdown → inject full content or summarized excerpt if >8K tokens). AI wiki access restrictions (no deletions, no renaming, write only via N5 pipeline). AI cross-linking — tiered pipeline: AI reads auto-generated index.md → selects candidates → requests full content → generates draft with suggested links → user reviews and accepts. Backlinks suggested after save. Auto-generated index.md at wiki root (directory tree, all headings with links, cross-links, recently modified, orphan pages). AI memory (`_memory.md` wiki file, "Update Memory" button triggers Write to Wiki pipeline, memory-aware toggle per chat injects full file into context with optional token cap). Find and replace across all wiki files with preview of changes and regex support (snapshots provide undo).
 
+HTML mock reference: [`vision/screens/wiki-browser.html`](vision/screens/wiki-browser.html).
+
 Dependencies: 4, 5.
 Vision groups: N.
 
 ---
 
-## Wave 4: Cross-Cutting — 2 Features
+## Wave 4: Cross-Cutting + Polish — 4 Features
 
-Features that span across vertical slices. Smaller independent features combined with optimization, hardening, and polish.
+Features that span across vertical slices. Smaller independent features combined with optimization, hardening, polish, and motion design.
 
 ### Feature 17 — Model Comparison, Backup & Recovery
 
 **Model Comparison (M):** Send same prompt to 2–4 Personas simultaneously. Side-by-side comparison with independent streaming panels (horizontal or vertical layout). Each panel shows Persona name, response time, token count, and cost. Broadcast mode toggle (typing in one input sends to all). Accept result appends to permanent ChatThread; others saved as branches or discarded. "Accept All as Branches" option.
 
 **Backup & Recovery (R):** Full backup of SQLite database, wiki .md files, and artifacts. Google Cloud Storage backup (zip → upload via GCS SDK, DPAPI-encrypted credentials). Local folder backup alternative (zero-dependency). Backup schedule (daily, weekly, manual; default: daily). Manual "Backup Now" button with progress. Restore from backup (browse list, download, replace, restart with confirmation dialog and warning).
+
+HTML mock reference: [`vision/screens/model-comparison.html`](vision/screens/model-comparison.html).
 
 Dependencies: 4, 5, 7, 9.
 Vision groups: M, R.
@@ -186,8 +213,28 @@ Vision groups: M, R.
 
 **Testing, Performance & Security:** E2E testing with FlaUI for WPF automation (full onboarding, send message + streaming, branching workflow, Write to Wiki pipeline, Tier 1 hotkey flow, model comparison, import/export). Visual regression testing (screenshot-based comparison for all 8 screens in dark and light themes). Performance optimization (SQLite FTS5 tuning, `VirtualizingStackPanel` with Recycling for all large lists, image thumbnail caching, R2R compilation, memory management, `IDisposable` audit). Accessibility (keyboard navigation audit, high contrast mode support, screen reader labels via `AutomationProperties`, live regions for streaming and errors). Security hardening (DPAPI and AES-GCM audit, WebSocket auth review, SQL injection surface check, file path traversal prevention, crash reporting with graceful shutdown). Empty state and error state coverage for all screens and panels (descriptive messages with actionable buttons, no blank screens or generic errors).
 
+HTML mock references: [`vision/screens/usage-dashboard.html`](vision/screens/usage-dashboard.html), [`vision/screens/settings.html`](vision/screens/settings.html) (import/export, analytics sections).
+
 Dependencies: all Wave 3 features.
 Vision groups: I, S, P (P3, P4, P7 — platform refinements).
+
+### Feature 19 — UI Polish: All Screens Visual Refinement Pass
+
+Apply the Visual Design System (Feature 5b) consistently across all 8 screens. Implement proper spacing, typography, color application, empty state illustrations, and responsive panel behavior. Ensure every screen looks professional and polished — no placeholder gray-on-gray look. Addresses: card/panel elevation and borders, consistent header styling, focus indicators, scrollbar styling, and sidebar visual hierarchy. Includes visual regression test snapshots for all 8 screens in both Dark and Light themes.
+
+HTML mock references: all 8 vision screens as visual targets — [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html), [`vision/screens/wiki-browser.html`](vision/screens/wiki-browser.html), [`vision/screens/media-library.html`](vision/screens/media-library.html), [`vision/screens/global-artifacts-browser.html`](vision/screens/global-artifacts-browser.html), [`vision/screens/usage-dashboard.html`](vision/screens/usage-dashboard.html), [`vision/screens/settings.html`](vision/screens/settings.html), [`vision/screens/onboarding-wizard.html`](vision/screens/onboarding-wizard.html), [`vision/screens/model-comparison.html`](vision/screens/model-comparison.html).
+
+Dependencies: all Wave 3 features, 5b.
+Vision groups: cross-cutting (affects all screens).
+
+### Feature 20 — UI Polish: Micro-interactions & Motion Design
+
+Add subtle motion and interaction feedback throughout the app: hover transitions on buttons/list items (150ms color fade), smooth panel resize animations, tab open/close transitions, message appear/fade-in during streaming, scroll-to-bottom smooth behavior, toast notification slide-in/out, thinking block expand/collapse animation, sidebar collapse/expand transition, overlay fade-in for Tier 1 pill and Tier 2 command bar. All animations respect the Windows "Turn off all unnecessary animations" accessibility setting (`SystemParametersInfo` SPI_GETCLIENTAREAANIMATION).
+
+HTML mock reference: (cross-cutting — tooltip toast behavior and hover states shown in [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html); animation timing inspired by Windows 11 Fluent design language).
+
+Dependencies: 5b, 19.
+Vision groups: cross-cutting (affects all screens).
 
 ---
 
@@ -196,10 +243,10 @@ Vision groups: I, S, P (P3, P4, P7 — platform refinements).
 | Wave | Description | Features |
 |------|-------------|----------|
 | Wave 1 | Foundation — Infrastructure, data model, abstractions | 4 (built) |
-| Wave 2 | Skeleton — App shell, navigation, theming, Windows infrastructure | 2 |
+| Wave 2 | Skeleton — App shell, navigation, theming, Windows infrastructure, design system | 3 |
 | Wave 3 | Vertical Slices — All user-facing features (DB → service → UI) | 10 |
-| Wave 4 | Cross-Cutting — Smaller features, optimization, hardening, polish | 2 |
-| **Total** | | **18** |
+| Wave 4 | Cross-Cutting + Polish — Smaller features, optimization, hardening, polish, motion | 4 |
+| **Total** | | **21** |
 
 ---
 
@@ -213,8 +260,11 @@ Wave 1: Foundation (4 built)
   F4 ✅  Data Layer (entities, DbContext, repos)
     │
     ▼
-Wave 2: Skeleton (2)
+Wave 2: Skeleton + Design System (3)
   F5 ─── App Shell, Navigation & Theming
+  │
+  ├── F5b ── Visual Design System: Colors, Typography & Spacing
+  │
   F6 ─── Windows OS Platform Infrastructure
     │
     ├──────────┬──────────┬──────────┬──────────┬──────────┬──────────┐
@@ -240,11 +290,13 @@ Wave 3: Vertical Slices (10)
   │
   └── F16 ── Personal Wiki / Second Brain (N)
     │
-    ├──────────┬──────────┐
-    ▼          ▼          ▼
-Wave 4: Cross-Cutting (2)
+    ├──────────┬──────────┬──────────┐
+    ▼          ▼          ▼          ▼
+Wave 4: Cross-Cutting + Polish (4)
   F17 ── Model Comparison, Backup & Recovery (M + R)
-  F18 ── Data Portability, Analytics, Localization & Hardening (I + S + Q + P refinements + testing/polish)
+  F18 ── Data Portability, Analytics, Localization & Hardening (I + S + Q + P refinements + testing)
+  F19 ── UI Polish: All Screens Visual Refinement Pass
+  F20 ── UI Polish: Micro-interactions & Motion Design
 ```
 
 ---
