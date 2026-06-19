@@ -400,7 +400,7 @@ if (savedFontFamily is not null)
 
 ---
 
-### Step 7: Three Chat Visual Theme DataTemplates (Classic/Compact/Bubble)
+### [x] Step 7: Three Chat Visual Theme DataTemplates (Classic/Compact/Bubble)
 
 **Goal:** Create three distinct `DataTemplate` resources in `ChatView.xaml` for the three chat visual themes: Classic, Compact, and Bubble. Add a `ComboBox` to the chat header bar (alongside existing ☀, A⁻/A⁺, 📌, ⋯ buttons) to switch `IThemeProvider.CurrentChatTheme`. Replace the "No chats yet" placeholder in the conversation area with hardcoded sample user and assistant messages rendered via the selected DataTemplate so the visual difference is immediately apparent.
 
