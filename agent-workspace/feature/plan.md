@@ -81,7 +81,7 @@ src/
 - **Live Smoke Test (Mandatory):** Launch the app. Check log file for the port. Install a WebSocket client (e.g., [Simple WebSocket Client](https://chrome.google.com/webstore) Chrome extension, or use PowerShell: `$ws = New-Object System.Net.WebSockets.ClientWebSocket`). Try connecting to `ws://127.0.0.1:{port}/ws` WITHOUT a token — verify connection is rejected/closed. Check the log file for the auth token (run `findstr /C:"WebSocket" %LOCALAPPDATA%\MySecondBrain\logs\msb-*.log`). Connect again to `ws://127.0.0.1:{port}/ws?token={token}` — verify connection succeeds (stays open, not rejected).
 - **Suggested Commit Message:** `feat: add token-based authentication to Kestrel WebSocket server`
 
-### [ ] Step 4: Fill KestrelWebSocketServer — JSON message protocol
+### [x] Step 4: Fill KestrelWebSocketServer — JSON message protocol
 - **Goal:** Implement bidirectional JSON messaging over the authenticated WebSocket connection. Enable `SendAsync` and `MessageReceived` event.
 - **Actions:**
   - Implement receive loop: on connected WebSocket, read messages in a background loop. Parse each message as JSON. Fire `MessageReceived` event with the raw JSON string.
