@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using MySecondBrain.Data;
 using MySecondBrain.Data.Entities;
 using MySecondBrain.Data.Repositories;
+using Message = MySecondBrain.Data.Entities.Message;
 using CoreModels = MySecondBrain.Core.Models;
 
 namespace MySecondBrain.Tests.Unit;

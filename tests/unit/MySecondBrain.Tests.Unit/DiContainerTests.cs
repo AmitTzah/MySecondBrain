@@ -1,3 +1,5 @@
+using System.Reflection;
+using System.Windows.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
@@ -227,5 +229,173 @@ public class DiContainerTests
         var second = (KestrelWebSocketServer)_provider.GetRequiredService<ILocalWebSocketServer>();
 
         Assert.Equal(first.AuthToken, second.AuthToken);
+    }
+
+    [Fact]
+    public void SystemTray_ContextMenuHasCorrectItemOrder()
+    {
+        var service = (WinFormsSystemTrayService)_provider.GetRequiredService<ISystemTrayService>();
+        var contextMenuField = typeof(WinFormsSystemTrayService).GetField("_contextMenu",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var contextMenu = (ContextMenuStrip)contextMenuField.GetValue(service)!;
+        var items = contextMenu.Items;
+
+        Assert.Equal(8, items.Count);
+
+        // Index 0: New Chat
+        var item0 = Assert.IsType<ToolStripMenuItem>(items[0]);
+        Assert.Equal("New Chat", item0.Text);
+
+        // Index 1: Open Studio
+        var item1 = Assert.IsType<ToolStripMenuItem>(items[1]);
+        Assert.Equal("Open Studio", item1.Text);
+
+        // Index 2: Command Bar
+        var item2 = Assert.IsType<ToolStripMenuItem>(items[2]);
+        Assert.Equal("Command Bar", item2.Text);
+
+        // Index 3: Separator
+        Assert.IsType<ToolStripSeparator>(items[3]);
+
+        // Index 4: Recent Chats (submenu)
+        var item4 = Assert.IsType<ToolStripMenuItem>(items[4]);
+        Assert.Equal("Recent Chats", item4.Text);
+        Assert.NotNull(item4.DropDownItems);
+
+        // Index 5: Settings
+        var item5 = Assert.IsType<ToolStripMenuItem>(items[5]);
+        Assert.Equal("Settings", item5.Text);
+
+        // Index 6: Separator
+        Assert.IsType<ToolStripSeparator>(items[6]);
+
+        // Index 7: Exit
+        var item7 = Assert.IsType<ToolStripMenuItem>(items[7]);
+        Assert.Equal("Exit", item7.Text);
+    }
+
+    [Fact]
+    public void SystemTray_UpdateRecentChats_WithItems_AddsClickableItems()
+    {
+        var service = (WinFormsSystemTrayService)_provider.GetRequiredService<ISystemTrayService>();
+        var recentChatsField = typeof(WinFormsSystemTrayService).GetField("_recentChatsMenu",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var recentChats = (ToolStripMenuItem)recentChatsField.GetValue(service)!;
+
+        service.UpdateRecentChats(["Chat A", "Chat B"]);
+
+        Assert.Equal(2, recentChats.DropDownItems.Count);
+
+        var item0 = Assert.IsType<ToolStripMenuItem>(recentChats.DropDownItems[0]);
+        Assert.Equal("Chat A", item0.Text);
+        Assert.True(item0.Enabled, $"Expected 'Chat A' to be enabled");
+
+        var item1 = Assert.IsType<ToolStripMenuItem>(recentChats.DropDownItems[1]);
+        Assert.Equal("Chat B", item1.Text);
+        Assert.True(item1.Enabled, $"Expected 'Chat B' to be enabled");
+    }
+
+    [Fact]
+    public void SystemTray_UpdateRecentChats_TruncatesToMaxFive()
+    {
+        var service = (WinFormsSystemTrayService)_provider.GetRequiredService<ISystemTrayService>();
+        var recentChatsField = typeof(WinFormsSystemTrayService).GetField("_recentChatsMenu",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var recentChats = (ToolStripMenuItem)recentChatsField.GetValue(service)!;
+
+        var titles = new[] { "A", "B", "C", "D", "E", "F", "G" };
+        service.UpdateRecentChats(titles);
+
+        Assert.Equal(5, recentChats.DropDownItems.Count);
+        for (int i = 0; i < 5; i++)
+        {
+            var item = Assert.IsType<ToolStripMenuItem>(recentChats.DropDownItems[i]);
+            Assert.Equal(titles[i], item.Text);
+            Assert.True(item.Enabled, $"Expected item '{titles[i]}' to be enabled");
+        }
+    }
+
+    [Fact]
+    public void SystemTray_UpdateRecentChats_Empty_ClearsSubmenu()
+    {
+        var service = (WinFormsSystemTrayService)_provider.GetRequiredService<ISystemTrayService>();
+        var recentChatsField = typeof(WinFormsSystemTrayService).GetField("_recentChatsMenu",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var recentChats = (ToolStripMenuItem)recentChatsField.GetValue(service)!;
+
+        service.UpdateRecentChats([]);
+
+        var single = Assert.Single(recentChats.DropDownItems);
+
+        var placeholder = Assert.IsType<ToolStripMenuItem>(single);
+        Assert.Equal("No recent chats", placeholder.Text);
+        Assert.False(placeholder.Enabled);
+    }
+
+    [Fact]
+    public void SystemTray_Events_FireOnMenuClick()
+    {
+        var service = (WinFormsSystemTrayService)_provider.GetRequiredService<ISystemTrayService>();
+        var contextMenuField = typeof(WinFormsSystemTrayService).GetField("_contextMenu",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var contextMenu = (ContextMenuStrip)contextMenuField.GetValue(service)!;
+        var items = contextMenu.Items;
+
+        var newChatFired = false;
+        var openStudioFired = false;
+        var commandBarFired = false;
+        var settingsFired = false;
+        var exitFired = false;
+
+        service.NewChatRequested += (_, _) => newChatFired = true;
+        service.OpenStudioRequested += (_, _) => openStudioFired = true;
+        service.CommandBarRequested += (_, _) => commandBarFired = true;
+        service.SettingsRequested += (_, _) => settingsFired = true;
+        service.ExitRequested += (_, _) => exitFired = true;
+
+        // New Chat (index 0) — only NewChatRequested fires
+        newChatFired = openStudioFired = commandBarFired = settingsFired = exitFired = false;
+        ((ToolStripMenuItem)items[0]).PerformClick();
+        Assert.True(newChatFired, "NewChatRequested should fire on 'New Chat' click");
+        Assert.False(openStudioFired, "OpenStudioRequested should not fire on 'New Chat' click");
+        Assert.False(commandBarFired, "CommandBarRequested should not fire on 'New Chat' click");
+        Assert.False(settingsFired, "SettingsRequested should not fire on 'New Chat' click");
+        Assert.False(exitFired, "ExitRequested should not fire on 'New Chat' click");
+
+        // Open Studio (index 1) — only OpenStudioRequested fires
+        newChatFired = openStudioFired = commandBarFired = settingsFired = exitFired = false;
+        ((ToolStripMenuItem)items[1]).PerformClick();
+        Assert.True(openStudioFired, "OpenStudioRequested should fire on 'Open Studio' click");
+        Assert.False(newChatFired, "NewChatRequested should not fire on 'Open Studio' click");
+        Assert.False(commandBarFired, "CommandBarRequested should not fire on 'Open Studio' click");
+        Assert.False(settingsFired, "SettingsRequested should not fire on 'Open Studio' click");
+        Assert.False(exitFired, "ExitRequested should not fire on 'Open Studio' click");
+
+        // Command Bar (index 2) — only CommandBarRequested fires
+        newChatFired = openStudioFired = commandBarFired = settingsFired = exitFired = false;
+        ((ToolStripMenuItem)items[2]).PerformClick();
+        Assert.True(commandBarFired, "CommandBarRequested should fire on 'Command Bar' click");
+        Assert.False(newChatFired, "NewChatRequested should not fire on 'Command Bar' click");
+        Assert.False(openStudioFired, "OpenStudioRequested should not fire on 'Command Bar' click");
+        Assert.False(settingsFired, "SettingsRequested should not fire on 'Command Bar' click");
+        Assert.False(exitFired, "ExitRequested should not fire on 'Command Bar' click");
+
+        // Settings (index 5) — only SettingsRequested fires
+        newChatFired = openStudioFired = commandBarFired = settingsFired = exitFired = false;
+        ((ToolStripMenuItem)items[5]).PerformClick();
+        Assert.True(settingsFired, "SettingsRequested should fire on 'Settings' click");
+        Assert.False(newChatFired, "NewChatRequested should not fire on 'Settings' click");
+        Assert.False(openStudioFired, "OpenStudioRequested should not fire on 'Settings' click");
+        Assert.False(commandBarFired, "CommandBarRequested should not fire on 'Settings' click");
+        Assert.False(exitFired, "ExitRequested should not fire on 'Settings' click");
+
+        // Exit (index 7) — only ExitRequested fires
+        newChatFired = openStudioFired = commandBarFired = settingsFired = exitFired = false;
+        ((ToolStripMenuItem)items[7]).PerformClick();
+        Assert.True(exitFired, "ExitRequested should fire on 'Exit' click");
+        Assert.False(newChatFired, "NewChatRequested should not fire on 'Exit' click");
+        Assert.False(openStudioFired, "OpenStudioRequested should not fire on 'Exit' click");
+        Assert.False(commandBarFired, "CommandBarRequested should not fire on 'Exit' click");
+        Assert.False(settingsFired, "SettingsRequested should not fire on 'Exit' click");
     }
 }

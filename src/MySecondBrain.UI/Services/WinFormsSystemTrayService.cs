@@ -15,14 +15,13 @@ public class WinFormsSystemTrayService : ISystemTrayService
     private readonly ILogger<WinFormsSystemTrayService> _logger;
     private readonly NotifyIcon _notifyIcon;
     private readonly ContextMenuStrip _contextMenu;
+    private readonly ToolStripMenuItem _recentChatsMenu;
     private bool _isDisposed;
 
     public event EventHandler? OpenStudioRequested;
-#pragma warning disable CS0414 // Events wired in later steps
     public event EventHandler? NewChatRequested;
     public event EventHandler? CommandBarRequested;
     public event EventHandler? SettingsRequested;
-#pragma warning restore CS0414
     public event EventHandler? ExitRequested;
 
     public bool IsVisible => _notifyIcon.Visible;
@@ -100,15 +99,35 @@ public class WinFormsSystemTrayService : ISystemTrayService
 
         _contextMenu = new ContextMenuStrip();
 
+        var newChat = new ToolStripMenuItem("New Chat");
+        newChat.Click += (s, e) => NewChatRequested?.Invoke(this, EventArgs.Empty);
+
         var openStudio = new ToolStripMenuItem("Open Studio");
         openStudio.Click += (s, e) => OpenStudioRequested?.Invoke(this, EventArgs.Empty);
-        _contextMenu.Items.Add(openStudio);
 
-        _contextMenu.Items.Add(new ToolStripSeparator());
+        var commandBar = new ToolStripMenuItem("Command Bar");
+        commandBar.Click += (s, e) => CommandBarRequested?.Invoke(this, EventArgs.Empty);
+
+        _recentChatsMenu = new ToolStripMenuItem("Recent Chats");
+        _recentChatsMenu.DropDownItems.Add(new ToolStripMenuItem("No recent chats") { Enabled = false });
+
+        var settings = new ToolStripMenuItem("Settings");
+        settings.Click += (s, e) => SettingsRequested?.Invoke(this, EventArgs.Empty);
 
         var exit = new ToolStripMenuItem("Exit");
         exit.Click += (s, e) => ExitRequested?.Invoke(this, EventArgs.Empty);
-        _contextMenu.Items.Add(exit);
+
+        _contextMenu.Items.AddRange(new ToolStripItem[]
+        {
+            newChat,
+            openStudio,
+            commandBar,
+            new ToolStripSeparator(),
+            _recentChatsMenu,
+            settings,
+            new ToolStripSeparator(),
+            exit
+        });
 
         _notifyIcon.ContextMenuStrip = _contextMenu;
         _notifyIcon.DoubleClick += (s, e) => OpenStudioRequested?.Invoke(this, EventArgs.Empty);
@@ -136,8 +155,25 @@ public class WinFormsSystemTrayService : ISystemTrayService
 
     public void UpdateRecentChats(IReadOnlyList<string> recentChatTitles)
     {
-        // Placeholder — full implementation in Step 6
         _logger.LogDebug("UpdateRecentChats({Count} titles)", recentChatTitles.Count);
+
+        _recentChatsMenu.DropDownItems.Clear();
+
+        if (recentChatTitles.Count == 0)
+        {
+            _recentChatsMenu.DropDownItems.Add(new ToolStripMenuItem("No recent chats") { Enabled = false });
+            return;
+        }
+
+        var maxItems = Math.Min(recentChatTitles.Count, 5);
+        if (recentChatTitles.Count > 5)
+            _logger.LogDebug("Truncated {TotalCount} recent chat titles to 5", recentChatTitles.Count);
+        for (int i = 0; i < maxItems; i++)
+        {
+            var title = recentChatTitles[i];
+            var item = new ToolStripMenuItem(title);
+            _recentChatsMenu.DropDownItems.Add(item);
+        }
     }
 
     public void Dispose()
