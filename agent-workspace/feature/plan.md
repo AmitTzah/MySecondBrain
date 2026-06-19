@@ -112,7 +112,11 @@ src/
   - Add menu items: "New Chat" (fires `NewChatRequested`), "Command Bar" (fires `CommandBarRequested`), separator, "Recent Chats" (submenu with placeholder "No recent chats" disabled item), "Settings" (fires `SettingsRequested`), separator, "Exit" (fires `ExitRequested`).
   - Implement `UpdateRecentChats(IReadOnlyList<string> recentChatTitles)`: rebuild the Recent Chats submenu. If empty, show disabled "No recent chats". If populated, show up to 5 items.
   - Each event is fired but NOT yet handled by MainWindow — the wiring will be done in Step 8 (system tray integration with MainWindow).
-- **Automated Testing:** Run `dotnet test tests/unit/` — all tests pass.
+- **Automated Testing:** Add these unit tests to `tests/unit/MySecondBrain.Tests.Unit/DiContainerTests.cs`:
+  1. `SystemTray_ContextMenuHasCorrectItemOrder` — Resolve `ISystemTrayService`, reflect into the private `_contextMenu` field, assert 8 items in order (New Chat, Open Studio, Command Bar, separator, Recent Chats submenu, Settings, separator, Exit).
+  2. `SystemTray_UpdateRecentChats_WithItems_AddsClickableItems` — Call `UpdateRecentChats(["Chat A", "Chat B"])`, reflect the Recent Chats submenu, assert 2 enabled items with correct text.
+  3. `SystemTray_UpdateRecentChats_Empty_ClearsSubmenu` — Call `UpdateRecentChats([])`, assert submenu has 1 disabled "No recent chats" item.
+  4. `SystemTray_Events_FireOnMenuClick` — Resolve the service, subscribe a flag to each of the 5 events, reflect into the menu items and invoke their Click handlers, assert each flag was set. Run all existing tests too.
 - **Live Smoke Test (Mandatory):** Launch the app. Right-click the tray icon. Verify the context menu now shows (in order): New Chat, Open Studio, Command Bar, separator, Recent Chats (with "No recent chats" grayed out), Settings, separator, Exit. Click "New Chat" — nothing visible happens yet (event fires but no handler wired). Click "Settings" — nothing visible happens yet. Click "Command Bar" — nothing visible happens yet. Click "Exit" — app closes cleanly.
 - **Suggested Commit Message:** `feat: add full system tray context menu with New Chat, Command Bar, Recent Chats, Settings`
 
@@ -123,10 +127,13 @@ src/
   - Wire `MainWindow.Closing` event in `MainWindow.xaml.cs`: if `ISystemTrayService.IsVisible` and minimize-to-tray enabled, `e.Cancel = true; this.Hide();`.
   - Implement `SetGenerationIndicator(bool isGenerating)`: swap `NotifyIcon.Icon` between normal icon and a variant with a green dot overlay. Build the overlay icon programmatically using `System.Drawing` (render a small green circle in the bottom-right corner of the base icon).
   - Create the two icon resources: `app.ico` (normal) and generate `app-generating.ico` programmatically on first use via `System.Drawing.Bitmap` + `Graphics`.
-- **Automated Testing:** Run `dotnet test tests/unit/` — all tests pass.
+- **Automated Testing:** Add these unit tests to `tests/unit/MySecondBrain.Tests.Unit/DiContainerTests.cs`:
+  1. `SystemTray_SetGenerationIndicator_DoesNotThrow` — Resolve `ISystemTrayService`, call `SetGenerationIndicator(true)`, call `SetGenerationIndicator(false)`, assert no exception thrown and `IsVisible` unchanged.
+  2. `SystemTray_GenerationIndicator_ProducesGreenDotIcon` — Resolve `ISystemTrayService`, reflect the `BuildGeneratingIcon()` private method, invoke it, assert returned `Icon` is not null and differs from the normal icon (compare `Size` and check for at least one green pixel via `Bitmap.GetPixel` on the bottom-right quadrant).
+  3. `SystemTray_IsVisible_TracksShowHide` — Call `Show()`, assert `IsVisible == true`. Call `Hide()`, assert `IsVisible == false`. Call `Show()`, assert `IsVisible == true` again. Run all existing tests too.
 - **Live Smoke Test (Mandatory):**
   1. **Minimize to tray:** Launch the app. Click the X (close) button on the MainWindow title bar. Verify the window disappears but the app icon remains in the system tray. Verify no `MySecondBrain.UI.exe` process was terminated (check Task Manager). Double-click the tray icon — verify the main window reappears. Right-click tray icon → "Exit" — verify app fully closes.
-  2. **Generation indicator:** This is harder to test without actual AI generation running. Add a temporary debug button/hotkey (e.g., bind a test hotkey that calls `ISystemTrayService.SetGenerationIndicator(true)` and `SetGenerationIndicator(false)` on toggle). Verify the tray icon changes to include a green dot when toggled on, and reverts to the normal icon when toggled off. Alternatively, verify via unit test: create `WinFormsSystemTrayService` with a temporary icon, call `SetGenerationIndicator(true)`, assert no exception and `IsVisible` unchanged.
+  2. **Generation indicator:** Add a temporary test hotkey in `App.xaml.cs` that toggles `ISystemTrayService.SetGenerationIndicator`. Verify the tray icon changes to include a green dot when toggled on, and reverts to the normal icon when toggled off.
 - **Suggested Commit Message:** `feat: implement minimize-to-tray on close and generation indicator icon`
 
 ### [ ] Step 8: Wire system tray events to MainWindow + App startup lifecycle
@@ -139,7 +146,10 @@ src/
   - `SettingsRequested` → `MainWindow.Show()` + `MainWindow.Activate()` + set `MainWindowViewModel.SelectedScreen = ScreenType.Settings`.
   - `ExitRequested` → `Application.Current.Shutdown()`.
   - In `MainWindow.xaml.cs` `OnClosing`: check minimize-to-tray setting via `ISystemTrayService` and `ISettingsRepository`. If minimize-to-tray, `e.Cancel = true; this.Hide();`.
-- **Automated Testing:** Run `dotnet test tests/unit/` — all tests pass. Run `dotnet test tests/e2e/` — 18 E2E tests must pass.
+- **Automated Testing:** Add these unit tests to `tests/unit/MySecondBrain.Tests.Unit/DiContainerTests.cs`:
+  1. `SystemTray_ExitRequested_DisposesAndClearsEvents` — Resolve `ISystemTrayService`, call `Show()`, subscribe a flag to `ExitRequested`, invoke `ExitRequested`, assert flag was raised. Then call `Dispose()`, assert `IsVisible == false`. Subscribe a new handler to `ExitRequested` after dispose — assert it is now null (event handlers cleared).
+  2. `SystemTray_UpdateRecentChats_AfterShow_IsIdempotent` — Call `Show()`, call `UpdateRecentChats(["Test"])`, call it again with different items, assert no double entries in the submenu.
+Run `dotnet test tests/unit/` — all tests pass. Run `dotnet test tests/e2e/` — 18 E2E tests must pass.
 - **Live Smoke Test (Mandatory):** Launch the app. Right-click tray icon → "Settings" — verify the main window appears with Settings screen selected. Right-click tray icon → "Open Studio" — verify main window comes to foreground. Right-click tray icon → "New Chat" — verify main window appears (new chat creation logged but not visible yet). Click MainWindow X button — verify window hides to tray. Right-click tray icon → "Exit" — verify app fully closes.
 - **Suggested Commit Message:** `feat: wire system tray events to MainWindow actions and app lifecycle`
 
@@ -154,7 +164,16 @@ src/
   - Implement `IsRegistered(string hotkeyId)` and `GetRegisteredHotkeys()`.
   - In the `HwndSourceHook`: on `WM_HOTKEY` (0x0312), extract `wParam` as hotkey ID, resolve to `HotkeyAssignment`, fire `HotkeyTriggered` event with `HotkeyTriggeredEventArgs`.
   - On construction: create the hidden message window. On `Dispose()`: unregister all hotkeys, destroy the window.
-- **Automated Testing:** Run `dotnet test tests/unit/` — all existing tests pass. Note: Hotkey integration tests are manual because they require a real Windows message pump and are hard to automate without UI automation frameworks.
+- **Automated Testing:** Add these unit tests to `tests/unit/MySecondBrain.Tests.Unit/DiContainerTests.cs`:
+  1. `GlobalHotkeyService_CanResolve_AsSingleton` — Resolve `IGlobalHotkeyService`, assert `IsType<GlobalHotkeyService>()`, assert singleton lifetime via `Assert.Same`.
+  2. `GlobalHotkeyService_IsRegistered_ReturnsTrueForRegisteredHotkey` — Call `RegisterHotkey("test", ModifierKeys.Alt, VirtualKey.Q)`, assert `IsRegistered("test") == true`. Call `UnregisterHotkey("test")`, assert `IsRegistered("test") == false`.
+  3. `GlobalHotkeyService_GetRegisteredHotkeys_ReturnsAll` — Register "hk1" and "hk2", assert `GetRegisteredHotkeys().Count == 2`, assert both IDs present.
+  4. `GlobalHotkeyService_DetectConflict_SameKeyReturnsTrue` — Register "hkA" with Alt+W, assert `DetectConflict(ModifierKeys.Alt, VirtualKey.W) == true`.
+  5. `GlobalHotkeyService_DetectConflict_DifferentKeyReturnsFalse` — Register "hkB" with Alt+E, assert `DetectConflict(ModifierKeys.Alt, VirtualKey.R) == false`.
+  6. `GlobalHotkeyService_UnregisterHotkey_NonexistentIdReturnsFalse` — `UnregisterHotkey("nosuch")` returns `false`.
+  7. `GlobalHotkeyService_Dispose_UnregistersAll` — Register two hotkeys, call `Dispose()`, assert `GetRegisteredHotkeys().Count == 0`.
+  Note: `RegisterHotKey` P/Invoke will fail in unit tests (no HWND), so use `[StaFact]` and expect `false` from `RegisterHotkey` in the test environment. The registration tracking and conflict detection logic is validated. Hotkey dispatch (WM_HOTKEY) requires manual smoke testing.
+  Run all existing tests too.
 - **Live Smoke Test (Mandatory):** Launch the app. The app registers Alt+Space for the Command Bar (the default Tier 2 hotkey) on startup. **Note:** Alt+Space is the Windows system menu shortcut — if Windows intercepts it first, this test will not pass; the Command Bar hotkey may need to be changed in Feature 13 if this conflict proves unresolvable. Open any other application (e.g., Notepad). Press Alt+Space. Verify the app log file shows: "Hotkey triggered: CommandBar" (or similar log entry). Press Alt+Q (also registered by default) — verify log entry for the Rewrite hotkey. The hotkeys fire events but no UI appears yet (Tier 1/2 UIs are Feature 13). **Important:** `RegisterHotKey` intercepts keystrokes globally — these hotkeys WILL override the same shortcuts in other applications (Alt+Q in VS Code, Alt+W in browsers, etc.). This is by design for Tier 1 text actions; if conflicts arise, hotkey assignments can be changed in Settings (Feature 8).
 - **Suggested Commit Message:** `feat: implement RegisterHotKey-based global hotkey service with HwndSource hook`
 
@@ -166,7 +185,11 @@ src/
   - The low-level hook is used as a FALLBACK only — `RegisterHotKey` is tried first. If `RegisterHotKey` fails, automatically try the low-level hook.
   - Implement `DetectConflict(ModifierKeys modifiers, VirtualKey key)`: check if any other registered hotkey uses the same combination. Also check against known Windows system hotkeys (Win+D, Win+L, Win+R, Alt+Tab, Alt+F4, Ctrl+Alt+Del, Ctrl+Shift+Esc). Return `true` if conflict found.
   - The low-level hook requires a message pump to run — the `HwndSource` window from Step 9 provides this.
-- **Automated Testing:** Run `dotnet test tests/unit/` — all tests pass.
+- **Automated Testing:** Add these unit tests to `tests/unit/MySecondBrain.Tests.Unit/DiContainerTests.cs`:
+  1. `GlobalHotkeyService_DetectConflict_KnownSystemHotkeys` — Assert `DetectConflict(ModifierKeys.Windows, VirtualKey.D) == true` (Win+D), same for Win+L, Win+R, Alt+Tab (check `ModifierKeys.Alt, VirtualKey.Tab`), Alt+F4, Ctrl+Alt+Del, Ctrl+Shift+Esc. These must always return conflict even without registration.
+  2. `GlobalHotkeyService_RegisterHotkey_RecordsFallbackWhenApiFails` — Register a hotkey with Alt+Q (expects RegisterHotKey to fail in test env). Verify via reflection that the registration was tracked in the `_fallbackRegistrations` collection (fallback path exercised).
+  3. `GlobalHotkeyService_WH_KEYBOARD_LL_Hook_Created` — Verify via reflection that after construction, the `_hookId` is not `IntPtr.Zero` (the low-level hook was installed). Dispose the service, verify `_hookId` is `IntPtr.Zero` (hook was uninstalled).
+  Run all existing tests too.
 - **Live Smoke Test (Mandatory):** Launch the app. The app now has both `RegisterHotKey` (primary) and `WH_KEYBOARD_LL` (fallback) active. Open PowerShell and test conflict detection: this isn't directly testable by the user since `DetectConflict` is called programmatically. Instead, verify via log: the startup log should show which hotkeys were registered via `RegisterHotKey` vs. fallback. Verify Alt+Space still triggers (from Step 9). Close the app — verify all hotkeys are unregistered (try Alt+Space in another app, verify it opens the other app's behavior, not logging to MySecondBrain).
 - **Suggested Commit Message:** `feat: add WH_KEYBOARD_LL fallback hook and hotkey conflict detection`
 
@@ -187,7 +210,13 @@ src/
       <mandatory>false</mandatory>
     </item>
     ```
-- **Automated Testing:** Run `dotnet test tests/unit/` — all tests pass.
+- **Automated Testing:** Add these unit tests to `tests/unit/MySecondBrain.Tests.Unit/DiContainerTests.cs`:
+  1. `AutoUpdaterDotNet_CurrentVersion_ReadsFromAssembly` — Resolve `IUpdateChecker` concretely as `AutoUpdaterDotNet`, assert `CurrentVersion` is not null, not `0.0.0.0`.
+  2. `AutoUpdaterDotNet_UpdateFeedUrl_IsNotEmpty` — Assert `UpdateFeedUrl` is not null and not empty after construction.
+  3. `AutoUpdaterDotNet_CheckForUpdates_NoFeedAvailable_ReturnsNoUpdate` — Call `CheckForUpdatesAsync(CancellationToken.None)`, assert `UpdateAvailable == false` and `ErrorMessage` is not null (no real feed configured in test).
+  4. `AutoUpdaterDotNet_DownloadUpdate_ThrowsForNullUpdate` — Assert `DownloadUpdateAsync(null!, null, CancellationToken.None)` throws `ArgumentNullException` or returns a faulted task.
+  5. `AutoUpdaterDotNet_VersionComparison_NewerVersionDetected` — Set up a test-only `UpdateFeedUrl` pointing to a local temp file with version `99.0.0.0`, call `CheckForUpdatesAsync`, assert `UpdateAvailable == true` and `Update.Version == 99.0.0.0`. (Requires the service to expose a settable `UpdateFeedUrl` for testing — add this if not already present.)
+  Run all existing tests too.
 - **Live Smoke Test (Mandatory):** Since no real update feed exists yet, test via a local HTTP server:
   1. Create a temporary XML file with version `99.0.0.0` (higher than current `0.0.0.0`).
   2. Serve it via Python: `python -m http.server 8888` in the directory containing the XML.
@@ -226,14 +255,14 @@ src/
 - **Live Smoke Test (Mandatory):** Run `dotnet build src/MySecondBrain.Package/MySecondBrain.Package.wapproj` from the solution root. Verify the build completes with no errors. Verify the output `.msix` file exists in the build output directory. Check the generated `AppxManifest.xml` in the output — verify it includes the three required capabilities (`internetClient`, `runFullTrust`, `localSystemServices`). Open the `.appinstaller` template file in a text editor — verify it contains the correct XML structure with `MainBundle`, `UpdateSettings`, and `OnLaunch` elements.
 - **Suggested Commit Message:** `feat: verify MSIX package build and add .appinstaller auto-update template`
 
-### [ ] Step 14: Run full test suite — 114 unit + 18 E2E tests must pass
-- **Goal:** Verify all existing tests pass after all platform service implementations are in place. No regressions.
+### [ ] Step 14: Run full test suite — all unit + E2E tests must pass
+- **Goal:** Verify all tests pass after all platform service implementations are in place. No regressions.
 - **Actions:**
-  - Run `dotnet test tests/unit/MySecondBrain.Tests.Unit/` — all 114 tests must pass.
+  - Run `dotnet test tests/unit/MySecondBrain.Tests.Unit/` — all tests must pass (expecting 125+ unit tests including the 24 new platform service tests from Steps 6-11).
   - Run `dotnet test tests/e2e/MySecondBrain.Tests.E2E/` (or `pwsh tests/e2e/run-e2e-tests.ps1`) — all 18 tests must pass.
   - Verify DI resolution tests still pass — all 76+ registrations resolve correctly with the new implementations.
 - **Automated Testing:** This step IS the automated testing run.
-- **Live Smoke Test (Mandatory):** Run `dotnet test` from the solution root. Verify output shows "114 passed, 0 failed" for unit tests and "18 passed, 0 failed" for E2E tests. Verify total test count is 132 passed.
+- **Live Smoke Test (Mandatory):** Run `dotnet test` from the solution root. Verify output shows 0 failed tests for both unit and E2E. Verify the total unit test count reflects the new tests added in Steps 6-11 (expecting 49+ tests in DiContainerTests alone: 25 existing + 24 new platform service tests).
 - **Suggested Commit Message:** `test: verify all 132 tests pass after platform service implementations`
 
 ---
