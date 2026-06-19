@@ -8,29 +8,47 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Column 0: Category Sidebar -->
+        <!-- Column 0: Settings Category Sidebar -->
         <Border Grid.Column="0" Background="{DynamicResource SidebarBackground}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
-            <ListBox Background="Transparent" BorderThickness="0"
-                     Foreground="{DynamicResource SidebarForeground}"
-                     FontSize="12">
-                <ListBoxItem Padding="12,8">🔑 Providers</ListBoxItem>
-                <ListBoxItem Padding="12,8">🧑 Personas</ListBoxItem>
-                <ListBoxItem Padding="12,8">🎨 Appearance</ListBoxItem>
-                <ListBoxItem Padding="12,8">✏️ Font + Layout</ListBoxItem>
-                <ListBoxItem Padding="12,8">⌨️ Hotkeys</ListBoxItem>
-                <ListBoxItem Padding="12,8">🗣️ Speech-to-Text</ListBoxItem>
-                <ListBoxItem Padding="12,8">🔌 Plugins</ListBoxItem>
-                <ListBoxItem Padding="12,8">📝 Wiki</ListBoxItem>
-                <ListBoxItem Padding="12,8">🗄️ Data + Storage</ListBoxItem>
-                <ListBoxItem Padding="12,8">💾 Backup</ListBoxItem>
-                <ListBoxItem Padding="12,8">☁️ Sync</ListBoxItem>
-                <ListBoxItem Padding="12,8">🔒 Privacy + Security</ListBoxItem>
-                <ListBoxItem Padding="12,8">🔄 Updates</ListBoxItem>
-                <ListBoxItem Padding="12,8">🛠️ Advanced</ListBoxItem>
-                <ListBoxItem Padding="12,8">ℹ️ About</ListBoxItem>
-                <ListBoxItem Padding="12,8">📋 Logs</ListBoxItem>
-            </ListBox>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Settings" FontSize="13" FontWeight="Bold"
+                           Foreground="{DynamicResource SidebarForeground}"
+                           Margin="12,10,12,6" Padding="0,0,0,6"/>
+
+                <ListBox Grid.Row="1" Background="Transparent" BorderThickness="0"
+                         Foreground="{DynamicResource SidebarForeground}"
+                         FontSize="12">
+                    <ListBoxItem Padding="12,7">🔑 Providers</ListBoxItem>
+                    <ListBoxItem Padding="12,7">👤 Profiles</ListBoxItem>
+                    <ListBoxItem Padding="12,7">🎨 Appearance</ListBoxItem>
+                    <ListBoxItem Padding="12,7">📝 Wiki</ListBoxItem>
+                    <ListBoxItem Padding="12,7">☁️ Backup</ListBoxItem>
+                    <ListBoxItem Padding="12,7">⚡ Text Actions</ListBoxItem>
+                    <ListBoxItem Padding="12,7">⌨️ Hotkeys</ListBoxItem>
+                    <ListBoxItem Padding="12,7">🔧 Tools</ListBoxItem>
+                    <ListBoxItem Padding="12,7">🔔 Notifications</ListBoxItem>
+                    <ListBoxItem Padding="12,7">🚀 Startup</ListBoxItem>
+                    <ListBoxItem Padding="12,7">🔄 Updates</ListBoxItem>
+                    <ListBoxItem Padding="12,7">💰 Pricing</ListBoxItem>
+                    <ListBoxItem Padding="12,7">🔒 Security</ListBoxItem>
+                    <ListBoxItem Padding="12,7">🛠️ Maintenance</ListBoxItem>
+                    <ListBoxItem Padding="12,7">🩺 Diagnostics</ListBoxItem>
+                </ListBox>
+
+                <TextBlock Grid.Row="2" Margin="12,8,12,12">
+                    <Hyperlink Foreground="{DynamicResource AccentBrush}" FontSize="11"
+                               TextDecorations="Underline">
+                        🔄 Re-run Onboarding Wizard
+                    </Hyperlink>
+                </TextBlock>
+            </Grid>
         </Border>
 
         <!-- Column 1: Content Area -->
