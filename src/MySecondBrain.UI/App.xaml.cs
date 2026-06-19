@@ -102,6 +102,20 @@ public partial class App : Application
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
 
+        // Show the system tray icon and wire basic events
+        var trayService = _serviceProvider.GetRequiredService<ISystemTrayService>();
+        trayService.Show();
+        trayService.OpenStudioRequested += (s, args) =>
+        {
+            mainWindow.Dispatcher.Invoke(() =>
+            {
+                mainWindow.Show();
+                mainWindow.WindowState = WindowState.Normal;
+                mainWindow.Activate();
+            });
+        };
+        trayService.ExitRequested += (s, args) => App.Current.Shutdown();
+
         // Start the embedded Kestrel WebSocket server (non-blocking)
         _ = StartWebSocketServerAsync(startupLogger);
     }
