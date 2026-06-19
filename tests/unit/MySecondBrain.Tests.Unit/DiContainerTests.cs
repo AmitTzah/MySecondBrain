@@ -193,4 +193,39 @@ public class DiContainerTests
         var second = _provider.GetRequiredService<ILocalWebSocketServer>();
         Assert.Same(first, second);
     }
+
+    [Fact]
+    public void KestrelWebSocketServer_AuthToken_IsNonEmptyHexString()
+    {
+        var server = (KestrelWebSocketServer)_provider.GetRequiredService<ILocalWebSocketServer>();
+
+        var token = server.AuthToken;
+
+        Assert.NotNull(token);
+        Assert.NotEmpty(token);
+        Assert.Equal(64, token.Length); // 32 bytes = 64 hex chars
+        Assert.Matches("^[0-9A-F]{64}$", token); // uppercase hex, no dashes
+    }
+
+    [Fact]
+    public void KestrelWebSocketServer_RegenerateAuthToken_ReturnsNewToken()
+    {
+        var server = (KestrelWebSocketServer)_provider.GetRequiredService<ILocalWebSocketServer>();
+
+        var original = server.AuthToken;
+        var regenerated = server.RegenerateAuthToken();
+
+        Assert.NotEqual(original, regenerated);
+        Assert.Equal(64, regenerated.Length);
+        Assert.Equal(regenerated, server.AuthToken); // property updated
+    }
+
+    [Fact]
+    public void KestrelWebSocketServer_AuthToken_SameAcrossSingletonResolves()
+    {
+        var first = (KestrelWebSocketServer)_provider.GetRequiredService<ILocalWebSocketServer>();
+        var second = (KestrelWebSocketServer)_provider.GetRequiredService<ILocalWebSocketServer>();
+
+        Assert.Equal(first.AuthToken, second.AuthToken);
+    }
 }
