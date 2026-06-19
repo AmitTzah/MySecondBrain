@@ -57,7 +57,7 @@ src/
 - **Live Smoke Test (Mandatory):** Open terminal, run `dotnet build src/MySecondBrain.UI/MySecondBrain.UI.csproj`. Verify build succeeds with zero errors. Run `dotnet test tests/unit/MySecondBrain.Tests.Unit/` — verify all existing 114 unit tests still pass.
 - **Suggested Commit Message:** `feat: add ASP.NET Core Kestrel framework reference for embedded WebSocket server`
 
-### [ ] Step 2: Fill KestrelWebSocketServer stub — server startup with auto-port selection
+### [x] Step 2: Fill KestrelWebSocketServer stub — server startup with auto-port selection
 - **Goal:** Replace the stub in [`KestrelWebSocketServer.cs`](src/MySecondBrain.UI/Services/KestrelWebSocketServer.cs:5) with a working Kestrel server that starts on `127.0.0.1` with auto-port selection.
 - **Actions:**
   - Implement `StartAsync(int? preferredPort, CancellationToken ct)`: Build a `WebApplication` with Kestrel listening on `127.0.0.1:{port}`. If no port specified, bind to port 0 (OS auto-assigns). Store the actual port.
@@ -254,5 +254,6 @@ src/
 - **AppSetting keys introduced:**
   - `"WebSocketAuthToken"` — auto-generated WebSocket auth token
   - `"MinimizeToTray"` — boolean, default `true`
+- **KestrelWebSocketServer API (Step 2):** `ILocalWebSocketServer` resolved as `KestrelWebSocketServer` singleton. Methods: `StartAsync(int? preferredPort, CancellationToken)` — builds Kestrel `WebApplication` on `127.0.0.1:{port}` (0=auto), extracts port via `Uri.TryCreate`. `StopAsync(CancellationToken)` — graceful shutdown. `Port` (int), `IsRunning` (bool), `Dispose()` — synchronous via `GetAwaiter().GetResult()`. `/health` GET endpoint returns `"OK"`. Startup pattern in `App.xaml.cs`: fire-and-forget `StartWebSocketServerAsync()` after `MainWindow.Show()`. Shutdown in `OnExit`: resolve `ILocalWebSocketServer`, `StopAsync` with 5s timeout, then `Log.CloseAndFlush()`. Kestrel logging wired via `builder.Logging.AddSerilog()`.
 - **Auto-Update XML feed format (AutoUpdater.NET):** `<item><version>X.Y.Z.W</version><url>...</url><changelog>...</changelog><mandatory>true|false</mandatory></item>`
 - **DPI configuration:** `PerMonitorV2` set via `<ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>` in `.csproj`. Per-monitor DPI values logged at startup.
