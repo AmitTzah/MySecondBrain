@@ -118,8 +118,7 @@ Scrollable area showing the active category's settings. Each category section ha
 - **STT Provider (A10):** Provider dropdown, Model field, API Key, "Test Microphone" button.
 
 ### 🌐 Language
-- **UI Language:** Dropdown: English (default). Hebrew available per Q2.
-- **RTL Detection:** Toggle: Auto-detect RTL from Unicode ranges (default: ON).
+- **Auto-detect RTL:** Toggle. When ON, messages with >30% Hebrew characters (Unicode range U+0590–U+05FF) render right-to-left. Default: ON. This is a rendering behavior setting only — the app UI is always in English.
 
 ### 🔔 Notifications
 - **Sound on Completion (A4):** Toggle. Plays system sound when generation completes.
