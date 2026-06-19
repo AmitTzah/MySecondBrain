@@ -7,6 +7,7 @@ using Serilog;
 using System.Net;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace MySecondBrain.UI.Services;
 
@@ -14,11 +15,15 @@ public class KestrelWebSocketServer : ILocalWebSocketServer
 {
     private readonly ILogger<KestrelWebSocketServer> _logger;
     private readonly ISettingsRepository _settings;
+    private readonly object _connectionLock = new();
     private WebApplication? _app;
+    private WebSocket? _connectedClient;
+    private CancellationTokenSource? _cts;
     private int _port;
     private string _authToken;
 
     private const string AuthTokenKey = "WebSocketAuthToken";
+    private const int ReceiveBufferSize = 4096;
 
     public KestrelWebSocketServer(ILogger<KestrelWebSocketServer> logger, ISettingsRepository settings)
     {
@@ -42,6 +47,8 @@ public class KestrelWebSocketServer : ILocalWebSocketServer
             _logger.LogWarning("WebSocket server is already running on port {Port}", _port);
             return;
         }
+
+        _cts = new CancellationTokenSource();
 
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
@@ -82,14 +89,52 @@ public class KestrelWebSocketServer : ILocalWebSocketServer
                 return;
             }
 
-            if (context.WebSockets.IsWebSocketRequest)
-            {
-                using var ws = await context.WebSockets.AcceptWebSocketAsync();
-                await ReceiveLoop(ws);
-            }
-            else
+            if (!context.WebSockets.IsWebSocketRequest)
             {
                 context.Response.StatusCode = 400;
+                return;
+            }
+
+            // Enforce single-client constraint: reject additional connections with HTTP 409
+            // BEFORE accepting the WebSocket, because AcceptWebSocketAsync sends the HTTP 101
+            // Switching Protocols response, after which the response status code is immutable.
+            bool occupied;
+            lock (_connectionLock)
+            {
+                occupied = _connectedClient is not null;
+            }
+
+            if (occupied)
+            {
+                context.Response.StatusCode = 409;
+                _logger.LogWarning("Rejected additional WebSocket connection — only one client is supported");
+                await context.Response.WriteAsync("Only one WebSocket client is supported");
+                return;
+            }
+
+            var ws = await context.WebSockets.AcceptWebSocketAsync();
+
+            // Register the new client (still under lock to prevent race with SendAsync)
+            lock (_connectionLock)
+            {
+                _connectedClient = ws;
+            }
+
+            _logger.LogInformation("WebSocket client connected");
+
+            try
+            {
+                await ReceiveLoop(ws);
+            }
+            finally
+            {
+                lock (_connectionLock)
+                {
+                    if (_connectedClient == ws)
+                        _connectedClient = null;
+                }
+                ws.Dispose();
+                _logger.LogInformation("WebSocket client disconnected");
             }
         });
 
@@ -112,13 +157,56 @@ public class KestrelWebSocketServer : ILocalWebSocketServer
             return;
         }
 
+        // Cancel the receive loop token to unblock any active WebSocket reads,
+        // then close the connected client gracefully.
+        _cts?.Cancel();
+
+        WebSocket? client;
+        lock (_connectionLock)
+        {
+            client = _connectedClient;
+            _connectedClient = null;
+        }
+
+        if (client is not null && client.State == WebSocketState.Open)
+        {
+            try
+            {
+                await client.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server shutting down", CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error closing WebSocket client during shutdown");
+            }
+            finally
+            {
+                client.Dispose();
+            }
+        }
+
         await _app.StopAsync(ct);
         _app = null;
         _logger.LogInformation("WebSocket server stopped");
     }
 
-    public Task SendAsync(string message, CancellationToken ct = default) =>
-        Task.CompletedTask;
+    public async Task SendAsync(string message, CancellationToken ct = default)
+    {
+        WebSocket? client;
+        lock (_connectionLock)
+        {
+            client = _connectedClient;
+        }
+
+        if (client is null || client.State != WebSocketState.Open)
+        {
+            _logger.LogWarning("Cannot send message — no connected WebSocket client");
+            return;
+        }
+
+        var bytes = Encoding.UTF8.GetBytes(message);
+        await client.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, ct);
+        _logger.LogTrace("Sent WebSocket message ({Length} bytes)", bytes.Length);
+    }
 
     /// <summary>
     /// Regenerates the authentication token: creates a cryptographically random
@@ -141,6 +229,17 @@ public class KestrelWebSocketServer : ILocalWebSocketServer
     /// </summary>
     public void Dispose()
     {
+        _cts?.Cancel();
+        _cts?.Dispose();
+
+        WebSocket? client;
+        lock (_connectionLock)
+        {
+            client = _connectedClient;
+            _connectedClient = null;
+        }
+        client?.Dispose();
+
         if (_app is not null)
         {
             _app.DisposeAsync().AsTask().GetAwaiter().GetResult();
@@ -209,36 +308,54 @@ public class KestrelWebSocketServer : ILocalWebSocketServer
     }
 
     /// <summary>
-    /// Placeholder receive loop for WebSocket messages. This method is invoked
-    /// for each accepted WebSocket connection. The full JSON message protocol
-    /// will be implemented in a subsequent step.
+    /// Receive loop for WebSocket messages. Reads messages from the connected client
+    /// in a background loop, assembling multi-frame messages into a complete JSON string,
+    /// and fires the <see cref="MessageReceived"/> event with the raw JSON.
+    /// On client disconnect (close frame, socket error, or cancellation), cleans up
+    /// the connection gracefully. The caller is responsible for clearing the
+    /// <see cref="_connectedClient"/> reference and disposing the WebSocket after this method returns.
     /// </summary>
     private async Task ReceiveLoop(WebSocket webSocket)
     {
-        var buffer = new byte[4096];
-        _logger.LogInformation("WebSocket client connected");
+        var buffer = new byte[ReceiveBufferSize];
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts?.Token ?? CancellationToken.None);
         try
         {
             while (webSocket.State == WebSocketState.Open)
             {
-                var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), linkedCts.Token);
+
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
+                    _logger.LogInformation("WebSocket client sent close frame");
+                    // Use CancellationToken.None for the close handshake response so that
+                    // a server shutdown cancellation does not mask a client-initiated close.
                     await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
                     break;
                 }
-                var message = System.Text.Encoding.UTF8.GetString(buffer, 0, result.Count);
+
+                // Accumulate multi-frame messages: keep reading until EndOfMessage is true.
+                var messageBuilder = new StringBuilder();
+                messageBuilder.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+
+                while (!result.EndOfMessage)
+                {
+                    result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), linkedCts.Token);
+                    messageBuilder.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+                }
+
+                var message = messageBuilder.ToString();
                 _logger.LogDebug("WebSocket received: {Message}", message);
                 MessageReceived?.Invoke(this, message);
             }
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("WebSocket receive loop cancelled (server shutting down)");
+        }
         catch (WebSocketException ex)
         {
-            _logger.LogWarning(ex, "WebSocket error");
-        }
-        finally
-        {
-            _logger.LogInformation("WebSocket client disconnected");
+            _logger.LogWarning(ex, "WebSocket error in receive loop");
         }
     }
 }
