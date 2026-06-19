@@ -69,7 +69,7 @@ src/
 - **Live Smoke Test (Mandatory):** Launch the app. Check the log file at `%LOCALAPPDATA%\MySecondBrain\logs\msb-{date}.log` — verify a log entry contains "WebSocket server started on port" with a port number. Open PowerShell and run `netstat -ano | findstr :{port}` — verify the port is in LISTENING state on `127.0.0.1`. Close the app, run `netstat -ano | findstr :{port}` again — verify the port is no longer listening.
 - **Suggested Commit Message:** `feat: implement KestrelWebSocketServer startup with auto-port selection on 127.0.0.1`
 
-### [ ] Step 3: Fill KestrelWebSocketServer — token-based authentication
+### [x] Step 3: Fill KestrelWebSocketServer — token-based authentication
 - **Goal:** Add WebSocket endpoint with token-based authentication. Auto-generate token on first run, store via `ISettingsRepository`, validate on every WebSocket connection attempt.
 - **Actions:**
   - Map a WebSocket endpoint (e.g., `/ws`) in the Kestrel pipeline.
