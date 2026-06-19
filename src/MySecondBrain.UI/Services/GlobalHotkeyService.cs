@@ -2,7 +2,9 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows.Input;
 using System.Windows.Interop;
+
 using Microsoft.Extensions.Logging;
+
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 
@@ -142,7 +144,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
 
             // Build the assignment
             var assignment = new HotkeyAssignment(hotkeyId, modifiers, key);
-            bool success = TryRegisterApiHotKey(assignment, out int id);
+            var success = TryRegisterApiHotKey(assignment, out var id);
 
             if (success)
             {
@@ -171,7 +173,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
                 return false;
 
             // Check primary registrations
-            if (_idByHotkeyId.TryGetValue(hotkeyId, out int apiId))
+            if (_idByHotkeyId.TryGetValue(hotkeyId, out var apiId))
             {
                 if (_hwndSource is not null && _hwndSource.Handle != IntPtr.Zero)
                     UnregisterHotKey(_hwndSource.Handle, apiId);
@@ -266,8 +268,8 @@ public class GlobalHotkeyService : IGlobalHotkeyService
             return false;
 
         id = ++_nextId; // Thread-safe — caller holds _lock
-        uint modifiers = ToModifierFlags(assignment.Modifiers);
-        uint vk = (uint)assignment.Key;
+        var modifiers = ToModifierFlags(assignment.Modifiers);
+        var vk = (uint)assignment.Key;
 
         return RegisterHotKey(_hwndSource.Handle, id, modifiers | MOD_NOREPEAT, vk);
     }
@@ -327,7 +329,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
     {
         if (msg == WM_HOTKEY)
         {
-            int hotkeyId = wParam.ToInt32();
+            var hotkeyId = wParam.ToInt32();
 
             HotkeyAssignment? assignment;
             lock (_lock)
@@ -361,7 +363,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
                 return;
             }
 
-            IntPtr moduleHandle = GetModuleHandle(curModule.ModuleName);
+            var moduleHandle = GetModuleHandle(curModule.ModuleName);
             if (moduleHandle == IntPtr.Zero)
             {
                 _logger.LogWarning("GetModuleHandle returned zero — WH_KEYBOARD_LL hook not installed");
@@ -375,7 +377,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
 
             if (_hookId == IntPtr.Zero)
             {
-                int error = Marshal.GetLastWin32Error();
+                var error = Marshal.GetLastWin32Error();
                 _logger.LogWarning("SetWindowsHookEx(WH_KEYBOARD_LL) failed with error {Error} — fallback disabled", error);
                 _hookDelegate = null;
             }
@@ -418,13 +420,13 @@ public class GlobalHotkeyService : IGlobalHotkeyService
             if (_fallbackHotkeys.Count == 0)
                 return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
 
-            int vkCode = Marshal.ReadInt32(lParam);
+            var vkCode = Marshal.ReadInt32(lParam);
 
             // Get current modifier states
-            bool altDown = (GetKeyState(VK_MENU) & 0x8000) != 0;
-            bool ctrlDown = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
-            bool shiftDown = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
-            bool winDown = ((GetKeyState(VK_LWIN) & 0x8000) != 0) || ((GetKeyState(VK_RWIN) & 0x8000) != 0);
+            var altDown = (GetKeyState(VK_MENU) & 0x8000) != 0;
+            var ctrlDown = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+            var shiftDown = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+            var winDown = ((GetKeyState(VK_LWIN) & 0x8000) != 0) || ((GetKeyState(VK_RWIN) & 0x8000) != 0);
 
             // Build the current modifier combination
             ModifierKeys currentModifiers = ModifierKeys.None;
@@ -433,7 +435,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
             if (shiftDown) currentModifiers |= ModifierKeys.Shift;
             if (winDown) currentModifiers |= ModifierKeys.Windows;
 
-            VirtualKey currentKey = (VirtualKey)vkCode;
+            var currentKey = (VirtualKey)vkCode;
 
             // Check fallback hotkeys
             HotkeyAssignment? matchedAssignment = null;
@@ -508,7 +510,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
 
         foreach (var (id, mod, key) in defaults)
         {
-            bool success = RegisterHotkey(id, mod, key);
+            var success = RegisterHotkey(id, mod, key);
             if (success)
                 _logger.LogInformation("Default hotkey registered: '{HotkeyId}' ({Modifiers}+{Key})", id, mod, key);
             else

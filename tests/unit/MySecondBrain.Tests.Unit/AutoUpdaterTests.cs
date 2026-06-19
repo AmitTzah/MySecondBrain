@@ -1,8 +1,11 @@
 using System.Net;
 using System.Reflection;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using Moq.Protected;
+
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 using MySecondBrain.Services.Update;

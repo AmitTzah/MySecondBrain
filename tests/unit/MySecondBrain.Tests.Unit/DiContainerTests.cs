@@ -1,13 +1,15 @@
 using System.Reflection;
 using System.Windows.Forms;
 using System.Windows.Input;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 using MySecondBrain.Data;
-using MySecondBrain.UI;
 using MySecondBrain.Services.Update;
+using MySecondBrain.UI;
 using MySecondBrain.UI.Services;
 using MySecondBrain.UI.ViewModels;
 
@@ -317,7 +319,7 @@ public class DiContainerTests
         service.UpdateRecentChats(titles);
 
         Assert.Equal(5, recentChats.DropDownItems.Count);
-        for (int i = 0; i < 5; i++)
+        for (var i = 0; i < 5; i++)
         {
             var item = Assert.IsType<ToolStripMenuItem>(recentChats.DropDownItems[i]);
             Assert.Equal(titles[i], item.Text);
@@ -558,12 +560,12 @@ public class DiContainerTests
     {
         var service = _provider.GetRequiredService<IGlobalHotkeyService>();
 
-        bool registered = service.RegisterHotkey("TestHotkey", ModifierKeys.Alt, VirtualKey.A);
+        var registered = service.RegisterHotkey("TestHotkey", ModifierKeys.Alt, VirtualKey.A);
         Assert.True(registered, "RegisterHotkey should return true");
 
         Assert.True(service.IsRegistered("TestHotkey"), "IsRegistered should be true after Register");
 
-        bool unregistered = service.UnregisterHotkey("TestHotkey");
+        var unregistered = service.UnregisterHotkey("TestHotkey");
         Assert.True(unregistered, "UnregisterHotkey should return true");
 
         Assert.False(service.IsRegistered("TestHotkey"), "IsRegistered should be false after Unregister");
@@ -617,7 +619,7 @@ public class DiContainerTests
     {
         var service = _provider.GetRequiredService<IGlobalHotkeyService>();
 
-        bool result = service.UnregisterHotkey("NoSuchHotkey_XYZ");
+        var result = service.UnregisterHotkey("NoSuchHotkey_XYZ");
         Assert.False(result);
     }
 
@@ -658,13 +660,13 @@ public class DiContainerTests
         var service = _provider.GetRequiredService<IGlobalHotkeyService>();
 
         // RegisterHotKey P/Invoke will fail in test (no HwndSource on MTA) → falls to WH_KEYBOARD_LL
-        bool result = service.RegisterHotkey("FallbackTest", ModifierKeys.Alt, VirtualKey.Z);
+        var result = service.RegisterHotkey("FallbackTest", ModifierKeys.Alt, VirtualKey.Z);
         Assert.True(result, "RegisterHotkey should return true even with fallback");
 
         Assert.True(service.IsRegistered("FallbackTest"),
             "Hotkey should be registered (even if via fallback)");
 
-        bool unregistered = service.UnregisterHotkey("FallbackTest");
+        var unregistered = service.UnregisterHotkey("FallbackTest");
         Assert.True(unregistered, "UnregisterHotkey should return true for fallback-registered hotkey");
 
         Assert.False(service.IsRegistered("FallbackTest"),

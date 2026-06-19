@@ -1,14 +1,12 @@
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Windows;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Serilog;
-using Serilog.Formatting.Json;
-using System.Windows;
-// Resolves ambiguity with System.Windows.Forms.Application from UseWindowsForms=true
-using Application = System.Windows.Application;
+
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 using MySecondBrain.Data;
@@ -26,6 +24,11 @@ using MySecondBrain.Services.Wiki;
 using MySecondBrain.UI.Controls;
 using MySecondBrain.UI.Services;
 using MySecondBrain.UI.ViewModels;
+
+using Serilog;
+using Serilog.Formatting.Json;
+// Resolves ambiguity with System.Windows.Forms.Application from UseWindowsForms=true
+using Application = System.Windows.Application;
 
 namespace MySecondBrain.UI;
 
@@ -103,7 +106,7 @@ public partial class App : Application
         startupLogger.LogInformation("DPI mode: PerMonitorV2 (ApplicationHighDpiMode in .csproj)");
         var screenCount = System.Windows.Forms.Screen.AllScreens.Length;
         startupLogger.LogInformation("Screen count: {Count}", screenCount);
-        for (int i = 0; i < screenCount; i++)
+        for (var i = 0; i < screenCount; i++)
         {
             var s = System.Windows.Forms.Screen.AllScreens[i];
             startupLogger.LogInformation(

@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Xml.Linq;
+
 using Microsoft.Extensions.Logging;
+
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 
@@ -73,7 +75,7 @@ public class AutoUpdaterDotNet : IUpdateChecker
                 return new UpdateCheckResult(false, null, $"Unparseable version: {versionStr}");
             }
 
-            bool isMandatory = string.Equals(mandatoryStr, "true", StringComparison.OrdinalIgnoreCase);
+            var isMandatory = string.Equals(mandatoryStr, "true", StringComparison.OrdinalIgnoreCase);
 
             if (remoteVersion <= CurrentVersion)
             {
