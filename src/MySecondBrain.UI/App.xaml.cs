@@ -101,13 +101,53 @@ public partial class App : Application
 
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
+
+        // Start the embedded Kestrel WebSocket server (non-blocking)
+        _ = StartWebSocketServerAsync(startupLogger);
     }
 
-    protected override void OnExit(ExitEventArgs e)
+    protected override async void OnExit(ExitEventArgs e)
     {
+        // Gracefully stop the WebSocket server before disposing DI container.
+        // Use static Serilog Log rather than ILogger<T> because the DI container
+        // is being torn down and ILogger<T> may be unavailable during teardown.
+        try
+        {
+            var wsServer = _serviceProvider.GetService<ILocalWebSocketServer>();
+            if (wsServer is not null)
+            {
+                // 5-second timeout to prevent indefinite blocking on shutdown
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                await wsServer.StopAsync(timeoutCts.Token);
+                Log.Information("WebSocket server stopped on shutdown");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            Log.Warning("WebSocket server stop timed out after 5 seconds");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Error stopping WebSocket server on shutdown");
+        }
+
         Log.CloseAndFlush();
         (_serviceProvider as IDisposable)?.Dispose();
         base.OnExit(e);
+    }
+
+    private async Task StartWebSocketServerAsync(ILogger<App>? startupLogger)
+    {
+        try
+        {
+            var wsServer = _serviceProvider.GetRequiredService<ILocalWebSocketServer>();
+            await wsServer.StartAsync();
+            startupLogger?.LogInformation("WebSocket server lifecycle started");
+        }
+        catch (Exception ex)
+        {
+            startupLogger?.LogError(ex, "Failed to start WebSocket server");
+        }
     }
 
     public static void ConfigureServices(IServiceCollection services)

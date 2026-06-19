@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Data;
 using MySecondBrain.UI;
+using MySecondBrain.UI.Services;
 using MySecondBrain.UI.ViewModels;
 
 namespace MySecondBrain.Tests.Unit;
@@ -178,5 +179,18 @@ public class DiContainerTests
     {
         var logger = _provider.GetRequiredService<ILogger<DiContainerTests>>();
         Assert.NotNull(logger);
+    }
+
+    [Fact]
+    public void CanResolve_KestrelWebSocketServer()
+    {
+        var server = _provider.GetRequiredService<ILocalWebSocketServer>();
+        Assert.NotNull(server);
+        Assert.IsType<KestrelWebSocketServer>(server);
+
+        // Verify singleton lifetime
+        var first = _provider.GetRequiredService<ILocalWebSocketServer>();
+        var second = _provider.GetRequiredService<ILocalWebSocketServer>();
+        Assert.Same(first, second);
     }
 }
