@@ -49,7 +49,7 @@ src/
 
 ## 5. Execution Steps
 
-### [ ] Step 1: Add ASP.NET Core Kestrel + WebSocket NuGet packages to UI project
+### [x] Step 1: Add ASP.NET Core Kestrel + WebSocket NuGet packages to UI project
 - **Goal:** Add required NuGet packages for embedded Kestrel WebSocket server to [`MySecondBrain.UI.csproj`](src/MySecondBrain.UI/MySecondBrain.UI.csproj:17-32).
 - **Actions:**
   - Add `<FrameworkReference Include="Microsoft.AspNetCore.App" />` to the UI .csproj. This brings in Kestrel, WebSocket middleware, and the ASP.NET Core hosting primitives needed for the embedded server.
