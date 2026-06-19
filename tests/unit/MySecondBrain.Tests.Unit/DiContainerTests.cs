@@ -1,10 +1,13 @@
 using System.Reflection;
 using System.Windows.Forms;
+using System.Windows.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
+using MySecondBrain.Core.Models;
 using MySecondBrain.Data;
 using MySecondBrain.UI;
+using MySecondBrain.Services.Update;
 using MySecondBrain.UI.Services;
 using MySecondBrain.UI.ViewModels;
 
@@ -129,6 +132,12 @@ public class DiContainerTests
         // IUpdateChecker: 2 implementations
         var updateCheckers = _provider.GetServices<IUpdateChecker>().ToList();
         Assert.Equal(2, updateCheckers.Count);
+
+        // Verify AutoUpdaterDotNet.CurrentVersion reads from assembly (non-zero)
+        var autoUpdater = updateCheckers.OfType<AutoUpdaterDotNet>().FirstOrDefault();
+        Assert.NotNull(autoUpdater);
+        Assert.NotNull(autoUpdater.CurrentVersion);
+        Assert.NotEqual(new Version(0, 0, 0), autoUpdater.CurrentVersion);
 
         // IContentBlockRenderer: 7 implementations
         var renderers = _provider.GetServices<IContentBlockRenderer>().ToList();
@@ -532,5 +541,215 @@ public class DiContainerTests
         // After two sequential updates, only the last set should remain (no double entries)
         var item = Assert.IsType<ToolStripMenuItem>(Assert.Single(recentChats.DropDownItems));
         Assert.Equal("Test B", item.Text);
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_CanResolve_AsSingleton()
+    {
+        var first = _provider.GetRequiredService<IGlobalHotkeyService>();
+        var second = _provider.GetRequiredService<IGlobalHotkeyService>();
+
+        Assert.NotNull(first);
+        Assert.Same(first, second);
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_IsRegistered_TrueAfterRegister()
+    {
+        var service = _provider.GetRequiredService<IGlobalHotkeyService>();
+
+        bool registered = service.RegisterHotkey("TestHotkey", ModifierKeys.Alt, VirtualKey.A);
+        Assert.True(registered, "RegisterHotkey should return true");
+
+        Assert.True(service.IsRegistered("TestHotkey"), "IsRegistered should be true after Register");
+
+        bool unregistered = service.UnregisterHotkey("TestHotkey");
+        Assert.True(unregistered, "UnregisterHotkey should return true");
+
+        Assert.False(service.IsRegistered("TestHotkey"), "IsRegistered should be false after Unregister");
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_GetRegisteredHotkeys_ReturnsAll()
+    {
+        var service = _provider.GetRequiredService<IGlobalHotkeyService>();
+
+        // Register two additional hotkeys (default ones exist already)
+        service.RegisterHotkey("Test_A", ModifierKeys.Alt, VirtualKey.A);
+        service.RegisterHotkey("Test_B", ModifierKeys.Control, VirtualKey.B);
+
+        var all = service.GetRegisteredHotkeys();
+
+        // At least 8: 6 defaults + 2 we just registered
+        Assert.Equal(8, all.Count);
+
+        // Cleanup
+        service.UnregisterHotkey("Test_A");
+        service.UnregisterHotkey("Test_B");
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_DetectConflict_SameKeyReturnsTrue()
+    {
+        var service = _provider.GetRequiredService<IGlobalHotkeyService>();
+
+        service.RegisterHotkey("ConflictTest", ModifierKeys.Alt, VirtualKey.F);
+        Assert.True(service.DetectConflict(ModifierKeys.Alt, VirtualKey.F),
+            "DetectConflict should return true for registered hotkey");
+
+        service.UnregisterHotkey("ConflictTest");
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_DetectConflict_DifferentKeyReturnsFalse()
+    {
+        var service = _provider.GetRequiredService<IGlobalHotkeyService>();
+
+        // Unusual modifier+key combos not registered by default and not system hotkeys
+        Assert.False(service.DetectConflict(ModifierKeys.Control | ModifierKeys.Shift, VirtualKey.F1),
+            "Ctrl+Shift+F1 should not conflict");
+        Assert.False(service.DetectConflict(ModifierKeys.Control | ModifierKeys.Alt, VirtualKey.F2),
+            "Ctrl+Alt+F2 should not conflict");
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_UnregisterHotkey_NonexistentIdReturnsFalse()
+    {
+        var service = _provider.GetRequiredService<IGlobalHotkeyService>();
+
+        bool result = service.UnregisterHotkey("NoSuchHotkey_XYZ");
+        Assert.False(result);
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_Dispose_UnregistersAll()
+    {
+        var service = (GlobalHotkeyService)_provider.GetRequiredService<IGlobalHotkeyService>();
+
+        service.RegisterHotkey("DisposeTest_A", ModifierKeys.Alt, VirtualKey.G);
+        service.RegisterHotkey("DisposeTest_B", ModifierKeys.Control, VirtualKey.H);
+
+        var beforeCount = service.GetRegisteredHotkeys().Count;
+        Assert.True(beforeCount >= 2, "Should have at least 2 registered hotkeys before dispose");
+
+        service.Dispose();
+
+        var afterCount = service.GetRegisteredHotkeys().Count;
+        Assert.Equal(0, afterCount);
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_DetectConflict_KnownSystemHotkeys()
+    {
+        var service = _provider.GetRequiredService<IGlobalHotkeyService>();
+
+        Assert.True(service.DetectConflict(ModifierKeys.Windows, VirtualKey.D),   "Win+D");
+        Assert.True(service.DetectConflict(ModifierKeys.Windows, VirtualKey.L),   "Win+L");
+        Assert.True(service.DetectConflict(ModifierKeys.Windows, VirtualKey.R),   "Win+R");
+        Assert.True(service.DetectConflict(ModifierKeys.Alt, VirtualKey.Tab),      "Alt+Tab");
+        Assert.True(service.DetectConflict(ModifierKeys.Alt, VirtualKey.F4),       "Alt+F4");
+        Assert.True(service.DetectConflict(ModifierKeys.Control | ModifierKeys.Alt, VirtualKey.Delete), "Ctrl+Alt+Del");
+        Assert.True(service.DetectConflict(ModifierKeys.Control | ModifierKeys.Shift, VirtualKey.Escape), "Ctrl+Shift+Esc");
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_RegisterHotkey_SucceedsAndTracksCorrectly()
+    {
+        var service = _provider.GetRequiredService<IGlobalHotkeyService>();
+
+        // RegisterHotKey P/Invoke will fail in test (no HwndSource on MTA) → falls to WH_KEYBOARD_LL
+        bool result = service.RegisterHotkey("FallbackTest", ModifierKeys.Alt, VirtualKey.Z);
+        Assert.True(result, "RegisterHotkey should return true even with fallback");
+
+        Assert.True(service.IsRegistered("FallbackTest"),
+            "Hotkey should be registered (even if via fallback)");
+
+        bool unregistered = service.UnregisterHotkey("FallbackTest");
+        Assert.True(unregistered, "UnregisterHotkey should return true for fallback-registered hotkey");
+
+        Assert.False(service.IsRegistered("FallbackTest"),
+            "IsRegistered should be false after unregister");
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_WH_KEYBOARD_LL_Hook_Created()
+    {
+        var service = (GlobalHotkeyService)_provider.GetRequiredService<IGlobalHotkeyService>();
+
+        // Verify the WH_KEYBOARD_LL hook was installed (hook handle non-zero)
+        var hookIdField = typeof(GlobalHotkeyService).GetField("_hookId",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var hookId = (IntPtr)hookIdField.GetValue(service)!;
+        Assert.NotEqual(IntPtr.Zero, hookId);
+
+        // Verify the service is functional
+        Assert.True(service.RegisterHotkey("HookTest", ModifierKeys.Alt, VirtualKey.F1),
+            "Should register hotkey (any available mechanism)");
+
+        Assert.True(service.IsRegistered("HookTest"),
+            "Hotkey should be registered");
+
+        Assert.True(service.UnregisterHotkey("HookTest"),
+            "Should unregister hotkey");
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_RegisterHotkey_DuplicateIdReturnsFalse()
+    {
+        var service = _provider.GetRequiredService<IGlobalHotkeyService>();
+
+        Assert.True(service.RegisterHotkey("DupTest", ModifierKeys.Alt, VirtualKey.Z),
+            "First registration should succeed");
+
+        // Second registration with same ID should return false
+        Assert.False(service.RegisterHotkey("DupTest", ModifierKeys.Control, VirtualKey.Y),
+            "Duplicate registration should return false");
+
+        // Unregister once
+        Assert.True(service.UnregisterHotkey("DupTest"),
+            "Unregister should succeed");
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_RegisterHotkey_AfterDisposeReturnsFalse()
+    {
+        var service = (GlobalHotkeyService)_provider.GetRequiredService<IGlobalHotkeyService>();
+
+        service.Dispose();
+
+        Assert.False(service.RegisterHotkey("PostDispose", ModifierKeys.Alt, VirtualKey.X),
+            "RegisterHotkey should return false after Dispose");
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_DetectConflict_SystemHotkeyStillTrueWhenAlsoRegistered()
+    {
+        var service = _provider.GetRequiredService<IGlobalHotkeyService>();
+
+        // Alt+Tab is a known system hotkey AND the service may have registered it
+        Assert.True(service.DetectConflict(ModifierKeys.Alt, VirtualKey.Tab),
+            "Alt+Tab should always be conflicted (system hotkey)");
+
+        Assert.True(service.DetectConflict(ModifierKeys.Windows, VirtualKey.D),
+            "Win+D should always be conflicted (system hotkey)");
+    }
+
+    [StaFact]
+    public void GlobalHotkeyService_HotkeyTriggered_NulledAfterDispose()
+    {
+        var service = (GlobalHotkeyService)_provider.GetRequiredService<IGlobalHotkeyService>();
+
+        // Subscribe a handler so the backing field is non-null
+        service.HotkeyTriggered += (_, _) => { };
+
+        var hotkeyEventField = typeof(GlobalHotkeyService).GetField("HotkeyTriggered",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var beforeValue = (Delegate?)hotkeyEventField.GetValue(service);
+        Assert.NotNull(beforeValue); // Should be non-null after subscribing
+
+        service.Dispose();
+
+        var afterValue = (Delegate?)hotkeyEventField.GetValue(service);
+        Assert.Null(afterValue); // Dispose should null the backing field
     }
 }

@@ -97,7 +97,32 @@ public partial class App : Application
             startupLogger.LogError(ex, "Failed to restore theme/font settings, continuing with defaults");
         }
 
-        startupLogger.LogInformation("MySecondBrain started");
+    // Log DPI awareness mode and per-monitor DPI info for diagnostics
+    try
+    {
+        startupLogger.LogInformation("DPI mode: PerMonitorV2 (ApplicationHighDpiMode in .csproj)");
+        var screenCount = System.Windows.Forms.Screen.AllScreens.Length;
+        startupLogger.LogInformation("Screen count: {Count}", screenCount);
+        for (int i = 0; i < screenCount; i++)
+        {
+            var s = System.Windows.Forms.Screen.AllScreens[i];
+            startupLogger.LogInformation(
+                "Screen[{Idx}]: bounds=({L},{T})-({R},{B}), primary={Primary}, device={Dev}",
+                i, s.Bounds.Left, s.Bounds.Top, s.Bounds.Right, s.Bounds.Bottom,
+                s.Primary, s.DeviceName?.TrimEnd('\0'));
+        }
+
+        // WPF PerMonitorV2 handles DPI scaling automatically via device-independent pixels.
+        // The HwndSource will fire DpiChanged events per-monitor when the window moves.
+        startupLogger.LogInformation(
+            "DPI scaling: WPF device-independent pixels handle per-monitor scaling natively");
+    }
+    catch (Exception ex)
+    {
+        startupLogger.LogWarning(ex, "Failed to log DPI diagnostics");
+    }
+
+    startupLogger.LogInformation("MySecondBrain started");
 
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
@@ -145,6 +170,11 @@ public partial class App : Application
 
         // Start the embedded Kestrel WebSocket server (non-blocking)
         _ = StartWebSocketServerAsync(startupLogger);
+
+        // Start global hotkey service — registers default hotkeys (Alt+Space, Ctrl+Shift+Q/W/E/R/C)
+        var hotkeyService = _serviceProvider.GetRequiredService<IGlobalHotkeyService>();
+        var hotkeyCount = hotkeyService.GetRegisteredHotkeys().Count;
+        startupLogger.LogInformation("Global hotkey service started with {Count} default hotkeys", hotkeyCount);
     }
 
     protected override async void OnExit(ExitEventArgs e)

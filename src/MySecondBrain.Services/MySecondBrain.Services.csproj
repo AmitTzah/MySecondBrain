@@ -50,4 +50,10 @@
     <ProjectReference Include="..\MySecondBrain.Core\MySecondBrain.Core.csproj" />
     <ProjectReference Include="..\MySecondBrain.Data\MySecondBrain.Data.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>MySecondBrain.Tests.Unit</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>
