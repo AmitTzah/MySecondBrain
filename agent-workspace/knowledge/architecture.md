@@ -576,3 +576,262 @@ All repository interfaces in `Core/Interfaces/` accept and return plain C# DTOs/
 
 This isolation allows the data layer to be swapped (e.g., SQLite → PostgreSQL) without touching any service or UI code.
 
+---
+
+## 18. Three-Region WPF Grid Shell Architecture
+
+The MainWindow hosts all screens inside a single `Grid` with three content regions separated by two vertical `GridSplitter` controls. This is the foundational shell — all future screen features render inside this layout.
+
+```mermaid
+graph LR
+    Sidebar["Sidebar\n280px\nmin 150 / max 500"]
+    Splitter1["GridSplitter\n4px"]
+    Center["Center Area\nflex"]
+    Splitter2["GridSplitter\n4px"]
+    RightPanel["Right Panel\n320px\nmin 200 / max 500"]
+    Sidebar --- Splitter1
+    Splitter1 --- Center
+    Center --- Splitter2
+    Splitter2 --- RightPanel
+```
+
+### 18.1 Column Definitions
+
+| Column | Width | MinWidth | MaxWidth | Content |
+|--------|-------|----------|----------|---------|
+| 0 | `280` | `150` | `500` | Sidebar: 6 nav items (Chats/Wiki/Media/Artifacts/Usage/Settings) + static chat list preview |
+| 1 | `Auto` | — | — | GridSplitter (`Width="4"`) |
+| 2 | `*` (flex) | — | — | Center: MainWindow-level tab bar (Row 0) + ContentControl with ScreenTemplateSelector (Row 1) |
+| 3 | `Auto` | — | — | GridSplitter (`Width="4"`) |
+| 4 | `320` | `200` | `500` | Right panel: two-section vertical split (Artifacts top + Chat Navigation bottom) |
+
+### 18.2 GridSplitter Configuration
+
+Both splitters use identical configuration:
+- `Width="4"`, `HorizontalAlignment="Stretch"`
+- `ResizeBehavior="PreviousAndNext"` — drag resizes both adjacent columns
+- `Background="{DynamicResource GridSplitterBrush}"` — theme-aware color
+
+### 18.3 Right Panel — Two-Section Vertical Split
+
+The right panel (Column 4) contains its own nested `Grid` with two rows separated by a horizontal `GridSplitter`:
+- **Top row (2\*):** "Artifacts" section header + placeholder. Future Features F (Artifacts) will populate this with an artifact list.
+- **Horizontal GridSplitter** (`Height="4"`, `ResizeBehavior="PreviousAndNext"`)
+- **Bottom row (\*):** "Chat Navigation" section header + placeholder. Future Feature D (Branching) will populate this with chat navigation controls.
+
+### 18.4 DynamicResource Colors
+
+All three regions use `DynamicResource` for backgrounds and foregrounds so theme changes apply instantly without any region-level code changes. The resource keys are: `SidebarBackground`/`SidebarForeground`, `ContentBackground`/`ContentForeground`, `PanelBackground`/`PanelForeground`.
+
+---
+
+## 19. Screen Navigation Architecture — ContentControl + DataTemplateSelector
+
+Screen switching uses a `ContentControl` bound to an enum property, resolved through a custom `DataTemplateSelector`. This replaces the more common WPF `TabControl` approach, which would force tab chrome on every screen.
+
+### 19.1 Why Not TabControl?
+
+`TabControl` provides built-in tab headers and selection, but MySecondBrain needs:
+- Screen navigation via sidebar (not tab headers)
+- A chat tab bar at the MainWindow level (always visible, independent of screen)
+- Screens that are NOT tabs (Wiki, Settings, Usage, etc.) render without tab chrome
+
+A `ContentControl` with a `DataTemplateSelector` provides screen switching without imposing tab visuals.
+
+### 19.2 ScreenType Enum
+
+```csharp
+public enum ScreenType { Chats, Wiki, Media, Artifacts, Usage, Settings }
+```
+
+### 19.3 ViewModel Navigation
+
+```csharp
+public partial class MainWindowViewModel : ObservableObject
+{
+    [ObservableProperty]
+    private ScreenType _selectedScreen = ScreenType.Chats;
+
+    [RelayCommand]
+    private void Navigate(string screenName)
+    {
+        if (Enum.TryParse<ScreenType>(screenName, out var screen))
+            SelectedScreen = screen;
+    }
+}
+```
+
+Sidebar `RadioButton` items bind `Command="{Binding NavigateCommand}"` with `CommandParameter="Chats"` (etc.). When checked, the `ContentControl` renders the corresponding `UserControl`.
+
+### 19.4 ScreenTemplateSelector
+
+`ScreenTemplateSelector` subclasses `DataTemplateSelector` and maps each `ScreenType` enum value to a named `DataTemplate`:
+
+```csharp
+public class ScreenTemplateSelector : DataTemplateSelector
+{
+    public DataTemplate? ChatsTemplate { get; set; }
+    public DataTemplate? WikiTemplate { get; set; }
+    public DataTemplate? MediaTemplate { get; set; }
+    public DataTemplate? ArtifactsTemplate { get; set; }
+    public DataTemplate? UsageTemplate { get; set; }
+    public DataTemplate? SettingsTemplate { get; set; }
+
+    public override DataTemplate? SelectTemplate(object item, DependencyObject container)
+    {
+        return item switch
+        {
+            ScreenType.Chats => ChatsTemplate,
+            ScreenType.Wiki => WikiTemplate,
+            ScreenType.Media => MediaTemplate,
+            ScreenType.Artifacts => ArtifactsTemplate,
+            ScreenType.Usage => UsageTemplate,
+            ScreenType.Settings => SettingsTemplate,
+            _ => null
+        };
+    }
+}
+```
+
+**Critical note:** Implicit `DataTemplate` by `x:Type` does NOT work with C# enums in WPF. The `DataTemplateSelector` is mandatory for enum-based navigation.
+
+### 19.5 XAML Wiring
+
+```xml
+<ContentControl Grid.Column="2" Content="{Binding SelectedScreen}"
+                ContentTemplateSelector="{StaticResource ScreenTemplateSelector}">
+    <ContentControl.Resources>
+        <DataTemplate x:Key="ChatsTemplate">
+            <views:ChatView/>
+        </DataTemplate>
+        <!-- ... one DataTemplate per ScreenType -->
+    </ContentControl.Resources>
+</ContentControl>
+```
+
+### 19.6 Extensibility
+
+Adding a new screen requires: (a) add enum value to `ScreenType`, (b) create `UserControl` in `Views/`, (c) add property + case to `ScreenTemplateSelector`, (d) add `DataTemplate` in `MainWindow.xaml` resources, (e) add sidebar nav item. No changes to existing screens or the navigation infrastructure.
+
+---
+
+## 20. WPF Theme System Architecture
+
+The theme system uses WPF `ResourceDictionary` with `DynamicResource` references for runtime theme switching without application restart.
+
+### 20.1 Dual Dictionary Design
+
+Two `ResourceDictionary` files share identical resource keys with different values:
+
+| File | Purpose |
+|------|---------|
+| `Themes/Dark.xaml` | Dark theme (VS Code-inspired: `#1E1E1E` background) |
+| `Themes/Light.xaml` | Light theme (`#FFFFFF` background, default) |
+
+Both define 25+ resource keys. All XAML in the application uses `DynamicResource` (not `StaticResource`) for themeable values so changes propagate instantly.
+
+### 20.2 Resource Key Catalog
+
+| Key | Type | Dark Value | Light Value |
+|-----|------|-----------|-------------|
+| `AppBackground` | `SolidColorBrush` | `#1E1E1E` | `#FFFFFF` |
+| `AppForeground` | `SolidColorBrush` | `#E0E0E0` | `#1A1A1A` |
+| `SidebarBackground` | `SolidColorBrush` | `#252526` | `#F5F5F5` |
+| `SidebarForeground` | `SolidColorBrush` | `#CCCCCC` | `#333333` |
+| `ContentBackground` | `SolidColorBrush` | `#1E1E1E` | `#FFFFFF` |
+| `ContentForeground` | `SolidColorBrush` | `#D4D4D4` | `#1A1A1A` |
+| `PanelBackground` | `SolidColorBrush` | `#252526` | `#FAFAFA` |
+| `PanelForeground` | `SolidColorBrush` | `#CCCCCC` | `#333333` |
+| `TabBarBackground` | `SolidColorBrush` | `#2D2D2D` | `#EEEEEE` |
+| `TabActiveBackground` | `SolidColorBrush` | `#1E1E1E` | `#FFFFFF` |
+| `TabInactiveBackground` | `SolidColorBrush` | `#2D2D2D` | `#EEEEEE` |
+| `HeaderBackground` | `SolidColorBrush` | `#2D2D2D` | `#F5F5F5` |
+| `InputBackground` | `SolidColorBrush` | `#2D2D2D` | `#FFFFFF` |
+| `AccentBrush` | `SolidColorBrush` | `#2563EB` | `#2563EB` |
+| `AccentForeground` | `SolidColorBrush` | `#FFFFFF` | `#FFFFFF` |
+| `BorderBrush` | `SolidColorBrush` | `#3E3E3E` | `#DDDDDD` |
+| `SubtleBrush` | `SolidColorBrush` | `#555555` | `#999999` |
+| `SuccessBrush` | `SolidColorBrush` | `#22C55E` | `#22C55E` |
+| `WarningBrush` | `SolidColorBrush` | `#F59E0B` | `#F59E0B` |
+| `ErrorBrush` | `SolidColorBrush` | `#EF4444` | `#EF4444` |
+| `ScrollBarBrush` | `SolidColorBrush` | `#424242` | `#CCCCCC` |
+| `GridSplitterBrush` | `SolidColorBrush` | `#3E3E3E` | `#DDDDDD` |
+| `NavActiveBackground` | `SolidColorBrush` | `#2563EB` | `#2563EB` |
+| `NavInactiveForeground` | `SolidColorBrush` | `#999999` | `#666666` |
+| `FontFamily` | `sys:String` / `FontFamily` | `Segoe UI` | `Segoe UI` |
+| `FontSize` | `sys:Double` | `14` | `14` |
+
+### 20.3 App.xaml Default
+
+`App.xaml` merges `Light.xaml` at compile time as the default theme. This means first launch always shows Light theme. The `WpfThemeProvider` defaults to `AppTheme.Light` to match.
+
+### 20.4 Theme Extensibility
+
+Adding a third theme (e.g., "HighContrast") requires:
+1. Create `HighContrast.xaml` with the same 25+ resource keys
+2. Add `HighContrast` to the `AppTheme` enum (in Core)
+3. Update the switch in `WpfThemeProvider.SetAppTheme()`
+
+Zero XAML changes to any screen, control, or converter.
+
+---
+
+## 21. WpfThemeProvider Service Pattern
+
+`WpfThemeProvider` is a UI-layer service (`MySecondBrain.UI/Services/`) that implements `IThemeProvider` (Core interface). It manages theme/font state, persists preferences via `ISettingsRepository`, and fires change events.
+
+### 21.1 Interface Contract
+
+```csharp
+// Defined in Core/Interfaces/IThemeProvider.cs
+public interface IThemeProvider
+{
+    AppTheme CurrentAppTheme { get; }
+    ChatTheme CurrentChatTheme { get; }
+    string FontFamily { get; }
+    double FontSize { get; }
+    FontWeight FontWeight { get; }
+
+    event EventHandler<AppTheme>? AppThemeChanged;
+    event EventHandler<ChatTheme>? ChatThemeChanged;
+
+    void SetAppTheme(AppTheme theme);
+    void SetFontSettings(string fontFamily, double fontSize, FontWeight fontWeight);
+    void SetChatTheme(ChatTheme theme);
+    DataTemplate GetChatMessageTemplate(ChatTheme theme);
+}
+```
+
+### 21.2 Implementation Pattern
+
+| Method | Behavior |
+|--------|----------|
+| `SetAppTheme(AppTheme)` | Guards no-op, builds `ResourceDictionary` from `Themes/Dark.xaml` or `Themes/Light.xaml`, calls `MergedDictionaries.Clear()` + `Add(dict)`, fires `AppThemeChanged`, persists `"AppTheme"` key |
+| `SetFontSettings(family, size, weight)` | Validates 10–24px range, updates `Application.Current.Resources["FontFamily"]`/`["FontSize"]`/`["FontWeight"]`, persists all three keys |
+| `SetChatTheme(ChatTheme)` | Guards no-op, persists `"ChatTheme"` key, fires `ChatThemeChanged` |
+| `GetChatMessageTemplate(ChatTheme)` | Resolves named `DataTemplate` (`"ClassicMessageTemplate"`, `"CompactMessageTemplate"`, `"BubbleMessageTemplate"`) from `Application.Current.Resources` |
+
+### 21.3 Constructor & Defaults
+
+```csharp
+public WpfThemeProvider(ISettingsRepository settings)
+{
+    _settings = settings;
+    // Defaults: AppTheme.Light (matches App.xaml), ChatTheme.Classic, Segoe UI 14px Normal
+}
+```
+
+Property getters (`FontFamily`, `FontSize`, `FontWeight`) read live values from `Application.Current.Resources` with fallback defaults. This ensures they always reflect the current WPF resource state, even if a future feature modifies resources directly.
+
+### 21.4 Platform Placement
+
+`WpfThemeProvider` lives in `MySecondBrain.UI/Services/` (not `MySecondBrain.Services/`) because it depends on WPF `ResourceDictionary`, `Application.Current.Resources`, and `FontFamily`/`FontWeight` types. The `IThemeProvider` interface in Core has no WPF dependency — it uses `string` for font family and `double` for font size.
+
+### 21.5 DI Registration
+
+```csharp
+services.AddSingleton<IThemeProvider, WpfThemeProvider>();
+```
+
+Singleton lifetime — shared theme state across all windows and the application lifetime.
+

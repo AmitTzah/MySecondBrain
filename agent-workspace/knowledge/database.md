@@ -508,3 +508,93 @@ Exposed via `public DbSet<AppSetting> Settings => Set<AppSetting>();` on `AppDbC
 Uses `System.Text.Json` for serialization. Find-then-add-or-update pattern via `_db.Settings.FindAsync(key)` followed by `_db.Settings.Add()` or `_db.Entry(existing).CurrentValues.SetValues()`.
 
 No raw SQL needed — standard EF Core CRUD operations on the `AppSetting` entity.
+
+---
+
+## 16. Theme/Font Settings Key Conventions
+
+`SettingsRepository` (backed by `AppSetting` entity, see [§15](#15-appsetting-entity--key-value-settings-store)) stores theme and font preferences as key-value pairs. These keys are read at startup in `App.xaml.cs` and written by `WpfThemeProvider` on every change.
+
+### 16.1 Persisted Keys
+
+| Key | Type | Example Value | Written By | Read At |
+|-----|------|--------------|------------|---------|
+| `"AppTheme"` | `string` | `"Light"`, `"Dark"` | `WpfThemeProvider.SetAppTheme()` | `App.xaml.cs` OnStartup |
+| `"ChatTheme"` | `string` | `"Classic"`, `"Compact"`, `"Bubble"` | `WpfThemeProvider.SetChatTheme()` | — (applied on next theme change via ViewModel) |
+| `"FontFamily"` | `string` | `"Segoe UI"`, `"Cascadia Code"` | `WpfThemeProvider.SetFontSettings()` | `App.xaml.cs` OnStartup |
+| `"FontSize"` | `string` | `"14"`, `"18.5"` | `WpfThemeProvider.SetFontSettings()` | `App.xaml.cs` OnStartup |
+| `"FontWeight"` | `string` | `"Normal"`, `"Bold"`, `"SemiBold"` | `WpfThemeProvider.SetFontSettings()` | `App.xaml.cs` OnStartup |
+
+### 16.2 FontWeight Persistence — FontWeightConverter
+
+`FontWeight` is a WPF struct (not an enum), so it cannot be round-tripped via `Enum.Parse`. The persistence layer uses `FontWeightConverter`:
+
+**Save:**
+```csharp
+var weightString = fontWeight.ToString();  // e.g., "Normal", "Bold", "SemiBold"
+await _settings.SetAsync("FontWeight", weightString);
+```
+
+**Restore:**
+```csharp
+var saved = await _settings.GetAsync("FontWeight");
+var fontWeight = FontWeights.Normal;  // fallback default
+if (saved is not null)
+{
+    try
+    {
+        var converter = new FontWeightConverter();
+        var result = converter.ConvertFromString(saved);
+        if (result is FontWeight fw)
+            fontWeight = fw;
+    }
+    catch { /* fallback to FontWeights.Normal */ }
+}
+```
+
+This pattern applies to any WPF value type that has an associated `TypeConverter`. The converter lives in `System.ComponentModel` and is discovered via `TypeDescriptor`.
+
+### 16.3 FontSize Clamping
+
+`FontSize` is validated in `WpfThemeProvider.SetFontSettings()` to the range **10–24px** (vision spec A3 constraint). Values outside this range throw `ArgumentOutOfRangeException`. The persisted string uses `CultureInfo.InvariantCulture` formatting:
+
+```csharp
+fontSize.ToString(CultureInfo.InvariantCulture)  // "14.5", not "14,5"
+```
+
+### 16.4 Startup Restore Pattern
+
+In `App.xaml.cs` `OnStartup`, after DI build and migration:
+
+```csharp
+var themeProvider = _serviceProvider.GetRequiredService<IThemeProvider>();
+var settings = _serviceProvider.GetRequiredService<ISettingsRepository>();
+
+// 1. Restore theme (if saved; otherwise App.xaml Light default stays)
+var savedTheme = await settings.GetAsync("AppTheme");
+if (savedTheme is not null && Enum.TryParse<AppTheme>(savedTheme, out var theme))
+    themeProvider.SetAppTheme(theme);
+
+// 2. Restore font (family, size, AND weight — all three together)
+var savedFontFamily = await settings.GetAsync("FontFamily");
+var savedFontSize = await settings.GetAsync("FontSize");
+var savedFontWeight = await settings.GetAsync("FontWeight");
+var fontSize = 14.0;
+var fontWeight = FontWeights.Normal;
+if (savedFontSize is not null)
+    double.TryParse(savedFontSize, NumberStyles.Float, CultureInfo.InvariantCulture, out fontSize);
+if (savedFontWeight is not null)
+{
+    try
+    {
+        var converter = new FontWeightConverter();
+        var result = converter.ConvertFromString(savedFontWeight);
+        if (result is FontWeight fw) fontWeight = fw;
+    }
+    catch { }
+}
+if (savedFontFamily is not null)
+    themeProvider.SetFontSettings(savedFontFamily, fontSize, fontWeight);
+```
+
+**Ordering:** Theme restore happens BEFORE font restore. This ensures font resources are set on top of the correct theme dictionary. If font restore ran first and then theme swap cleared the dictionaries, font settings would be lost.

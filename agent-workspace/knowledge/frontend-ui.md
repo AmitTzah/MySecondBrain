@@ -372,3 +372,316 @@ Services that depend on WPF, Windows Forms, or Windows platform APIs live in `My
 
 All are registered as Singleton except transient UI services (`WpfClipboardService`, `AForgeCameraService`, `WpfVideoPlayerService`, `NaudioAudioService` in Services project).
 
+---
+
+## 12. Three-Region WPF Grid Shell Layout
+
+The MainWindow uses a single `Grid` with five column definitions to create a three-region shell. This is the WPF layout pattern that hosts all screens and controls.
+
+### 12.1 Column Layout
+
+```xml
+<Grid>
+    <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="280" MinWidth="150" MaxWidth="500"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="320" MinWidth="200" MaxWidth="500"/>
+    </Grid.ColumnDefinitions>
+</Grid>
+```
+
+| Column | Role | Key Characteristics |
+|--------|------|-------------------|
+| 0 | Sidebar | Nav items (6 icon+label `RadioButton` controls), static chat list preview below. `Background="{DynamicResource SidebarBackground}"` |
+| 1 | GridSplitter | `Width="4"`, `ResizeBehavior="PreviousAndNext"`, `Background="{DynamicResource GridSplitterBrush}"` |
+| 2 | Center Area | MainWindow-level tab bar (Row 0) + `ContentControl` with `ScreenTemplateSelector` (Row 1). `Background="{DynamicResource ContentBackground}"` |
+| 3 | GridSplitter | Same as Column 1 |
+| 4 | Right Panel | Two-section vertical `Grid` (Artifacts top, Chat Navigation bottom) with horizontal `GridSplitter`. `Background="{DynamicResource PanelBackground}"` |
+
+### 12.2 Resize Constraints
+
+- **Sidebar:** Min 150px, Max 500px (prevents collapsing to zero, prevents consuming >50% width)
+- **Right Panel:** Min 200px, Max 500px
+- **Center:** Always fills remaining space (`*`)
+
+### 12.3 Right Panel — Two-Section Vertical Layout
+
+The right panel uses a nested `Grid` with `RowDefinitions="2*,Auto,*"`:
+- Row 0 (`2*`): Artifacts section (header + placeholder)
+- Row 1 (`Auto`): Horizontal `GridSplitter` (`Height="4"`)
+- Row 2 (`*`): Chat Navigation section (header + placeholder)
+
+Future features populate these placeholders with real content. The splitter allows the user to resize the two sections.
+
+---
+
+## 13. Screen Navigation — ScreenTemplateSelector Pattern
+
+Screen switching between the 6 primary screens uses a `ContentControl` bound to an enum, resolved via a custom `DataTemplateSelector`.
+
+### 13.1 Why Not TabControl?
+
+`TabControl` forces tab chrome (headers, selection indicators) on every screen. MySecondBrain needs:
+- Screen-level navigation via sidebar (not tab headers)
+- A chat tab bar at the MainWindow level that is ALWAYS visible across all screens
+- Non-tab screens (Wiki, Settings, Usage) that render cleanly without tab UI
+
+### 13.2 ViewModel Binding
+
+```csharp
+public enum ScreenType { Chats, Wiki, Media, Artifacts, Usage, Settings }
+
+public partial class MainWindowViewModel : ObservableObject
+{
+    [ObservableProperty]
+    private ScreenType _selectedScreen = ScreenType.Chats;
+
+    [RelayCommand]
+    private void Navigate(string screenName)
+    {
+        if (Enum.TryParse<ScreenType>(screenName, out var screen))
+            SelectedScreen = screen;
+    }
+}
+```
+
+### 13.3 ScreenTemplateSelector Implementation
+
+```csharp
+public class ScreenTemplateSelector : DataTemplateSelector
+{
+    // One bindable property per screen — set in XAML
+    public DataTemplate? ChatsTemplate { get; set; }
+    public DataTemplate? WikiTemplate { get; set; }
+    public DataTemplate? MediaTemplate { get; set; }
+    public DataTemplate? ArtifactsTemplate { get; set; }
+    public DataTemplate? UsageTemplate { get; set; }
+    public DataTemplate? SettingsTemplate { get; set; }
+
+    public override DataTemplate? SelectTemplate(object item, DependencyObject container)
+    {
+        return item switch
+        {
+            ScreenType.Chats => ChatsTemplate,
+            ScreenType.Wiki => WikiTemplate,
+            ScreenType.Media => MediaTemplate,
+            ScreenType.Artifacts => ArtifactsTemplate,
+            ScreenType.Usage => UsageTemplate,
+            ScreenType.Settings => SettingsTemplate,
+            _ => null
+        };
+    }
+}
+```
+
+### 13.4 XAML Wiring in MainWindow
+
+```xml
+<ContentControl Grid.Column="2" Content="{Binding SelectedScreen}"
+                ContentTemplateSelector="{StaticResource ScreenTemplateSelector}"
+                Background="{DynamicResource ContentBackground}">
+    <ContentControl.Resources>
+        <DataTemplate x:Key="ChatsTemplate">
+            <views:ChatView/>
+        </DataTemplate>
+        <DataTemplate x:Key="WikiTemplate">
+            <views:WikiBrowserView/>
+        </DataTemplate>
+        <!-- ... one DataTemplate per ScreenType ... -->
+    </ContentControl.Resources>
+</ContentControl>
+```
+
+### 13.5 Critical Rule: Enums + Implicit DataTemplate
+
+Implicit `DataTemplate` by `x:Type` (without `x:Key`) does NOT work with C# enums in WPF. The `DataTemplateSelector` with explicit switch/case is mandatory for enum-based navigation. Do not attempt to use `DataType="{x:Type local:ScreenType}"` on DataTemplates.
+
+---
+
+## 14. Chat Visual Theme DataTemplate Switching
+
+Three distinct `DataTemplate` resources provide different chat message visual styles. The user switches between them at runtime via a `ComboBox` in the chat header bar.
+
+### 14.1 Three Chat Themes
+
+| Theme | Key | Visual Style |
+|-------|-----|-------------|
+| Classic | `ClassicMessageTemplate` | Role label + timestamp header, user messages right-aligned, assistant left-aligned, bordered content area |
+| Compact | `CompactMessageTemplate` | Colored dot inline with role, minimal vertical spacing, no header |
+| Bubble | `BubbleMessageTemplate` | Speech bubbles with rounded corners, timestamp inside bubble, user right/assistant left |
+
+### 14.2 DataTemplate Resolution
+
+Templates are defined in `ChatView.xaml`'s `UserControl.Resources` and resolved by `WpfThemeProvider.GetChatMessageTemplate()`:
+
+```csharp
+public DataTemplate GetChatMessageTemplate(ChatTheme theme) =>
+    theme switch
+    {
+        ChatTheme.Classic => Application.Current.Resources["ClassicMessageTemplate"] as DataTemplate,
+        ChatTheme.Compact => Application.Current.Resources["CompactMessageTemplate"] as DataTemplate,
+        ChatTheme.Bubble => Application.Current.Resources["BubbleMessageTemplate"] as DataTemplate,
+        _ => new DataTemplate()
+    };
+```
+
+### 14.3 ViewModel Binding
+
+```csharp
+[ObservableProperty]
+private ChatTheme _currentChatTheme = ChatTheme.Classic;
+
+[RelayCommand]
+private void SetChatTheme(string themeName)
+{
+    if (Enum.TryParse<ChatTheme>(themeName, out var theme))
+    {
+        _themeProvider.SetChatTheme(theme);
+        CurrentChatTheme = theme;
+    }
+}
+```
+
+### 14.4 Theme Selector ComboBox
+
+```xml
+<ComboBox SelectedItem="{Binding CurrentChatTheme}"
+          ItemsSource="{Binding ChatThemeOptions}"
+          FontSize="11" Width="100"/>
+```
+
+### 14.5 Extensibility
+
+Adding a fourth chat visual theme (e.g., "Minimal"):
+1. Add `Minimal` to `ChatTheme` enum (Core)
+2. Create `DataTemplate x:Key="MinimalMessageTemplate"` in `ChatView.xaml`
+3. Add `ChatTheme.Minimal` case to `WpfThemeProvider.GetChatMessageTemplate()`
+4. Add `"Minimal"` to `ChatThemeOptions` collection
+
+Zero changes to message data models, existing templates, or the chat view layout.
+
+---
+
+## 15. BoolToGridLengthConverter — Dynamic Column Visibility
+
+`BoolToGridLengthConverter` is an `IValueConverter` that maps `bool` to `GridLength`, enabling dynamic column visibility in the WPF Grid shell.
+
+### 15.1 Converter Implementation
+
+```csharp
+public class BoolToGridLengthConverter : IValueConverter
+{
+    public GridLength TrueValue { get; set; } = new GridLength(1, GridUnitType.Star);
+    public GridLength FalseValue { get; set; } = new GridLength(0);
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is true ? TrueValue : FalseValue;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is GridLength gl && gl.Value > 0;
+    }
+}
+```
+
+### 15.2 Usage — Right Panel Visibility
+
+The right panel column width is bound to `MainWindowViewModel.IsRightPanelVisible`:
+
+```xml
+<ColumnDefinition Width="{Binding IsRightPanelVisible, Converter={StaticResource BoolToGridLengthConverter}}"/>
+```
+
+When `IsRightPanelVisible` is `false`, the column width becomes `0` (collapsed). When `true`, it uses the configured width.
+
+### 15.3 Registration
+
+Converters are registered as resources in `App.xaml` or `MainWindow.xaml`:
+
+```xml
+<converters:BoolToGridLengthConverter x:Key="BoolToGridLengthConverter"
+    TrueValue="320" FalseValue="0"/>
+```
+
+Note: `TrueValue="320"` sets the pixel width when visible. This is a configurable property — different bindings can use different visible widths.
+
+---
+
+## 16. Font Settings UI — DynamicResource Persistence
+
+Font settings (family, size, weight) are managed through WPF `DynamicResource` keys and persisted via `ISettingsRepository`. The chat header bar provides quick-adjust font size buttons with live preview.
+
+### 16.1 DynamicResource Keys
+
+Three resource keys control font rendering across the entire application:
+
+| Key | Type | Default | Persisted As |
+|-----|------|---------|-------------|
+| `FontFamily` | `FontFamily` | `Segoe UI` | `ISettingsRepository` key `"FontFamily"` |
+| `FontSize` | `double` | `14.0` | `ISettingsRepository` key `"FontSize"` |
+| `FontWeight` | `FontWeight` | `Normal` | `ISettingsRepository` key `"FontWeight"` |
+
+All chat message text binds `FontSize="{DynamicResource FontSize}"` and `FontFamily="{DynamicResource FontFamily}"`.
+
+### 16.2 Quick-Adjust Font Size Buttons (A⁻ / A⁺)
+
+The chat header bar displays three controls inline:
+
+```xml
+<StackPanel Orientation="Horizontal">
+    <Button Content="A⁻" Command="{Binding DecreaseFontCommand}" ToolTip="Decrease font size"/>
+    <TextBlock Text="{Binding FontSizeDisplay}" MinWidth="20" TextAlignment="Center"/>
+    <Button Content="A⁺" Command="{Binding IncreaseFontCommand}" ToolTip="Increase font size"/>
+</StackPanel>
+```
+
+### 16.3 ViewModel Commands
+
+```csharp
+[ObservableProperty]
+private double _fontSizeDisplay;  // synced from _themeProvider.FontSize
+
+[RelayCommand]
+private void IncreaseFont()
+{
+    var newSize = Math.Min(_themeProvider.FontSize + 1, 24);
+    _themeProvider.SetFontSettings(_themeProvider.FontFamily, newSize, _themeProvider.FontWeight);
+    FontSizeDisplay = newSize;
+}
+
+[RelayCommand]
+private void DecreaseFont()
+{
+    var newSize = Math.Max(_themeProvider.FontSize - 1, 10);
+    _themeProvider.SetFontSettings(_themeProvider.FontFamily, newSize, _themeProvider.FontWeight);
+    FontSizeDisplay = newSize;
+}
+```
+
+### 16.4 Clamping Range
+
+Font size is clamped to **10–24px** per vision spec A3. `WpfThemeProvider.SetFontSettings()` throws `ArgumentOutOfRangeException` if called outside this range. The A⁻/A⁺ commands enforce the clamping in the ViewModel, so the user can never trigger the exception through UI interaction.
+
+### 16.5 Font Family/Weight UI Deferral
+
+Vision spec A3 calls for font family and weight selection controls. The persistence infrastructure (keys, `SetFontSettings` method, startup restore) is complete in this feature, but the UI controls for family and weight selection are deferred to Feature 8 (Settings — Appearance category). Only font size quick-adjust buttons are delivered here.
+
+### 16.6 Persistence Flow
+
+```
+User clicks A⁺
+  → MainWindowViewModel.IncreaseFont()
+    → IThemeProvider.SetFontSettings(family, newSize, weight)
+      → Application.Current.Resources["FontSize"] = newSize   [instant UI update via DynamicResource]
+      → ISettingsRepository.SetAsync("FontSize", newSize)     [persisted to SQLite]
+
+App restart:
+  → App.xaml.cs OnStartup
+    → ISettingsRepository.GetAsync("FontSize")
+    → IThemeProvider.SetFontSettings(family, savedSize, weight)  [restore DynamicResource]
+```
+
