@@ -365,7 +365,7 @@ if (savedFontFamily is not null)
 
 ---
 
-### Step 6: Font Size Quick-Adjust Buttons + Font Settings Persistence
+### [x] Step 6: Font Size Quick-Adjust Buttons + Font Settings Persistence
 
 **Goal:** Wire the existing A⁻ and A⁺ buttons in ChatView's chat header bar to `MainWindowViewModel` commands that call `IThemeProvider.SetFontSettings()`. Display current font size between the buttons. Font changes apply to `FontSize` DynamicResource, affecting all chat message text. Persist via `ISettingsRepository`. Enforce the 10-24px range from vision spec A3.
 
