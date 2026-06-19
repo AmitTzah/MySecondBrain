@@ -40,14 +40,16 @@
                             VerticalAlignment="Center">
                     <Button Content="A⁻" Background="Transparent" BorderThickness="0"
                             Foreground="{DynamicResource SubtleBrush}" FontSize="13"
-                            ToolTip="Decrease font size" Padding="4,2"/>
+                            ToolTip="Decrease font size" Padding="4,2"
+                            Command="{Binding DataContext.DecreaseFontCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
                     <TextBlock Text="{Binding DataContext.FontSizeDisplay, RelativeSource={RelativeSource AncestorType=Window}}"
                                 VerticalAlignment="Center"
                                 FontSize="11" Foreground="{DynamicResource SubtleBrush}"
                                 MinWidth="20" TextAlignment="Center"/>
                     <Button Content="A⁺" Background="Transparent" BorderThickness="0"
                             Foreground="{DynamicResource SubtleBrush}" FontSize="13"
-                            ToolTip="Increase font size" Padding="4,2"/>
+                            ToolTip="Increase font size" Padding="4,2"
+                            Command="{Binding DataContext.IncreaseFontCommand, RelativeSource={RelativeSource AncestorType=Window}}"/>
                     <Button Command="{Binding DataContext.ToggleThemeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                             Content="{Binding DataContext.ThemeToggleIcon, RelativeSource={RelativeSource AncestorType=Window}}"
                             Background="Transparent" BorderThickness="0"

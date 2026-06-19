@@ -72,12 +72,20 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void IncreaseFont()
     {
-        // Stub — wired in Step 6
+        var current = _themeProvider.FontSize;
+        if (current >= 24) return;
+        var newSize = current + 1;
+        _themeProvider.SetFontSettings(_themeProvider.FontFamily, newSize, _themeProvider.FontWeight);
+        FontSizeDisplay = newSize.ToString("F0");
     }
 
     [RelayCommand]
     private void DecreaseFont()
     {
-        // Stub — wired in Step 6
+        var current = _themeProvider.FontSize;
+        if (current <= 10) return;
+        var newSize = current - 1;
+        _themeProvider.SetFontSettings(_themeProvider.FontFamily, newSize, _themeProvider.FontWeight);
+        FontSizeDisplay = newSize.ToString("F0");
     }
 }
