@@ -1,0 +1,45 @@
+<UserControl x:Class="MySecondBrain.UI.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="{DynamicResource ContentBackground}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Column 0: Category Sidebar -->
+        <Border Grid.Column="0" Background="{DynamicResource SidebarBackground}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+            <ListBox Background="Transparent" BorderThickness="0"
+                     Foreground="{DynamicResource SidebarForeground}"
+                     FontSize="12">
+                <ListBoxItem Padding="12,8">🔑 Providers</ListBoxItem>
+                <ListBoxItem Padding="12,8">🧑 Personas</ListBoxItem>
+                <ListBoxItem Padding="12,8">🎨 Appearance</ListBoxItem>
+                <ListBoxItem Padding="12,8">✏️ Font + Layout</ListBoxItem>
+                <ListBoxItem Padding="12,8">⌨️ Hotkeys</ListBoxItem>
+                <ListBoxItem Padding="12,8">🗣️ Speech-to-Text</ListBoxItem>
+                <ListBoxItem Padding="12,8">🔌 Plugins</ListBoxItem>
+                <ListBoxItem Padding="12,8">📝 Wiki</ListBoxItem>
+                <ListBoxItem Padding="12,8">🗄️ Data + Storage</ListBoxItem>
+                <ListBoxItem Padding="12,8">💾 Backup</ListBoxItem>
+                <ListBoxItem Padding="12,8">☁️ Sync</ListBoxItem>
+                <ListBoxItem Padding="12,8">🔒 Privacy + Security</ListBoxItem>
+                <ListBoxItem Padding="12,8">🔄 Updates</ListBoxItem>
+                <ListBoxItem Padding="12,8">🛠️ Advanced</ListBoxItem>
+                <ListBoxItem Padding="12,8">ℹ️ About</ListBoxItem>
+                <ListBoxItem Padding="12,8">📋 Logs</ListBoxItem>
+            </ListBox>
+        </Border>
+
+        <!-- Column 1: Content Area -->
+        <Border Grid.Column="1" Background="{DynamicResource ContentBackground}">
+            <TextBlock Text="Select a category"
+                       Foreground="{DynamicResource SubtleBrush}"
+                       FontSize="14"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+        </Border>
+    </Grid>
+</UserControl>

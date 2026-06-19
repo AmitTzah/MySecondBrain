@@ -15,6 +15,16 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private ScreenType _selectedScreen = ScreenType.Chats;
 
+    [ObservableProperty]
+    private bool _isRightPanelVisible = true;
+
+    partial void OnSelectedScreenChanged(ScreenType value)
+    {
+        // Right panel (Artifacts + Chat Nav) is only for Studio Chat screen
+        // All other screens have their own layouts per vision mocks
+        IsRightPanelVisible = value == ScreenType.Chats;
+    }
+
     public MainWindowViewModel(
         IThemeProvider themeProvider,
         ISystemTrayService systemTray,
