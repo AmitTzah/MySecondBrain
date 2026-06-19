@@ -24,9 +24,26 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _fontSizeDisplay = string.Empty;
 
+    [ObservableProperty]
+    private ChatTheme _currentChatTheme = ChatTheme.Classic;
+
     public AppTheme CurrentAppTheme => _themeProvider.CurrentAppTheme;
 
-    public ChatTheme CurrentChatTheme => _themeProvider.CurrentChatTheme;
+    public DataTemplate? CurrentMessageTemplate =>
+        _themeProvider.GetChatMessageTemplate(CurrentChatTheme);
+
+    public List<ChatTheme> ChatThemeOptions { get; } =
+        [ChatTheme.Classic, ChatTheme.Compact, ChatTheme.Bubble];
+
+    /// <summary>
+    /// Called by the generated [ObservableProperty] setter whenever CurrentChatTheme changes.
+    /// Persists the selection via the theme provider and notifies the template binding.
+    /// </summary>
+    partial void OnCurrentChatThemeChanged(ChatTheme value)
+    {
+        _themeProvider.SetChatTheme(value);
+        OnPropertyChanged(nameof(CurrentMessageTemplate));
+    }
 
     partial void OnSelectedScreenChanged(ScreenType value)
     {
@@ -43,20 +60,15 @@ public partial class MainWindowViewModel : ObservableObject
         _themeProvider = themeProvider;
         _systemTray = systemTray;
         _logger = logger;
+        _currentChatTheme = _themeProvider.CurrentChatTheme;
         FontSizeDisplay = _themeProvider.FontSize.ToString("F0");
+
+        _themeProvider.ChatThemeChanged += OnChatThemeChanged;
     }
 
-    [RelayCommand]
-    private void Navigate(string screenName)
+    private void OnChatThemeChanged(object? sender, ChatTheme theme)
     {
-        if (Enum.TryParse<ScreenType>(screenName, out var screen))
-        {
-            SelectedScreen = screen;
-        }
-        else
-        {
-            _logger.LogWarning("Unrecognized screen name in Navigate: {ScreenName}", screenName);
-        }
+        CurrentChatTheme = theme;
     }
 
     [RelayCommand]
@@ -87,5 +99,14 @@ public partial class MainWindowViewModel : ObservableObject
         var newSize = current - 1;
         _themeProvider.SetFontSettings(_themeProvider.FontFamily, newSize, _themeProvider.FontWeight);
         FontSizeDisplay = newSize.ToString("F0");
+    }
+
+    [RelayCommand]
+    private void SetChatTheme(string themeName)
+    {
+        if (Enum.TryParse<ChatTheme>(themeName, out var theme))
+        {
+            CurrentChatTheme = theme;
+        }
     }
 }
