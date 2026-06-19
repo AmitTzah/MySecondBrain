@@ -120,7 +120,7 @@ src/
 - **Live Smoke Test (Mandatory):** Launch the app. Right-click the tray icon. Verify the context menu now shows (in order): New Chat, Open Studio, Command Bar, separator, Recent Chats (with "No recent chats" grayed out), Settings, separator, Exit. Click "New Chat" — nothing visible happens yet (event fires but no handler wired). Click "Settings" — nothing visible happens yet. Click "Command Bar" — nothing visible happens yet. Click "Exit" — app closes cleanly.
 - **Suggested Commit Message:** `feat: add full system tray context menu with New Chat, Command Bar, Recent Chats, Settings`
 
-### [ ] Step 7: WinFormsSystemTrayService — minimize-to-tray and generation indicator
+### [x] Step 7: WinFormsSystemTrayService — minimize-to-tray and generation indicator
 - **Goal:** Implement minimize-to-tray on window close (per A6 setting) and the generation indicator (icon variant with green dot overlay).
 - **Actions:**
   - Implement minimize-to-tray: read `ISettingsRepository` key `"MinimizeToTray"` (default: `true`). When MainWindow close is requested and minimize-to-tray is enabled, hide window instead of exiting. Only `ExitRequested` event fully exits.
