@@ -99,37 +99,37 @@
                              Command="{Binding NavigateCommand}"
                              CommandParameter="Chats"
                              Style="{StaticResource NavButtonStyle}"
-                             IsChecked="{Binding SelectedScreen, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Chats}"
+                             IsChecked="{Binding SelectedScreen, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Chats, Mode=OneWay}"
                              AutomationProperties.AutomationId="NavChats"/>
                 <RadioButton Content="📝 Wiki"
                              Command="{Binding NavigateCommand}"
                              CommandParameter="Wiki"
                              Style="{StaticResource NavButtonStyle}"
-                             IsChecked="{Binding SelectedScreen, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Wiki}"
+                             IsChecked="{Binding SelectedScreen, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Wiki, Mode=OneWay}"
                              AutomationProperties.AutomationId="NavWiki"/>
                 <RadioButton Content="🖼️ Media"
                              Command="{Binding NavigateCommand}"
                              CommandParameter="Media"
                              Style="{StaticResource NavButtonStyle}"
-                             IsChecked="{Binding SelectedScreen, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Media}"
+                             IsChecked="{Binding SelectedScreen, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Media, Mode=OneWay}"
                              AutomationProperties.AutomationId="NavMedia"/>
                 <RadioButton Content="📄 Artifacts"
                              Command="{Binding NavigateCommand}"
                              CommandParameter="Artifacts"
                              Style="{StaticResource NavButtonStyle}"
-                             IsChecked="{Binding SelectedScreen, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Artifacts}"
+                             IsChecked="{Binding SelectedScreen, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Artifacts, Mode=OneWay}"
                              AutomationProperties.AutomationId="NavArtifacts"/>
                 <RadioButton Content="📊 Usage"
                              Command="{Binding NavigateCommand}"
                              CommandParameter="Usage"
                              Style="{StaticResource NavButtonStyle}"
-                             IsChecked="{Binding SelectedScreen, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Usage}"
+                             IsChecked="{Binding SelectedScreen, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Usage, Mode=OneWay}"
                              AutomationProperties.AutomationId="NavUsage"/>
                 <RadioButton Content="⚙️ Settings"
                              Command="{Binding NavigateCommand}"
                              CommandParameter="Settings"
                              Style="{StaticResource NavButtonStyle}"
-                             IsChecked="{Binding SelectedScreen, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Settings}"
+                             IsChecked="{Binding SelectedScreen, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Settings, Mode=OneWay}"
                              AutomationProperties.AutomationId="NavSettings"/>
             </StackPanel>
 
