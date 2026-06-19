@@ -31,7 +31,6 @@
 				"WINDOWS_MCP_SCREENSHOT_SCALE": "0.5"
 			},
 			"alwaysAllow": [
-				"Snapshot",
 				"Screenshot",
 				"Wait",
 				"WaitFor",
@@ -43,7 +42,7 @@
 				"Scrape",
 				"Notification",
 				"Clipboard",
-				"Shortcut"
+				"Snapshot"
 			]
 		}
 	}
