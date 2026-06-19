@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ using System.Windows;
 // Resolves ambiguity with System.Windows.Forms.Application from UseWindowsForms=true
 using Application = System.Windows.Application;
 using MySecondBrain.Core.Interfaces;
+using MySecondBrain.Core.Models;
 using MySecondBrain.Data;
 using MySecondBrain.Data.Repositories;
 using MySecondBrain.Services.Audio;
@@ -30,8 +32,9 @@ namespace MySecondBrain.UI;
 public partial class App : Application
 {
     private IServiceProvider _serviceProvider = null!;
+    private static readonly FontWeightConverter s_fontWeightConverter = new();
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         var services = new ServiceCollection();
         ConfigureServices(services);
@@ -49,6 +52,44 @@ public partial class App : Application
         {
             startupLogger.LogError(ex, "Database migration failed");
             throw; // Re-throw — app cannot function without database
+        }
+
+        try
+        {
+            // Restore saved theme and font settings
+            var themeProvider = _serviceProvider.GetRequiredService<IThemeProvider>();
+            var settings = _serviceProvider.GetRequiredService<ISettingsRepository>();
+
+            var savedTheme = await settings.GetAsync("AppTheme");
+            if (savedTheme is not null && Enum.TryParse<AppTheme>(savedTheme, out var theme))
+                themeProvider.SetAppTheme(theme);
+
+            var savedFontFamily = await settings.GetAsync("FontFamily");
+            var savedFontSize = await settings.GetAsync("FontSize");
+            var savedFontWeight = await settings.GetAsync("FontWeight");
+
+            if (savedFontFamily is not null && savedFontSize is not null
+                && double.TryParse(savedFontSize, NumberStyles.Float, CultureInfo.InvariantCulture, out var fontSize))
+            {
+                var fontWeight = FontWeights.Normal;
+                if (savedFontWeight is not null)
+                {
+                    try
+                    {
+                        if (s_fontWeightConverter.ConvertFromString(savedFontWeight) is FontWeight fw)
+                            fontWeight = fw;
+                    }
+                    catch (Exception ex)
+                    {
+                        startupLogger.LogWarning(ex, "Failed to parse saved FontWeight '{Value}', falling back to Normal", savedFontWeight);
+                    }
+                }
+                themeProvider.SetFontSettings(savedFontFamily, fontSize, fontWeight);
+            }
+        }
+        catch (Exception ex)
+        {
+            startupLogger.LogError(ex, "Failed to restore theme/font settings, continuing with defaults");
         }
 
         startupLogger.LogInformation("MySecondBrain started");
