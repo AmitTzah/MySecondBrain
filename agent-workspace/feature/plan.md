@@ -23,9 +23,10 @@ The following vision-spec items are NOT delivered by this feature. They are docu
 | Vision Spec Item | Deferred To | Justification |
 |---|---|---|
 | Tab drag-drop reorder, Ctrl+W close, Ctrl+Shift+T reopen (C10) | Feature 6 (Studio Chat Workspace) | Requires ChatThread entities, ChatThreadService, and message rendering — not available yet. F5 creates the tab bar UI shell only. |
-| Sidebar chat list with date groups, favorites, tags, pins, folders (L1-L14) | Feature L (Chat Organization & Search) | Requires full ChatThread data and repository operations. F5 builds the screen-navigation sidebar only. |
+| Tab bar functional logic (open/close/reorder tabs) | Feature 6 (Studio Chat Workspace) | The tab bar UI shell was built early at MainWindow level (always visible across all screens). Actual tab open/close/reorder logic with ChatThread entities is deferred. |
+| Sidebar chat list with date groups, favorites, tags, pins, folders (L1-L14) | Feature L (Chat Organization & Search) | Requires full ChatThread data and repository operations. F5 builds the screen-navigation sidebar only. **Note:** A chat list preview shell (search bar, Chats/Timeline tabs, pinned section, "+ New Chat" button, "Reveal Locked Chats" link) was built early in MainWindow.xaml sidebar as static UI — no data binding or functional logic. |
 | Trash tab in sidebar (U2) | Feature U (Soft-Delete Trash) | Requires IsDeleted/DeletedAt fields on ChatThread entity and soft-delete logic. |
-| Timeline tab in sidebar (L5) | Feature L (Chat Organization & Search) | Requires Tier 1/2 transient thread data that doesn't exist yet. |
+| Timeline tab in sidebar (L5) | Feature L (Chat Organization & Search) | Requires Tier 1/2 transient thread data that doesn't exist yet. **Note:** A "Timeline" tab label exists in the static sidebar chat list preview — functional tab switching is deferred. |
 | Font family/weight UI controls (A3) | Feature 8 (Settings — Appearance) | Font persistence infrastructure is built here; UI controls for family/weight selection belong in the Settings screen. |
 | Right panel content — Artifacts list (F2) + Chat Navigation (D6) | Features F (Artifacts) + D (Branching) | F5 creates the right panel container with two-section placeholder structure. Actual artifact list and chat navigation rendering require those features. |
 
@@ -56,9 +57,9 @@ public enum ScreenType { Chats, Wiki, Media, Artifacts, Usage, Settings }
 private ScreenType _selectedScreen = ScreenType.Chats;
 ```
 
-The tab bar is chat-thread-only and lives inside `ChatView.xaml`, NOT in the MainWindow shell. Other screens (Wiki, Settings, etc.) render as single views without tabs.
+The tab bar is built at the MainWindow level (Grid.Row 0 of the center column) and is always visible across all screens. It contains static placeholder tabs ("New Chat", "Chat 2") and a "+" button. Other screens (Wiki, Settings, etc.) render below the tab bar as single views without their own tabs.
 
-**Tab System Deferral:** The full tab system (drag-drop reorder, Ctrl+W close, Ctrl+Shift+T reopen, scrollable overflow per vision spec C10) is deferred to Feature 6 (Studio Chat Workspace). This feature (F5) only creates the tab bar UI shell with placeholder tabs and a "+" button — purely visual, no tab open/close/reorder logic. This is intentional: the tab system requires ChatThread data entities, ChatThreadService, and message rendering infrastructure that don't exist yet.
+**Tab System Deferral:** The full tab system (drag-drop reorder, Ctrl+W close, Ctrl+Shift+T reopen, scrollable overflow per vision spec C10) is deferred to Feature 6 (Studio Chat Workspace). This feature (F5) only creates the tab bar UI shell with placeholder tabs and a "+" button at the MainWindow level — purely visual, no tab open/close/reorder logic. This is intentional: the tab system requires ChatThread data entities, ChatThreadService, and message rendering infrastructure that don't exist yet.
 
 ### 3.3 Theme System — Extensibility
 
@@ -72,7 +73,7 @@ The 3 chat visual themes (Classic/Compact/Bubble) are `DataTemplate` variants se
 
 **Font Family/Weight UI Deferral:** Vision spec A3 calls for customizable font family, size, and weight. Only font size has quick-adjust UI controls (A⁻/A⁺ buttons, C25) in this feature. Font family and weight persistence infrastructure is built here, but their UI controls are deferred to Feature 8 (Settings — Appearance category, A3). The infrastructure (persistence via ISettingsRepository, DynamicResource keys, SetFontSettings method) is complete so that Feature 8 only needs to add UI.
 
-**Sidebar Chat List / Trash / Timeline Deferral:** The vision spec calls for a sidebar with chat list (L1), Trash tab (U2), and Timeline tab (L5). These are Features L (Chat Organization & Search) and U (Soft-Delete Trash), NOT part of this app shell feature. This feature builds the main screen-navigation sidebar (Chats/Wiki/Media/Artifacts/Usage/Settings). The chat-list sidebar, Trash, and Timeline are sub-views within the ChatView that will be added in those respective features.
+**Sidebar Chat List / Trash / Timeline Deferral:** The vision spec calls for a sidebar with chat list (L1), Trash tab (U2), and Timeline tab (L5). These are Features L (Chat Organization & Search) and U (Soft-Delete Trash), NOT part of this app shell feature. This feature builds the main screen-navigation sidebar (Chats/Wiki/Media/Artifacts/Usage/Settings). A static chat list preview (search bar, Chats/Timeline tabs, pinned section, "+ New Chat" button, "Reveal Locked Chats" link) was built early in the MainWindow sidebar column below the navigation items as UI scaffolding — all functional logic and data binding is deferred to Features L and U.
 
 ### 3.4 Renderer Registry — Plugin/Registry Pattern
 
@@ -81,24 +82,35 @@ The 3 chat visual themes (Classic/Compact/Bubble) are `DataTemplate` variants se
 ## 4. Final Expected Project Structure
 
 - `src/MySecondBrain.UI/`
-  - `App.xaml` — **[MODIFIED]** Merged Dark.xaml into Application.Resources
+  - `App.xaml` — **[MODIFIED]** Merged Light.xaml into Application.Resources (Light is the default theme)
   - `App.xaml.cs` — **[MODIFIED]** Apply saved theme/font on startup, wire MainWindow with DataContext
-  - `MainWindow.xaml` — **[MODIFIED]** Three-region Grid shell with GridSplitters, ContentControl for screens
+  - `MainWindow.xaml` — **[MODIFIED]** Three-region Grid shell with GridSplitters, sidebar nav, sidebar chat list preview, MainWindow-level tab bar, ContentControl for screens, right panel with visibility binding
   - `MainWindow.xaml.cs` — **[MODIFIED]** Constructor injection of MainWindowViewModel
   - `Themes/`
     - `Dark.xaml` — **[NEW]** Dark theme ResourceDictionary (25+ color/brush resources)
     - `Light.xaml` — **[NEW]** Light theme ResourceDictionary (25+ color/brush resources)
+  - `Converters/`
+    - `BoolToGridLengthConverter.cs` — **[NEW]** Converts bool to GridLength (Star or 0) for right panel column visibility
   - `Views/`
-    - `ChatView.xaml` — **[NEW]** Chat screen shell with tab bar, chat header, conversation area placeholder, input area placeholder
+    - `ScreenTemplateSelector.cs` — **[NEW]** DataTemplateSelector mapping ScreenType enum to UserControl DataTemplates
+    - `ChatView.xaml` — **[NEW]** Chat screen shell with chat header bar (persona, context, cost, A⁻/A⁺, ☀, 📌, ⋯), conversation area placeholder, input area with 15-button toolbar
+    - `ChatView.xaml.cs` — **[NEW]** Code-behind
     - `WikiBrowserView.xaml` — **[NEW]** Wiki Browser shell with file tree + Markdown viewer + info panel placeholders
+    - `WikiBrowserView.xaml.cs` — **[NEW]** Code-behind
     - `MediaLibraryView.xaml` — **[NEW]** Media Library shell with filter bar + grid placeholder
+    - `MediaLibraryView.xaml.cs` — **[NEW]** Code-behind
     - `GlobalArtifactsBrowserView.xaml` — **[NEW]** Global Artifacts Browser shell with search/filter + table placeholder
-    - `UsageDashboardView.xaml` — **[NEW]** Usage Dashboard shell with summary cards + chart placeholders
-    - `SettingsView.xaml` — **[NEW]** Settings shell with category sidebar + content area placeholders
-    - `ModelComparisonView.xaml` — **[NEW]** Model Comparison shell with setup + results phase placeholders
-    - `OnboardingWizardView.xaml` — **[NEW]** Onboarding Wizard shell with step indicator + content card placeholder
+    - `GlobalArtifactsBrowserView.xaml.cs` — **[NEW]** Code-behind
+    - `UsageDashboardView.xaml` — **[NEW]** Usage Dashboard shell with summary cards + chart placeholders + sample data tables
+    - `UsageDashboardView.xaml.cs` — **[NEW]** Code-behind
+    - `SettingsView.xaml` — **[NEW]** Settings shell with 15-category sidebar + content area placeholders
+    - `SettingsView.xaml.cs` — **[NEW]** Code-behind
+    - `ModelComparisonView.xaml` — **[NEW]** Model Comparison shell with persona checklist + prompt input + side-by-side panels
+    - `ModelComparisonView.xaml.cs` — **[NEW]** Code-behind
+    - `OnboardingWizardView.xaml` — **[NEW]** Onboarding Wizard shell with 4-dot step indicator + welcome card
+    - `OnboardingWizardView.xaml.cs` — **[NEW]** Code-behind
   - `ViewModels/`
-    - `MainWindowViewModel.cs` — **[MODIFIED]** Added SelectedScreen, navigation commands, theme/font properties
+    - `MainWindowViewModel.cs` — **[MODIFIED]** Added SelectedScreen, IsRightPanelVisible (true only for Chats), NavigateCommand, theme/font properties
     - `ChatThreadViewModel.cs` — No changes (stub, used by ChatView)
     - `SettingsViewModel.cs` — No changes (stub)
     - `WikiBrowserViewModel.cs` — No changes (stub)
@@ -113,9 +125,9 @@ The 3 chat visual themes (Classic/Compact/Bubble) are `DataTemplate` variants se
     - `ContentRendererRegistry.cs` — **[MODIFIED]** Fixed priorities to match knowledge base, added priority sorting
     - `MarkdownTextRenderer.cs` — No code changes (Priority=100 is correct)
     - `CodeBlockRenderer.cs` — **[MODIFIED]** Priority changed from 90→200
-    - `ArtifactReferenceRenderer.cs` — No code changes (check Priority=300)
-    - `ImageRenderer.cs` — No code changes (check Priority=400)
-    - `MediaRenderer.cs` — No code changes (check Priority=500)
+    - `ArtifactReferenceRenderer.cs` — **[MODIFIED]** Priority changed from 80→300
+    - `ImageRenderer.cs` — **[MODIFIED]** Priority changed from 70→400
+    - `MediaRenderer.cs` — **[MODIFIED]** Priority changed from 60→500
     - `ThinkingRenderer.cs` — **[MODIFIED]** Priority changed from 50→600
     - `ToolCallRenderer.cs` — **[MODIFIED]** Priority changed from 40→700
 
@@ -125,12 +137,12 @@ The 3 chat visual themes (Classic/Compact/Bubble) are `DataTemplate` variants se
 
 ### [x] Step 1: Dark & Light Theme ResourceDictionaries + App.xaml wiring
 
-**Goal:** Create `Dark.xaml` and `Light.xaml` ResourceDictionaries with 25+ color/brush resources, merge `Dark.xaml` into `Application.Resources` in `App.xaml`, and apply `DynamicResource` to MainWindow background.
+**Goal:** Create `Dark.xaml` and `Light.xaml` ResourceDictionaries with 25+ color/brush resources, merge `Light.xaml` into `Application.Resources` in `App.xaml`, and apply `DynamicResource` to MainWindow background.
 
 **Actions:**
 1. Create `src/MySecondBrain.UI/Themes/Dark.xaml` with 25+ `SolidColorBrush` and `sys:Double` resources using dark color values (see reference.md for full catalog)
 2. Create `src/MySecondBrain.UI/Themes/Light.xaml` with identical resource keys and light color values
-3. Modify `src/MySecondBrain.UI/App.xaml` — add `<ResourceDictionary.MergedDictionaries>` containing `Dark.xaml` as the default
+3. Modify `src/MySecondBrain.UI/App.xaml` — add `<ResourceDictionary.MergedDictionaries>` containing `Light.xaml` as the default
 4. Modify `src/MySecondBrain.UI/MainWindow.xaml` — change `Window Background` to `{DynamicResource AppBackground}`
 
 **Resource keys to define (both files, same keys):**
@@ -141,9 +153,9 @@ The 3 chat visual themes (Classic/Compact/Bubble) are `DataTemplate` variants se
 **Live Smoke Test (Mandatory):**
 1. Build the project: `dotnet build`
 2. Launch `MySecondBrain.UI.exe` (or F5 from Visual Studio)
-3. **Observe:** The MainWindow background is dark gray (#1E1E1E), NOT the default white (#FFFFFF)
+3. **Observe:** The MainWindow background is white (#FFFFFF), matching the Light theme default
 4. **Observe:** Window title bar reads "MySecondBrain"
-5. The window has no other content yet — just a dark background
+5. The window has no other content yet — just a light background
 
 **Suggested Commit Message:** `feat: add Dark and Light theme ResourceDictionaries with 25+ color/brush resources`
 
@@ -237,53 +249,60 @@ The 3 chat visual themes (Classic/Compact/Bubble) are `DataTemplate` variants se
 
 ---
 
-### Step 4: WpfThemeProvider Implementation + Theme Toggle Button
+### Step 4: WpfThemeProvider Implementation + Theme Toggle Button Wiring
 
-**Goal:** Fill in the `WpfThemeProvider` stub with a full implementation: `SetAppTheme()` swaps the `ResourceDictionary` at runtime via `MergedDictionaries.Clear()` + `Add()`, `SetFontSettings()` updates font DynamicResource values, events fire on theme changes, and all settings persist via `ISettingsRepository`. Add the ☀/🌙 theme toggle button to ChatView's chat header bar wired to `MainWindowViewModel.ToggleThemeCommand`.
+**Goal:** Fill in the `WpfThemeProvider` stub with a full implementation: `SetAppTheme()` swaps the `ResourceDictionary` at runtime via `MergedDictionaries.Clear()` + `Add()`, `SetFontSettings()` updates font DynamicResource values, events fire on theme changes, and all settings persist via `ISettingsRepository`. Wire the existing ☀ button in ChatView's chat header bar to `MainWindowViewModel.ToggleThemeCommand`.
+
+**Vision Reference:** [`studio-chat.html`](agent-workspace/project-director/vision/screens/studio-chat.html) — Chat header bar layout with ☀ theme toggle button, persona name, context bar, and action buttons.
+
+**Current state:** The ☀ button is already rendered in [`ChatView.xaml`](src/MySecondBrain.UI/Views/ChatView.xaml:50) with `ToolTip="Toggle dark/light mode"` but has no `Command` binding. The `WpfThemeProvider` is a stub with hardcoded returns and empty methods. `App.xaml` merges `Light.xaml` as the default theme.
 
 **Actions:**
 1. Implement `WpfThemeProvider.cs` fully (see reference.md for complete code):
-   - Constructor: inject `ISettingsRepository`, default to `AppTheme.Dark`, `ChatTheme.Classic`, `Segoe UI` 14px
+   - Constructor: inject `ISettingsRepository`, default to `AppTheme.Light` (matching App.xaml default), `ChatTheme.Classic`, `Segoe UI` 14px
    - `SetAppTheme(AppTheme)`: guard against no-op, build `ResourceDictionary` from `Themes/Dark.xaml` or `Themes/Light.xaml`, `merged.Clear()` + `merged.Add(dict)`, fire `AppThemeChanged` event, persist to `ISettingsRepository` key `"AppTheme"`
    - `SetFontSettings(family, size, weight)`: validate 10-24px range, update `Application.Current.Resources["FontFamily"]`, `["FontSize"]`, `["FontWeight"]`, persist all three keys (`"FontFamily"`, `"FontSize"`, `"FontWeight"`)
    - `SetChatTheme(ChatTheme)`: guard against no-op, persist key `"ChatTheme"`, fire `ChatThemeChanged`
    - `GetChatMessageTemplate(ChatTheme)`: resolve named `DataTemplate` from application resources
-   - Property getters: `CurrentAppTheme`, `CurrentChatTheme`, `FontFamily`, `FontSize`, `FontWeight`
+   - Property getters: `CurrentAppTheme`, `CurrentChatTheme`, `FontFamily`, `FontSize`, `FontWeight` — read from `Application.Current.Resources` or fallback to defaults
 2. Add to `MainWindowViewModel.cs`:
    - Inject `IThemeProvider`, expose `CurrentAppTheme`, `CurrentChatTheme` properties
-   - `[RelayCommand] ToggleTheme()` — flips Dark↔Light, calls `_themeProvider.SetAppTheme()`
-   - `[RelayCommand] IncreaseFont()` / `DecreaseFont()` — with 10-24 clamping (full commands added in Step 6)
+   - `[RelayCommand] ToggleTheme()` — flips Light↔Dark, calls `_themeProvider.SetAppTheme()`
+   - `[RelayCommand] IncreaseFont()` / `DecreaseFont()` — stubs for now (full implementation in Step 6)
    - `[ObservableProperty] FontSizeDisplay` — synced to `_themeProvider.FontSize`
-3. Modify `ChatView.xaml` — add ☀/🌙 `Button` in chat header bar bound to `ToggleThemeCommand`, content toggles based on `CurrentAppTheme`
+3. Wire the existing ☀ `Button` in `ChatView.xaml` chat header bar (line 50) — add `Command="{Binding ToggleThemeCommand}"` and update button `Content` dynamically based on `CurrentAppTheme` (☀ for Light mode, 🌙 for Dark mode). Add an `[ObservableProperty] string _themeToggleIcon` to `MainWindowViewModel`, default `"☀"`, and update it in `ToggleTheme()` after the theme switch.
 
 **Files:**
 - `src/MySecondBrain.UI/Services/WpfThemeProvider.cs` (MODIFY — full implementation)
-- `src/MySecondBrain.UI/ViewModels/MainWindowViewModel.cs` (MODIFY — add theme/font properties, ToggleThemeCommand, IncreaseFontCommand, DecreaseFontCommand)
-- `src/MySecondBrain.UI/Views/ChatView.xaml` (MODIFY — wire toggle button to command)
+- `src/MySecondBrain.UI/ViewModels/MainWindowViewModel.cs` (MODIFY — add theme/font properties, ToggleThemeCommand, IncreaseFontCommand/DecreaseFontCommand stubs)
+- `src/MySecondBrain.UI/Views/ChatView.xaml` (MODIFY — add Command binding to existing ☀ button)
 
 **Automated Testing:** `dotnet build` — verify solution compiles with full WpfThemeProvider. `dotnet test` — verify all 114 existing unit tests still pass (no regressions). Not applicable for theme-switching unit tests — WPF ResourceDictionary requires a running Application, verified by manual smoke test only.
 
 **Live Smoke Test (Mandatory):**
-1. Build and launch the app — see Dark theme
-2. **Locate the ☀ button** in the ChatView's chat header bar (right side, near the pin icon)
-3. **Click ☀**
-4. **Observe:** Entire application instantly switches to Light theme — sidebar, content area, right panel, all text and backgrounds change
-5. The button icon changes to 🌙 (indicating light mode is active, click to return to dark)
-6. **Click 🌙:** App instantly returns to Dark theme
-7. **Click rapidly 5 times:** No flicker, no delay, instant each time
+1. Build and launch the app — see Light theme (default)
+2. **Locate the ☀ button** in the ChatView's chat header bar (right side, between A⁺ and 📌)
+3. **Observe:** The button shows ☀ icon when Light theme is active
+4. **Click ☀**
+5. **Observe:** Entire application instantly switches to Dark theme — sidebar, content area, right panel, all text and backgrounds change
+6. **Observe:** The button icon changes to 🌙 (indicating dark mode is active)
+7. **Click 🌙:** App instantly returns to Light theme, button changes back to ☀
+8. **Click rapidly 5 times:** No flicker, no delay, instant each time
 
-**Suggested Commit Message:** `feat: implement WpfThemeProvider with runtime theme swapping, font persistence, and toggle button`
+**Suggested Commit Message:** `feat: implement WpfThemeProvider with runtime theme swapping, font persistence, and toggle button wiring`
 
 ---
 
 ### Step 5: Apply Saved Theme & Font Settings on Startup
 
-**Goal:** In `App.xaml.cs` `OnStartup`, after DI container build and before `MainWindow.Show()`, read `"AppTheme"`, `"FontFamily"`, `"FontSize"`, and `"FontWeight"` from `ISettingsRepository`. Apply saved theme via `IThemeProvider.SetAppTheme()` and saved font settings via `IThemeProvider.SetFontSettings()`. If no saved preference exists, default to Dark theme with Segoe UI 14px Normal weight.
+**Goal:** In `App.xaml.cs` `OnStartup`, after DI container build and before `MainWindow.Show()`, read `"AppTheme"`, `"FontFamily"`, `"FontSize"`, and `"FontWeight"` from `ISettingsRepository`. Apply saved theme via `IThemeProvider.SetAppTheme()` and saved font settings via `IThemeProvider.SetFontSettings()`. If no saved preference exists, the app stays with the `App.xaml` default (Light theme, Segoe UI 14px Normal weight) — no override needed since `WpfThemeProvider` defaults match `App.xaml`.
+
+**Note:** `App.xaml` already merges `Light.xaml` as the default. `WpfThemeProvider` will default to `AppTheme.Light` (set in Step 4). If no saved settings exist, the app launches with Light theme and Segoe UI 14px — this is the intended first-run experience.
 
 **Actions:**
 1. In `App.xaml.cs` `OnStartup`, after `_serviceProvider = services.BuildServiceProvider()` and `db.Database.Migrate()`:
    - Resolve `IThemeProvider` and `ISettingsRepository` from DI
-   - Read `"AppTheme"` key — if found and parsable as `AppTheme`, call `themeProvider.SetAppTheme(theme)`
+   - Read `"AppTheme"` key — if found and parsable as `AppTheme`, call `themeProvider.SetAppTheme(theme)`. If the saved theme differs from the App.xaml default (Light), this will swap to the saved theme (e.g., Dark).
    - Read `"FontFamily"`, `"FontSize"`, and `"FontWeight"` keys — if all found and parsable, call `themeProvider.SetFontSettings(savedFontFamily, fontSize, fontWeight)` (do NOT hardcode `FontWeights.Normal`; restore the actual saved weight)
    - If no saved font weight, default to `FontWeights.Normal`
 2. Ensure `MainWindow.Show()` is called AFTER all restoration is complete
@@ -291,7 +310,7 @@ The 3 chat visual themes (Classic/Compact/Bubble) are `DataTemplate` variants se
 **Files:**
 - `src/MySecondBrain.UI/App.xaml.cs` (MODIFY — add theme/font restoration)
 
-**Startup sequence (updated — FontWeight restored, not hardcoded):**
+**Startup sequence (updated — FontWeight restored via FontWeightConverter):**
 ```csharp
 // After _serviceProvider = services.BuildServiceProvider();
 // After db.Database.Migrate();
@@ -299,7 +318,7 @@ The 3 chat visual themes (Classic/Compact/Bubble) are `DataTemplate` variants se
 var themeProvider = _serviceProvider.GetRequiredService<IThemeProvider>();
 var settings = _serviceProvider.GetRequiredService<ISettingsRepository>();
 
-// Restore theme
+// Restore theme (if saved; otherwise App.xaml Light default stays)
 var savedTheme = await settings.GetAsync("AppTheme");
 if (savedTheme is not null && Enum.TryParse<AppTheme>(savedTheme, out var theme))
     themeProvider.SetAppTheme(theme);
@@ -312,8 +331,18 @@ var fontSize = 14.0;
 var fontWeight = FontWeights.Normal;
 if (savedFontSize is not null)
     double.TryParse(savedFontSize, NumberStyles.Float, CultureInfo.InvariantCulture, out fontSize);
-if (savedFontWeight is not null && Enum.TryParse<FontWeight>(savedFontWeight, out var parsedWeight))
-    fontWeight = parsedWeight;
+if (savedFontWeight is not null)
+{
+    // FontWeight is a struct, not an enum — use FontWeightConverter
+    try
+    {
+        var converter = new FontWeightConverter();
+        var result = converter.ConvertFromString(savedFontWeight);
+        if (result is FontWeight fw)
+            fontWeight = fw;
+    }
+    catch { /* fallback to FontWeights.Normal */ }
+}
 if (savedFontFamily is not null)
     themeProvider.SetFontSettings(savedFontFamily, fontSize, fontWeight);
 
@@ -323,13 +352,13 @@ if (savedFontFamily is not null)
 **Automated Testing:** `dotnet build` — verify compile. `dotnet test` — verify all 114 existing unit tests still pass. Not applicable for theme restoration unit tests — startup sequence requires Application runtime, verified by manual smoke test only.
 
 **Live Smoke Test (Mandatory):**
-1. Build and launch the app — see Dark theme (default)
-2. Click ☀ to switch to Light theme
+1. Build and launch the app — see Light theme (default)
+2. Click ☀ to switch to Dark theme
 3. Close the app (click X on window)
 4. Launch the app again
-5. **Observe:** App launches with Light theme (the saved preference), NOT Dark
-6. Switch back to Dark, close, relaunch — see Dark
-7. Check SQLite: `SELECT Value FROM Settings WHERE Key = 'AppTheme'` — returns `"Dark"` or `"Light"`
+5. **Observe:** App launches with Dark theme (the saved preference), NOT the default Light
+6. Switch back to Light, close, relaunch — see Light
+7. Check SQLite: `SELECT Value FROM Settings WHERE Key = 'AppTheme'` — returns `"Light"` or `"Dark"`
 8. Check SQLite: `SELECT Value FROM Settings WHERE Key IN ('FontFamily', 'FontSize', 'FontWeight')` — all three keys present
 
 **Suggested Commit Message:** `feat: restore saved theme and font settings on startup with all font properties persisted`
@@ -338,14 +367,18 @@ if (savedFontFamily is not null)
 
 ### Step 6: Font Size Quick-Adjust Buttons + Font Settings Persistence
 
-**Goal:** Wire the A⁻ and A⁺ buttons in ChatView's chat header bar to `MainWindowViewModel` commands that call `IThemeProvider.SetFontSettings()`. Display current font size between the buttons. Font changes apply to `FontSize` DynamicResource, affecting all chat message text. Persist via `ISettingsRepository`. Enforce the 10-24px range from vision spec A3.
+**Goal:** Wire the existing A⁻ and A⁺ buttons in ChatView's chat header bar to `MainWindowViewModel` commands that call `IThemeProvider.SetFontSettings()`. Display current font size between the buttons. Font changes apply to `FontSize` DynamicResource, affecting all chat message text. Persist via `ISettingsRepository`. Enforce the 10-24px range from vision spec A3.
+
+**Vision Reference:** [`studio-chat.html`](agent-workspace/project-director/vision/screens/studio-chat.html) — Font size quick-adjust buttons (A⁻/A⁺) in chat header bar (spec C25).
+
+**Current state:** A⁻, A⁺ buttons and the "14" TextBlock are already rendered in [`ChatView.xaml`](src/MySecondBrain.UI/Views/ChatView.xaml:41) at lines 41-49, but the buttons have no `Command` bindings and the TextBlock has a hardcoded `Text="14"`.
 
 **Actions:**
 1. Add to `MainWindowViewModel.cs`:
    - `[ObservableProperty] double _fontSizeDisplay` — synced from `_themeProvider.FontSize`
    - `[RelayCommand] IncreaseFont()` — `Math.Min(_themeProvider.FontSize + 1, 24)`, calls `SetFontSettings` with current family and weight, updates `FontSizeDisplay`
    - `[RelayCommand] DecreaseFont()` — `Math.Max(_themeProvider.FontSize - 1, 10)`, same pattern
-2. Modify `ChatView.xaml` — wire A⁻/A⁺ `Button` elements in chat header bar to `DecreaseFontCommand`/`IncreaseFontCommand`, display `{Binding FontSizeDisplay}` as a `TextBlock` between them
+2. Modify `ChatView.xaml` — add `Command="{Binding DecreaseFontCommand}"` to existing A⁻ button (line 41), `Command="{Binding IncreaseFontCommand}"` to existing A⁺ button (line 47), change hardcoded `Text="14"` to `Text="{Binding FontSizeDisplay}"` on the middle TextBlock (line 44)
 
 **Files:**
 - `src/MySecondBrain.UI/ViewModels/MainWindowViewModel.cs` (MODIFY)
@@ -369,32 +402,36 @@ if (savedFontFamily is not null)
 
 ### Step 7: Three Chat Visual Theme DataTemplates (Classic/Compact/Bubble)
 
-**Goal:** Create three distinct `DataTemplate` resources in `ChatView.xaml` for the three chat visual themes: Classic, Compact, and Bubble. Wire a `ComboBox` in the chat header to switch `IThemeProvider.CurrentChatTheme`. Each template renders hardcoded sample user and assistant messages so the visual difference is immediately apparent.
+**Goal:** Create three distinct `DataTemplate` resources in `ChatView.xaml` for the three chat visual themes: Classic, Compact, and Bubble. Add a `ComboBox` to the chat header bar (alongside existing ☀, A⁻/A⁺, 📌, ⋯ buttons) to switch `IThemeProvider.CurrentChatTheme`. Replace the "No chats yet" placeholder in the conversation area with hardcoded sample user and assistant messages rendered via the selected DataTemplate so the visual difference is immediately apparent.
+
+**Vision Reference:** [`studio-chat.html`](agent-workspace/project-director/vision/screens/studio-chat.html) — Chat message layout and conversation area structure.
+
+**Current state:** ChatView's conversation area (Row 1) shows a static "No chats yet" TextBlock. The chat header bar (Row 0) has action buttons at the right side. The ComboBox will be added to this header bar.
 
 **Actions:**
 1. Add to `MainWindowViewModel.cs`:
    - `[ObservableProperty] ChatTheme _currentChatTheme = ChatTheme.Classic`
    - `[RelayCommand] SetChatTheme(string themeName)` — parses enum, calls `_themeProvider.SetChatTheme()`, updates `CurrentChatTheme`
    - Populate a static `ChatThemeOption[]` for ComboBox binding: `["Classic", "Compact", "Bubble"]`
-2. Add three `DataTemplate` resources to `ChatView.xaml` Resources (see reference.md for full XAML):
+2. Add a `<UserControl.Resources>` section to `ChatView.xaml` with three `DataTemplate` resources (see reference.md for full XAML):
    - `ClassicMessageTemplate`: Role label + timestamp header, user right/assistant left alignment
    - `CompactMessageTemplate`: Colored dot inline, minimal spacing, no header
    - `BubbleMessageTemplate`: Speech bubbles with tails, rounded corners, timestamp inside
-3. Each template binds to hardcoded sample data (e.g., `{Binding Role}`, `{Binding Content}`, `{Binding Timestamp}`) from a local sample model
-4. Add a `ComboBox` to the chat header bar bound to `CurrentChatTheme` with `ChatThemeOptions` ItemsSource
+3. Replace the "No chats yet" placeholder in the conversation area with sample message items rendered via the selected DataTemplate (use hardcoded sample data with Role, Content, Timestamp properties)
+4. Add a `ComboBox` to the chat header bar (alongside existing buttons) bound to `CurrentChatTheme` with `ChatThemeOptions` ItemsSource
 5. Implement `WpfThemeProvider.GetChatMessageTemplate(ChatTheme)` — resolves named DataTemplate from `Application.Current.Resources`
 6. Implement `WpfThemeProvider.SetChatTheme(ChatTheme)` — guard no-op, persist key `"ChatTheme"`, fire `ChatThemeChanged`
 
 **Files:**
-- `src/MySecondBrain.UI/Views/ChatView.xaml` (MODIFY)
-- `src/MySecondBrain.UI/Services/WpfThemeProvider.cs` (MODIFY)
-- `src/MySecondBrain.UI/ViewModels/MainWindowViewModel.cs` (MODIFY)
+- `src/MySecondBrain.UI/Views/ChatView.xaml` (MODIFY — add Resources with DataTemplates, add ComboBox to header, replace placeholder with sample messages)
+- `src/MySecondBrain.UI/Services/WpfThemeProvider.cs` (MODIFY — implement GetChatMessageTemplate, SetChatTheme)
+- `src/MySecondBrain.UI/ViewModels/MainWindowViewModel.cs` (MODIFY — add chat theme properties and command)
 
 **Automated Testing:** `dotnet build` — verify compile with DataTemplates and ComboBox binding. `dotnet test` — verify all 114 existing unit tests still pass (no regressions). Not applicable for DataTemplate rendering unit tests — WPF DataTemplate resolution requires visual tree, verified by manual smoke test only.
 
 **Live Smoke Test (Mandatory):**
 1. Build and launch the app — ChatView shows sample messages in Classic layout (role labels above messages, user aligned right)
-2. **Locate the ChatTheme dropdown** in the chat header bar (labeled "Theme: Classic")
+2. **Locate the ChatTheme dropdown** in the chat header bar (right side, near the existing action buttons)
 3. **Switch to Compact**
 4. **Observe:** Messages change to compact style — small colored dots replace role labels, vertical spacing shrinks significantly
 5. **Switch to Bubble**
@@ -459,11 +496,11 @@ if (savedFontFamily is not null)
 ## 6. Shared Technical Context
 
 - [Initial State]: Dark.xaml and Light.xaml define 25+ resource keys. All XAML uses `DynamicResource` for themeable values.
-- [After Step 1]: App.xaml merges Dark.xaml at startup. Resource keys: `AppBackground`, `AppForeground`, `SidebarBackground`, `SidebarForeground`, `ContentBackground`, `ContentForeground`, `PanelBackground`, `PanelForeground`, `TabBarBackground`, `TabActiveBackground`, `TabInactiveBackground`, `HeaderBackground`, `InputBackground`, `AccentBrush`, `AccentForeground`, `BorderBrush`, `SubtleBrush`, `SuccessBrush`, `WarningBrush`, `ErrorBrush`, `ScrollBarBrush`, `GridSplitterBrush`, `NavActiveBackground`, `NavInactiveForeground`, `FontFamily`, `FontSize`.
+- [After Step 1]: App.xaml merges Light.xaml at startup. Resource keys: `AppBackground`, `AppForeground`, `SidebarBackground`, `SidebarForeground`, `ContentBackground`, `ContentForeground`, `PanelBackground`, `PanelForeground`, `TabBarBackground`, `TabActiveBackground`, `TabInactiveBackground`, `HeaderBackground`, `InputBackground`, `AccentBrush`, `AccentForeground`, `BorderBrush`, `SubtleBrush`, `SuccessBrush`, `WarningBrush`, `ErrorBrush`, `ScrollBarBrush`, `GridSplitterBrush`, `NavActiveBackground`, `NavInactiveForeground`, `FontFamily`, `FontSize`.
 - [After Step 2]: MainWindow Grid columns: `280, Auto(4), *, Auto(4), 320`. Sidebar min 150/max 500, Right panel min 200/max 500 with two-section layout (Artifacts top + Chat Navigation bottom, resizable divider). GridSplitters `ResizeBehavior="PreviousAndNext"`.
 - [After Step 3]: `MainWindowViewModel.SelectedScreen` enum: `Chats, Wiki, Media, Artifacts, Usage, Settings`. ContentControl in center with `ScreenTemplateSelector` (DataTemplateSelector pattern — implicit DataTemplate by x:Type does NOT work with enums). 8 screen shells in `Views/` directory.
-- [After Step 4]: `WpfThemeProvider` fully implemented. Theme persistence via `ISettingsRepository` key `"AppTheme"`. `SetAppTheme()` clears and re-adds MergedDictionaries. Known constraint: `Clear()` removes ALL merged dictionaries — safe now but must be updated if future features add other merged dictionaries.
-- [After Step 5]: Startup sequence: DI build → Migrate → Restore theme from ISettingsRepository → Restore font (family, size, AND weight) → Show MainWindow. Persistence keys: `"AppTheme"`, `"FontFamily"`, `"FontSize"`, `"FontWeight"`.
+- [After Step 4]: `WpfThemeProvider` fully implemented. Default theme: `AppTheme.Light` (matching `App.xaml` which merges `Light.xaml`). Theme persistence via `ISettingsRepository` key `"AppTheme"`. `SetAppTheme()` clears and re-adds MergedDictionaries. Known constraint: `Clear()` removes ALL merged dictionaries — safe now but must be updated if future features add other merged dictionaries.
+- [After Step 5]: Startup sequence: DI build → Migrate → Restore theme from ISettingsRepository → Restore font (family, size, AND weight) → Show MainWindow. If no saved theme, `App.xaml` default (Light) stays. Persistence keys: `"AppTheme"`, `"FontFamily"`, `"FontSize"`, `"FontWeight"`.
 - [After Step 6]: Font persistence keys: `"FontFamily"` (string), `"FontSize"` (string, e.g. "14"). Clamped to 10-24 range. Displayed in ChatView header.
 - [After Step 7]: ChatTheme persistence key: `"ChatTheme"`. Three DataTemplates: Classic (role+timestamp header, left/right alignment), Compact (color dots, minimal spacing), Bubble (speech bubbles with tails).
 - [After Step 8]: Renderer priorities: 100(MarkdownText), 200(CodeBlock), 300(ArtifactReference), 400(Image), 500(Media), 600(Thinking), 700(ToolCall). Registry sorts by `.OrderBy(r => r.Priority)` on construction. Unit test verifies 7 renderers resolved in correct priority order.

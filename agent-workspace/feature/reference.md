@@ -282,7 +282,7 @@ public class ScreenTemplateSelector : DataTemplateSelector
 public class WpfThemeProvider : IThemeProvider
 {
     private readonly ISettingsRepository _settings;
-    private AppTheme _currentAppTheme = AppTheme.Dark;
+    private AppTheme _currentAppTheme = AppTheme.Light;
     private ChatTheme _currentChatTheme = ChatTheme.Classic;
 
     public WpfThemeProvider(ISettingsRepository settings)
@@ -295,7 +295,8 @@ public class WpfThemeProvider : IThemeProvider
     public string FontFamily => Application.Current.Resources["FontFamily"] is FontFamily f
         ? f.Source : "Segoe UI";
     public double FontSize => Application.Current.Resources["FontSize"] is double d ? d : 14.0;
-    public FontWeight FontWeight => FontWeights.Normal;
+    public FontWeight FontWeight => Application.Current.Resources["FontWeight"] is FontWeight w
+        ? w : FontWeights.Normal;
 
     public event EventHandler<AppTheme>? AppThemeChanged;
     public event EventHandler<ChatTheme>? ChatThemeChanged;
@@ -360,20 +361,24 @@ public class WpfThemeProvider : IThemeProvider
 }
 ```
 
-- **ToggleThemeCommand (MainWindowViewModel):**
+- **ToggleThemeCommand + icon (MainWindowViewModel):**
 ```csharp
+[ObservableProperty]
+private string _themeToggleIcon = "☀";
+
 [RelayCommand]
 private void ToggleTheme()
 {
-    var newTheme = _themeProvider.CurrentAppTheme == AppTheme.Dark
-        ? AppTheme.Light : AppTheme.Dark;
+    var newTheme = _themeProvider.CurrentAppTheme == AppTheme.Light
+        ? AppTheme.Dark : AppTheme.Light;
     _themeProvider.SetAppTheme(newTheme);
+    ThemeToggleIcon = newTheme == AppTheme.Dark ? "🌙" : "☀";
 }
 ```
 
 - **☀/🌙 button in ChatView header:**
 ```xml
-<Button Command="{Binding ToggleThemeCommand}" Content="☀" 
+<Button Command="{Binding ToggleThemeCommand}" Content="{Binding ThemeToggleIcon}"
         ToolTip="Toggle dark/light mode"
         Background="Transparent" BorderThickness="0" FontSize="14"/>
 ```
@@ -409,8 +414,18 @@ protected override async void OnStartup(StartupEventArgs e)
     var fontWeight = FontWeights.Normal;
     if (savedFontSize is not null)
         double.TryParse(savedFontSize, NumberStyles.Float, CultureInfo.InvariantCulture, out fontSize);
-    if (savedFontWeight is not null && Enum.TryParse<FontWeight>(savedFontWeight, out var parsedWeight))
-        fontWeight = parsedWeight;
+    if (savedFontWeight is not null)
+    {
+        // FontWeight is a struct, not an enum — use FontWeightConverter
+        try
+        {
+            var converter = new FontWeightConverter();
+            var result = converter.ConvertFromString(savedFontWeight);
+            if (result is FontWeight fw)
+                fontWeight = fw;
+        }
+        catch { /* fallback to FontWeights.Normal */ }
+    }
     if (savedFontFamily is not null)
     {
         themeProvider.SetFontSettings(savedFontFamily, fontSize, fontWeight);
