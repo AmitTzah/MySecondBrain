@@ -16,7 +16,7 @@ public class SettingsRepository : ISettingsRepository
 
     public async Task<string?> GetAsync(string key)
     {
-        var setting = await _db.Settings.FindAsync(key);
+        var setting = await _db.Settings.FindAsync(key).ConfigureAwait(false);
         return setting?.Value;
     }
 

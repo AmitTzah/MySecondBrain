@@ -398,4 +398,88 @@ public class DiContainerTests
         Assert.False(commandBarFired, "CommandBarRequested should not fire on 'Exit' click");
         Assert.False(settingsFired, "SettingsRequested should not fire on 'Exit' click");
     }
+
+    [Fact]
+    public void SystemTray_SetGenerationIndicator_DoesNotThrow()
+    {
+        var service = (WinFormsSystemTrayService)_provider.GetRequiredService<ISystemTrayService>();
+        var notifyIconField = typeof(WinFormsSystemTrayService).GetField("_notifyIcon",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var normalIconField = typeof(WinFormsSystemTrayService).GetField("_normalIcon",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var generatingIconField = typeof(WinFormsSystemTrayService).GetField("_generatingIcon",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+
+        var normalIcon = (Icon)normalIconField.GetValue(service)!;
+        var notifyIcon = (NotifyIcon)notifyIconField.GetValue(service)!;
+
+        // Before SetGenerationIndicator, Icon should be the normal icon
+        Assert.Same(normalIcon, notifyIcon.Icon);
+
+        // Act: switch to generating icon
+        var exception = Record.Exception(() => service.SetGenerationIndicator(true));
+        Assert.Null(exception);
+        Assert.False(service.IsVisible); // unchanged
+
+        // Verify icon was swapped to generating icon
+        var generatingIcon = (Icon?)generatingIconField.GetValue(service);
+        Assert.NotNull(generatingIcon);
+        Assert.Same(generatingIcon, notifyIcon.Icon);
+
+        // Act: switch back to normal icon
+        exception = Record.Exception(() => service.SetGenerationIndicator(false));
+        Assert.Null(exception);
+        Assert.False(service.IsVisible); // unchanged
+
+        // Verify icon restored to normal
+        Assert.Same(normalIcon, notifyIcon.Icon);
+    }
+
+    [Fact]
+    public void SystemTray_GenerationIndicator_ProducesGreenDotIcon()
+    {
+        var service = (WinFormsSystemTrayService)_provider.GetRequiredService<ISystemTrayService>();
+        var method = typeof(WinFormsSystemTrayService).GetMethod("BuildGeneratingIcon",
+            BindingFlags.NonPublic | BindingFlags.Static)!;
+
+        // Get the normal icon via reflection to pass as source
+        var normalIconField = typeof(WinFormsSystemTrayService).GetField("_normalIcon",
+            BindingFlags.NonPublic | BindingFlags.Instance)!;
+        var normalIcon = (Icon)normalIconField.GetValue(service)!;
+
+        var generatingIcon = (Icon)method.Invoke(null, [normalIcon])!;
+
+        Assert.NotNull(generatingIcon);
+        Assert.NotSame(normalIcon, generatingIcon);
+        Assert.Equal(normalIcon.Width, generatingIcon.Width);
+        Assert.Equal(normalIcon.Height, generatingIcon.Height);
+
+        // Verify the generated icon has a green pixel at the dot center.
+        // Green dot: FilledEllipse at (Width-dotSize-margin, Height-dotSize-margin, dotSize, dotSize)
+        // with dotSize=5, margin=1 → bounding rect (10,10)-(14,14) for a 16x16 icon.
+        // Center of dot is at (12, 12).
+        using var bitmap = generatingIcon.ToBitmap();
+        var dotCenter = bitmap.GetPixel(12, 12);
+        Assert.True(dotCenter.G > 200,
+            $"Expected green channel > 200 at dot center (12,12), got G={dotCenter.G}");
+        Assert.True(dotCenter.G > dotCenter.R && dotCenter.G > dotCenter.B,
+            $"Expected green to dominate at dot center, got R={dotCenter.R} G={dotCenter.G} B={dotCenter.B}");
+    }
+
+    [StaFact]
+    public void SystemTray_IsVisible_TracksShowHide()
+    {
+        var service = (WinFormsSystemTrayService)_provider.GetRequiredService<ISystemTrayService>();
+
+        Assert.False(service.IsVisible);
+
+        service.Show();
+        Assert.True(service.IsVisible);
+
+        service.Hide();
+        Assert.False(service.IsVisible);
+
+        service.Show();
+        Assert.True(service.IsVisible);
+    }
 }

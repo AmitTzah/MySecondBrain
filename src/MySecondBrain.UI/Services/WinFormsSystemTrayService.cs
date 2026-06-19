@@ -16,6 +16,8 @@ public class WinFormsSystemTrayService : ISystemTrayService
     private readonly NotifyIcon _notifyIcon;
     private readonly ContextMenuStrip _contextMenu;
     private readonly ToolStripMenuItem _recentChatsMenu;
+    private readonly Icon _normalIcon;
+    private Icon? _generatingIcon;
     private bool _isDisposed;
 
     public event EventHandler? OpenStudioRequested;
@@ -89,10 +91,10 @@ public class WinFormsSystemTrayService : ISystemTrayService
     {
         _logger = logger;
 
-        var icon = LoadAppIcon(logger);
+        _normalIcon = LoadAppIcon(logger);
         _notifyIcon = new NotifyIcon
         {
-            Icon = icon,
+            Icon = _normalIcon,
             Visible = false,
             Text = "MySecondBrain"
         };
@@ -147,10 +149,47 @@ public class WinFormsSystemTrayService : ISystemTrayService
         _logger.LogDebug("System tray icon hidden");
     }
 
+    private static Icon BuildGeneratingIcon(Icon sourceIcon)
+    {
+        using var bitmap = sourceIcon.ToBitmap();
+        using var g = Graphics.FromImage(bitmap);
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        // Draw a small green circle in the bottom-right corner
+        const int dotSize = 5;
+        const int margin = 1;
+        int x = bitmap.Width - dotSize - margin;
+        int y = bitmap.Height - dotSize - margin;
+        using var brush = new SolidBrush(Color.LimeGreen);
+        g.FillEllipse(brush, x, y, dotSize, dotSize);
+
+        var hicon = bitmap.GetHicon();
+        try
+        {
+            using var tempIcon = Icon.FromHandle(hicon);
+            using var ms = new MemoryStream();
+            tempIcon.Save(ms);
+            ms.Position = 0;
+            return new Icon(ms);
+        }
+        finally
+        {
+            DestroyIcon(hicon);
+        }
+    }
+
     public void SetGenerationIndicator(bool isGenerating)
     {
-        // Placeholder — full implementation in Step 7
-        _logger.LogDebug("SetGenerationIndicator({IsGenerating})", isGenerating);
+        if (isGenerating)
+        {
+            _generatingIcon ??= BuildGeneratingIcon(_normalIcon);
+            _notifyIcon.Icon = _generatingIcon;
+        }
+        else
+        {
+            _notifyIcon.Icon = _normalIcon;
+        }
+        _logger.LogDebug("SetGenerationIndicator({IsGenerating}) — icon swapped", isGenerating);
     }
 
     public void UpdateRecentChats(IReadOnlyList<string> recentChatTitles)
@@ -192,10 +231,13 @@ public class WinFormsSystemTrayService : ISystemTrayService
         {
             _notifyIcon.ContextMenuStrip = null;
             _notifyIcon.Visible = false;
+            _notifyIcon.Icon = null;
             _notifyIcon.Dispose();
         }
 
         _contextMenu?.Dispose();
+        _normalIcon?.Dispose();
+        _generatingIcon?.Dispose();
 
         _logger.LogDebug("WinFormsSystemTrayService disposed");
     }
