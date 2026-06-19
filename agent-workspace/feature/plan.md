@@ -293,7 +293,7 @@ The 3 chat visual themes (Classic/Compact/Bubble) are `DataTemplate` variants se
 
 ---
 
-### Step 5: Apply Saved Theme & Font Settings on Startup
+### [x] Step 5: Apply Saved Theme & Font Settings on Startup
 
 **Goal:** In `App.xaml.cs` `OnStartup`, after DI container build and before `MainWindow.Show()`, read `"AppTheme"`, `"FontFamily"`, `"FontSize"`, and `"FontWeight"` from `ISettingsRepository`. Apply saved theme via `IThemeProvider.SetAppTheme()` and saved font settings via `IThemeProvider.SetFontSettings()`. If no saved preference exists, the app stays with the `App.xaml` default (Light theme, Segoe UI 14px Normal weight) — no override needed since `WpfThemeProvider` defaults match `App.xaml`.
 
