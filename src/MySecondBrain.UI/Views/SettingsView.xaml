@@ -39,7 +39,7 @@
                     <ListBoxItem Padding="12,7">💰 Pricing</ListBoxItem>
                     <ListBoxItem Padding="12,7">🔒 Security</ListBoxItem>
                     <ListBoxItem Padding="12,7">🛠️ Maintenance</ListBoxItem>
-                    <ListBoxItem Padding="12,7">🩺 Diagnostics</ListBoxItem>
+                    <ListBoxItem Padding="12,7">🔬 Diagnostics</ListBoxItem>
                 </ListBox>
 
                 <TextBlock Grid.Row="2" Margin="12,8,12,12">
