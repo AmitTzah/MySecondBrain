@@ -9,7 +9,7 @@ public class ContentRendererRegistry : IContentRendererRegistry
 
     public ContentRendererRegistry(IEnumerable<IContentBlockRenderer> renderers)
     {
-        _renderers.AddRange(renderers);
+        _renderers.AddRange(renderers.OrderBy(r => r.Priority));
     }
 
     public void Register(IContentBlockRenderer renderer)

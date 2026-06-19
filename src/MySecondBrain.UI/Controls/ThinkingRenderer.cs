@@ -8,7 +8,7 @@ namespace MySecondBrain.UI.Controls;
 public class ThinkingRenderer : IContentBlockRenderer
 {
     public string RendererName => "Thinking";
-    public int Priority => 50;
+    public int Priority => 600;
 
     public bool CanRender(MarkdownObject markdownNode) => false;
 

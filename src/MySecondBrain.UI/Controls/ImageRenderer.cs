@@ -8,7 +8,7 @@ namespace MySecondBrain.UI.Controls;
 public class ImageRenderer : IContentBlockRenderer
 {
     public string RendererName => "Image";
-    public int Priority => 70;
+    public int Priority => 400;
 
     public bool CanRender(MarkdownObject markdownNode) => false;
 

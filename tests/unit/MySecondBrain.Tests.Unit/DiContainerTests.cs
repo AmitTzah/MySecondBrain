@@ -133,11 +133,30 @@ public class DiContainerTests
     }
 
     [Fact]
-    public void ContentRendererRegistry_HasSevenRenderers()
+    public void ContentRendererRegistry_ResolvesAllSevenRenderersInCorrectPriorityOrder()
     {
+        // Arrange
         var registry = _provider.GetRequiredService<IContentRendererRegistry>();
+
+        // Act
         var renderers = registry.GetRenderers();
+
+        // Assert
         Assert.Equal(7, renderers.Count);
+        Assert.Equal("MarkdownText", renderers[0].RendererName);
+        Assert.Equal(100, renderers[0].Priority);
+        Assert.Equal("CodeBlock", renderers[1].RendererName);
+        Assert.Equal(200, renderers[1].Priority);
+        Assert.Equal("ArtifactReference", renderers[2].RendererName);
+        Assert.Equal(300, renderers[2].Priority);
+        Assert.Equal("Image", renderers[3].RendererName);
+        Assert.Equal(400, renderers[3].Priority);
+        Assert.Equal("Media", renderers[4].RendererName);
+        Assert.Equal(500, renderers[4].Priority);
+        Assert.Equal("Thinking", renderers[5].RendererName);
+        Assert.Equal(600, renderers[5].Priority);
+        Assert.Equal("ToolCall", renderers[6].RendererName);
+        Assert.Equal(700, renderers[6].Priority);
     }
 
     [StaFact]

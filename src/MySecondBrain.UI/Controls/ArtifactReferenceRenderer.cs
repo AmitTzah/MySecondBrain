@@ -8,7 +8,7 @@ namespace MySecondBrain.UI.Controls;
 public class ArtifactReferenceRenderer : IContentBlockRenderer
 {
     public string RendererName => "ArtifactReference";
-    public int Priority => 80;
+    public int Priority => 300;
 
     public bool CanRender(MarkdownObject markdownNode) => false;
 

@@ -86,6 +86,11 @@ public partial class App : Application
                 }
                 themeProvider.SetFontSettings(savedFontFamily, fontSize, fontWeight);
             }
+
+            // Restore saved chat theme
+            var savedChatTheme = await settings.GetAsync("ChatTheme");
+            if (savedChatTheme is not null && Enum.TryParse<ChatTheme>(savedChatTheme, out var chatTheme))
+                themeProvider.SetChatTheme(chatTheme);
         }
         catch (Exception ex)
         {

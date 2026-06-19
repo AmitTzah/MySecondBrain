@@ -8,7 +8,7 @@ namespace MySecondBrain.UI.Controls;
 public class CodeBlockRenderer : IContentBlockRenderer
 {
     public string RendererName => "CodeBlock";
-    public int Priority => 90;
+    public int Priority => 200;
 
     public bool CanRender(MarkdownObject markdownNode) => false;
 

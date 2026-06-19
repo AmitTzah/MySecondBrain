@@ -8,7 +8,7 @@ namespace MySecondBrain.UI.Controls;
 public class ToolCallRenderer : IContentBlockRenderer
 {
     public string RendererName => "ToolCall";
-    public int Priority => 40;
+    public int Priority => 700;
 
     public bool CanRender(MarkdownObject markdownNode) => false;
 
