@@ -109,4 +109,13 @@ public partial class MainWindowViewModel : ObservableObject
             CurrentChatTheme = theme;
         }
     }
+
+    [RelayCommand]
+    private void Navigate(string screenName)
+    {
+        if (Enum.TryParse<ScreenType>(screenName, out var screen))
+            SelectedScreen = screen;
+        else
+            _logger.LogWarning("Unrecognized screen name: {ScreenName}", screenName);
+    }
 }

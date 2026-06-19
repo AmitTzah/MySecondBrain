@@ -48,7 +48,12 @@ public class WpfThemeProvider : IThemeProvider
         var dict = new ResourceDictionary { Source = GetThemeUri(theme) };
 
         var merged = Application.Current.Resources.MergedDictionaries;
-        merged.Clear();
+        for (int i = merged.Count - 1; i >= 0; i--)
+        {
+            var src = merged[i].Source?.ToString();
+            if (src != null && (src.EndsWith("Dark.xaml") || src.EndsWith("Light.xaml")))
+                merged.RemoveAt(i);
+        }
         merged.Add(dict);
 
         PersistAndLog("AppTheme", theme.ToString());
