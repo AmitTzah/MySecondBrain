@@ -835,3 +835,71 @@ services.AddSingleton<IThemeProvider, WpfThemeProvider>();
 
 Singleton lifetime — shared theme state across all windows and the application lifetime.
 
+---
+
+## 22. Platform Services Architecture (Feature 6)
+
+Feature 6 filled four platform service stubs behind existing interfaces. All services are registered as Singletons in DI and follow the provider/adapter pattern.
+
+### 22.1 KestrelWebSocketServer (`ILocalWebSocketServer`)
+
+| Property | Value |
+|----------|-------|
+| **Location** | `src/MySecondBrain.UI/Services/KestrelWebSocketServer.cs` |
+| **DI Lifetime** | Singleton |
+| **Bind** | `127.0.0.1:{auto-port}` (port 0 = OS assignment) |
+| **Auth** | 64-char uppercase hex token via `RandomNumberGenerator`, stored in `ISettingsRepository` key `"WebSocketAuthToken"` |
+| **Protocol** | Bidirectional JSON over WebSocket. One active client at a time (HTTP 409 for additional). |
+| **Endpoints** | `/health` (GET → "OK"), `/ws` (WebSocket with token auth via `?token=` or `Authorization: Bearer`) |
+| **Startup** | Fire-and-forget `StartWebSocketServerAsync()` after `MainWindow.Show()` in `App.xaml.cs` |
+| **Shutdown** | In `OnExit`: 5-second timeout via `CancellationTokenSource`, then graceful stop |
+
+### 22.2 WinFormsSystemTrayService (`ISystemTrayService`)
+
+| Property | Value |
+|----------|-------|
+| **Location** | `src/MySecondBrain.UI/Services/WinFormsSystemTrayService.cs` |
+| **DI Lifetime** | Singleton |
+| **Mechanism** | `System.Windows.Forms.NotifyIcon` via `UseWindowsForms=true` |
+| **Context Menu** (8 items in order) | New Chat, Open Studio, Command Bar, separator, Recent Chats (submenu, max 5 items), Settings, separator, Exit |
+| **Events** | `NewChatRequested`, `OpenStudioRequested`, `CommandBarRequested`, `SettingsRequested`, `ExitRequested` |
+| **Minimize-to-tray** | `MainWindow.OnClosing` hides window when `MinimizeToTray` setting is `"true"`. Only `ExitRequested` fully closes. |
+| **Generation indicator** | `SetGenerationIndicator(bool)`: swaps icon between normal and green-dot variant (LimeGreen 10px circle in bottom-right) |
+| **Icon fallback** | Pack URI → file path → programmatic (dark "M" shape) |
+
+### 22.3 GlobalHotkeyService (`IGlobalHotkeyService`)
+
+| Property | Value |
+|----------|-------|
+| **Location** | `src/MySecondBrain.UI/Services/GlobalHotkeyService.cs` |
+| **DI Lifetime** | Singleton |
+| **Primary mechanism** | `RegisterHotKey` (user32.dll P/Invoke, kernel-level) via hidden `HwndSource` message window |
+| **Fallback mechanism** | `WH_KEYBOARD_LL` low-level hook (SetWindowsHookEx) |
+| **WM_HOTKEY** | Message ID 0x0312, decoded via `wParam` → hotkey ID → `HotkeyTriggered` event |
+| **Conflict detection** | `DetectConflict()` checks 17 system hotkeys (Win+D/L/R, Alt+Tab/F4, Ctrl+Alt+Del, Ctrl+Shift+Esc, etc.) |
+| **Dispose** | Unregisters all hotkeys via `UnregisterHotKey`, destroys `HwndSource`, unhooks low-level hook |
+
+**Default hotkeys** (registered at startup in `App.xaml.cs`):
+
+| Hotkey | Action ID | Purpose |
+|--------|-----------|---------|
+| Alt+Space | CommandBar | Tier 2 Command Bar |
+| Ctrl+Shift+Q | Rewrite | Tier 1: selection/replaceSelection |
+| Ctrl+Shift+W | Summarize | Tier 1: selection/showOnly |
+| Ctrl+Shift+E | Explain | Tier 1: selection/showOnly |
+| Ctrl+Shift+R | Translate | Tier 1: selection/replaceSelection |
+| Ctrl+Shift+C | ContinueWriting | Tier 1: focusedElement/insertAtCursor |
+
+### 22.4 AutoUpdaterDotNet (`IUpdateChecker`)
+
+| Property | Value |
+|----------|-------|
+| **Location** | `src/MySecondBrain.Services/Update/AutoUpdaterDotNet.cs` |
+| **DI Lifetime** | Singleton |
+| **Feed format** | AutoUpdater.NET XML: `<item><version><url><changelog><mandatory>` |
+| **Feed URL** | `https://updates.mysecondbrain.app/releases.xml` (hardcoded, configurable in Feature 8) |
+| **CurrentVersion** | From `Assembly.GetEntryAssembly().GetName().Version` |
+| **Version comparison** | `System.Version.CompareTo` — standard semantic versioning |
+| **Download** | Stream to temp file, progress reporting via `IProgress<int>`, 30-min deferred cleanup |
+| **Install** | Shell-execute MSIX installer via `Process.Start` |
+

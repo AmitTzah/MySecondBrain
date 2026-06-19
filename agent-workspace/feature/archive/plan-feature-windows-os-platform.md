@@ -153,7 +153,7 @@ Run `dotnet test tests/unit/` — all tests pass. Run `dotnet test tests/e2e/` �
 - **Live Smoke Test (Mandatory):** Launch the app. Right-click tray icon → "Settings" — verify the main window appears with Settings screen selected. Right-click tray icon → "Open Studio" — verify main window comes to foreground. Right-click tray icon → "New Chat" — verify main window appears (new chat creation logged but not visible yet). Click MainWindow X button — verify window hides to tray. Right-click tray icon → "Exit" — verify app fully closes.
 - **Suggested Commit Message:** `feat: wire system tray events to MainWindow actions and app lifecycle`
 
-### [ ] Step 9: Fill GlobalHotkeyService stub — RegisterHotKey with HwndSource hook
+### [x] Step 9: Fill GlobalHotkeyService stub — RegisterHotKey with HwndSource hook
 - **Goal:** Replace the stub in [`GlobalHotkeyService.cs`](src/MySecondBrain.UI/Services/GlobalHotkeyService.cs:7) with a working `RegisterHotKey` implementation. System-wide hotkeys fire the `HotkeyTriggered` event.
 - **Actions:**
   - Create a hidden `HwndSource` window to receive `WM_HOTKEY` messages. Use `HwndSourceHook` to intercept the message pump.
@@ -177,7 +177,7 @@ Run `dotnet test tests/unit/` — all tests pass. Run `dotnet test tests/e2e/` �
 - **Live Smoke Test (Mandatory):** Launch the app. The app registers Alt+Space for the Command Bar (the default Tier 2 hotkey) on startup. **Note:** Alt+Space is the Windows system menu shortcut — if Windows intercepts it first, this test will not pass; the Command Bar hotkey may need to be changed in Feature 13 if this conflict proves unresolvable. Open any other application (e.g., Notepad). Press Alt+Space. Verify the app log file shows: "Hotkey triggered: CommandBar" (or similar log entry). Press Alt+Q (also registered by default) — verify log entry for the Rewrite hotkey. The hotkeys fire events but no UI appears yet (Tier 1/2 UIs are Feature 13). **Important:** `RegisterHotKey` intercepts keystrokes globally — these hotkeys WILL override the same shortcuts in other applications (Alt+Q in VS Code, Alt+W in browsers, etc.). This is by design for Tier 1 text actions; if conflicts arise, hotkey assignments can be changed in Settings (Feature 8).
 - **Suggested Commit Message:** `feat: implement RegisterHotKey-based global hotkey service with HwndSource hook`
 
-### [ ] Step 10: GlobalHotkeyService — WH_KEYBOARD_LL fallback and conflict detection
+### [x] Step 10: GlobalHotkeyService — WH_KEYBOARD_LL fallback and conflict detection
 - **Goal:** Add the `WH_KEYBOARD_LL` low-level keyboard hook as a fallback for key combinations that `RegisterHotKey` cannot handle. Implement `DetectConflict`.
 - **Actions:**
   - P/Invoke `SetWindowsHookEx(WH_KEYBOARD_LL, callback, hMod, 0)` and `UnhookWindowsHookEx`.
@@ -193,7 +193,7 @@ Run `dotnet test tests/unit/` — all tests pass. Run `dotnet test tests/e2e/` �
 - **Live Smoke Test (Mandatory):** Launch the app. The app now has both `RegisterHotKey` (primary) and `WH_KEYBOARD_LL` (fallback) active. Open PowerShell and test conflict detection: this isn't directly testable by the user since `DetectConflict` is called programmatically. Instead, verify via log: the startup log should show which hotkeys were registered via `RegisterHotKey` vs. fallback. Verify Alt+Space still triggers (from Step 9). Close the app — verify all hotkeys are unregistered (try Alt+Space in another app, verify it opens the other app's behavior, not logging to MySecondBrain).
 - **Suggested Commit Message:** `feat: add WH_KEYBOARD_LL fallback hook and hotkey conflict detection`
 
-### [ ] Step 11: Fill AutoUpdaterDotNet stub — update check against remote feed
+### [x] Step 11: Fill AutoUpdaterDotNet stub — update check against remote feed
 - **Goal:** Replace the stub in [`AutoUpdaterDotNet.cs`](src/MySecondBrain.Services/Update/AutoUpdaterDotNet.cs:7) with a working update checker that queries a remote XML/JSON feed and compares versions.
 - **Actions:**
   - Implement `CheckForUpdatesAsync(CancellationToken ct)`: fetch the update feed XML from `UpdateFeedUrl` via `HttpClient`. Parse the XML to extract latest version, release notes, download URL, and mandatory flag. Compare with `CurrentVersion` (read from `Assembly.GetEntryAssembly().GetName().Version`). Return `UpdateCheckResult` with `UpdateAvailable=true` + `UpdateInfo` if newer version exists.
@@ -225,7 +225,7 @@ Run `dotnet test tests/unit/` — all tests pass. Run `dotnet test tests/e2e/` �
   5. Verify the app does NOT crash or show errors even though the update isn't actually downloaded (the check succeeds but download is not triggered until user action, which comes in Feature 8).
 - **Suggested Commit Message:** `feat: implement AutoUpdaterDotNet update check against remote XML feed`
 
-### [ ] Step 12: Verify PerMonitorV2 DPI rendering at multiple scaling levels
+### [x] Step 12: Verify PerMonitorV2 DPI rendering at multiple scaling levels
 - **Goal:** Confirm that PerMonitorV2 DPI awareness (already configured) produces crisp rendering across common Windows scaling levels. Add DPI-related startup logging for diagnostics.
 - **Actions:**
   - Verify [`MySecondBrain.UI.csproj`](src/MySecondBrain.UI/MySecondBrain.UI.csproj:10) has `<ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>` (already present).
@@ -241,7 +241,7 @@ Run `dotnet test tests/unit/` — all tests pass. Run `dotnet test tests/e2e/` �
   6. Check the log file — verify DPI awareness log shows "PerMonitorV2" and the detected DPI values.
 - **Suggested Commit Message:** `feat: verify PerMonitorV2 DPI awareness and add DPI diagnostics logging`
 
-### [ ] Step 13: Verify MSIX Package project builds with .appinstaller template
+### [x] Step 13: Verify MSIX Package project builds with .appinstaller template
 - **Goal:** Verify the MSIX packaging project builds correctly and create the `.appinstaller` template for auto-update.
 - **Actions:**
   - Verify [`MySecondBrain.Package.wapproj`](src/MySecondBrain.Package/MySecondBrain.Package.wapproj) builds with `dotnet build`.
@@ -255,7 +255,7 @@ Run `dotnet test tests/unit/` — all tests pass. Run `dotnet test tests/e2e/` �
 - **Live Smoke Test (Mandatory):** Run `dotnet build src/MySecondBrain.Package/MySecondBrain.Package.wapproj` from the solution root. Verify the build completes with no errors. Verify the output `.msix` file exists in the build output directory. Check the generated `AppxManifest.xml` in the output — verify it includes the three required capabilities (`internetClient`, `runFullTrust`, `localSystemServices`). Open the `.appinstaller` template file in a text editor — verify it contains the correct XML structure with `MainBundle`, `UpdateSettings`, and `OnLaunch` elements.
 - **Suggested Commit Message:** `feat: verify MSIX package build and add .appinstaller auto-update template`
 
-### [ ] Step 14: Run full test suite — all unit + E2E tests must pass
+### [x] Step 14: Run full test suite — all unit + E2E tests must pass
 - **Goal:** Verify all tests pass after all platform service implementations are in place. No regressions.
 - **Actions:**
   - Run `dotnet test tests/unit/MySecondBrain.Tests.Unit/` — all tests must pass (expecting 125+ unit tests including the 24 new platform service tests from Steps 6-11).

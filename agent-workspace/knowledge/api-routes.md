@@ -27,21 +27,200 @@ For **external integration** (specifically the Word Add-in), the WPF application
 
 ### 2.1 Startup Pattern
 
-The Kestrel server is started in `App.xaml.cs` `OnStartup` or via an `IHostedService`:
+The Kestrel server is started in `App.xaml.cs` `OnStartup` via a fire-and-forget pattern after `MainWindow.Show()`:
 
+```csharp
+// In App.xaml.cs OnStartup, after mainWindow.Show():
+_ = StartWebSocketServerAsync();  // Fire-and-forget — server starts in background
+
+private async Task StartWebSocketServerAsync()
+{
+    var server = _serviceProvider.GetRequiredService<ILocalWebSocketServer>();
+    await server.StartAsync(preferredPort: null, CancellationToken.None);
+}
 ```
-ServiceCollection → Add Kestrel → Listen on 127.0.0.1:{dynamic-port}
+
+Shutdown in `OnExit`:
+
+```csharp
+protected override void OnExit(ExitEventArgs e)
+{
+    var server = _serviceProvider?.GetService<ILocalWebSocketServer>();
+    if (server is not null)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await server.StopAsync(cts.Token);
+    }
+    Log.CloseAndFlush();
+    (_serviceProvider as IDisposable)?.Dispose();
+    base.OnExit(e);
+}
 ```
 
-### 2.2 WebSocket Endpoint Convention
+### 2.2 Endpoint Catalog
 
-A single WebSocket endpoint accepts connections from the Word Add-in:
+Two HTTP endpoints are mapped on the embedded Kestrel server:
 
-| Path | Direction | Purpose |
-|------|-----------|---------|
-| `/ws/word-addin` | Bidirectional | Word Add-in exchanges text/commands with desktop app |
+| Path | Method | Protocol | Purpose | Auth Required |
+|------|--------|----------|---------|---------------|
+| `/health` | GET | HTTP/1.1 | Health check — returns `200 OK` with body `"OK"` | No |
+| `/ws` | GET (Upgrade) | WebSocket (RFC 6455) | Bidirectional JSON message channel for external integrations (Word Add-in protocol in Feature 13) | Yes (token) |
 
-**Message protocol:** JSON frames over WebSocket. Exact message schema defined when the Word Add-in integration feature is implemented.
+### 2.3 Kestrel Pipeline — ASP.NET Core Minimal API
+
+The Kestrel server uses the ASP.NET Core minimal hosting API with inline endpoint mapping:
+
+```csharp
+var builder = WebApplication.CreateBuilder();
+builder.WebHost.UseKestrel(options =>
+{
+    options.Listen(IPAddress.Loopback, preferredPort ?? 0);  // 0 = OS auto-assign
+});
+builder.Logging.AddSerilog();  // Bridge Kestrel logs into Serilog pipeline
+
+var app = builder.Build();
+
+// Health check — no auth, always available
+app.MapGet("/health", () => "OK");
+
+// WebSocket endpoint — token auth, single client constraint
+app.Map("/ws", async (HttpContext context) =>
+{
+    // --- Token extraction (two methods, query takes priority) ---
+    var token = context.Request.Query["token"].FirstOrDefault()
+        ?? context.Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "");
+
+    // --- Missing/invalid token → HTTP 401 ---
+    if (string.IsNullOrEmpty(token) || token != _authToken)
+    {
+        context.Response.StatusCode = 401;
+        await context.Response.WriteAsync("Unauthorized");
+        return;
+    }
+
+    // --- Not a WebSocket request → HTTP 400 ---
+    if (!context.WebSockets.IsWebSocketRequest)
+    {
+        context.Response.StatusCode = 400;
+        await context.Response.WriteAsync("WebSocket connections only");
+        return;
+    }
+
+    // --- Single-client constraint → HTTP 409 ---
+    if (_currentClient is not null && _currentClient.State == WebSocketState.Open)
+    {
+        context.Response.StatusCode = 409;
+        await context.Response.WriteAsync("Another client is already connected");
+        return;
+    }
+
+    // --- Accept the WebSocket ---
+    using var ws = await context.WebSockets.AcceptWebSocketAsync();
+    _currentClient = ws;
+    await ReceiveLoop(ws, context.RequestAborted);
+    _currentClient = null;
+});
+```
+
+### 2.4 Authentication — Token Details
+
+Token-based auth on the `/ws` endpoint accepts tokens via two mechanisms (checked in order):
+
+| Method | Format | Example |
+|--------|--------|---------|
+| **Query string** | `?token={token}` | `ws://127.0.0.1:51234/ws?token=1A2B3C4D5E6F...` |
+| **Authorization header** | `Authorization: Bearer {token}` | `Authorization: Bearer 1A2B3C4D5E6F...` |
+
+The query string method takes priority — if both are present, the query parameter value is used.
+
+**Token properties:**
+- **Format:** 64-character uppercase hexadecimal string
+- **Generation:** `RandomNumberGenerator.GetBytes(32)` → `Convert.ToHexString(bytes)` — 32 bytes (256 bits) of cryptographic entropy
+- **Character set:** `[0-9A-F]` only (no lowercase, no hyphens, no special characters)
+- **Storage:** `ISettingsRepository` key `"WebSocketAuthToken"` — auto-generated on first run if not present
+- **Lifetime:** Generated once, persisted permanently. Regeneration is user-initiated via Settings UI (Feature 8)
+
+### 2.5 HTTP Status Codes — Complete Reference
+
+| Status | Condition | Body |
+|--------|-----------|------|
+| **200** | `GET /health` — server is healthy | `"OK"` |
+| **101** | `GET /ws` with valid token + WebSocket upgrade headers | *(protocol switch to WebSocket)* |
+| **400** | `GET /ws` with valid token but no WebSocket upgrade headers | `"WebSocket connections only"` |
+| **401** | `GET /ws` with missing or invalid token | `"Unauthorized"` |
+| **409** | `GET /ws` with valid token but another client is already connected | `"Another client is already connected"` |
+
+### 2.6 Single-Client Constraint
+
+The Kestrel server enforces a strict single-client policy:
+
+- Only one active WebSocket connection is allowed at any time
+- If a client attempts to connect while another is active, the new connection receives **HTTP 409 Conflict**
+- When the active client disconnects (graceful close, network drop, or exception), `_currentClient` is set to `null`, allowing a new connection
+- This constraint is checked at the Kestrel middleware level — before the WebSocket handshake is accepted — to avoid unnecessary resource allocation
+- The active client reference (`_currentClient`) is stored as a field on the `KestrelWebSocketServer` singleton instance
+
+**Rationale:** MySecondBrain is a single-user desktop application. The Word Add-in is the primary WebSocket client. Multiple simultaneous connections would create ambiguity about which client "owns" the chat context and could lead to conflicting message routing.
+
+### 2.7 Message Protocol — JSON over WebSocket
+
+Once a WebSocket connection is established:
+
+```csharp
+private async Task ReceiveLoop(WebSocket webSocket, CancellationToken ct)
+{
+    var buffer = new byte[4096];
+    _logger.LogInformation("WebSocket client connected");
+
+    try
+    {
+        while (webSocket.State == WebSocketState.Open)
+        {
+            var result = await webSocket.ReceiveAsync(
+                new ArraySegment<byte>(buffer), ct);
+
+            if (result.MessageType == WebSocketMessageType.Close)
+            {
+                await webSocket.CloseAsync(
+                    WebSocketCloseStatus.NormalClosure, "Closing", ct);
+                break;
+            }
+
+            var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+            _logger.LogDebug("WebSocket received: {Message}", message);
+            MessageReceived?.Invoke(this, message);
+        }
+    }
+    catch (WebSocketException ex)
+    {
+        _logger.LogWarning(ex, "WebSocket error");
+    }
+    finally
+    {
+        _logger.LogInformation("WebSocket client disconnected");
+    }
+}
+```
+
+**Protocol properties:**
+- **Frame type:** UTF-8 text frames (`WebSocketMessageType.Text`)
+- **Message format:** JSON objects (free-form; schema defined per integration protocol in Feature 13)
+- **Buffer size:** 4 KB per frame (multi-frame messages are assembled by the WebSocket implementation)
+- **Send:** `SendAsync(string message)` wraps the string in a UTF-8 `ArraySegment<byte>` and calls `webSocket.SendAsync()`
+- **Event:** `MessageReceived` event fires with the raw JSON string. Subscribers (e.g., a protocol handler in Feature 13) parse and route messages.
+
+### 2.8 Port Discovery
+
+The actual port is determined at startup and logged:
+
+```csharp
+_logger.LogInformation("WebSocket server started on port {Port}", _port);
+```
+
+**Discovery methods:**
+- **Log file:** `%LOCALAPPDATA%\MySecondBrain\logs\msb-{date}.log` — search for "WebSocket server started on port"
+- **Programmatic:** `ILocalWebSocketServer.Port` property (available after `StartAsync` completes)
+- **CLI:** `netstat -ano | findstr :{port}` — verify `127.0.0.1:{port}` is in LISTENING state
 
 ---
 

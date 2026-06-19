@@ -598,3 +598,89 @@ if (savedFontFamily is not null)
 ```
 
 **Ordering:** Theme restore happens BEFORE font restore. This ensures font resources are set on top of the correct theme dictionary. If font restore ran first and then theme swap cleared the dictionaries, font settings would be lost.
+
+---
+
+## 17. Platform Infrastructure AppSetting Keys (Feature 6)
+
+Feature 6 introduced two new `AppSetting` keys that enable platform infrastructure services. Both keys use the standard `SettingsRepository` pattern defined in [§15](#15-appsetting-entity--key-value-settings-store).
+
+### 17.1 Key Catalog
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `"WebSocketAuthToken"` | `string` | Auto-generated (64-char uppercase hex) | WebSocket authentication token for Kestrel server |
+| `"MinimizeToTray"` | `string` | `"true"` | Minimize to system tray on window close (boolean stored as string) |
+
+### 17.2 WebSocketAuthToken — Auto-Generation on First Run
+
+The auth token is generated once on first launch and persisted permanently:
+
+```csharp
+// In KestrelWebSocketServer constructor:
+var existingToken = await _settings.GetAsync("WebSocketAuthToken");
+if (string.IsNullOrEmpty(existingToken))
+{
+    var bytes = RandomNumberGenerator.GetBytes(32);       // 32 bytes = 256 bits
+    _authToken = Convert.ToHexString(bytes);               // 64-char uppercase hex
+    await _settings.SetAsync("WebSocketAuthToken", _authToken);
+}
+else
+{
+    _authToken = existingToken;                            // Reuse existing token
+}
+```
+
+**Key properties:**
+- **Length:** 64-character uppercase hexadecimal string (32 bytes × 2 hex chars/byte)
+- **Entropy:** 256 bits, cryptographically random via `System.Security.Cryptography.RandomNumberGenerator`
+- **Lifetime:** Generated once, never rotated automatically. Regeneration is user-initiated via Settings UI (Feature 8)
+- **Storage:** Plain text in SQLite `AppSettings` table. No encryption needed — the token only authenticates loopback connections
+
+### 17.3 MinimizeToTray — Read Pattern in MainWindow.OnClosing
+
+The minimize-to-tray setting controls whether clicking the X button hides the window to the system tray or fully exits the application:
+
+```csharp
+// In MainWindow.xaml.cs OnClosing:
+var settings = App.Current.Services.GetRequiredService<ISettingsRepository>();
+var minimizeToTray = await settings.GetAsync("MinimizeToTray") ?? "true";
+
+if (minimizeToTray == "true" && _trayService.IsVisible)
+{
+    e.Cancel = true;     // Prevent window close
+    this.Hide();          // Hide to tray
+}
+else
+{
+    Application.Current.Shutdown();  // Full exit
+}
+```
+
+**Key properties:**
+- **Default:** `"true"` (minimize to tray is the default behavior)
+- **Read path:** `ISettingsRepository.GetAsync("MinimizeToTray")` with `?? "true"` fallback
+- **Write path:** Settings UI (Feature 8) writes via `ISettingsRepository.SetAsync("MinimizeToTray", value)`
+- **Override:** The `ExitRequested` event from `ISystemTrayService` bypasses this check and always fully exits
+
+### 17.4 SettingsRepository Access Pattern (Consistent with Existing Keys)
+
+Both keys follow the same find-then-upsert pattern used by theme/font keys in [§16](#16-themefont-settings-key-conventions):
+
+| Operation | Pattern |
+|-----------|---------|
+| **Read** | `await settings.GetAsync(key)` → returns `string?` (null if not set) |
+| **Write** | `await settings.SetAsync(key, value)` → upserts the `AppSetting` row |
+| **Default fallback** | `?? "defaultValue"` at the call site, not in the repository |
+
+The repository's `SetAsync` method uses `_db.Settings.FindAsync(key)` followed by `_db.Settings.Add()` or `_db.Entry(existing).CurrentValues.SetValues()` — the same upsert pattern documented in [§15.1](#151-settingsrepository--json-serialization). No raw SQL is needed.
+
+### 17.5 Future Platform Keys
+
+Additional platform infrastructure keys expected in future features:
+
+| Key | Feature | Purpose |
+|-----|---------|---------|
+| `"HotkeyAssignments"` | Feature 13 (Text Actions) | JSON-serialized hotkey → action mapping, overrides default seed-data hotkeys |
+| `"UpdateFeedUrl"` | Feature 8 (Settings) | User-configurable auto-update feed URL, overriding the hardcoded default |
+| `"WebSocketPort"` | Feature 13 (Word Add-in) | User-specified preferred port for the Kestrel WebSocket server |

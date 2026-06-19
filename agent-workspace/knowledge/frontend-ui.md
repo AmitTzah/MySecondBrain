@@ -249,12 +249,174 @@ MySecondBrain.UI/
 
 ---
 
-## 8. System Tray Integration
+## 8. System Tray Integration — WinFormsSystemTrayService
 
-- `UseWindowsForms=true` in `.csproj` enables `System.Windows.Forms.NotifyIcon`
-- No WinForms controls used — only `NotifyIcon` for system tray
-- `NotifyIcon` with context menu: Show/Hide, Exit
-- Minimize to tray behavior: hide main window, show `NotifyIcon`
+The system tray is implemented via `System.Windows.Forms.NotifyIcon` (enabled by `UseWindowsForms=true` in the `.csproj`). The service manages its own `ContextMenuStrip` and fires events that `App.xaml.cs` handles to drive MainWindow actions.
+
+### 8.1 NotifyIcon Lifecycle
+
+| Phase | Action | Trigger |
+|-------|--------|---------|
+| **Startup** | `ISystemTrayService.Show()` called in `App.xaml.cs` OnStartup after `MainWindow.Show()` | App launch |
+| **Runtime** | `NotifyIcon.Visible = true`, context menu responds to clicks, events fire | User interaction |
+| **Minimize-to-tray** | `MainWindow.OnClosing` cancels close, calls `this.Hide()` when `MinimizeToTray` is `"true"` | User clicks X button |
+| **Shutdown** | `ExitRequested` event → `Application.Current.Shutdown()`, then `Dispose()` cleans up `NotifyIcon` | User clicks "Exit" in context menu |
+
+### 8.2 Context Menu — 8 Items in Strict Order
+
+The context menu is built in the `WinFormsSystemTrayService` constructor. The order is intentional and must be preserved:
+
+| # | Label | Type | Event Fired | Behavior |
+|---|-------|------|-------------|----------|
+| 1 | **New Chat** | `ToolStripMenuItem` | `NewChatRequested` | Show MainWindow + send messenger message for new chat (Feature 9) |
+| 2 | **Open Studio** | `ToolStripMenuItem` | `OpenStudioRequested` | Show MainWindow, restore to Normal, Activate |
+| 3 | **Command Bar** | `ToolStripMenuItem` | `CommandBarRequested` | Logged; Tier 2 window not yet implemented (Feature 13) |
+| 4 | *(separator)* | `ToolStripSeparator` | — | Visual grouping |
+| 5 | **Recent Chats** | `ToolStripMenuItem` (submenu) | *(child items)* | Submenu rebuilt via `UpdateRecentChats()`. Empty state: single disabled "No recent chats" item. Populated: max 5 clickable chat titles. |
+| 6 | **Settings** | `ToolStripMenuItem` | `SettingsRequested` | Show MainWindow + set `MainWindowViewModel.SelectedScreen = ScreenType.Settings` |
+| 7 | *(separator)* | `ToolStripSeparator` | — | Visual grouping |
+| 8 | **Exit** | `ToolStripMenuItem` | `ExitRequested` | `Application.Current.Shutdown()` (bypasses minimize-to-tray) |
+
+### 8.3 Events Interface
+
+All five events are declared on `ISystemTrayService` (Core interface) as plain `EventHandler?`:
+
+```csharp
+public interface ISystemTrayService : IDisposable
+{
+    event EventHandler? NewChatRequested;
+    event EventHandler? OpenStudioRequested;
+    event EventHandler? CommandBarRequested;
+    event EventHandler? SettingsRequested;
+    event EventHandler? ExitRequested;
+
+    void Show();
+    void Hide();
+    bool IsVisible { get; }
+    void UpdateRecentChats(IReadOnlyList<string> recentChatTitles);
+    void SetGenerationIndicator(bool isGenerating);
+}
+```
+
+The service fires events on the thread pool (WinForms `Click` handler context). Subscribers in `App.xaml.cs` marshal to the UI thread via `mainWindow.Dispatcher.Invoke()` when touching WPF elements.
+
+### 8.4 Minimize-to-Tray Pattern — MainWindow.OnClosing
+
+```csharp
+// In MainWindow.xaml.cs
+protected override async void OnClosing(CancelEventArgs e)
+{
+    var settings = App.Current.Services.GetRequiredService<ISettingsRepository>();
+    var minimizeToTray = await settings.GetAsync("MinimizeToTray") ?? "true";
+
+    if (minimizeToTray == "true" && _trayService.IsVisible)
+    {
+        e.Cancel = true;   // Prevent window destruction
+        this.Hide();        // Hide to system tray
+        return;
+    }
+
+    // If minimize-to-tray is disabled or tray is not visible, allow normal close
+    base.OnClosing(e);
+}
+```
+
+**Key rules:**
+- The `MinimizeToTray` setting defaults to `"true"` (see [database.md §17.3](database.md#173-minimizetotray--read-pattern-in-mainwindowonclosing))
+- `ExitRequested` bypasses this logic — it calls `Application.Current.Shutdown()` directly
+- Double-clicking the tray icon restores the window (`Show()` + `WindowState = Normal` + `Activate()`)
+
+### 8.5 Generation Indicator — LimeGreen Dot Overlay
+
+When an LLM is actively generating a response, the tray icon swaps to a variant with a LimeGreen dot in the bottom-right corner:
+
+```csharp
+// In WinFormsSystemTrayService
+public void SetGenerationIndicator(bool isGenerating)
+{
+    _notifyIcon.Icon = isGenerating
+        ? _generatingIcon ??= BuildGeneratingIcon()
+        : _normalIcon;
+}
+
+private Icon BuildGeneratingIcon()
+{
+    var bitmap = new Bitmap(32, 32);
+    using (var g = Graphics.FromImage(bitmap))
+    {
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.DrawIcon(_normalIcon, 0, 0);                    // Base icon at origin
+        using (var brush = new SolidBrush(Color.LimeGreen))
+        {
+            g.FillEllipse(brush, 22, 22, 10, 10);          // 10px green dot, bottom-right
+        }
+    }
+    return Icon.FromHandle(bitmap.GetHicon());
+}
+```
+
+**Key properties:**
+- **Color:** `Color.LimeGreen` (0xFF32CD32), a saturated green for high visibility at 16×16 rendering
+- **Position:** Bottom-right corner of the 32×32 icon: ellipse at (22, 22) with 10×10 size
+- **Lazy generation:** `_generatingIcon` is built once on first call, cached for subsequent toggles
+- **Memory:** `Icon.FromHandle()` takes ownership of the HICON. The `Bitmap` is kept alive to prevent premature GC of the underlying pixel buffer
+
+### 8.6 Three-Tier Icon Fallback
+
+The tray icon is resolved through three fallback tiers, ensuring the app always has a visible icon even if the `.ico` file is missing:
+
+```
+Tier 1: Pack URI  →  new Icon(Application.GetResourceStream(
+                        new Uri("pack://application:,,,/Resources/app.ico")).Stream)
+Tier 2: File path →  new Icon("Resources/app.ico")
+Tier 3: Programmatic → BuildDefaultIcon()  (dark "M" letterform on transparent background)
+```
+
+```csharp
+private Icon LoadIcon()
+{
+    try
+    {
+        // Tier 1: Pack URI (works when running from build output)
+        var uri = new Uri("pack://application:,,,/Resources/app.ico");
+        var streamInfo = Application.GetResourceStream(uri);
+        if (streamInfo?.Stream != null)
+            return new Icon(streamInfo.Stream);
+    }
+    catch { /* fall through to Tier 2 */ }
+
+    try
+    {
+        // Tier 2: Relative file path (works when working directory = project root)
+        if (File.Exists("Resources/app.ico"))
+            return new Icon("Resources/app.ico");
+    }
+    catch { /* fall through to Tier 3 */ }
+
+    // Tier 3: Programmatic fallback (guaranteed to produce a visible icon)
+    return BuildDefaultIcon();
+}
+
+private Icon BuildDefaultIcon()
+{
+    var bitmap = new Bitmap(32, 32);
+    using (var g = Graphics.FromImage(bitmap))
+    {
+        g.Clear(Color.Transparent);
+        using (var font = new Font("Segoe UI", 18, FontStyle.Bold))
+        using (var brush = new SolidBrush(Color.FromArgb(37, 99, 235)))  // Accent blue #2563EB
+        {
+            g.DrawString("M", font, brush, new PointF(4, 2));
+        }
+    }
+    return Icon.FromHandle(bitmap.GetHicon());
+}
+```
+
+**Fallback rationale:**
+- **Tier 1 (Pack URI):** The standard WPF resource loading mechanism. Works when `.ico` is a `Resource` build action in the `.csproj`. Covers the normal runtime path.
+- **Tier 2 (File path):** Covers the edge case where the working directory is the project root (e.g., running from an IDE without full build). Also catches environments where pack URIs are unavailable (unit test runners, design-time tools).
+- **Tier 3 (Programmatic):** Guaranteed fallback. Renders a dark blue "M" letterform on transparent background. Ensures the tray icon is never missing, even in corrupted installs or minimal container environments.
 
 ---
 
@@ -685,3 +847,92 @@ App restart:
     → IThemeProvider.SetFontSettings(family, savedSize, weight)  [restore DynamicResource]
 ```
 
+---
+
+## 17. EnumMatchConverter — RadioButton Enum Binding
+
+[`EnumMatchConverter`](src/MySecondBrain.UI/Converters/EnumMatchConverter.cs:5) is an `IValueConverter` that enables `RadioButton.IsChecked` to reflect and set an enum-valued property. It is essential for the sidebar navigation pattern where `RadioButton` controls represent `ScreenType` values.
+
+### 17.1 Why This Converter Is Needed
+
+WPF `RadioButton` binds `IsChecked` to a boolean. To make a `RadioButton` represent an enum value (e.g., `ScreenType.Chats`), you need a converter that compares the bound enum value against a target string:
+
+```
+RadioButton.IsChecked = (SelectedScreen.ToString() == "Chats")
+```
+
+`EnumMatchConverter` provides this comparison. Without it, each `RadioButton` would need a separate boolean property on the ViewModel.
+
+### 17.2 Implementation
+
+```csharp
+namespace MySecondBrain.UI.Converters;
+
+/// <summary>
+/// Compares a bound enum value (e.g., ScreenType.Chats) against the ConverterParameter string.
+/// Returns true when they match, enabling RadioButton.IsChecked to follow SelectedScreen.
+/// </summary>
+public class EnumMatchConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is null || parameter is not string paramStr)
+            return false;
+
+        return value.ToString() == paramStr;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotSupportedException();
+    }
+}
+```
+
+**Key design decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| `ConvertBack` throws `NotSupportedException` | The `RadioButton` does NOT set the enum value via `ConvertBack`. Instead, each `RadioButton` uses a `Command` (e.g., `NavigateCommand` with `CommandParameter="Chats"`) that calls `Enum.TryParse` in the ViewModel. This avoids needing to round-trip the enum through a string comparison. |
+| `value.ToString() == paramStr` | Works for any enum type. The enum's `ToString()` matches the enum member name (e.g., `ScreenType.Chats.ToString()` → `"Chats"`). |
+| Null-safe | Returns `false` when either `value` or `parameter` is null — no `RadioButton` is checked, which is correct for uninitialized state. |
+
+### 17.3 XAML Usage — Sidebar RadioButton Pattern
+
+```xml
+<!-- In MainWindow.xaml sidebar -->
+<RadioButton Command="{Binding NavigateCommand}"
+             CommandParameter="Chats"
+             IsChecked="{Binding SelectedScreen,
+                         Converter={StaticResource EnumMatchConverter},
+                         ConverterParameter=Chats}"
+             Content="Chats"/>
+```
+
+**How it works:**
+1. `SelectedScreen` is `ScreenType.Chats` → `value.ToString()` = `"Chats"` → matches `ConverterParameter="Chats"` → `IsChecked = true`
+2. User clicks the `RadioButton` → `NavigateCommand` fires with `CommandParameter="Chats"` → ViewModel sets `SelectedScreen = ScreenType.Chats` → binding updates → `IsChecked` stays true
+3. User clicks a different `RadioButton` (e.g., "Wiki") → `NavigateCommand("Wiki")` fires → ViewModel sets `SelectedScreen = ScreenType.Wiki` → `Chats` button's `IsChecked` becomes false, `Wiki` button's becomes true
+
+### 17.4 Registration
+
+```xml
+<!-- In App.xaml or MainWindow.xaml Resources -->
+<converters:EnumMatchConverter x:Key="EnumMatchConverter"/>
+```
+
+### 17.5 Relationship to ScreenTemplateSelector
+
+`EnumMatchConverter` and [`ScreenTemplateSelector`](#13-screen-navigation--screentemplateselector-pattern) work together:
+- `EnumMatchConverter` handles the **sidebar RadioButton selection** (which button is highlighted)
+- `ScreenTemplateSelector` handles the **center content switching** (which UserControl is displayed)
+- Both read `MainWindowViewModel.SelectedScreen` — the single source of truth
+
+Neither converter needs to know about the other; they are independently registered and read the same binding source.
+
+### 17.6 General Applicability
+
+This pattern applies to any WPF scenario where `RadioButton` controls must reflect and drive an enum-valued property. Use cases beyond sidebar navigation:
+- Theme selector (`AppTheme.Light` / `AppTheme.Dark`)
+- Chat visual theme selector (`ChatTheme.Classic` / `ChatTheme.Compact` / `ChatTheme.Bubble`)
+- Any settings panel with mutually exclusive enum options displayed as `RadioButton` groups

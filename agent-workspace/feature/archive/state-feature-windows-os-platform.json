@@ -18,10 +18,10 @@
     },
     "missing_prerequisites": []
   },
-  "current_phase": 3,
-  "plan_status": "validated",
+  "current_phase": 5,
+  "plan_status": "archived",
   "total_steps": 14,
-  "current_step": 8,
+  "current_step": 14,
   "pivot_in_progress": false,
-  "phase_5_substep": null
+  "phase_5_substep": "state_finalized"
 }
