@@ -444,7 +444,7 @@ if (savedFontFamily is not null)
 
 ---
 
-### Step 8: ContentRendererRegistry Priority Fix + DI Resolution Verification
+### [x] Step 8: ContentRendererRegistry Priority Fix + DI Resolution Verification
 
 **Goal:** Fix the `Priority` values in 6 renderer stubs that don't match the knowledge base specification. Add priority-based sorting to `ContentRendererRegistry` constructor. Verify via unit test that all 7 renderers resolve from DI with correct priorities.
 
