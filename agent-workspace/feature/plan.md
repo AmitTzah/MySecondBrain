@@ -182,7 +182,7 @@ The 3 chat visual themes (Classic/Compact/Bubble) are `DataTemplate` variants se
 
 ---
 
-### Step 3: Screen Navigation System + 8 Screen UserControl Shells
+### [x] Step 3: Screen Navigation System + 8 Screen UserControl Shells
 
 **Goal:** Implement `MainWindowViewModel.SelectedScreen` enum property with navigation commands. Create a `ScreenTemplateSelector` (subclass of `DataTemplateSelector`) to map `ScreenType` → `UserControl`. Wire `ContentControl` in center area with the selector. Create all 8 screen UserControl shells, each with placeholder content matching its vision layout structure and `DynamicResource` colors. Wire each View's `DataContext` to its corresponding ViewModel via DI.
 
