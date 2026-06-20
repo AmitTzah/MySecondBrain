@@ -273,6 +273,7 @@ public partial class App : Application
 
         // === Transient Services ===
         services.AddTransient<IClipboardService, WpfClipboardService>();
+        services.AddTransient<IConfirmationService, WpfConfirmationService>();
         services.AddTransient<IAudioService, NaudioAudioService>();
         services.AddTransient<ICameraService, AForgeCameraService>();
         services.AddTransient<IVideoPlayerService, WpfVideoPlayerService>();

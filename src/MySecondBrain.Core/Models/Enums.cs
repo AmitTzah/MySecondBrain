@@ -83,6 +83,25 @@ public enum ContextOverflowStrategy
     HardStop
 }
 
+public enum SettingsCategory
+{
+    Providers,
+    Profiles,
+    Appearance,
+    Wiki,
+    Backup,
+    TextActions,
+    Hotkeys,
+    Tools,
+    Notifications,
+    Startup,
+    Updates,
+    Pricing,
+    Security,
+    Maintenance,
+    Diagnostics
+}
+
 public enum VirtualKey
 {
     None = 0x00,
