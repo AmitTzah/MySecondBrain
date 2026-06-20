@@ -28,6 +28,16 @@ public class ApiKeyRepository : IApiKeyRepository
         return entity is null ? null : MapToDomain(entity);
     }
 
+    public async Task<IReadOnlyList<ApiKey>> GetByProviderAsync(ProviderType provider)
+    {
+        var providerStr = provider.ToString();
+        var entities = await _db.ApiKeys
+            .AsNoTracking()
+            .Where(k => k.Provider == providerStr)
+            .ToListAsync();
+        return entities.Select(MapToDomain).ToList();
+    }
+
     public async Task<ApiKey> CreateAsync(ApiKey key)
     {
         var entity = MapToEntity(key);

@@ -41,11 +41,35 @@ public class LLMProviderService : ILLMProviderService
         CancellationToken ct) =>
         Task.FromResult<ChatResponse>(default!);
 
-    public Task<IReadOnlyList<ModelInfo>> ListModelsAsync(ModelConfiguration config, CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<ModelInfo>>(Array.Empty<ModelInfo>());
+    public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(ModelConfiguration config, CancellationToken ct)
+    {
+        var provider = _providerFactory.GetProvider(config.ProviderType, config.EndpointUrl);
+        if (provider == null)
+        {
+            _logger.LogWarning("No provider found for type {ProviderType}", config.ProviderType);
+            return Array.Empty<ModelInfo>();
+        }
 
-    public Task<bool> ValidateApiKeyAsync(ProviderType provider, string apiKey, string? endpointUrl, CancellationToken ct) =>
-        Task.FromResult(false);
+        _logger.LogDebug("Listing models for {Provider} via LLMProviderService", provider.ProviderName);
+        return await provider.ListModelsAsync(ct);
+    }
+
+    public async Task<bool> ValidateApiKeyAsync(
+        ProviderType providerType,
+        string apiKey,
+        string? endpointUrl,
+        CancellationToken ct)
+    {
+        var provider = _providerFactory.GetProvider(providerType, endpointUrl);
+        if (provider == null)
+        {
+            _logger.LogWarning("No provider found for type {ProviderType}", providerType);
+            return false;
+        }
+
+        _logger.LogDebug("Validating API key for {Provider} via LLMProviderService", provider.ProviderName);
+        return await provider.ValidateKeyAsync(apiKey, ct, endpointUrl);
+    }
 
     public int CountTokens(string text, string modelId, ProviderType provider) => 0;
 
