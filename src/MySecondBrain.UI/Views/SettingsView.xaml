@@ -325,7 +325,6 @@
                                 <!-- List header -->
                                 <Grid Grid.Row="0" Margin="12,10,12,6">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
@@ -333,11 +332,7 @@
                                                FontWeight="SemiBold"
                                                Foreground="{DynamicResource ContentForeground}"
                                                VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding StatusMessage}"
-                                               FontSize="10" Margin="10,0,0,0"
-                                               Foreground="{DynamicResource AccentBrush}"
-                                               VerticalAlignment="Center"/>
-                                    <Button Grid.Column="2" Content="+ Add API Key"
+                                    <Button Grid.Column="1" Content="+ Add API Key"
                                             FontSize="11" Padding="8,4"
                                             Command="{Binding AddApiKeyCommand}"
                                             Background="{DynamicResource AccentBrush}"
