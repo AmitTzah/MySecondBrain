@@ -1,0 +1,62 @@
+<Window x:Class="MySecondBrain.UI.Views.PersonaPickerDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Select Persona"
+        Height="400" Width="400"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="{DynamicResource ContentBackground}"
+        ResizeMode="NoResize"
+        KeyDown="Window_KeyDown"
+        AutomationProperties.AutomationId="PersonaPickerDialog">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Search box -->
+        <Border Grid.Row="0" Margin="0,0,0,8"
+                Background="{DynamicResource InputBackground}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                CornerRadius="4" Padding="6,4">
+            <TextBox x:Name="SearchBox"
+                     Text="{Binding PersonaPickerSearchText, UpdateSourceTrigger=PropertyChanged}"
+                     FontSize="13"
+                     Background="Transparent"
+                     Foreground="{DynamicResource ContentForeground}"
+                     BorderThickness="0"
+                     AutomationProperties.AutomationId="PersonaPickerSearchBox"/>
+        </Border>
+
+        <!-- Persona list -->
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding FilteredPersonaList}"
+                 SelectedItem="{Binding ActivePersona, Mode=TwoWay}"
+                 DisplayMemberPath="DisplayName"
+                 FontSize="13"
+                 Background="{DynamicResource InputBackground}"
+                 BorderBrush="{DynamicResource BorderBrush}"
+                 BorderThickness="1"
+                 AutomationProperties.AutomationId="PersonaPickerList"
+                 MouseDoubleClick="PersonaList_MouseDoubleClick"/>
+
+        <!-- Bottom buttons -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal"
+                    HorizontalAlignment="Right" Margin="0,8,0,0">
+            <Button Content="Select" Padding="16,6" FontSize="12"
+                    Background="{DynamicResource AccentBrush}"
+                    Foreground="{DynamicResource AccentForeground}"
+                    BorderThickness="0" Margin="0,0,8,0"
+                    Click="SelectButton_Click"
+                    AutomationProperties.AutomationId="PersonaPickerSelectBtn"/>
+            <Button Content="Cancel" Padding="16,6" FontSize="12"
+                    Background="Transparent"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    Foreground="{DynamicResource ContentForeground}"
+                    Click="CancelButton_Click"
+                    AutomationProperties.AutomationId="PersonaPickerCancelBtn"/>
+        </StackPanel>
+    </Grid>
+</Window>

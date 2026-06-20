@@ -37,6 +37,12 @@ public partial class App : Application
     private IServiceProvider _serviceProvider = null!;
     private static readonly FontWeightConverter s_fontWeightConverter = new();
 
+    /// <summary>
+    /// Provides access to the application's DI service provider from non-DI-aware code (e.g., UserControls in DataTemplates).
+    /// </summary>
+    public static IServiceProvider ServiceProvider =>
+        ((App)Current)._serviceProvider;
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         var services = new ServiceCollection();

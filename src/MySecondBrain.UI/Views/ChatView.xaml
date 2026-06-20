@@ -24,7 +24,8 @@
                 <!-- Left: Persona name + context bar -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal"
                             VerticalAlignment="Center">
-                    <TextBlock Text="Default Persona" FontSize="14" FontWeight="SemiBold"
+                    <TextBlock Text="{Binding ActivePersona.DisplayName, FallbackValue='Select Persona'}"
+                               FontSize="14" FontWeight="SemiBold"
                                Foreground="{DynamicResource ContentForeground}"
                                VerticalAlignment="Center"/>
                     <Border Background="{DynamicResource InputBackground}"
@@ -100,10 +101,16 @@
             <StackPanel>
                 <!-- Toolbar -->
                 <WrapPanel Margin="0,2">
-                    <Button Content="🤖 Default Persona ▾" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource ContentForeground}"
-                            Padding="6,3" Margin="2"/>
+                    <ComboBox ItemsSource="{Binding PersonaList}"
+                              SelectedItem="{Binding ActivePersona, Mode=TwoWay}"
+                              DisplayMemberPath="DisplayName"
+                              FontSize="10" Width="160"
+                              Background="Transparent"
+                              BorderBrush="{DynamicResource BorderBrush}"
+                              BorderThickness="1"
+                              Foreground="{DynamicResource ContentForeground}"
+                              Padding="2,1" Margin="2"
+                              AutomationProperties.AutomationId="PersonaSelector"/>
                     <Button Content="🧠 Thinking" FontSize="10"
                             Background="Transparent" BorderBrush="{DynamicResource AccentBrush}"
                             BorderThickness="1" Foreground="{DynamicResource AccentBrush}"
