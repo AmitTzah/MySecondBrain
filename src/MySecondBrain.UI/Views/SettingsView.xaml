@@ -193,14 +193,26 @@
                         <!-- Action buttons -->
                         <StackPanel Grid.Column="2" Orientation="Horizontal"
                                     VerticalAlignment="Center">
-                            <Button Content="📋" Width="28" Height="24" FontSize="11"
+                            <Button Width="28" Height="24" FontSize="11"
                                     ToolTip="Copy API key to clipboard"
                                     Command="{Binding DataContext.CopyKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"
                                     Background="Transparent"
                                     BorderThickness="0"
                                     Foreground="{DynamicResource SubtleBrush}"
-                                    Margin="2,0"/>
+                                    Margin="2,0">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Setter Property="Content" Value="📋"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsCopied}" Value="True">
+                                                <Setter Property="Content" Value="✅"/>
+                                                <Setter Property="Foreground" Value="#4CAF50"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
                             <Button Content="✏️" Width="28" Height="24" FontSize="11"
                                     ToolTip="Edit"
                                     Command="{Binding DataContext.EditApiKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"

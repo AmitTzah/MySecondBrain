@@ -82,6 +82,13 @@ public partial class ApiKeyDisplayItem : ObservableObject
     public string MaskedValue => "••••••••";
 
     /// <summary>
+    /// Transient flag set briefly after the key is copied to show a checkmark on the copy button.
+    /// Reset after a short delay by the ViewModel.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isCopied;
+
+    /// <summary>
     /// Computes a masked key from the decrypted plaintext.
     /// Used by the ViewModel to set the display mask after decryption.
     /// </summary>
@@ -111,6 +118,11 @@ public partial class SettingsViewModel : ObservableObject
     /// Cancellation token source for model auto-fetch, cancelled on each new request to avoid stale results.
     /// </summary>
     private CancellationTokenSource? _fetchModelsCts;
+
+    /// <summary>
+    /// Timer used to reset the copy button checkmark after a short delay.
+    /// </summary>
+    private System.Windows.Threading.DispatcherTimer? _copyFeedbackTimer;
 
     public SettingsViewModel(
         ISettingsRepository settingsRepo,
@@ -448,12 +460,36 @@ public partial class SettingsViewModel : ObservableObject
             var decrypted = _encryptionService.UnprotectString(item.EncryptedValue);
             _clipboardService.SetText(decrypted);
             StatusMessage = "API key copied to clipboard.";
+
+            // Show checkmark on the copy button
+            item.IsCopied = true;
+            ScheduleCopyFeedbackReset(item);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to copy API key to clipboard");
             StatusMessage = "Failed to copy API key.";
         }
+    }
+
+    /// <summary>
+    /// Schedules a timer to reset the IsCopied flag after 1.5 seconds
+    /// so the copy button reverts from checkmark back to clipboard icon.
+    /// </summary>
+    private void ScheduleCopyFeedbackReset(ApiKeyDisplayItem item)
+    {
+        _copyFeedbackTimer?.Stop();
+        _copyFeedbackTimer = new System.Windows.Threading.DispatcherTimer(
+            TimeSpan.FromMilliseconds(1500),
+            System.Windows.Threading.DispatcherPriority.Normal,
+            (_, _) =>
+            {
+                item.IsCopied = false;
+                _copyFeedbackTimer?.Stop();
+                _copyFeedbackTimer = null;
+            },
+            System.Windows.Threading.Dispatcher.CurrentDispatcher);
+        _copyFeedbackTimer.Start();
     }
 
     [RelayCommand]
