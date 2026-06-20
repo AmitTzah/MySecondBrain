@@ -248,7 +248,6 @@
                          ItemsSource="{Binding CategoryItems}"
                          SelectedValue="{Binding SelectedSettingsCategory}"
                          SelectedValuePath="Category"
-                         DisplayMemberPath="Label"
                          ItemTemplate="{StaticResource SidebarItemTemplate}"
                          Background="Transparent" BorderThickness="0"
                          Foreground="{DynamicResource SidebarForeground}"

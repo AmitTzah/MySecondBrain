@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Extensions.DependencyInjection;
 using MySecondBrain.UI.ViewModels;
 using UserControl = System.Windows.Controls.UserControl;
 
@@ -12,6 +13,23 @@ public partial class SettingsView : UserControl
 
     public SettingsView()
     {
+        // Resolve the ViewModel from DI before InitializeComponent so
+        // XAML bindings resolve immediately. When App.Current is null
+        // (e.g., in unit tests or design mode), fall back to inherited
+        // DataContext.
+        try
+        {
+            if (!DesignerProperties.GetIsInDesignMode(this) && App.Current is not null)
+            {
+                DataContext = App.ServiceProvider.GetRequiredService<SettingsViewModel>();
+            }
+        }
+        catch
+        {
+            // DI container may not be initialized during testing;
+            // fall through to inherited DataContext
+        }
+
         InitializeComponent();
         Loaded += OnLoaded;
     }
