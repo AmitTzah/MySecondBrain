@@ -430,7 +430,7 @@
     <rule>Vision discovery belongs to the Vision Hasher. Execution planning belongs to the Architect. Feature execution belongs to the feature-developer. E2E test generation belongs to the E2E generation subtask (code mode). The PD orchestrates the pipeline between them.</rule>
     <rule>The PD owns the E2E regression suite: it spawns E2E generation subtasks to write tests, runs the suite, and enforces the "locked in" quality gate.</rule>
     <rule>The PD owns vision document maintenance: after each feature, re-evaluate vision docs. Minor drift → edit directly. Major drift → flag for user, potentially re-plan.</rule>
-    <rule>Tests/unit/ is the feature-developer's domain (unit tests per feature). Tests/e2e/ is the PD's domain (cross-feature regression tests). These directories must not overlap.</rule>
+    <rule>Tests/unit/ and tests/integration/ are the feature-developer's domain (unit and integration tests per feature). Tests/e2e/ is the PD's domain (cross-feature regression tests). These directories must not overlap.</rule>
     <rule>The PD may write vision template files and planning template files within agent-workspace/project-director/.</rule>
   </boundaries>
 

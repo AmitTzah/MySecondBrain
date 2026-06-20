@@ -1,8 +1,15 @@
 <common_patterns>
   <overview>
-    Reusable question patterns, interview structures, and the interactive mock HTML
-    generation system. The CSS component library and tooltip system are defined here
-    as canonical templates — VH copies them verbatim into every screen HTML file.
+    Reusable question patterns, interview structures, and deliverable generation systems.
+    The appropriate deliverable system is selected based on project_type from vision-config.json.
+
+    PROJECT TYPE → DELIVERABLE SYSTEM:
+    - gui: Interactive Mock HTML Generation (screens/*.html with wireframe aesthetic + tooltips)
+    - cli: Terminal Session Transcript Generation (commands/*.session.md with realistic output)
+    - api: OpenAPI Contract Generation (endpoints/*.openapi.yaml)
+    - library: Usage Example Generation (public-api/*.example.* in target language)
+    - game: HTML Wireframes (UI only) + Mechanics Spec Generation (mechanics/*.md)
+    - pipeline: Mermaid Data Flow Diagram Generation (in pipeline-stages/*.md)
 
     CRITICAL DEFAULT: Always prefer offering suggested responses (2-4 concrete options)
     over open-ended questions. The user picks, combines, or rejects options — this is
@@ -11,7 +18,7 @@
   </overview>
 
   <!-- ============================================================ -->
-  <!-- QUESTION PATTERNS (unchanged from original — still valid)     -->
+  <!-- QUESTION PATTERNS (project-type appropriate)                   -->
   <!-- ============================================================ -->
   <suggested_responses_pattern>
     <name>Default Questioning: Suggested Responses</name>
@@ -36,8 +43,9 @@
   </suggested_responses_pattern>
 
   <question_patterns>
-    <pattern name="screen_decomposition">
-      <description>For describing any UI screen in exhaustive detail. Use during Phase 2 screen interviews.</description>
+    <!-- GUI question patterns -->
+    <pattern name="screen_decomposition" project_type="gui,game">
+      <description>For describing any UI screen in exhaustive detail. Use during GUI/game Phase 2 screen interviews.</description>
       <questions>
         <question order="1">What is the purpose of this screen? What does the user accomplish here?</question>
         <question order="2">What is the layout? (single panel, split panel, tabs, cards, list+detail, etc.)</question>
@@ -56,11 +64,95 @@
       </questions>
     </pattern>
 
+    <!-- CLI question patterns -->
+    <pattern name="command_decomposition" project_type="cli">
+      <description>For describing a CLI command/subcommand in exhaustive detail.</description>
+      <questions>
+        <question order="1">What is the purpose of this command? What does the user accomplish by running it?</question>
+        <question order="2">What are the subcommands? (if this is a command group)</question>
+        <question order="3">What positional arguments does it accept? Name, type, required/optional, description for each.</question>
+        <question order="4">What flags/options does it accept? Short form (-f), long form (--flag), type, default value, required?</question>
+        <question order="5">What input sources does it use? (stdin, file path, environment variable, config file)</question>
+        <question order="6">What output formats does it support? (table, JSON, YAML, plain text, custom --output flag)</question>
+        <question order="7">What are all exit codes? (0=success, specific non-zero codes for each error condition)</question>
+        <question order="8">What error conditions exist? Invalid input, missing required args, permission denied, network failure?</question>
+        <question order="9">How does this command interact with others? (piping output to another command, chaining, scripting)</question>
+        <question order="10">What would a realistic terminal session look like? Show me the commands a user would type and the output.</question>
+      </questions>
+    </pattern>
+
+    <!-- API question patterns -->
+    <pattern name="endpoint_decomposition" project_type="api">
+      <description>For describing an API endpoint/resource group in exhaustive detail.</description>
+      <questions>
+        <question order="1">What resource does this endpoint group manage? What can clients do with it?</question>
+        <question order="2">What HTTP methods are supported? (GET, POST, PUT, PATCH, DELETE) For each: path, summary, idempotency.</question>
+        <question order="3">What request parameters exist? (path params, query params, headers, request body with full schema)</question>
+        <question order="4">What authentication is required? (none, API key, JWT, OAuth2 scopes) Per-endpoint or global?</question>
+        <question order="5">What are the success response schemas? (200, 201, 204 — full JSON structure, types, required fields)</question>
+        <question order="6">What are the error responses? (400 validation, 401 unauthorized, 403 forbidden, 404 not found, 409 conflict, 429 rate limit, 500 server error)</question>
+        <question order="7">What pagination, filtering, and sorting options exist?</question>
+        <question order="8">What rate limits apply? Per-endpoint or global? What headers communicate limits?</question>
+        <question order="9">How do endpoints relate? (e.g., POST /projects/{id}/tasks creates a task under a project)</question>
+        <question order="10">What webhooks or events does this resource trigger?</question>
+      </questions>
+    </pattern>
+
+    <!-- Library question patterns -->
+    <pattern name="public_api_decomposition" project_type="library">
+      <description>For describing a library module/namespace's public API surface.</description>
+      <questions>
+        <question order="1">What is the purpose of this module? What problem does it solve for the developer?</question>
+        <question order="2">What are the public exports? (functions, classes, types, constants, decorators)</question>
+        <question order="3">For each function: full signature (parameters with types, return type, async/sync, generics)</question>
+        <question order="4">For each parameter: name, type, required/optional, default value, valid range/constraints</question>
+        <question order="5">What errors/exceptions does each function throw? Under what conditions?</question>
+        <question order="6">What are the side effects? (I/O, mutation, network calls, state changes)</question>
+        <question order="7">What is the thread safety model? Is it safe for concurrent use?</question>
+        <question order="8">How does this module compose with other modules? What are typical usage patterns?</question>
+        <question order="9">What would realistic usage code look like? Show me how a developer would use these exports.</question>
+      </questions>
+    </pattern>
+
+    <!-- Game mechanics question patterns -->
+    <pattern name="mechanics_decomposition" project_type="game">
+      <description>For describing a game mechanic/system in exhaustive detail.</description>
+      <questions>
+        <question order="1">What is this mechanic? What player experience does it create?</question>
+        <question order="2">What is the core loop/cycle? (trigger → player action → system response → feedback → repeat)</question>
+        <question order="3">What are the rules and constraints? (what can/cannot happen, limits, cooldowns)</question>
+        <question order="4">What player inputs drive this mechanic? (button presses, mouse movement, combos, timing windows)</question>
+        <question order="5">For each input: what is the exact behavior? Frame data, animation triggers, state transitions.</question>
+        <question order="6">What are the balance parameters? (speeds, damage values, durations, probabilities — specific numbers)</question>
+        <question order="7">What are the edge cases? (simultaneous inputs, boundary conditions, interaction with other mechanics)</question>
+        <question order="8">What feedback does the player receive? (visual effects, sound, camera shake, UI updates)</question>
+        <question order="9">How does this mechanic interact with other systems? (combat + movement, inventory + equipment, etc.)</question>
+        <question order="10">What is the failure state? What happens when the player fails at this mechanic?</question>
+      </questions>
+    </pattern>
+
+    <!-- Pipeline question patterns -->
+    <pattern name="pipeline_stage_decomposition" project_type="pipeline">
+      <description>For describing a data pipeline stage in exhaustive detail.</description>
+      <questions>
+        <question order="1">What is the purpose of this stage? What transformation does it perform on the data?</question>
+        <question order="2">What is the input? (source system, data format/schema, volume, frequency/batch size)</question>
+        <question order="3">What are the transformation steps? Each step: logic, validations, enrichments, filters.</question>
+        <question order="4">What is the output? (destination, format/schema, write mode — append/overwrite/upsert)</question>
+        <question order="5">What error handling exists? (malformed data → dead letter queue? transient failures → retry?)</question>
+        <question order="6">What is the retry strategy? (max retries, backoff, idempotency guarantees)</question>
+        <question order="7">What monitoring exists? (metrics emitted, alert thresholds, log levels, tracing)</question>
+        <question order="8">What are the dependencies? (upstream stages, external services, configuration)</question>
+        <question order="9">How does data flow through this stage visually? What would a diagram look like?</question>
+      </questions>
+    </pattern>
+
+    <!-- Universal patterns (all project types) -->
     <pattern name="feature_specification">
-      <description>For describing any feature completely. Use during Phase 1 feature-inventory interview.</description>
+      <description>For describing any feature completely. Use during Phase 1 feature-inventory interview. Universal — all project types.</description>
       <questions>
         <question order="1">What is the user trying to accomplish with this feature?</question>
-        <question order="2">What triggers this feature? (button click, navigation, automatic, scheduled)</question>
+        <question order="2">What triggers this feature? (for GUI: button click, navigation. For CLI: command, flag. For API: HTTP request. For library: function call. For game: player action. For pipeline: schedule or event.)</question>
         <question order="3">Step by step, what happens from trigger to completion?</question>
         <question order="4">What data goes in? What data comes out?</question>
         <question order="5">What validations or constraints exist?</question>
@@ -72,12 +164,12 @@
     </pattern>
 
     <pattern name="user_flow">
-      <description>For describing an end-to-end user journey. Use during Phase 3 flow interviews.</description>
+      <description>For describing an end-to-end user journey. Use during Phase 3 flow/workflow interviews. Universal — adapt step references by project_type.</description>
       <questions>
         <question order="1">Who is the user? (persona, role, context)</question>
         <question order="2">What is their goal? What are they trying to achieve?</question>
-        <question order="3">Where do they start? What screen?</question>
-        <question order="4">What steps do they take? Screens visited, actions performed, decisions made.</question>
+        <question order="3">Where do they start? (GUI: which screen? CLI: which command? API: which endpoint? Library: which import? Game: which screen/state? Pipeline: which source?)</question>
+        <question order="4">What steps do they take? Reference specific interface surface artifacts.</question>
         <question order="5">What decisions or branching points exist? (if X then Y, else Z)</question>
         <question order="6">What is the happy path from start to goal?</question>
         <question order="7">What are the alternative paths? (different choices, edge cases)</question>
@@ -88,7 +180,7 @@
 
     <pattern name="data_concept">
       <description>For describing a conceptual data entity (not database schema — what data exists).
-        Use during Phase 1 data/ interviews.</description>
+        Use during Phase 1 data/ interviews. Universal — all project types.</description>
       <questions>
         <question order="1">What is this thing called? (e.g., "Task," "Project," "Invoice")</question>
         <question order="2">What information describes it? List every attribute. (e.g., name, status, due date, assignee)</question>
@@ -97,7 +189,7 @@
         <question order="5">How is it updated? By whom? From where?</question>
         <question order="6">How is it deleted? Soft delete or hard delete? Consequences?</question>
         <question order="7">How does it relate to other data concepts? (belongs to, has many, references)</question>
-        <question order="8">Where does it appear in the UI? Which screens show it?</question>
+        <question order="8">Where does it appear in the interface surface? (GUI: which screens? CLI: which commands? API: which endpoints? Library: which function params? Game: which UI/mechanics? Pipeline: which stage?)</question>
       </questions>
     </pattern>
   </question_patterns>
@@ -114,13 +206,15 @@
   </consistency_callout>
 
   <!-- ============================================================ -->
-  <!-- INTERACTIVE MOCK HTML GENERATION SYSTEM                       -->
+  <!-- DELIVERABLE GENERATION SYSTEMS (one per project_type)         -->
   <!-- ============================================================ -->
-  <interactive_mock_system>
-    <name>Interactive Mock HTML Generation</name>
+
+  <!-- ===== GUI: INTERACTIVE MOCK HTML GENERATION SYSTEM ===== -->
+  <interactive_mock_system project_type="gui,game">
+    <name>Interactive Mock HTML Generation (GUI / Game UI)</name>
     <description>
       For every UI screen, generate BOTH a canonical .md spec AND an interactive .html mock.
-      The HTML uses a pre-built CSS component library and a deliberate wireframe aesthetic.
+      The HTML uses inline CSS and a deliberate wireframe aesthetic.
       The user opens the HTML in a browser to see the layout, click around, read tooltips,
       and navigate between screens.
 
@@ -408,4 +502,195 @@
       <step>9. On user confirmation: mark confirmed in state.json, generate placeholders for new navigation targets discovered.</step>
     </mock_generation_workflow>
   </interactive_mock_system>
+
+  <!-- ===== CLI: TERMINAL SESSION TRANSCRIPT SYSTEM ===== -->
+  <terminal_transcript_system project_type="cli">
+    <name>Terminal Session Transcript Generation (CLI)</name>
+    <description>
+      For every CLI command/subcommand, generate BOTH a canonical .md spec AND a terminal session
+      transcript (.session.md). The session transcript is the CLI equivalent of a GUI interactive
+      mock — the user reads realistic terminal output to verify behavior.
+    </description>
+
+    <session_transcript_format>
+      <rule priority="critical">Use `$ ` as the prompt prefix for all commands.</rule>
+      <rule priority="critical">Show realistic output immediately after each command — formatted
+        as it would appear in a real terminal (tables with borders, JSON with indentation, etc.).</rule>
+      <rule priority="critical">Include at minimum: happy path example, --help output, one error case.</rule>
+      <rule priority="high">For each flag/option, show at least one example invocation.</rule>
+      <rule priority="high">Show pipe and redirect examples when applicable.</rule>
+      <rule priority="high">Exit code should be implied by success/failure — if the output shows
+        an error message, the reader understands this would be a non-zero exit.</rule>
+    </session_transcript_format>
+
+    <transcript_template>
+      <description>Template for a command session transcript file:</description>
+      <code><![CDATA[
+# [Command Name] — Terminal Session Transcript
+
+> These transcripts simulate realistic terminal sessions. They are the CLI equivalent of GUI wireframe mocks.
+> Read through them to verify: subcommands, flags, output formats, and error handling match your vision.
+
+## Happy Path
+
+$ mycli [command] [args] --flags
+[expected output — table, JSON, or plain text]
+
+$ mycli [command] [args] --output json
+{
+  "status": "success",
+  "data": { ... }
+}
+
+## Help Output
+
+$ mycli [command] --help
+Usage: mycli [command] [options]
+
+[help text showing all subcommands, flags, and arguments]
+
+## Error Cases
+
+$ mycli [command] --invalid-flag
+Error: unknown flag '--invalid-flag'. See 'mycli [command] --help'.
+
+$ mycli [command] [missing-required-arg]
+Error: required argument [name] is missing.
+Usage: mycli [command] <required-arg> [options]
+      ]]></code>
+    </transcript_template>
+  </terminal_transcript_system>
+
+  <!-- ===== API: OPENAPI CONTRACT SYSTEM ===== -->
+  <openapi_contract_system project_type="api">
+    <name>OpenAPI Contract Generation (API)</name>
+    <description>
+      For every API endpoint resource group, generate BOTH a canonical .md spec AND an OpenAPI 3.0
+      YAML contract. The YAML can be opened in Swagger UI for interactive API reference.
+    </description>
+
+    <openapi_standards>
+      <rule priority="critical">Use OpenAPI 3.0.x format.</rule>
+      <rule priority="critical">Define reusable schemas under components/schemas and reference via $ref.</rule>
+      <rule priority="critical">Document all error response codes with example response bodies.</rule>
+      <rule priority="high">Include security scheme definitions (bearerAuth, apiKey, etc.).</rule>
+      <rule priority="high">Tag endpoints by resource group for Swagger UI grouping.</rule>
+      <rule priority="high">Include request/response examples, not just schemas.</rule>
+    </openapi_standards>
+
+    <openapi_template>
+      <description>Minimal OpenAPI YAML structure:</description>
+      <code><![CDATA[
+openapi: 3.0.3
+info:
+  title: [API Name]
+  version: 1.0.0
+  description: [Vision spec — not final implementation]
+servers:
+  - url: https://api.example.com/v1
+    description: Production (envisioned)
+security:
+  - bearerAuth: []
+paths:
+  /[resource]:
+    get:
+      summary: [List resources]
+      operationId: list[Resources]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/[Resource]'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    [Resource]:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, example: "Authentication required" }
+      ]]></code>
+    </openapi_template>
+  </openapi_contract_system>
+
+  <!-- ===== LIBRARY: USAGE EXAMPLE SYSTEM ===== -->
+  <usage_example_system project_type="library">
+    <name>Usage Example Generation (Library/SDK)</name>
+    <description>
+      For every library module, generate runnable usage example files in the target language.
+      These are the library equivalent of GUI interactive mocks.
+    </description>
+
+    <example_standards>
+      <rule priority="critical">Examples must be in the target language (determined from vision-config.json
+        or app-overview.md platform section).</rule>
+      <rule priority="critical">Examples should be realistic, not contrived — show patterns a real developer would use.</rule>
+      <rule priority="critical">Include error handling in examples (try/catch, Result types, etc.).</rule>
+      <rule priority="high">Add inline comments explaining the "why" for each section.</rule>
+      <rule priority="high">Show composition: how this module is used with other modules.</rule>
+    </example_standards>
+  </usage_example_system>
+
+  <!-- ===== PIPELINE: MERMAID DIAGRAM SYSTEM ===== -->
+  <mermaid_diagram_system project_type="pipeline">
+    <name>Mermaid Data Flow Diagram Generation (Pipeline)</name>
+    <description>
+      For every pipeline stage, include a Mermaid graph or flowchart diagram in the .md spec
+      showing data flow. The diagram is the pipeline equivalent of a GUI interactive mock.
+    </description>
+
+    <mermaid_standards>
+      <rule priority="critical">Use ```mermaid code blocks within the .md spec file.</rule>
+      <rule priority="critical">Show input sources, transformation steps, output destinations, and error paths.</rule>
+      <rule priority="high">Use graph TD (top-down) or flowchart LR (left-right) orientation.</rule>
+      <rule priority="high">Label edges with data format/volume where relevant.</rule>
+      <rule priority="high">Show DLQ (dead letter queue) and retry paths.</rule>
+    </mermaid_standards>
+
+    <mermaid_template>
+      <description>Example Mermaid diagram for a pipeline stage:</description>
+      <code><![CDATA[
+```mermaid
+graph TD
+    A[S3 Bucket: raw-events/] -->|JSON, 10K events/min| B[Stage: Validate]
+    B -->|Valid events| C[Stage: Transform]
+    B -->|Invalid events| D[DLQ: invalid-events/]
+    C -->|Enriched events| E[Stage: Load]
+    E -->|Upsert| F[(PostgreSQL: events table)]
+    E -->|Failure after 3 retries| D
+```
+      ]]></code>
+    </mermaid_template>
+  </mermaid_diagram_system>
+
 </common_patterns>

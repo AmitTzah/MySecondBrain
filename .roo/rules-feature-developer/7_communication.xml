@@ -77,9 +77,11 @@
     </structure>
     <example name="git_automation_enabled">
       "Feature 'User Authentication' is complete on branch feature/user-auth.
-      5/5 steps executed. Plan archived at agent-workspace/feature/archive/plan-feature-user-auth.md.
+      5/5 steps executed.
+      Plan archived at agent-workspace/feature/archive/plan-feature-user-auth.md.
       state.json archived at agent-workspace/feature/archive/state-feature-user-auth.json.
       Unit tests: tests/unit/user-auth.test.ts (24 tests across User model, auth endpoints, JWT middleware, and React components).
+      Skipped GUI smoke tests: 2 presented to user in Phase 5 Step 0.
       Knowledge base updated:
       - architecture.md: JWT authentication pattern, middleware chain
       - database.md: users table (id, email, password_hash, created_at)

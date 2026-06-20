@@ -21,16 +21,35 @@
       <rule number="1">
         One step = ONE subtask = ONE git commit = ONE visible change.
         Every single step must produce exactly ONE noticeable, testable change
-        in the UI or app behavior that a human can verify via a Live Smoke Test.
-        Do NOT pack multiple logical changes into one step. Do NOT create invisible/untestable steps.
+        in the UI or app behavior. Do NOT pack multiple logical changes into one step.
+        Do NOT create invisible/untestable steps.
       </rule>
       <rule number="2">
-        Every step must have a concrete Live Smoke Test.
-        If a step is backend-focused (like a DB schema or an API endpoint),
-        the Live Smoke Test MUST provide a concrete way for the human to test it
-        (e.g., a specific cURL command, a Postman test, or a SQL query script).
-        Steps like "Setup folder structure" or "Refactor variables" are forbidden
-        unless the Live Smoke Test proves a visible change.
+        Every step must have a concrete Live Smoke Test AND a Smoke Test Classification.
+        The Live Smoke Test describes exactly what to verify. The Classification tells the
+        orchestrator WHO can verify it: the AI itself (Model) or a human/SHT (GUI required).
+      </rule>
+      <rule number="3" priority="critical">
+        Smoke Test Classification: Every step MUST be tagged as exactly one of:
+        - **Model**: Verifiable by the AI via terminal — build/launch binaries, HTTP requests
+          (curl), CLI commands with expected output, file content checks, process management,
+          temporary script execution. The AI has full command access and can verify anything
+          with exit codes, stdout/stderr, or file contents.
+        - **HUMAN/SHT REQUIRED**: Requires GUI interaction or visual perception — click flows,
+          form filling, drag-drop, window management, responsive layout verification, visual
+          correctness. Cannot be verified through terminal output alone. Needs a human or synthetic-human-tester (SHT) to verify.
+
+        DO NOT classify "Run npm test" or "Run automated tests" as a Model smoke test —
+        automated tests are already run by the quality loop. A Model smoke test is an
+        ADDITIONAL terminal-based verification beyond the automated test suite.
+      </rule>
+      <rule number="4" priority="critical">
+        Merge trivial steps. Modern 1M-context models handle substantial steps efficiently.
+        If a step's only meaningful smoke test would be "run automated tests" (which the
+        quality loop already does), that step is too small — merge it with adjacent steps.
+        Every step must justify a full Code→refactor→QA pipeline. Avoid token-wasting
+        micro-steps. A step that genuinely has no smoke test beyond automated tests
+        should NOT be a separate step.
       </rule>
     </critical_rules_for_architect>
 
@@ -64,12 +83,24 @@
 - **Actions:**
   - [Action 1]
   - [Action 2]
-- **Automated Testing:** [Specify which tests must be run, e.g., `npm test`, and what new unit tests need to be written. Unit tests MUST be placed in `tests/unit/` directory with the naming convention `tests/unit/{feature-name}.test.{ext}`.]
-- **Live Smoke Test (Mandatory):** [Explain EXACTLY what the developer needs to do to verify this step. Choose the format that matches the target environment:
-  *Web UI:* "Navigate to /dashboard, click 'Add', ensure modal opens."
-  *CLI/Backend:* "Verified by Code mode directly via automated tests and exit code checks — no manual smoke test needed."
-  *Desktop:* "Launch the app, click File → Save, verify the status bar shows 'Saved successfully'."
-  *Backend/API:* "Run `curl http://localhost:3000/api/users` and ensure it returns a 200 JSON response."]
+- **Unit Tests to Write:** [List each new unit test file and the specific test cases to create. Only list tests that don't already exist — check the `tests/unit/` directory first to avoid duplication. Use the project's existing test framework and naming conventions:]
+  - `tests/unit/{feature-name}.test.{ext}`: Test [specific behavior], test [edge case], test [error path]
+- **Integration Tests to Write:** [List each new integration test file. Integration tests verify that code works with real infrastructure — database, filesystem, network, external services. Only specify integration tests when this step's Actions touch real infrastructure. If this step is pure computation, UI-only styling, or has no external dependencies, write "None — [reason]" (e.g., "None — pure CSS changes," "None — no database or external service interaction"). Check `tests/integration/` first to avoid duplication:]
+  - `tests/integration/{feature-name}.integration.test.{ext}`: Test [DB write + read], test [API handler with real request], test [file I/O]
+- **Automated Test Commands:** [Specify which CLI test commands to run to verify this step, e.g., `npm test`, `npm run test:unit`, `npm run test:integration`, `npm run lint`. These are the commands Code mode will execute during its quality loop. Include unit tests, integration tests, linters, and type-checkers — everything that runs without human interaction. Do NOT include E2E tests (browser-based, visual regression, device/simulator) — those run at the Project Director level in Phase 4 as a cross-feature regression suite, not per step.]
+- **Live Smoke Test (Mandatory):** [Explain EXACTLY what to verify. Must be a substantive smoke test — NOT just "run automated tests" since the quality loop already runs those. Choose ONE of the two formats below based on who can verify it:]
+- **Smoke Test Classification:** Model OR HUMAN/SHT REQUIRED 
+  - **Model** — AI-verifiable via terminal. Examples:
+    - Build + launch: "Run `dotnet build` then launch `bin/Debug/app.exe` — verify process stays alive 5+ seconds, no crash."
+    - HTTP endpoint: "Run `curl -X POST http://localhost:3000/api/users -d '{"name":"Test"}'` and verify HTTP 201 + JSON response contains an `id` field."
+    - CLI command: "Run `myapp process --input test.csv` and verify exit code 0 and stdout contains 'Processed: 42 rows'."
+    - File verification: "Check that `src/routes.ts` contains the new `/api/items` route definition."
+    - Temp script: "Create and run a temp script that calls the new service and prints results — verify expected output."
+  - **HUMAN/SHT REQUIRED** — Needs GUI interaction or visual perception. Examples:
+    - Web UI: "Navigate to /dashboard, click 'Add Item', verify the modal opens with Name and Price fields."
+    - Desktop: "Launch the app, click File → Export, verify the Save dialog appears with expected file types."
+    - Visual: "Resize browser to 400px width, verify the hamburger menu appears and navigation is usable."
+    - Multi-step GUI: "Drag item from list to cart, verify cart badge updates from 0 to 1."
 - **Suggested Commit Message:** `feat: [descriptive message]`
 
 *(Continue for as many steps as needed)*
@@ -118,13 +149,17 @@
     <name>Standard Subtask Prompt Structure</name>
     <description>
       Use this pattern every time you spawn a code subtask for a step.
+      The behavior varies based on (a) the step's Smoke Test Classification and
+      (b) whether hands_off_mode is enabled in state.json.
     </description>
     <structure>
       <section name="context">
         <p>Include the following from the plan:</p>
         <item>1. Overall Project Context (verbatim)</item>
         <item>2. Feature-Specific Context (verbatim)</item>
+        <item>3. Architecture and Extensibility (verbatim) — Code must understand the design patterns, interfaces, and abstractions the Architect designed for this feature so it doesn't violate them.</item>
         <item>6. Shared Technical Context (relevant entries only)</item>
+        <item priority="high">Step Summary: Read Section 5 (Execution Steps) from plan.md. Compile a brief summary of ALL steps — each step gets a one-sentence description of its Goal. Mark the current step clearly (e.g., "→ YOU ARE HERE"). This gives Code the big picture: what was built before this step, what this step does, and what future steps will add on top of it. This helps Code understand where its work fits, avoid touching files owned by future steps, and correctly identify scope drift (e.g., a user request that's actually covered by a later step).</item>
       </section>
 
       <section name="reference_materials">
@@ -138,13 +173,16 @@
         <p>Include the step's specific content:</p>
         <item>Goal</item>
         <item>Actions</item>
-        <item>Automated Testing instructions</item>
+        <item>Unit Tests to Write (verbatim from the plan — specific test files and test cases the Architect expects Code to create in tests/unit/)</item>
+        <item>Integration Tests to Write (verbatim from the plan — specific integration test files for tests/integration/. May say "None — [reason]" if this step has no infrastructure dependencies)</item>
+        <item>Automated Test Commands (CLI commands Code must run during its quality loop, including integration test commands like `npm run test:integration` if applicable)</item>
         <item>Live Smoke Test instructions</item>
+        <item>Smoke Test Classification (Model or HUMAN/SHT REQUIRED) — see instruction_2_variant below</item>
         <item>Suggested Commit Message</item>
       </section>
 
       <section name="critical_instructions">
-        <p>Always include the instructions_1_to_4 block verbatim. Instruction 4 below varies by git_automation_enabled in state.json. Instruction 5 varies by git-tools availability in mcp-config.json (the Feature Developer reads both before constructing the prompt):</p>
+        <p>Always include the instructions_1_to_4 block verbatim. Instruction 2 (smoke test behavior) has TWO variants selected by smoke test classification. Instruction 4 below varies by git_automation_enabled in state.json. Instruction 5 varies by git-tools availability in mcp-config.json (the Feature Developer reads both before constructing the prompt):</p>
 
         <instructions_1_to_4>
           <quote>
@@ -152,11 +190,57 @@
 
 Follow your standard quality workflow for implementation (write code, write tests, run all automated tests, self-refactor, run automated tests, QA review, fix issues, run automated tests). After your internal quality loop completes and all automated tests pass:
 
-First, review what you built against the Actions listed in your assigned task. If the changes you made go significantly beyond those Actions — touching files or systems not listed, introducing abstractions not requested, or altering behavior not described — adapt the Live Smoke Test to cover the additional changes you made. Then proceed to the smoke test as normal. In your completion summary, declare 'SCOPE DRIFT DETECTED' and detail: (a) which Actions you performed as instructed, (b) what additional changes you made beyond the Actions, (c) why each was necessary, and (d) how you adapted the Live Smoke Test.
+First, review what you built against the Actions listed in your assigned task. If the changes you made go significantly beyond those Actions — touching files or systems not listed, introducing abstractions not requested, or altering behavior not described — in your completion summary, declare 'SCOPE DRIFT DETECTED' and detail: (a) which Actions you performed as instructed, (b) what additional changes you made beyond the Actions, (c) why each was necessary.
 
-Second, verify the changes against a running application. If smoke_test_automation is enabled in your prompt, follow your verification_gate's automated smoke test path (spawn synthetic-human-tester) instead of asking the user. If smoke_test_automation is disabled or absent, you MUST ask the user to perform the 'Live Smoke Test' detailed above using the `ask_followup_question` tool with ONLY ONE Suggested Response: 'Smoke test passed ✅'. Also include this text in your message: 'If the test failed, please paste the error or explain what went wrong below.' You MUST NOT include the `attempt_completion` tool in the same response block as the `ask_followup_question` tool. You must fire the followup question, stop your generation, and wait for the user's next turn before ever calling `attempt_completion`."
+Second: [SEE INSTRUCTION 2 VARIANT BELOW — selected based on Smoke Test Classification]"
           </quote>
         </instructions_1_to_4>
+
+        <!-- INSTRUCTION 2: SMOKE TEST BEHAVIOR — TWO VARIANTS -->
+        <instruction_2_variants>
+          <description>
+            Read the step's Smoke Test Classification from the plan. Select the matching variant.
+            The orchestrator injects the correct variant into the subtask prompt.
+          </description>
+
+          <variant name="model_smoke_test">
+            <condition>Smoke Test Classification is "Model"</condition>
+            <quote>
+"Second (Model Smoke Test — AI Self-Verification): This step's smoke test is classified as Model, meaning it is verifiable via terminal without human interaction. After your quality loop passes:
+
+1. Self-verify the smoke test using your command access: build the project, launch the binary, run the specified CLI commands, send HTTP requests, check file contents, or execute temp scripts — whatever the Live Smoke Test describes.
+2. If the smoke test passes: skip to the git/commit step below (Instruction 4). Do NOT ask the user to test. Do NOT spawn SHT. You verified it yourself.
+3. If the smoke test fails: apply minimal fix, re-run quality loop (tests → QA → tests), then re-verify. If it fails after 2 attempts: report the failure in your completion summary with 'MODEL SMOKE TEST FAILED' and details.
+4. In your completion summary, report the smoke test result: 'Model smoke test: ✅ [what you verified]' or 'Model smoke test: ❌ [what failed]'."
+            </quote>
+          </variant>
+
+          <variant name="human_sht_smoke_test">
+            <condition>Smoke Test Classification is "HUMAN/SHT REQUIRED"</condition>
+            <description>This variant itself has TWO sub-variants based on hands_off_mode.</description>
+            <subvariant name="hands_off_mode_enabled">
+              <condition>hands_off_mode is true in the spawn prompt</condition>
+              <quote>
+"Second (HUMAN/SHT Smoke Test — SKIPPED in Hands-Off Mode): This step's smoke test requires GUI interaction or visual perception. Hands-off mode is active — the user does not want to be interrupted.
+
+1. Skip the smoke test entirely. Do NOT ask the user to test. Do NOT spawn SHT.
+2. After quality loop passes: proceed directly to the git/commit step below (Instruction 4).
+3. In your completion summary, include exactly this structured marker followed by the verbatim Live Smoke Test description from your prompt:
+   '<!--SMOKE_TEST_SKIPPED--> [paste the Live Smoke Test description verbatim]'
+   This marker enables reliable automated detection by the orchestrator."
+            </quote>
+            </subvariant>
+            <subvariant name="hands_off_mode_disabled">
+              <condition>hands_off_mode is false or absent</condition>
+              <quote>
+"Second (HUMAN/SHT Smoke Test — User Verification Required): This step's smoke test requires GUI interaction or visual perception. After your quality loop passes:
+
+1. If smoke_test_automation is enabled in your prompt AND at least one GUI environment is configured: follow your verification_gate's automated smoke test path (spawn synthetic-human-tester for GUI-only testing).
+2. If smoke_test_automation is disabled or absent: you MUST ask the user to perform the 'Live Smoke Test' detailed above using the `ask_followup_question` tool with ONLY ONE Suggested Response: 'Smoke test passed ✅'. Also include this text in your message: 'If the test failed, please paste the error or explain what went wrong below.' You MUST NOT include the `attempt_completion` tool in the same response block as the `ask_followup_question` tool. You must fire the followup question, stop your generation, and wait for the user's next turn before ever calling `attempt_completion`."
+            </quote>
+            </subvariant>
+          </variant>
+        </instruction_2_variants>
 
         <instruction_4>
           <variant name="git_automation_enabled">
@@ -164,7 +248,7 @@ Second, verify the changes against a running application. If smoke_test_automati
             <quote>
 "If during the Smoke Test the user requests a massive architectural pivot (e.g., 'I hate this UI, let us do a full page instead' or 'This API approach will not work'), DO NOT attempt to rewrite the entire feature yourself. Acknowledge the pivot, run `git add .` and `git commit -m '<Suggested Commit Message>'`, and immediately use `attempt_completion`. In your completion summary, declare 'SCOPE DRIFT DETECTED' and detail the user's new architectural direction.
 
-Otherwise, if the smoke test passes normally: Fifth, once the user explicitly confirms the UI/App works, run `git add .` and `git commit -m '<Suggested Commit Message>'`. ONLY THEN use `attempt_completion`. In your completion summary, you MUST explicitly detail any new API endpoints, JSON payloads, state shapes, database schemas, or modular abstractions you created so the next step can use them."
+Otherwise, if the smoke test passes (or was Model-self-verified, or was skipped in hands-off mode): run `git add .` and `git commit -m '<Suggested Commit Message>'`. ONLY THEN use `attempt_completion`. In your completion summary, you MUST explicitly detail any new API endpoints, JSON payloads, state shapes, database schemas, or modular abstractions you created so the next step can use them."
             </quote>
           </variant>
           <variant name="git_automation_disabled">
@@ -172,7 +256,7 @@ Otherwise, if the smoke test passes normally: Fifth, once the user explicitly co
             <quote>
 "If during the Smoke Test the user requests a massive architectural pivot (e.g., 'I hate this UI, let us do a full page instead' or 'This API approach will not work'), DO NOT attempt to rewrite the entire feature yourself. Acknowledge the pivot and immediately use `attempt_completion`. In your completion summary, declare 'SCOPE DRIFT DETECTED' and detail the user's new architectural direction.
 
-Otherwise, if the smoke test passes normally: Fifth, once the user explicitly confirms the UI/App works, do NOT run any git commands. Simply tell the user: 'Code is ready. Please make your manual git commit if desired.' ONLY THEN use `attempt_completion`. In your completion summary, you MUST explicitly detail any new API endpoints, JSON payloads, state shapes, database schemas, or modular abstractions you created so the next step can use them."
+Otherwise, if the smoke test passes (or was Model-self-verified, or was skipped in hands-off mode): do NOT run any git commands. Simply tell the user: 'Code is ready. Please make your manual git commit if desired.' ONLY THEN use `attempt_completion`. In your completion summary, you MUST explicitly detail any new API endpoints, JSON payloads, state shapes, database schemas, or modular abstractions you created so the next step can use them."
             </quote>
           </variant>
         </instruction_4>
@@ -218,13 +302,21 @@ If any MCP git tool fails, returns an error, or is unavailable at runtime: fall 
         <title>CRITICAL: Step Granularity Rules (Non-Negotiable)</title>
         These rules govern every step you write. Violating them causes re-work.
         <rule number="1" priority="critical">
-          One step = ONE subtask = ONE git commit = ONE visible change. Every single step must produce exactly ONE noticeable, testable change in the UI or app behavior that a human can verify via a Live Smoke Test. Do NOT pack multiple logical changes into one step. Do NOT create invisible/untestable steps.
+          One step = ONE subtask = ONE git commit. Every step must produce a substantive,
+          testable change that justifies a full Code→refactor→QA pipeline. Modern 1M-context
+          models handle substantial steps efficiently — do NOT create token-wasting micro-steps.
         </rule>
         <rule number="2" priority="critical">
-          Every step must have a concrete Live Smoke Test. The test must describe exactly what the human does and what they see. Steps like "Setup folder structure" or "Refactor variables" are forbidden unless the Live Smoke Test proves a visible change (e.g., "Run `npm test` and verify 23 tests pass").
+          Every step must have a concrete Live Smoke Test AND a Smoke Test Classification
+          (Model or HUMAN/SHT REQUIRED). See the plan template for classification definitions.
+          A step whose only smoke test would be "run automated tests" (which the quality loop
+          already does) is too small — merge it with adjacent steps.
         </rule>
         <rule number="3" priority="critical">
-          Backend/Invisible work: If a step is backend-focused (DB schema, API endpoint, service), the Live Smoke Test MUST provide a concrete way to test it (cURL command, Postman test, SQL query script, etc.). Do NOT create untestable steps.
+          Merge trivial steps. If a step has no substantive smoke test beyond what automated
+          tests already cover, it does NOT justify a dedicated Code subtask. Merge such
+          backend/model work (DB schema, API endpoint, service) into the step that first
+          makes it visible/testable. Every step must earn its pipeline cost.
         </rule>
       </item>
 
@@ -250,8 +342,12 @@ If any MCP git tool fails, returns an error, or is unavailable at runtime: fall 
       </item>
 
       <item number="3">
-        <title>Search Existing Codebase</title>
-        Use your tools to search and read the existing codebase files relevant to this feature to ensure your plan aligns with the current architecture.
+        <title>Search Existing Codebase (Including Tests)</title>
+        Use your tools to search and read the existing codebase files relevant to this feature to ensure your plan aligns with the current architecture. This MUST include:
+        <sub_item letter="a">Read the project's unit test directory (commonly `tests/unit/`, `__tests__/`, or `*.test.*` / `*.spec.*` files) to inventory existing unit tests — their framework, naming conventions, file structure, and what's already covered. You must NOT specify tests that already exist.</sub_item>
+        <sub_item letter="b">Read the project's integration test directory (commonly `tests/integration/`) if it exists — inventory existing integration tests, their framework, and what's covered. If no integration directory exists yet, note that this may be the first feature requiring integration tests.</sub_item>
+        <sub_item letter="c">Read source files, configuration, and dependencies related to the feature.</sub_item>
+        <sub_item letter="d">Note the project's test framework (Jest, Vitest, Mocha, pytest, xUnit, etc.) and any custom test helpers or fixtures — use these conventions in your Unit Tests to Write and Integration Tests to Write specifications.</sub_item>
       </item>
 
       <item number="4">
@@ -321,19 +417,16 @@ If any MCP git tool fails, returns an error, or is unavailable at runtime: fall 
       </item>
 
       <item number="8">
-        <title>Review Gate — Complete Your Task</title>
+        <title>Complete Your Task</title>
         <action priority="critical">
-          After filling out both the Plan and Reference files, you MUST STOP and ask the user to review them. Use the `ask_followup_question` tool and provide ONLY ONE Suggested Response: "Approved, proceed". Also include this text in your message: "If you require changes, please type your feedback in the chat."
-        </action>
-        <action priority="critical">
-          You MUST NOT include the `attempt_completion` tool in the same response block as the `ask_followup_question` tool. You must fire the followup question, stop your generation, and wait for the user's next turn before ever calling `attempt_completion`.
-        </action>
-        <action priority="critical">
-          When the user clicks "Approved, proceed": use `attempt_completion` to report your results. Your completion summary MUST include: (a) which files you modified (plan.md, reference.md, external-docs/), (b) total step count in the plan, and (c) a brief summary of your key design decisions.
+          After filling out both the Plan and Reference files, use `attempt_completion` immediately.
+          Do NOT ask the user to review or approve — auto-complete after filling both files.
+          Your completion summary MUST include: (a) which files you modified (plan.md, reference.md, external-docs/),
+          (b) total step count in the plan, and (c) a brief summary of your key design decisions.
         </action>
         <anti_patterns priority="critical">
+          <anti_pattern>Do NOT ask the user to approve the plan. Do NOT use `ask_followup_question`. Auto-complete.</anti_pattern>
           <anti_pattern>Do NOT offer to switch to Code mode, spawn subtasks, begin implementation, create branches, or run git commands. You are a planner — your job is to produce the plan and reference files. Implementation is a separate concern handled elsewhere.</anti_pattern>
-          <anti_pattern>Do NOT provide suggested responses like "Switch to Code mode", "Begin implementation", or "Start Step 1". The ONLY permitted suggested response is "Approved, proceed".</anti_pattern>
           <anti_pattern>Do NOT use `new_task`, `switch_mode`, or any tool that delegates work to other modes. Your sole job is to produce the plan and reference files, then complete your task.</anti_pattern>
         </anti_patterns>
       </item>
@@ -344,16 +437,37 @@ If any MCP git tool fails, returns an error, or is unavailable at runtime: fall 
     <name>Phase 5 Partitioned Knowledge Base Update Prompt</name>
     <description>
       Use this exact prompt when spawning the Architect subtask to update the
-      partitioned knowledge base during Phase 5.
+      partitioned knowledge base during Phase 5. The file list is project-type-adaptive:
+      determine the correct file set from vision/vision-config.json project_type
+      (see FD 1_workflow.xml Phase 0 Step 4 for the full mapping). If project_type
+      is unknown or vision-config.json is missing, default to GUI (4 files:
+      architecture.md, database.md, api-routes.md, frontend-ui.md).
     </description>
+    <project_type_file_mapping>
+      <!--
+        GUI:     architecture.md, database.md, api-routes.md, frontend-ui.md
+        CLI:     architecture.md, database.md, command-reference.md, cli-interface.md
+        API:     architecture.md, database.md, api-routes.md (3 files)
+        Library: architecture.md, database.md, public-api-surface.md, integration-patterns.md
+        Game:    architecture.md, database.md, api-routes.md, frontend-ui.md, game-mechanics.md (5 files)
+        Pipeline: architecture.md, database.md, data-contracts.md, pipeline-topology.md
+      -->
+    </project_type_file_mapping>
     <prompt>
-      "Review agent-workspace/feature/plan.md AND agent-workspace/feature/reference.md. Intelligently append new architectural patterns, core data structures, or endpoints to the *specific* partitioned files in agent-workspace/knowledge/:
+      "Review agent-workspace/feature/plan.md AND agent-workspace/feature/reference.md. Determine the project type from vision/vision-config.json (if missing, default to GUI). Intelligently append new architectural patterns, core data structures, or endpoints to the *specific* partitioned files in agent-workspace/knowledge/ based on the project type:
       - New architectural patterns, design decisions, or system-level concerns → agent-workspace/knowledge/architecture.md
       - New database schemas, models, migrations, or data-layer patterns → agent-workspace/knowledge/database.md
-      - New API endpoints, route definitions, middleware patterns, or protocol-level details → agent-workspace/knowledge/api-routes.md
-      - New UI components, frontend patterns, state management structures, or styling conventions → agent-workspace/knowledge/frontend-ui.md
+      - [GUI/Game only] New API endpoints, route definitions, middleware patterns, or protocol-level details → agent-workspace/knowledge/api-routes.md
+      - [GUI/Game only] New UI components, frontend patterns, state management structures, or styling conventions → agent-workspace/knowledge/frontend-ui.md
+      - [Game only] New game mechanics, level designs, physics rules, or progression systems → agent-workspace/knowledge/game-mechanics.md
+      - [CLI only] New CLI commands, argument parsing structures, or shell integration patterns → agent-workspace/knowledge/command-reference.md
+      - [CLI only] New terminal output formats, progress indicators, or interactive prompt patterns → agent-workspace/knowledge/cli-interface.md
+      - [Library only] New public API functions, classes, or exported types → agent-workspace/knowledge/public-api-surface.md
+      - [Library only] New integration patterns, plugin architectures, or extension points → agent-workspace/knowledge/integration-patterns.md
+      - [Pipeline only] New data contracts, schemas, or input/output specifications → agent-workspace/knowledge/data-contracts.md
+      - [Pipeline only] New stage definitions, DAG structures, or topology patterns → agent-workspace/knowledge/pipeline-topology.md
 
-      Keep each file clean and structured. Do not include minor feature details, only global knowledge that future features will benefit from. If a file doesn't exist yet, create it."
+      Keep each file clean and structured. Do not include minor feature details, only global knowledge that future features will benefit from. If a file doesn't exist yet, create it. Only update files that are relevant to the project type — do not create GUI files for a pipeline project or vice versa."
     </prompt>
   </knowledge_base_update_pattern>
 
@@ -390,7 +504,8 @@ If any MCP git tool fails, returns an error, or is unavailable at runtime: fall 
     <name>Critic Subtask Prompt for Plan Review</name>
     <description>
       Canonical prompt to use when spawning an Architect-mode Critic subtask in Phase 2 to review
-      and polish the implementation plan and reference files.
+      and polish the implementation plan and reference files. The Critic auto-completes after review —
+      no user approval gate.
     </description>
     <usage>
       Spawn via new_task in architect mode. Insert any syntax errors found in Phase 2 Step 1
@@ -404,14 +519,18 @@ You are a strict Principal Engineer acting as a Design Critic. Review and polish
 First, fix these specific formatting/syntax errors found by the system: [Insert syntax errors from Phase 2 Step 1, or state 'None found'].
 
 Second, perform a strict logic review:
-1. Are there any invisible/untestable steps?
-2. Are the Live Smoke Tests actually actionable?
-3. Do the code snippets in the Reference file logically match the steps in the Plan?
-4. Are there any obvious architectural flaws, missing error handling, or missing dependencies?
+1. Are there any invisible/untestable steps? (Remember: steps whose only smoke test is 'run automated tests' are too small — flag them for merging.)
+2. Does every step have a Smoke Test Classification (Model or HUMAN/SHT REQUIRED)? Is each classification correct based on the definitions?
+3. Are the Live Smoke Tests actually actionable and correctly classified?
+4. Does every step have a Unit Tests to Write field? If a step says "None" or "No new tests needed," is that genuinely justified (e.g., purely config/script change with no new logic)? Steps that introduce new logic MUST have corresponding unit tests specified.
+5. Does every step have an Integration Tests to Write field? If a step says "None — [reason]," is the reason valid? Steps that touch databases, filesystems, external APIs, or network services MUST have integration tests — "None" is only valid for pure computation, UI-only styling, or steps with zero infrastructure dependencies.
+6. Does every step have an Automated Test Commands field with actual CLI commands? Steps that specify unit or integration tests MUST include the corresponding run commands (e.g., `npm test`, `npm run test:unit`, `npm run test:integration`). If a step has "Unit Tests to Write: None" AND "Integration Tests to Write: None — [reason]," then "Automated Test Commands: `npm run lint`" or similar non-test checks are still required — every step must have at least one automated verification command.
+7. Do the code snippets in the Reference file logically match the steps in the Plan?
+8. Are there any obvious architectural flaws, missing error handling, or missing dependencies?
 
 Edit the files to fix any logic or formatting flaws you find.
 
-CRITICAL: If you found ZERO logic or syntax flaws and made ZERO changes, use attempt_completion immediately. HOWEVER, if you made ANY changes, use ask_followup_question with exactly 2 Suggested Responses: 'Approved, proceed' and 'Revert changes'. Include: 'If you want manual adjustments, please type your feedback in the chat.' Do NOT use attempt_completion until the user explicitly approves or reverts. If user clicks 'Approved, proceed', use attempt_completion with a success summary. If user clicks 'Revert changes', undo your edits and use attempt_completion with the message 'CHANGES REVERTED BY USER'."
+CRITICAL: After completing your review and applying any edits, use `attempt_completion` immediately. Do NOT ask the user to approve or revert — auto-complete. Your completion summary MUST state: (a) what changes you made (or 'No changes needed — plan is sound'), (b) a per-step assessment of smoke test classification correctness, and (c) any concerns the orchestrator should be aware of. If you made zero changes, state 'No changes needed — plan is sound' and auto-complete."
     </template>
   </critic_subtask_prompt>
 </common_patterns>

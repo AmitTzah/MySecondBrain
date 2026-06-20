@@ -23,7 +23,7 @@
       <path>agent-workspace/feature/archive/</path>
     </area>
     <area name="brain">
-      <purpose>Partitioned global knowledge that persists across features.</purpose>
+      <purpose>Partitioned global knowledge that persists across features. The exact set of knowledge files adapts to the project type, which is passed to you in your spawn prompt. The 4 files below are the GUI defaults. Project-type mappings: CLI → frontend-ui.md becomes cli-interface.md, api-routes.md becomes command-reference.md. API → remove frontend-ui.md. Library → frontend-ui.md becomes public-api-surface.md, api-routes.md becomes integration-patterns.md. Pipeline → frontend-ui.md becomes pipeline-topology.md, api-routes.md becomes data-contracts.md. Game → add game-mechanics.md. When project_type is absent from your spawn prompt, default to GUI (4 files) — backward compatible. You are caller-agnostic: you do not know or care who spawned you, and you never read another mode's configuration files.</purpose>
       <path>agent-workspace/knowledge/architecture.md</path>
       <path>agent-workspace/knowledge/database.md</path>
       <path>agent-workspace/knowledge/api-routes.md</path>
@@ -34,7 +34,7 @@
       <path>agent-workspace/external-docs/</path>
     </area>
     <area name="smoke_test_config">
-      <purpose>Persisted GUI smoke test environment configuration shared across features. Created by PD during project setup, or by FD on first standalone use. Read by FD on subsequent features to avoid re-asking the user for URLs and executable paths. Smoke testing is only for GUI environments (web, desktop, native) — CLI verification is self-verified by Code mode.</purpose>
+      <purpose>Persisted GUI smoke test environment configuration shared across features. Created during project setup or on first standalone use. Read on subsequent features to avoid re-asking the user for URLs and executable paths. Smoke testing is only for GUI environments (web, desktop, native) — CLI verification is self-verified.</purpose>
       <path>agent-workspace/testing-environments.json</path>
     </area>
     <area name="mcp_server_config">
@@ -53,6 +53,7 @@
   "feature_name": "string",
   "branch_name": "string | null",
   "git_automation_enabled": boolean,
+  "hands_off_mode": boolean,
   "smoke_test_automation": {
     "enabled": boolean,
     "environments": {
@@ -62,6 +63,9 @@
     },
     "missing_prerequisites": ["string"]
   },
+  "skipped_smoke_tests": [
+    { "step": number, "name": "string", "classification": "string", "description": "string" }
+  ],
   "current_phase": number,
   "plan_status": "string",
   "total_steps": number,
@@ -74,7 +78,9 @@
       <field name="feature_name">The human-readable name of the feature (e.g., "User Authentication").</field>
       <field name="branch_name">The git branch name, or null if git automation is disabled.</field>
       <field name="git_automation_enabled">Whether the orchestrator should run git commands.</field>
+      <field name="hands_off_mode">When true: all user interaction gates are skipped. Model smoke tests are self-verified. HUMAN/SHT smoke tests are skipped and collected for batch presentation at feature end. Architect/Critic already auto-complete (this is the default now). Received in the spawn prompt, or asked of the user if not provided. Defaults to false if never configured.</field>
       <field name="smoke_test_automation">Configuration for automated GUI smoke testing via synthetic-human-tester. Smoke testing is only for GUI environments (web, desktop, native) — CLI is self-verified by Code mode. Received in the prompt, or asked of the user if not provided. Contains: enabled (boolean), environments (per-environment config with base_url/app_id/executable_path/window_title + mcp_available/mcp_name/verified populated by MCP verification in Phase 0 Step 4), and missing_prerequisites (list of unavailable MCP names). Passed to implementation in Phase 3 as part of the prompt. Defaults to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] } if never configured.</field>
+      <field name="skipped_smoke_tests">Accumulator for HUMAN/SHT smoke tests that were skipped during hands-off mode. Each entry records: step number, step name, classification, and the verbatim Live Smoke Test description. Populated during Phase 4 from Code subtask completion summaries. Presented to the user in Phase 5. Empty array by default.</field>
       <field name="current_phase">The current major checkpoint: 1 (planning), 3 (execution), 5 (complete). Phases 0, 2, and 4 are transient and not tracked as resume checkpoints.</field>
       <field name="plan_status">One of: "draft", "validated", "archived".</field>
       <field name="total_steps">Number of execution steps in the plan. Populated after Architect finishes in Phase 1. When pivot_in_progress is true, total_steps is set to 0 to signal that the Architect is re-drafting — this is NOT the same as "never drafted"; the resume routing checks pivot_in_progress to distinguish.</field>
@@ -173,7 +179,7 @@
             <!-- Check 1: state.json (Workbench) -->
             <verification_check label="state.json">
               <check>Does agent-workspace/feature/state.json exist on disk?</check>
-              <check>If it exists: parse as JSON. Verify these required fields are present and non-null (except branch_name which may be null): feature_name, current_phase, plan_status, total_steps, current_step, pivot_in_progress, git_automation_enabled, branch_name, smoke_test_automation.</check>
+              <check>If it exists: parse as JSON. Verify these required fields are present and non-null (except branch_name which may be null): feature_name, current_phase, plan_status, total_steps, current_step, pivot_in_progress, git_automation_enabled, branch_name, hands_off_mode, smoke_test_automation, skipped_smoke_tests.</check>
               <check>Validate value ranges: current_phase must be 1, 3, or 5. plan_status must be "draft", "validated", or "archived". total_steps and current_step must be non-negative integers.</check>
               <result>state_json_status: "ok" | "missing" | "malformed" | "invalid_fields"</result>
             </verification_check>
@@ -199,11 +205,19 @@
               <result>archive_status: "ok" | "missing"</result>
             </verification_check>
 
-            <!-- Check 5: Knowledge files (Brain) -->
+            <!-- Check 5: Knowledge files (Brain) — project-type-adaptive -->
             <verification_check label="knowledge_files">
-              <check>Do all 4 knowledge files exist: agent-workspace/knowledge/architecture.md, database.md, api-routes.md, frontend-ui.md?</check>
+              <pre_check>Determine the expected knowledge file set. Check your spawn prompt for project_type. If absent, default to GUI (4 files: architecture.md, database.md, api-routes.md, frontend-ui.md). Use the project-type file mapping from Phase 0 Step 4:
+                - GUI: architecture.md, database.md, api-routes.md, frontend-ui.md
+                - CLI: architecture.md, database.md, command-reference.md, cli-interface.md
+                - API: architecture.md, database.md, api-routes.md (no frontend-ui.md)
+                - Library: architecture.md, database.md, public-api-surface.md, integration-patterns.md
+                - Game: architecture.md, database.md, api-routes.md, frontend-ui.md, game-mechanics.md
+                - Pipeline: architecture.md, database.md, data-contracts.md, pipeline-topology.md
+              </pre_check>
+              <check>Do all project-type-relevant knowledge files exist in agent-workspace/knowledge/? Verify each file in the expected set for this project type.</check>
               <check>If they exist: verify each contains meaningful content (more than a placeholder heading — at least one substantive paragraph or bullet list).</check>
-              <result>knowledge_status: "ok" | "missing" | "incomplete" — list which files are missing or empty</result>
+              <result>knowledge_status: "ok" | "missing" | "incomplete" — list which files are missing or empty, and note the expected project type</result>
             </verification_check>
 
             <!-- Check 6: external-docs/ directory -->
@@ -286,7 +300,14 @@
 
       <step number="4">
         <title>Partitioned Knowledge Base Check</title>
-        <action>Check if agent-workspace/knowledge/ contains the 4 core files: architecture.md, database.md, api-routes.md, frontend-ui.md. Verify each contains meaningful content (more than a placeholder heading).</action>
+        <action>Determine the expected knowledge file set based on project type. Check your spawn prompt for project_type. If absent, default to GUI (4 files: architecture.md, database.md, api-routes.md, frontend-ui.md). The project-type-adaptive file sets are:
+          - GUI: architecture.md, database.md, api-routes.md, frontend-ui.md
+          - CLI: architecture.md, database.md, command-reference.md, cli-interface.md
+          - API: architecture.md, database.md, api-routes.md (no frontend-ui.md)
+          - Library: architecture.md, database.md, integration-patterns.md, public-api-surface.md
+          - Game: architecture.md, database.md, api-routes.md, frontend-ui.md, game-mechanics.md
+          - Pipeline: architecture.md, database.md, data-contracts.md, pipeline-topology.md</action>
+        <action>Check if agent-workspace/knowledge/ contains the project-type-relevant knowledge files. Verify each contains meaningful content (more than a placeholder heading).</action>
         <decision_tree>
           <branch condition="Knowledge files are complete and non-trivial">
             <action>Proceed to Phase 1.</action>
@@ -298,11 +319,11 @@
                 <action>Skip knowledge generation — no existing architecture to analyze. Proceed to Phase 1.</action>
               </branch>
               <branch condition="Existing codebase">
-                <action>Use ask_followup_question: "The partitioned knowledge base is missing or incomplete. Should I spawn an Architect to analyze your codebase and generate the 4 core knowledge files?"</action>
+                <action>Use ask_followup_question: "The partitioned knowledge base is missing or incomplete. Should I spawn an Architect to analyze your codebase and generate the project-type-relevant knowledge files ([list expected files])?"</action>
                 <action>Provide 2 responses: "Yes, generate the knowledge files" and "No, skip for now".</action>
                 <action>Wait for user reply.</action>
                 <sub_branch condition="User clicks 'Yes'">
-                  <action>Spawn Architect using the knowledge_base_generation_prompt from common patterns.</action>
+                  <action>Spawn Architect using the knowledge_base_generation_prompt from common patterns. Include the expected project-type-relevant file list in the prompt.</action>
                   <action>Wait for completion, then proceed to Phase 1.</action>
                 </sub_branch>
                 <sub_branch condition="User clicks 'No'">
@@ -315,31 +336,60 @@
       </step>
 
       <step number="5">
-        <title>Smoke Test Automation Configuration</title>
+        <title>Smoke Test Automation & Hands-Off Mode Configuration</title>
         <description>
-          Configure automated smoke testing via synthetic-human-tester. If smoke_test_automation
-          was provided in the prompt, use it as-is. If not provided, check for a persisted
-          configuration file. If neither exists (standalone, first use), ask the user.
+          Configure automated smoke testing AND hands-off mode. If provided in the spawn prompt
+          (from your caller), use as-is. If not provided (standalone FD), check persisted config or ask the user.
         </description>
+
+        <!-- PART A: HANDS-OFF MODE -->
+        <hands_off_mode_config>
+          <description>
+            Hands-off mode: when enabled, FD skips all user interaction during execution.
+            Model smoke tests are self-verified by Code. HUMAN/SHT smoke tests are skipped
+            and collected for batch presentation at feature end.
+          </description>
+          <decision_tree>
+            <branch condition="hands_off_mode was provided in the prompt (boolean)">
+              <action>Use the provided value as-is. Proceed to Part B.</action>
+            </branch>
+            <branch condition="hands_off_mode was NOT provided (standalone FD)">
+              <action>Check if agent-workspace/testing-environments.json exists AND contains a "hands_off_mode" field.</action>
+              <sub_branch condition="File exists with hands_off_mode field">
+                <action>Use the persisted value. Proceed to Part B.</action>
+              </sub_branch>
+              <sub_branch condition="Not persisted">
+                <action>Use ask_followup_question: "Hands-off mode skips all user interaction during feature development. Model smoke tests (CLI/build/curl) are self-verified. GUI smoke tests are collected and presented at the end. The next time you'll need to interact is when the feature is complete. Enable hands-off mode?" Options:
+                  1. "Yes — hands-off mode (no interruptions until feature end)"
+                  2. "No — I'll verify smoke tests as they come"
+                </action>
+                <action>Store the user's choice — it will be written to testing-environments.json in Part B and to state.json in Phase 1.</action>
+              </sub_branch>
+            </branch>
+          </decision_tree>
+        </hands_off_mode_config>
+
+        <!-- PART B: SMOKE TEST AUTOMATION (existing logic, unchanged) -->
         <decision_tree>
           <branch condition="smoke_test_automation was provided in the prompt with enabled=true and environments configured">
             <action>Use the provided configuration as-is. Skip the rest of this step. Proceed to Phase 1.</action>
           </branch>
           <branch condition="smoke_test_automation was provided with enabled=false">
-            <action>Skip configuration. Proceed to Phase 1 — verification will be manual.</action>
+            <action>Skip configuration. Proceed to Phase 1 — verification will be manual (or self-verified if hands-off mode).</action>
           </branch>
           <branch condition="smoke_test_automation was NOT provided (standalone FD)">
             <action>Check if agent-workspace/testing-environments.json exists.</action>
             <sub_branch condition="File EXISTS">
-              <action>Read the file. Use its smoke_test_automation configuration as-is. Skip the rest of this step. Proceed to Phase 1. (The user configured this in a previous feature or via PD.)</action>
+              <action>Read the file. Use its smoke_test_automation configuration as-is. Skip the rest of this step. Proceed to Phase 1. (The user configured this in a previous feature or via their orchestrator.)</action>
             </sub_branch>
             <sub_branch condition="File does NOT exist (first standalone use)">
-              <action>Use ask_followup_question: "Would you like to enable automated smoke testing? When enabled, each Code mode verification gate will automatically spawn a synthetic-human-tester to live-test your running application instead of asking you to test manually." Options:
+              <action>Use ask_followup_question: "Would you like to enable automated GUI smoke testing? When enabled, each Code mode verification gate will automatically spawn a synthetic-human-tester to live-test your running application instead of asking you to test manually." Options:
                 1. "Yes — enable automated smoke testing"
-                2. "No — I'll test manually"
+                2. "No — I'll test GUI manually"
               </action>
               <sub_branch condition="User selects No">
-                <action>Do NOT write testing-environments.json when enabled is false — only persist positive configuration. Proceed to Phase 1. (On the next feature, FD will ask again since no file exists, giving the user an opportunity to change their mind.)</action>
+                <action>If hands_off_mode is true (from Part A): write testing-environments.json with { hands_off_mode: true, smoke_test_automation: { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] } }. This preserves the user's hands-off mode choice even when smoke test automation is disabled.
+                If hands_off_mode is false: do NOT write testing-environments.json — only persist positive configuration. Proceed to Phase 1. (On the next feature, FD will ask again since no file exists, giving the user an opportunity to change their mind.)</action>
               </sub_branch>
               <sub_branch condition="User selects Yes">
                 <action priority="high">Detect the project type from the feature context before asking. Scan plan.md Section 1 (Project Context) and the user's original request for platform indicators:
@@ -358,8 +408,9 @@
                   OPTIONAL (not detected — ask once as a group):
                   "I also support [undetected types]. Would you like to configure any of these?" If user says no: set undetected environments to null. If user says yes: ask each one individually.
                 </action>
-                <action>Write the configuration to agent-workspace/testing-environments.json with all fields (mcp_available/mcp_name/verified initially false/null/false — populated by verification below):
+                <action>Write the configuration to agent-workspace/testing-environments.json with all fields (mcp_available/mcp_name/verified initially false/null/false — populated by verification below). Include hands_off_mode from Part A:
                   {
+                    "hands_off_mode": true|false,
                     "smoke_test_automation": {
                       "enabled": true,
                       "environments": {
@@ -435,7 +486,7 @@
           </route>
 
           <!-- PHASE 3: Execution was interrupted -->
-          <route condition="current_phase=3 AND plan_status='validated' AND current_step &lt; total_steps">
+          <route condition="current_phase=3 AND plan_status='validated' AND current_step < total_steps">
             <action>Verify agent-workspace/feature/plan.md exists on disk. If missing: state.json is valid but plan.md is lost. Re-spawn Architect to recreate plan.md from state.json context (feature_name, current_step, total_steps, branch_name). Provide Architect: the feature name, the completed step count (current_step), the total expected steps (total_steps), and instruction to reconstruct the plan from the existing codebase and knowledge files. If the codebase is empty (no prior implementation exists): escalate to user — "state.json indicates [N] steps were completed but plan.md is lost and no code exists. The feature state may be unrecoverable."</action>
             <action>Read branch_name from state.json. If branch_name is not null AND git_automation_enabled is true: verify the branch exists (check git branch --list output). If the branch does not exist: use ask_followup_question — "Feature branch [branch_name] no longer exists. How proceed?" Options: "Recreate the branch and continue", "Start this feature from scratch (Phase 1)", "I will fix manually and come back".</action>
             <action>Verify the step at current_step + 1 still exists in plan.md Section 5 (plan may have been edited while context was cleared). If the step is missing: set plan_status="draft", current_phase=1, total_steps=0, preserve current_step, and spawn Architect to re-plan (the plan changed).</action>
@@ -443,7 +494,7 @@
           </route>
 
           <!-- PHASE 3→5: Execution complete, archiving interrupted -->
-          <route condition="current_phase=3 AND plan_status='validated' AND current_step &gt;= total_steps">
+          <route condition="current_phase=3 AND plan_status='validated' AND current_step >= total_steps">
             <goto>Phase 5 — execution complete, archiving was interrupted</goto>
           </route>
 
@@ -494,9 +545,11 @@
           </decision_tree>
           <action priority="critical">Create agent-workspace/feature/state.json with:
             feature_name (derived from request), branch_name, git_automation_enabled,
+            hands_off_mode (if provided in prompt, use that value. Otherwise, read from agent-workspace/testing-environments.json if it exists and has the field. If none of the above, default to false),
             smoke_test_automation (if previously detected from prompt or configured in Phase 0 Step 5, use that value.
             Otherwise, read from agent-workspace/testing-environments.json if it exists.
             If none of the above, default to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] }),
+            skipped_smoke_tests=[],
             current_phase=1, plan_status="draft", total_steps=0, current_step=0, pivot_in_progress=false, phase_5_substep=null.
           </action>
           <action>Proceed to Step 2.</action>
@@ -516,14 +569,25 @@
         <action priority="critical">Forward every required element provided in your spawn prompt. This MUST include: (a) the overall project vision and user personas, (b) the specific feature description, acceptance criteria, wave context, and generalization notes, (c) the completion instruction, and (d) context about previously built features including the current wave structure and which Wave 1 abstractions exist. The Architect uses these as the authoritative source for plan sections 1 and 2. Do NOT omit any provided element.</action>
         <action>Spawn Architect via new_task using the standard_architect_prompt from common patterns.
           Prepend the provided context to the prompt.</action>
+        <note priority="high">
+          Architect auto-completes after filling plan and reference files — no "Approved, proceed?" gate.
+          The Architect's standard_architect_prompt instructs it to use attempt_completion immediately after filling both files.
+          FD does not wait for user approval — it processes the Architect's completion directly.
+        </note>
         <post_architect_action priority="critical">
           When Architect completes:
           1. Read agent-workspace/feature/plan.md.
           2. Count TOTAL steps in Section 5 (every heading starting with "### [ ] Step" OR "### [x] Step").
-          3. Update state.json: set "total_steps" to the count.
-          4. Verify agent-workspace/feature/reference.md exists and is non-empty.
-          5. Verify that any external documentation the Architect was instructed to save was actually written to agent-workspace/external-docs/ (check for new or modified .md files).
-          6. Leave current_phase=1, plan_status="draft" — Critic phase advances these.
+          3. Verify EVERY step has a Smoke Test Classification field with value "Model" or "HUMAN/SHT REQUIRED". If any step is missing the classification, flag it — the Critic will catch it in Phase 2.
+          4. Verify EVERY step has a Unit Tests to Write field (may say "None" or "No new unit tests needed for this step" — that's valid). If any step is missing the field entirely, flag it — the Critic will catch it in Phase 2.
+          5. Verify EVERY step has an Integration Tests to Write field (may say "None — [reason]" — that's valid). If any step is missing the field entirely, flag it — the Critic will catch it in Phase 2.
+          6. Verify EVERY step has an Automated Test Commands field (must specify which CLI commands to run — e.g., `npm test`, `npm run test:unit`, `npm run test:integration`, `npm run lint`). If any step is missing the field entirely, flag it — the Critic will catch it in Phase 2.
+          7. NON-GUI SMOKE TEST CLASSIFICATION GUARD: Determine project_type from your spawn prompt. If project_type is cli, api, library, or pipeline: verify ALL smoke test classifications are "Model." If any step is classified as "HUMAN/SHT REQUIRED," flag as potential error via ask_followup_question: "[N] steps classified as HUMAN/SHT REQUIRED for a non-GUI project. Humans cannot visually verify CLI/API/library behavior. All steps should be Model. Options: Re-classify all as Model, I will manually review the classifications, Proceed anyway." If user selects "Re-classify": spawn Architect to re-classify those steps as Model. If user selects "Proceed anyway": note the anomaly and continue. If project_type is gui, game, or unknown (default — backward compatible): skip this guard — HUMAN/SHT REQUIRED is valid for GUI projects.
+          8. Update state.json: set "total_steps" to the count.
+          9. Verify agent-workspace/feature/reference.md exists and is non-empty.
+          10. Verify that any external documentation the Architect was instructed to save was actually written to agent-workspace/external-docs/ (check for new or modified .md files).
+          11. Leave current_phase=1, plan_status="draft" — Critic phase advances these.
+          12. Proceed directly to Phase 2. Do NOT ask the user for plan approval.
         </post_architect_action>
       </step>
     </steps>
@@ -538,7 +602,13 @@
       <step number="1">
         <title>Feature Developer Syntax Check</title>
         <action>Read plan.md and reference.md. Verify: all 6 required plan sections present, every step
-          has a testable Live Smoke Test, reference has an H3 heading for every plan step.</action>
+          has a testable Live Smoke Test, EVERY step has a Smoke Test Classification ("Model" or
+          "HUMAN/SHT REQUIRED"), every step has a Unit Tests to Write field (may specify "none" if
+          no new tests are needed), every step has an Integration Tests to Write field (may say
+          "None — [reason]" if no infrastructure dependencies), every step has an Automated Test
+          Commands field (must specify CLI commands to run — e.g., `npm test`, `npm run test:unit`,
+          `npm run test:integration`, `npm run lint`), reference has an H3 heading for
+          every plan step.</action>
         <action>If validation fails, note the issues to pass to the Critic.</action>
       </step>
 
@@ -547,6 +617,10 @@
         <action>Spawn an architect subtask via new_task.</action>
         <action>Construct the prompt using the critic_subtask_prompt defined in common patterns.
           Insert any syntax errors found in Step 1 into the prompt.</action>
+        <note priority="high">
+          Critic auto-completes after review — no "Approved, proceed?" or "Revert changes" gate.
+          The critic_subtask_prompt instructs the Critic to use attempt_completion immediately.
+        </note>
       </step>
 
       <step number="3">
@@ -554,23 +628,16 @@
         <trigger>When the Critic subtask completes.</trigger>
         <action>Read the Critic's completion summary.</action>
         <decision_tree>
-          <branch condition="Summary contains 'CHANGES REVERTED BY USER'">
-            <action>Use ask_followup_question: "The Critic's changes were reverted. How should I proceed?"
-              Provide 2 responses: "Respawn Critic", "Spawn Architect for rewrite".</action>
-            <sub_branch condition="Respawn Critic">
-              <action>Loop back to Phase 2 Step 2.</action>
-            </sub_branch>
-            <sub_branch condition="Spawn Architect for rewrite">
-              <action>Update state.json: plan_status="draft", current_phase=1, total_steps=0.
-                Delete old plan.md and reference.md. Loop to Phase 1 Step 2 to re-init templates,
-                then Step 3. Inject: "The previous plan was reverted. Fill out a new plan from scratch."</action>
-            </sub_branch>
-          </branch>
-          <branch condition="Summary indicates success/approval">
+          <branch condition="Critic's summary indicates the plan is sound (with or without minor edits)">
             <action>Update state.json: plan_status="validated", current_phase=3.</action>
             <action>If git_automation_enabled: commit agent-workspace/ with message
               "docs: finalize validated plan, reference, and external docs".</action>
             <action>Proceed to Phase 3.</action>
+          </branch>
+          <branch condition="Critic's summary indicates fundamental problems (major architectural flaws, steps need complete rewrite)">
+            <action>Update state.json: plan_status="draft", current_phase=1, total_steps=0.
+              Delete old plan.md and reference.md. Loop to Phase 1 Step 2 to re-init templates,
+              then Step 3. Inject: "The previous plan had fundamental issues identified by the Critic: [summarize Critic's concerns]. Fill out a new plan addressing these issues."</action>
           </branch>
         </decision_tree>
       </step>
@@ -586,8 +653,8 @@
         <title>Determine Current Step from state.json</title>
         <action>Verify agent-workspace/feature/plan.md exists on disk before reading. If missing: state.json is valid but plan.md is lost. Route to the Phase 1 Step 1 resume routing for current_phase=3 — it now handles missing plan.md by re-spawning Architect to recreate it.</action>
         <action>Read state.json: if current_step=0, locate Step 1 in plan.md Section 5.
-          If current_step&gt;0, locate step current_step+1.
-          If current_step &gt;= total_steps: proceed to Phase 5.</action>
+          If current_step>0, locate step current_step+1.
+          If current_step >= total_steps: proceed to Phase 5.</action>
       </step>
 
       <step number="2">
@@ -669,10 +736,21 @@
         <action>Spawn a code mode subtask via new_task.</action>
         <action>Construct the prompt using the subtask_prompt_pattern from common patterns.
           Read git_automation_enabled from state.json to select the correct Instruction 4 variant.</action>
-        <action>Always include: project context (plan §1), feature context (plan §2), relevant Shared Technical
-          Context (plan §6), step details (Goal, Actions, Testing, Live Smoke Test, Commit Message),
-          and the reference_materials instruction to read reference.md.</action>
-        <action priority="high">Include smoke test automation configuration: read the full smoke_test_automation block from state.json. Before passing to Code, validate: (1) enabled must be a boolean, (2) if enabled is true, environments must be a non-null object with at least one non-null environment, (3) if enabled is false or environments is invalid, default to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] } and warn the user. Pass the entire valid block as literal config in the Code subtask spawn prompt — include enabled, environments with all fields (base_url/app_id/executable_path/window_title/launch_args/viewport + mcp_available/mcp_name/verified). CLI is not included — it is self-verified by Code mode. Code mode uses this at its verification gate to determine whether to spawn synthetic-human-tester. Example: "smoke_test_automation: { enabled: true, environments: { web: { base_url: \"...\", mcp_available: true, mcp_name: \"playwright\", verified: true }, ... } }"</action>
+        <action>Always include: project context (plan §1), feature context (plan §2), architecture and extensibility
+          (plan §3), relevant Shared Technical Context (plan §6), a step-summary of ALL steps from Section 5
+          (one-sentence per step with the current step clearly marked), step details (Goal, Actions,
+          Unit Tests to Write, Integration Tests to Write, Automated Test Commands, Live Smoke Test,
+          Smoke Test Classification, Commit Message), and the reference_materials instruction to
+          read reference.md.</action>
+        <action priority="high">Inject the step's Smoke Test Classification from plan.md into the subtask prompt as a literal line: "smoke_test_classification: Model" or "smoke_test_classification: HUMAN/SHT REQUIRED". Read the classification from the current step in plan.md Section 5. Select the correct Instruction 2 variant from the subtask_prompt_pattern:
+          - If classification is "Model": inject the model_smoke_test variant (Code self-verifies via terminal).
+          - If classification is "HUMAN/SHT REQUIRED": inject the human_sht_smoke_test variant. Then read hands_off_mode from state.json to select the subvariant:
+            - If hands_off_mode is true: inject the hands_off_mode_enabled subvariant (Code skips the smoke test entirely).
+            - If hands_off_mode is false: inject the hands_off_mode_disabled subvariant (Code asks user or spawns SHT).
+          - If classification is missing or neither "Model" nor "HUMAN/SHT REQUIRED": treat as HUMAN/SHT REQUIRED (safe default — forces GUI verification rather than silently self-verifying). Inject the human_sht_smoke_test variant. Flag to user: "⚠️ Step [N] is missing a valid Smoke Test Classification. Defaulting to HUMAN/SHT REQUIRED."
+        </action>
+        <action priority="high">Include smoke test automation configuration: read the full smoke_test_automation block from state.json. Before passing to Code, validate: (1) enabled must be a boolean, (2) if enabled is true, environments must be a non-null object with at least one non-null environment, (3) if enabled is false or environments is invalid, default to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] }. Pass the entire valid block as literal config in the Code subtask spawn prompt — include enabled, environments with all fields (base_url/app_id/executable_path/window_title/launch_args/viewport + mcp_available/mcp_name/verified). CLI is not included — it is self-verified by Code mode.</action>
+        <action priority="high">Include hands_off_mode from state.json in the subtask prompt as a literal boolean: "hands_off_mode: true" or "hands_off_mode: false". Code mode uses this to determine whether to skip HUMAN/SHT smoke tests.</action>
       </step>
     </steps>
   </phase>
@@ -686,6 +764,7 @@
       <step number="1">
         <title>Read and Verify Subtask Completion</title>
         <action>Read the subtask's completion summary carefully. Note whether it contains the string "SCOPE DRIFT DETECTED" and what details it provides.</action>
+        <action priority="high">Check for skipped smoke tests: if the subtask's completion summary contains the structured marker "<!--SMOKE_TEST_SKIPPED-->", extract the verbatim smoke test description that follows it. Append an entry to the skipped_smoke_tests array in state.json: { "step": [current_step+1], "name": "[step name from plan]", "classification": "HUMAN/SHT REQUIRED", "description": "[verbatim smoke test description]" }. This accumulates skipped GUI smoke tests for batch presentation in Phase 5. The structured marker enables reliable automated detection regardless of how the LLM formats the surrounding text.</action>
         <action priority="critical">
           Git diff verification (independent check against self-report):
           1. Read git_automation_enabled from state.json. If false: skip to Step 2 — rely on subtask self-report only.
@@ -757,7 +836,7 @@
           <branch condition="current_step == total_steps">
             <action>Proceed to Phase 5.</action>
           </branch>
-          <branch condition="current_step &lt; total_steps">
+          <branch condition="current_step < total_steps">
             <action>Loop back to Phase 3.</action>
           </branch>
         </decision_tree>
@@ -771,10 +850,59 @@
     <trigger>When current_step equals total_steps</trigger>
 
     <steps>
+      <step number="0" priority="critical">
+        <title>Present Skipped Smoke Tests (Hands-Off Mode)</title>
+        <trigger>Only when hands_off_mode is true in state.json AND skipped_smoke_tests array is non-empty.</trigger>
+        <action>Read skipped_smoke_tests from state.json. If the array is empty: skip this step, proceed to Step 1.</action>
+        <action>If skipped_smoke_tests is non-empty: compile a formatted list of all skipped GUI smoke tests and present them to the user via ask_followup_question.</action>
+        <action>
+          Message format:
+          "Hands-off mode was active. The following [N] GUI smoke tests were skipped during development.
+          Please test them now against the completed feature:
+
+          [For each entry in skipped_smoke_tests:]
+          **Step [step]: [name]** (HUMAN/SHT REQUIRED)
+          → [description]
+
+          ---
+          After testing all [N] smoke tests, how did it go?"
+
+          Options:
+          1. "All smoke tests passed ✅"
+          2. "Some tests failed — I'll describe below"
+        </action>
+        <decision_tree>
+          <branch condition="User selects 'All smoke tests passed'">
+            <action>Proceed to Step 1 (Update Knowledge Base).</action>
+          </branch>
+          <branch condition="User selects 'Some tests failed'">
+            <action>Wait for user's description of which steps failed and what went wrong. Then:
+              1. Read the user's failure description. Identify which steps failed and what the specific issues are.
+              2. Spawn a Code mode subtask to fix the issues. The Code prompt must include:
+                  - The full plan.md (all sections, all steps — so Code understands the full feature context). For plans with more than 10 steps, pass Sections 1-4 + Section 6 (full context) but only the relevant failing steps from Section 5 (not all steps). Reference the plan.md path for full context if needed.
+                  - The list of failing steps with their Smoke Test Classification and the user's failure description.
+                  - The skipped_smoke_tests entries for the failing steps (so Code knows what was supposed to work).
+                  - The reference.md file path for library/snippet context.
+                  - Suggested areas to investigate based on the failure description.
+                  - Inject: "smoke_test_classification: HUMAN/SHT REQUIRED" as a literal line so Code routes to the correct verification path.
+                  - Inject: "hands_off_mode: false" as a literal line so Code uses normal verification (asks user or spawns SHT for GUI tests).
+                  - If smoke_test_automation is enabled, include the config so Code can spawn SHT for GUI re-verification.
+                  - Include standard subtask_prompt_pattern elements: Instruction 1 (don't read state.json), Instruction 4 (git commit behavior based on git_automation_enabled), and Instruction 5 (git tools based on mcp-config.json).
+                  - Instructions: "Fix the issues causing these smoke test failures. After fixing, re-run your full quality loop (implement → tests → refactor → QA → fix → tests). Then verify ALL failing smoke tests with the user. Present all [N] smoke tests in a single ask_followup_question with a numbered checklist asking the user to confirm each step passed. If smoke_test_automation is enabled, compile a test plan covering all [N] failing smoke tests and spawn SHT with all test steps."
+              3. Wait for Code to complete. Code will: fix the issues, run quality loop, then verify the fixed smoke tests with the user (or SHT).
+              4. When Code returns successfully (user confirmed fixes): proceed to Step 1 (Update Knowledge Base).
+              5. If Code reports it cannot fix the issues: present the situation to the user. Options: "I'll fix manually and come back", "Skip these failing tests and proceed to completion", "Abandon the feature". If user selects "Abandon": update state.json to plan_status="archived", current_phase=5, phase_5_substep="state_finalized" to ensure a clean resume state, then call attempt_completion with abandonment details.
+            </action>
+            <note priority="high">This approach does NOT rewind git history, does NOT unmark completed steps, and does NOT spawn Architect. Code fixes the issues in-place and re-verifies with the user. The feature's git history and state remain intact.</note>
+          </branch>
+        </decision_tree>
+        <note>If hands_off_mode is false: this step is skipped — smoke tests were verified inline during execution.</note>
+      </step>
+
       <step number="1">
         <title>Update Partitioned Knowledge Base</title>
         <action>Before spawning Architect: read state.json. If phase_5_substep is "knowledge_updated" or "state_finalized": skip this step — knowledge base was already updated (resume after crash). Proceed to Step 2.</action>
-        <action>If phase_5_substep is null: spawn Architect via new_task using the knowledge_base_update_pattern from common patterns.</action>
+        <action>If phase_5_substep is null: determine the project-type-relevant knowledge files using the project_type from your spawn prompt (same logic as Phase 0 Step 4). Spawn Architect via new_task using the knowledge_base_update_pattern from common patterns. Include the project-type-relevant file list in the prompt so the Architect only updates files that are relevant to this project type (e.g., do NOT spawn an update for frontend-ui.md on a CLI project, do NOT spawn an update for api-routes.md on a pipeline project).</action>
         <action>Wait for completion. After Architect returns: set phase_5_substep="knowledge_updated" in state.json (crash guard: if context is lost after knowledge update, resume skips re-update).</action>
       </step>
 

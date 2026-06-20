@@ -1,9 +1,10 @@
 <error_handling>
   <overview>
     Common failure modes during vision discovery and how to handle them. As an interviewer
-    generating interactive mocks, your primary failure modes are: the user won't or can't give
-    specific answers, the user fixates on mock CSS, state/disk mismatch on resume, and
-    placeholder page accumulation.
+    generating project-type-appropriate deliverables, your primary failure modes are:
+    the user won't or can't give specific answers, the user fixates on deliverable aesthetics
+    (CSS for GUI, formatting for CLI transcripts, YAML style for API, etc.), state/disk
+    mismatch on resume, and placeholder accumulation.
   </overview>
 
   <scenarios>
@@ -17,17 +18,14 @@
         <step number="1">Acknowledge the pattern: "I'm noticing your answers are staying at a
           high level. The vision document needs to be specific enough that someone could build
           the app without asking follow-ups. Let me slow down and go deeper on one thing at a time."</step>
-        <step number="2">Switch to offering concrete options instead of open questions.
-          "Should the login use email+password only, or also support Google/SSO login?"</step>
+        <step number="2">Switch to offering concrete options instead of open questions.</step>
         <step number="3">If the user still can't decide, document what IS known and flag
           the unspecified areas in state.json with status="deferred".</step>
-        <step number="4">If this covers more than 20% of a phase, update state.json last_context
-          and suggest pausing: "The user was unable to specify [areas]. Consider a follow-up
-          session or providing more concrete examples/competitor references."</step>
+        <step number="4">If this covers more than 20% of a phase, suggest pausing.</step>
       </recovery>
     </scenario>
 
-    <scenario name="user_fixates_on_mock_css">
+    <scenario name="user_fixates_on_mock_css" project_type="gui,game">
       <severity>high</severity>
       <trigger>The user opens the interactive mock and immediately starts commenting on colors,
         spacing, font sizes, or visual polish.</trigger>
@@ -40,11 +38,23 @@
         <step number="2">If the user insists on visual changes: "I can adjust the layout
           STRUCTURE (move the sidebar, add a missing button), but I won't adjust visual STYLE
           (colors, shadows, exact spacing). Which is this?"</step>
-        <step number="3">If the user continues fixating after 2 redirects: "I want to make sure
-          we're using our time well. Visual design happens after the app is built. Right now,
-          we're defining WHAT the app does. Can we focus on behavior and layout structure?"</step>
+        <step number="3">If the user continues fixating after 2 redirects: escalate to third redirect.</step>
         <step number="4">If the user STILL insists: make the minimal structural change and
           move on. Do not engage in CSS debates. The .md spec is the source of truth, not the HTML.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="user_fixates_on_transcript_formatting" project_type="cli">
+      <severity>medium</severity>
+      <trigger>The user fixates on exact transcript formatting — "the table borders should be
+        double-line not single," "the JSON should use 4-space indent."</trigger>
+      <diagnosis>The user is treating the session transcript as final documentation, not a spec tool.</diagnosis>
+      <recovery>
+        <step number="1">Redirect: "The session transcript is a specification tool — it shows
+          what output the command produces, not the exact ASCII art. Focus on: does the output
+          contain the right data? Are the right flags documented?"</step>
+        <step number="2">If user insists: note formatting preference in the .md spec's Output
+          Format section. Do not engage in extended formatting debates.</step>
       </recovery>
     </scenario>
 
@@ -60,118 +70,95 @@
           "Start fresh (WARNING: overwrites all existing work)",
           "I will restore the files manually".</step>
         <step number="3">If user selects "Mark as incomplete": update state.json to reflect
-          actual disk state. Remove missing files from completed lists, add back to planned.</step>
+          actual disk state.</step>
         <step number="4">If files exist on disk but not in state.json: add them to the
-          appropriate completed list after verifying they contain substantive content (not
-          just placeholder headers).</step>
+          appropriate completed list after verifying they contain substantive content.</step>
       </recovery>
     </scenario>
 
-    <scenario name="placeholder_page_explosion">
+    <scenario name="placeholder_accumulation" project_type="gui,game">
       <severity>medium</severity>
       <trigger>During screen interviews, many navigation targets are mentioned but never reached.
         The screens/ directory fills with placeholder .html files.</trigger>
-      <diagnosis>The user mentioned screens in passing that may not actually need full design.
-        Placeholders accumulate but the user may consider them out of scope.</diagnosis>
       <recovery>
-        <step number="1">At each screen completion gate, review the planned.screens list in
-          state.json. Identify placeholders that haven't been reached after multiple screens.</step>
-        <step number="2">Before moving to Phase 3 (Flows), present the placeholder list:
-          "[N] screens were mentioned but never designed: [list]. Are these real screens we
-          need to design, or were they mentioned hypothetically?" Options:
-          "Design them now", "Remove them — they're out of scope", "Keep as placeholders — may design later".</step>
-        <step number="3">If user removes them: delete the placeholder files, remove from
-          state.json planned.screens, and update any screen HTML that linked to them
-          (regenerate those screens in Phase 5 wire-up).</step>
+        <step number="1">At each screen completion gate, review planned.screens list.</step>
+        <step number="2">Before moving to Phase 3, present placeholder list to user.</step>
+        <step number="3">If user removes them: delete placeholder files, remove from state.json,
+          regenerate affected screen HTML in Phase 5 wire-up.</step>
       </recovery>
     </scenario>
 
     <scenario name="user_changes_mind_mid_interview">
       <severity>medium</severity>
-      <description>The user describes Feature X one way, then later describes it differently,
-        or decides they want something completely different.</description>
-      <diagnosis>The vision is evolving as the user thinks through it — this is normal
-        and even healthy for discovery. But it creates churn across .md and .html files.</diagnosis>
+      <description>The user describes something one way, then later describes it differently.</description>
       <recovery>
-        <step number="1">Flag the contradiction immediately: "Earlier you said [old], but now
-          you're describing [new]. These are different approaches. Let's reconcile them."</step>
+        <step number="1">Flag the contradiction: "Earlier you said [old], but now you're
+          describing [new]. These are different approaches. Let's reconcile them."</step>
         <step number="2">Help the user compare tradeoffs. Once decided, go BACK to previously
-          filled files that the change affects and update them. For screens: regenerate the HTML.</step>
-        <step number="3">If this happens more than 3 times in one session, gently note:
-          "We've revised a few things — that's fine, but let's try to lock in decisions as we go."</step>
+          filled files that the change affects and update them. Regenerate deliverable files.</step>
+        <step number="3">If this happens more than 3 times in one session, gently note the pattern.</step>
       </recovery>
     </scenario>
 
     <scenario name="user_wants_to_skip_a_section">
       <severity>medium</severity>
-      <description>The user says "let's skip this for now, we'll figure it out later."</description>
       <recovery>
         <step number="1">Explain the cost: "Skipping this now means the Architect will have to
           make assumptions. Wrong assumptions lead to rework. Can we spend 5 minutes on it now?"</step>
-        <step number="2">If the user insists: mark the artifact as status="deferred" in state.json
-          with reason. Document in the .md file: "⚠️ DEFERRED: [section]. User chose to defer.
-          Architect will need to propose an approach."</step>
-        <step number="3">Track all deferred items in state.json metrics for the summary.</step>
+        <step number="2">If user insists: mark artifact as status="deferred" with reason.</step>
       </recovery>
     </scenario>
 
     <scenario name="interview_dragging_too_long">
       <severity>low</severity>
-      <description>The interview has been going for a long time and the user is showing
-        signs of fatigue or impatience.</description>
       <recovery>
         <step number="1">Check progress: how many planned artifacts remain?</step>
-        <step number="2">Offer to pause: "We've covered [N] of [M] screens. Would you like to
-          pause and resume later? I'll save everything to state.json and you can re-spawn me
-          to continue exactly where we left off."</step>
-        <step number="3">If continuing: prioritize the most critical remaining artifacts and
-          flag less critical ones for a follow-up.</step>
+        <step number="2">Offer to pause: "We've covered [N] of [M] artifacts. Would you like to
+          pause and resume later? I'll save everything to state.json."</step>
       </recovery>
     </scenario>
 
     <scenario name="user_refuses_to_answer">
       <severity>high</severity>
-      <trigger>The user repeatedly responds with "I don't know," refuses to make decisions,
-        or provides only non-answers to every question.</trigger>
-      <diagnosis>The user may lack clarity on their own vision, may be delegating product
-        decisions inappropriately, or may not be the right stakeholder for this interview.</diagnosis>
       <recovery>
-        <step number="1">After 3+ attempts with structured options for the same decision,
-          acknowledge the pattern: "I'm noticing you're unsure about several key decisions.
-          Let me try a different approach."</step>
-        <step number="2">Switch to presenting competitor-inspired defaults: "Most apps in this
-          category handle [X] by [common pattern]. If we use that as a starting point, we can
-          always refine later. Does that work?"</step>
-        <step number="3">If the user still cannot decide: mark the section as "⚠️ UNRESOLVED"
-          in state.json. If more than 30% of sections are unresolved: report back —
-          "Unable to complete vision discovery. [N]/[M] artifacts complete. The user needs to
-          clarify their vision before continuing."</step>
+        <step number="1">After 3+ attempts: acknowledge the pattern.</step>
+        <step number="2">Switch to presenting competitor-inspired defaults.</step>
+        <step number="3">If user still cannot decide after >30% of sections: report back —
+          "Unable to complete vision discovery. [N]/[M] artifacts complete."</step>
       </recovery>
     </scenario>
 
     <scenario name="no_templates_provided">
       <severity>critical</severity>
-      <description>The orchestrator spawned the vision hasher without providing template files.</description>
       <recovery>
         <step number="1">Do NOT improvise templates. Stop immediately.</step>
-        <step number="2">Report back via attempt_completion: "No templates provided. I need
-          .md template files with section headers and placeholder prompts in the vision/
-          directory before I can begin the discovery interview."</step>
+        <step number="2">Report back: "No templates provided. I need template files with section
+          headers and placeholder prompts in the vision/ directory."</step>
       </recovery>
     </scenario>
 
-    <scenario name="mock_too_complex_for_component_library">
+    <scenario name="mock_too_complex_for_component_library" project_type="gui,game">
       <severity>medium</severity>
-      <trigger>The screen has a layout that doesn't map cleanly to any CSS component library
-        pattern (e.g., a complex dashboard with nested grids, custom widgets, data visualizations).</trigger>
+      <trigger>The screen has a layout that doesn't map cleanly to any CSS component library pattern.</trigger>
       <recovery>
         <step number="1">Use the closest available layout pattern for the overall structure.</step>
-        <step number="2">For sub-regions that don't fit: use simple labeled boxes with placeholder
-          descriptions. Example: <div class="card"><div class="section-title">Chart: Revenue Over Time</div><div class="empty-state">📊 [Chart would render here — see .md spec for data points]</div></div></step>
+        <step number="2">For sub-regions that don't fit: use simple labeled boxes with placeholder descriptions.</step>
         <step number="3">Note in the .md spec: "HTML mock uses simplified layout for [region].
           See this .md spec for the authoritative description."</step>
-        <step number="4">The .md spec is always more detailed than the HTML mock. The mock
-          communicates structure; the .md communicates completeness.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="config_type_mismatch">
+      <severity>high</severity>
+      <trigger>vision-config.json says project_type="cli" but templates include screens/ directory.</trigger>
+      <diagnosis>The orchestrator provided templates for the wrong project type.</diagnosis>
+      <recovery>
+        <step number="1">Flag immediately: "vision-config.json specifies project_type=[X] but the
+          templates include [Y-specific files]. These don't match. Options: Use [X] workflow
+          (ignore mismatched templates), Use [Y] workflow (override config), I will fix the
+          mismatch manually."</step>
+        <step number="2">Do not proceed until the mismatch is resolved. Wrong templates
+          produce wrong deliverables.</step>
       </recovery>
     </scenario>
   </scenarios>
@@ -187,8 +174,8 @@
         the .md file and state.json status field.</rule>
       <rule>Include a completion percentage per phase in state.json last_context.</rule>
       <rule>List all deferred and incomplete items in priority order in vision-summary.md.</rule>
-      <rule>If the interactive mock is incomplete (some screens have only placeholders), flag
-        this prominently in vision-summary.md: "⚠️ [N] screens have placeholder mocks only."</rule>
+      <rule>If deliverables are incomplete (some screens have only placeholders, some commands
+        lack transcripts, etc.), flag this prominently in vision-summary.md.</rule>
     </rules>
   </graceful_degradation>
 
@@ -197,15 +184,16 @@
       The Vision Hasher maintains vision/state.json as its single source of truth. Interview
       progress is preserved through both state.json AND completed artifact files on disk.
       The Phase 0 verification gate cross-references state against disk on every spawn.
+      project_type is included in state.json for resume consistency.
     </description>
     <resume_guidance>
-      <step>If re-spawned with state.json present: read state.json first, then cross-reference
-        all completed files against disk. Present findings to user. Resume from current_phase
-        and skip confirmed artifacts.</step>
+      <step>If re-spawned with state.json present: read state.json first (including project_type),
+        then cross-reference all completed files against disk. Present findings. Resume from
+        current_phase and skip confirmed artifacts.</step>
       <step>If re-spawned with artifact files but NO state.json: state was lost. Read all
-        existing files to reconstruct progress. Present findings: "Found [N] completed files
-        but state.json is missing. I'll reconstruct state from disk. Resume from [detected
-        phase]?"</step>
+        existing files to reconstruct progress including project_type detection. Present
+        findings: "Found [N] completed files but state.json is missing. I'll reconstruct
+        state from disk. Resume from [detected phase]?"</step>
       <step>Do NOT overwrite completed files unless the user explicitly requests revision.</step>
       <step>If vision-summary.md exists from a prior session's Phase 5, use it to understand
         the overall state but re-verify all files against state.json.</step>

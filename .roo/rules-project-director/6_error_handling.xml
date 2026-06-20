@@ -123,7 +123,7 @@
         <step>Re-run the test suite.</step>
         <decision_tree>
           <branch condition="Tests now pass">
-            <action>Proceed to Phase 4, Step 2 (Generate E2E Tests).</action>
+            <action>Proceed to Phase 4, Step 2 (Run Existing E2E Suite).</action>
           </branch>
           <branch condition="Tests still fail">
             <action>Present the failure details to the user with options: "Retry the fix", "Skip unit tests (not recommended)", "I'll fix manually".</action>
@@ -134,7 +134,7 @@
     </scenario>
 
     <scenario name="e2e_generation_subtask_fails">
-      <trigger>The E2E generation subtask fails to generate E2E tests in Phase 4, Step 2</trigger>
+      <trigger>The E2E generation subtask fails to generate E2E tests in Phase 4, Step 4</trigger>
       <recovery>
         <step>Read the E2E generation subtask's completion summary for error details.</step>
         <step>If the E2E generation subtask couldn't determine the project type: provide more context and re-spawn.</step>
@@ -161,7 +161,7 @@
     </scenario>
 
     <scenario name="vision_reevaluation_detects_major_drift" priority="high">
-      <trigger>Phase 4, Step 5: Vision re-evaluation finds that the built feature fundamentally contradicts the vision, affecting remaining roadmap features</trigger>
+      <trigger>Phase 4, Step 7: Vision re-evaluation finds that the built feature fundamentally contradicts the vision, affecting remaining roadmap features</trigger>
       <recovery>
         <step>Document the specific divergence: what the vision said, what was built, which remaining features are affected.</step>
         <step>Present to user with options: "Re-plan remaining features", "Accept divergence — update vision only", "I'll manually update".</step>
@@ -245,7 +245,7 @@
             <action>Use ask_followup_question: "Vision documents referenced in state.json are missing from agent-workspace/project-director/vision/. How proceed?" Options: "Restore vision docs from git/backup", "Re-spawn Vision Hasher to redo discovery", "I will manually restore them."</action>
           </branch>
           <branch condition="current-state.md is missing">
-            <action>Recreate current-state.md from the template in Phase 1 Step 2 (fresh project path). The dashboard content will be repopulated during the next Phase 4 Step 6 update.</action>
+            <action>Recreate current-state.md from the dashboard template in common patterns. The dashboard content will be repopulated during the next Phase 4 Step 8 update.</action>
           </branch>
           <branch condition="planning/ directory is missing but roadmap.md exists">
             <action>Re-spawn Architect to recreate planning/ directory from roadmap.md and vision docs.</action>

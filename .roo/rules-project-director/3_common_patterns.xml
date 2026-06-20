@@ -195,25 +195,34 @@
       Additional context and constraints: [ANY PD CONSTRAINTS]
       Git automation: [git_automation_enabled from state.json]. If false, skip all git commits — save progress to disk only.
 
-      This is a screen-based application. Your output will include:
+      Read vision/vision-config.json to determine the project type and deliverable format. The PD wrote this file before spawning you. The project type is one of: gui, cli, api, library, game, pipeline.
+
+      Common to all project types:
       - Atomic .md files: app-overview.md, personas.md, feature-inventory.md, edge-cases.md
-      - Per-artifact directories: features/, data/, screens/, flows/
-      - For each screen: a canonical .md spec AND an interactive .html mock (screens/[name].md + screens/[name].html)
+      - Per-artifact subdirectories (project-type-specific — see below)
       - vision-summary.md: comprehensive index with tables linking every artifact
       - vision/state.json: progress tracker for multi-spawn resume
 
-      Your job:
-      1. Phase 0 — State Verification: Check for existing state.json. If found, cross-reference with disk and offer resume. If not found, initialize fresh state.
-      2. Phase 1 — Foundation: Fill app-overview.md, personas.md, feature-inventory.md. Create data/[entity].md and features/[feature].md as entities and features are discovered.
-      3. Phase 2 — Screens: For each screen, interview using screen_decomposition pattern, generate screens/[name].md (canonical spec) AND screens/[name].html (interactive mock with pre-built CSS component library, wireframe aesthetic, tooltips on all actions). Generate placeholder HTML pages immediately for any navigation targets not yet interviewed.
-      4. Phase 3 — Flows: Document end-to-end user journeys in flows/[flow-name].md, referencing actual screen files.
-      5. Phase 4 — Edge Cases: Fill edge-cases.md with global and per-feature edge cases.
-      6. Phase 5 — Wire-Up: Regenerate all screen HTML (placeholder links → real links), cross-reference all files for consistency, generate vision-summary.md with comprehensive index tables.
-      7. Use attempt_completion to return to me. Include: file manifest, feature/screen/entity/flow counts, flagged concerns, and path to vision-summary.md as the primary entry point.
+      Project-type-specific deliverable formats:
+      - GUI (web/desktop/mobile): screens/ directory with per-screen .md spec + interactive .html mock (wireframe aesthetic). flows/ directory for user journeys.
+      - CLI (terminal tool): commands/ directory with per-command .md spec + terminal session transcript. workflows/ directory for command sequences.
+      - API (backend service): endpoints/ directory with per-endpoint .md spec + OpenAPI YAML contract. integration_flows/ directory for multi-endpoint sequences.
+      - Library (SDK/package): public-api/ directory with per-module .md spec + runnable usage example. usage_flows/ directory for developer integration journeys.
+      - Game: screens/ directory (UI screens with .md + .html mocks) + mechanics/ directory (game systems design docs). gameplay_flows/ directory for player journeys.
+      - Pipeline (ETL/data): pipeline-stages/ directory with per-stage .md spec + Mermaid data flow diagram. data_flows/ directory for end-to-end data journeys.
+
+      Your job (phase names adapt to project type — read vision/vision-config.json for the exact phases array):
+      1. Phase 0 — State Verification: Check for existing vision/state.json. If found, cross-reference with disk and offer resume. If not found, initialize fresh state. Read vision/vision-config.json for project_type.
+      2. Phase 1 — Foundation (all types): Fill app-overview.md, personas.md, feature-inventory.md. Create data/[entity].md and features/[feature].md as entities and features are discovered.
+      3. Phase 2 — Interface Surface: Generate project-type-specific deliverables per the phases array. GUI: screen interviews → screens/[name].md + .html mocks. CLI: command interviews → commands/[name].md + .session.md transcripts. API: endpoint interviews → endpoints/[name].md + .openapi.yaml contracts. Library: module interviews → public-api/[module].md + .example.* files. Game: screen + mechanics interviews → screens/[name].md + .html + mechanics/[system].md. Pipeline: stage interviews → pipeline-stages/[stage].md with Mermaid diagrams.
+      4. Phase 3 — Journeys/Flows: Document end-to-end journeys (flows/, workflows/, integration_flows/, usage_flows/, gameplay_flows/, or data_flows/ depending on project type).
+      5. Edge Cases Phase: Fill edge-cases.md with global and per-feature edge cases.
+      6. Final Phase — Wire-Up/Walkthrough: Cross-reference all files for consistency, regenerate deliverables (HTML placeholders → real links for GUI/game), generate vision-summary.md with comprehensive index tables adapted to project type.
+      7. Use attempt_completion to return to me. Include: file manifest, feature count, project-type-appropriate artifact counts, flagged concerns, and path to vision-summary.md as the primary entry point.
 
       Maintain vision/state.json throughout — update after every confirmed artifact. This enables seamless resume across multiple spawns.
 
-      The interactive HTML mocks use a deliberate wireframe aesthetic (dashed borders, grayscale, "NOT FINAL DESIGN" banner). If the user fixates on CSS/visual polish, redirect: "That's UI Designer territory — for now, is the element in the right place with the right behavior?"
+      For GUI and game projects: interactive HTML mocks use a deliberate wireframe aesthetic (dashed borders, grayscale, "NOT FINAL DESIGN" banner). If the user fixates on CSS/visual polish, redirect: "That's UI Designer territory — for now, is the element in the right place with the right behavior?"
 
       Do NOT make technical decisions (no tech stack, no architecture). Flag any concerns for orchestrator review.
     </template>
@@ -392,31 +401,77 @@
         Write agent-workspace/project-director/roadmap.md. Group features into architectural Waves (NOT thematic milestones).
 
         <wave name="Wave 1: Foundation">
-          <description>Infrastructure that everything else depends on. These features build the core abstractions, data model, and project scaffolding.</description>
+          <description>Infrastructure that everything else depends on. These features build the core abstractions, data model, and project scaffolding — same for all project types.</description>
           <includes>All data entities (from vision data concepts), core abstraction interfaces (providers from planning/abstractions.md), database migrations, project setup, CI/CD pipeline.</includes>
         </wave>
 
         <wave name="Wave 2: Skeleton">
-          <description>App shell, navigation, and empty screens. These features create the structural frame that Wave 3 fills in.</description>
-          <includes>App shell with routing, all screens as empty shells with placeholder content, navigation structure, authentication framework (login/logout, no roles yet).</includes>
+          <description>Structural frame that Wave 3 fills in. The specifics depend on project type (determined by vision/vision-config.json):</description>
+          <includes>
+            - GUI: App shell, routing, auth framework, empty screens
+            - CLI: CLI framework, argument parsing, config loading, command stubs
+            - API: Server framework, middleware chain, route registration, endpoint stubs
+            - Library: Module structure, public API skeleton, build/publish pipeline
+            - Game: Engine bootstrap, game loop, input handling, placeholder UI screens
+            - Pipeline: Orchestrator setup, stage scaffolding, source/sink connectors
+          </includes>
         </wave>
 
         <wave name="Wave 3: Vertical Slices">
-          <description>End-to-end features. Each feature is a complete vertical slice through the stack (DB → API → UI). Features ADD new code to pre-built infrastructure — they do NOT modify Wave 1-2 code.</description>
-          <includes>Every user-facing feature from vision feature-inventory.md. Order by dependency (e.g., Task CRUD before Task Assignment). Each feature references which Wave 1 abstraction it extends.</includes>
+          <description>End-to-end features that ADD new code to pre-built infrastructure — they do NOT modify Wave 1-2 code. Format depends on project type:</description>
+          <includes>
+            - GUI: End-to-end features (DB→API→UI)
+            - CLI: End-to-end command groups (parsing→processing→output)
+            - API: End-to-end resource groups (endpoint→validation→persistence)
+            - Library: End-to-end module chains (public API→internal logic→error handling)
+            - Game: End-to-end gameplay features (input→mechanics→feedback)
+            - Pipeline: End-to-end data flows (source→transform→destination)
+            Every user-facing feature from vision feature-inventory.md. Order by dependency (e.g., Task CRUD before Task Assignment). Each feature references which Wave 1 abstraction it extends.
+          </includes>
         </wave>
 
         <wave name="Wave 4: Cross-Cutting">
-          <description>Features that span across all vertical slices. These enhance the entire app uniformly.</description>
-          <includes>Permissions/authorization, search/filtering, reporting/analytics, accessibility, i18n, performance optimization, end-to-end testing.</includes>
+          <description>Features that span across all vertical slices. These enhance the entire app uniformly. Scope depends on project type:</description>
+          <includes>
+            - GUI: Permissions, search, reporting, i18n, E2E suite
+            - CLI: Shell completion, config profiles, logging, plugin system
+            - API: Rate limiting, caching, versioning, webhook dispatch
+            - Library: Error standardization, logging hooks, plugin architecture
+            - Game: Save system, achievements, localization, accessibility
+            - Pipeline: Monitoring, alerting, schema evolution, data lineage
+          </includes>
         </wave>
 
-        <format_rules>
-          <rule>Format: "- Feature N: [Name] — [1-line description]. Depends on: [list or none]."</rule>
+          <rule>Format:
+            - Feature N: [Name] — [1-line description]. Depends on: [list or none].
+              E2E: [2-3 sentence concrete verification of this feature's end-to-end behavior. Describe what happens from the user's (or caller's) perspective. Tailor the format to the project type:
+
+              Web app: "Navigate to /login, enter 'user@test.com' + 'pass', click Sign In → redirected to /dashboard, see 'Welcome, User' heading."
+              Desktop GUI: "Launch app, click File → New Project, enter 'MyProject', click Create → main window title bar shows 'MyProject'."
+              CLI program: "Run `mycli process --input test.csv --output out.json`, verify exit code 0, stdout contains 'Processed: 42 rows', out.json exists with expected schema."
+              API backend: "POST /api/users with `{name:'Test',email:'t@t.com'}` → HTTP 201 + JSON body with `id`. GET /api/users/{id} → 200 + same user object."
+              Library/SDK: "Call `Lib.parse(validInput)` → returns ParsedResult with expected fields. Call `Lib.parse(invalidInput)` → throws ParseError with message 'Invalid format at line 3'."
+              Mobile app: "Tap 'Add Item' FAB, fill Name field with 'Milk', tap Save → item list shows 'Milk' with checkbox."
+              Game: "Player presses W → character moves forward. Player reaches checkpoint → 'Checkpoint Reached' UI appears. Player falls off edge → respawn at last checkpoint."
+              Pipeline: "Run pipeline with `sample_input.csv`, verify output data validates against schema, monitoring events fired for each stage, dead-letter queue contains 0 messages for valid input."
+
+              NOT vague: "Test login flow." NOT implementation: "Verify JWT token is in localStorage."]
+
+            If E2E is genuinely not applicable, write: E2E: Not applicable — [project-type-specific reason].
+            Valid "Not applicable" examples:
+            - Game engine plugin: "Not applicable — engine plugin, tested via integration tests."
+            - Data pipeline: "Not applicable — batch processor, verified via integration tests on sample data."
+            - Pure infrastructure library: "Not applicable — no user-facing API, tested via unit tests."
+
+            Wave 1 Foundation features (data model, CI/CD, project scaffold) may legitimately have no E2E.
+            Wave 2 Skeleton features (app shell, routing, empty screens) may have minimal E2E.
+            Wave 3+ features: "Not applicable" requires strong justification. If a Wave 3 feature has no verifiable end-to-end behavior, ask yourself: should this feature be merged into another feature instead of being standalone?
+            Wave 4 features: should have E2E for user/caller-facing aspects.
+          </rule>
           <rule>Testing and DevOps MUST be explicit features within appropriate waves.</rule>
           <rule>Each feature in Wave 3 must note: "Extends [Wave 1 abstraction]" or "Uses [Wave 1 entity]" so it's clear what pre-built infrastructure supports it.</rule>
           <rule>For features sourced via reference implementation: note "Reference pattern: external-docs/ref-[product]-[feature].md" in the feature description.</rule>
-          <rule>DO NOT write acceptance criteria. The FD Architect derives acceptance criteria from vision docs.</rule>
+          <rule>DO NOT write implementation acceptance criteria (the FD Architect derives those from vision docs). E2E specs are different: they describe concrete user journeys for the regression test suite, not implementation requirements.</rule>
           <rule>DO NOT number features yet — numbering happens in the assembly step.</rule>
         </format_rules>
       </item>
@@ -485,6 +540,14 @@
           4. vision-summary.md and feature-inventory.md — for broader context and cross-reference navigation
           5. Also note the corresponding HTML mock files: screens/[screen-a].html, screens/[screen-b].html — these are interactive mocks for human simulation; the FD Architect may open them in a browser for visual understanding but derives acceptance criteria from the .md specs
 
+          ⚠️ PROJECT-TYPE NOTE: The artifact paths shown above (screens/*.md, screens/*.html, data/*.md) are the GUI default. The PD workflow Phase 3 Step 2 overrides these paths based on project_type from vision/vision-config.json. For non-GUI project types, artifact paths differ:
+          - CLI: commands/*.md, transcripts/*.txt (no HTML mocks)
+          - API: endpoints/*.md, contracts/*.yaml (OpenAPI specs)
+          - Library: api-surface/*.md, examples/*.md (runnable usage examples)
+          - Game: screens/*.md, screens/*.html, mechanics/*.md (adds game mechanics docs)
+          - Pipeline: stages/*.md, dataflow/*.mermaid (Mermaid diagrams, no visual mocks)
+          The Vision Hasher's vision-summary.md Feature Index will list the correct artifact types for each project type. Use those instead of hardcoding GUI paths.
+
           Also include paths to:
           - The full planning/ directory (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md) — so the FD Architect understands the architecture and abstractions.
         </description>
@@ -501,6 +564,16 @@
           Also include the wave structure context: which Wave 1 abstractions exist, which Wave 2 skeleton is in place, and the current wave name. Format: "Wave 1 (Foundation) complete: [list abstractions from planning/abstractions.md]. Wave 2 (Skeleton) complete: [list]. Current wave: Wave 3 (Vertical Slices)."
 
           PRUNING RULE: If more than 3 prior features exist, do NOT copy all bullet points from current-state.md. Instead summarize concisely: "Features 1–N have built: [high-level summary of domains, e.g., auth, user management, inventory CRUD]." Keep this section under 5 bullet points or 2 sentences to avoid context bloat in the FD prompt and its Architect subtask.
+        </description>
+      </element>
+      <element name="hands_off_mode">
+        <description>
+          Read hands_off_mode from state.json. Pass as literal boolean in the FD spawn prompt: "hands_off_mode: true" or "hands_off_mode: false". FD uses this to skip user interaction during feature development — Model smoke tests are self-verified by Code, HUMAN/SHT smoke tests are collected for batch presentation at feature end.
+        </description>
+      </element>
+      <element name="smoke_test_automation">
+        <description>
+          Read the full smoke_test_automation block from state.json. Pass the entire block (enabled, environments with all fields including mcp_available/mcp_name/verified, missing_prerequisites) to FD as literal config in the spawn prompt. FD stores this in its state.json and passes it to Code mode subtasks. If smoke_test_automation.enabled is false or not yet configured, pass enabled: false.
         </description>
       </element>
     </required_elements>
@@ -586,26 +659,30 @@ CRITICAL: If you found ZERO flaws and made ZERO changes, use attempt_completion 
       Canonical prompt to use when spawning a Code mode subtask to generate E2E regression tests for a just-completed feature. The E2E generation subtask analyzes the project type and selects the appropriate E2E framework — the PD does NOT prescribe Playwright or any specific tool.
     </description>
     <usage>
-      Spawn via new_task in Code mode. The prompt must include the feature name (sanitized), acceptance criteria (from the FD's archived plan — the FD Architect derived these from vision docs), tech stack context, and target file path.
+      Spawn via new_task in Code mode. The prompt must include the feature name (sanitized), the E2E spec from the roadmap (written by the Architect during wave map creation), tech stack context, and target file path.
     </usage>
     <template>
+      <section name="exception_note" priority="critical">
+        ⚠️ EXCEPTION TO YOUR NORMAL WORKFLOW: You are being spawned specifically to generate and run E2E tests. Your normal rule of "E2E tests are NEVER run during the quality loop" does NOT apply here. This subtask's purpose IS E2E test creation and verification. You MUST create the test file and you MUST run ALL E2E tests before completion.
+      </section>
+
       <section name="context">
         <item number="1">
           <title>Project Tech Stack</title>
-          [Copy the tech stack from the planning/ directory (planning/tech-stack.md) and relevant architecture details from agent-workspace/knowledge/architecture.md. Include: programming language, UI framework (web/WPF/CLI/mobile), build system, test runner already in use.]
+          [Copy the tech stack from the planning/ directory (planning/tech-stack.md) and relevant architecture details from agent-workspace/knowledge/architecture.md. Include: programming language, UI framework (web/WPF/CLI/mobile/game/library), build system, test runner already in use.]
         </item>
         <item number="2">
-          <title>Vision Documents</title>
-          Also read the relevant vision documents: personas (vision/personas.md) and user flows (vision/flows/) to understand the user journey this feature enables.
-        </item>
-        <item number="3">
           <title>Feature to Test</title>
           Feature name: [Feature Name]
           Sanitized name for file: [sanitized-feature-name]
         </item>
-        <item number="4">
-          <title>Acceptance Criteria (from FD Architect — derived from vision docs)</title>
-          [Copy the exact acceptance criteria from the FD's archived plan. These were derived by the FD Architect from vision docs. These are the requirements the E2E test MUST verify.]
+        <item number="3">
+          <title>E2E Specification (from Roadmap — written by Architect during wave map)</title>
+          [Copy the EXACT E2E spec from the roadmap.md entry for this feature. This is the authoritative source for what the E2E test must verify. The Architect wrote this during Phase 2 execution planning specifically for the regression test suite.]
+
+          If the roadmap E2E spec is "Not applicable — [reason]": do NOT generate an E2E test. Instead, use attempt_completion with: E2E Framework: None, Run Command: None, Test File: None, Reason: [copy the "Not applicable" reason from the roadmap]. This is a valid outcome — not all project types need traditional E2E tests.
+          
+          (Note: The PD filters "Not applicable" features before spawning you. Under normal operation, you should never receive a "Not applicable" spec. This branch exists as a defensive fallback in case the PD's filtering has a bug.)
         </item>
       </section>
 
@@ -618,8 +695,10 @@ CRITICAL: If you found ZERO flaws and made ZERO changes, use attempt_completion 
           - CLI/terminal applications: Use shell scripts, expect, or a custom test harness
           - Mobile applications: Use Appium or Maestro
           - API-only backends: Use Supertest, REST Client, or HttpClient-based test projects
+          - Game/Unity projects: Use Unity Test Framework with playmode tests, or a custom test harness
+          - Libraries/SDKs: Use integration test projects that exercise the public API
           - If the project already has an E2E framework configured (check tests/e2e/ for existing tests), use the SAME framework — do not introduce a second E2E tool
-          - If the project is a desktop app with no existing E2E setup: choose the most appropriate framework and set it up from scratch
+          - If the project has no existing E2E setup: choose the most appropriate framework for the project type and set it up from scratch
         </item>
         <item number="2">
           <title>Set Up the E2E Framework</title>
@@ -633,22 +712,28 @@ CRITICAL: If you found ZERO flaws and made ZERO changes, use attempt_completion 
           <title>Write the E2E Test</title>
           Write a comprehensive E2E test at the target path: tests/e2e/feature-[sanitized-name].[ext] (choose the extension appropriate for the framework: .spec.ts for Playwright, .cs for .NET, .py for Python, etc.).
           The test MUST:
-          - Verify EVERY acceptance criterion provided
+          - Verify EVERY point in the roadmap E2E spec provided above
           - Use the feature name in the test description for traceability
           - Use reliable selectors (prefer data-testid, accessibility labels, or stable IDs over CSS classes)
           - Include setup and teardown that doesn't interfere with other tests
           - Follow the existing project's coding conventions
+
+          CRITICAL: You MUST create the test file. If you cannot set up the framework or cannot determine the project type, report the specific blocker in your completion summary — do NOT complete without creating the file or explaining exactly why it's impossible.
         </item>
         <item number="5">
-          <title>Verify the Test Runs</title>
-          Run the E2E test command yourself to confirm it works. If the test fails, fix it — do not hand off a broken test. If the test framework requires a running server/app and none is running, note this in your report but verify the test code is syntactically correct.
+          <title>Run ALL E2E Tests Before Completion</title>
+          Run the FULL E2E test suite — not just the new test you wrote, but ALL existing E2E tests in tests/e2e/. This verifies your new test works AND that it doesn't break any existing tests.
+          
+          If any test fails: fix it. If the failure is in your new test: fix the test code. If the failure is in an existing test: this is a regression — your new feature may have broken something. Report this in your completion summary under "Warnings" so the PD can investigate.
+          
+          If the test framework requires a running server/app and none is running: start the app, run the tests, then note the startup requirement in your report.
         </item>
         <item number="6">
           <title>Report Back</title>
           Use attempt_completion with this exact structure in your summary:
-          - E2E Framework: [framework name and version]
-          - Run Command: [exact command to run the E2E suite, e.g., "npx playwright test" or "dotnet test tests/e2e/"]
-          - Test File: tests/e2e/feature-[sanitized-name].[ext]
+          - E2E Framework: [framework name and version, or "None" if not applicable]
+          - Run Command: [exact command to run the E2E suite, or "None"]
+          - Test File: tests/e2e/feature-[sanitized-name].[ext], or "None — not applicable: [reason]"
           - Acceptance Criteria Covered: [list each criterion and how the test verifies it]
           - Setup Notes: [any prerequisites, e.g., "requires app running on localhost:3000" or "requires WinAppDriver service running"]
           - Warnings: [any limitations or known issues]

@@ -47,7 +47,9 @@
   "fd_status": "string",
   "phase_2_substep": "string | null",
   "phase_4_substep": "string | null",
+  "phase_5_substep": "string | null",
   "git_automation_enabled": boolean,
+  "hands_off_mode": boolean,
   "smoke_test_automation": {
     "enabled": boolean,
     "environments": {
@@ -68,9 +70,11 @@
       <field name="phase_2_substep">Tracks progress within Phase 2 for safe resume across multiple Architect spawns: null (Phase 2 not started), "tech_sourcing" (Step 2 — technology sourcing study in progress), "architecture" (Step 3 — planning/ directory being drafted), "wave_map" (Step 4 — wave map being written), "assembly" (Step 5 — numbering and dependency check in progress), "critic_review" (Step 6 — Critic reviewing), "generalization_audit" (Step 7 — PD auditing for over-specific features), "approval_gate" (Step 8 — awaiting human approval). Set to null after Phase 2 approval (Phase 2→3 transition).</field>
       <field name="current_feature_index">1-based index of the feature currently being executed. 0 = none executed yet.</field>
       <field name="status">One of: "planning", "in_progress", "complete".</field>
-      <field name="fd_status">Tracks FD subtask lifecycle: "idle" (no FD active), "spawned" (FD executing), "completed" (FD returned, awaiting QA/audit). Set to "idle" after Phase 5 cleanup.</field>
-      <field name="phase_4_substep">Tracks progress within Phase 4 for safe resume: null (not started), "pending_verification" (Phase 3 Step 4 independent verification in progress — transient, advances to null when verification completes and Phase 4 begins), "unit_tests_passed" (Step 1 done), "e2e_generated" (Step 2 done), "e2e_passed" (Step 3 done), "audited" (Step 4 done), "vision_reevaluated" (Step 5 vision check done), "replan_in_progress" (Phase 4 Step 5 re-plan in progress — Architect spawned, awaiting return), "dashboarded" (all Phase 4 done). Set to null at Phase 5 Step 5 cleanup.</field>
+      <field name="fd_status">Tracks FD subtask lifecycle: "idle" (no FD active), "spawned" (FD executing), "completed" (FD returned, awaiting QA/audit). Set to "idle" in Phase 5 Step 4 (before branch cleanup).</field>
+      <field name="phase_4_substep">Tracks progress within Phase 4 for safe resume: null (not started), "pending_verification" (Phase 3 Step 4 independent verification in progress — transient), "unit_tests_passed" (Step 1 done), "e2e_regression_passed" (Step 2 done — existing E2E suite passed), "scope_evaluated" (Step 3 done — drift evaluated), "e2e_generated" (Step 4 done — new E2E test generated), "e2e_validated" (Step 5 done — new E2E test validated), "audited" (Step 6 done), "vision_reevaluated" (Step 7 done), "replan_in_progress" (re-plan in progress — Architect spawned), "dashboarded" (all Phase 4 done — Step 8 complete). Set to null in Phase 5 Step 4 (before branch cleanup).</field>
+      <field name="phase_5_substep">Tracks progress within Phase 5 for safe resume: null (Phase 5 not started), "phase_set" (Step 0 done — current_phase=5 set), "report_presented" (Step 1 done), "pr_offered" (Step 2 done — PR offer presented to user), "pr_handled" (Step 3 done — PR created, OR user confirmed manual push/merge routing to Step 4), "state_updated" (Step 4 substep 0 done — current_feature_index incremented, fd_status="idle", phase_4_substep=null — NON-DESTRUCTIVE, done BEFORE branch deletion), "cleaned_up" (Step 4 complete — branch deleted, trunk checked out). Set to null at Phase 5 Step 5 when current_phase is set back to 3.</field>
       <field name="git_automation_enabled">Whether the PD should run git commands (push, PR, cleanup). Defaults to true.</field>
+      <field name="hands_off_mode">When true: all user interaction gates during feature development are skipped. Model smoke tests (CLI/build/curl) are self-verified by Code. HUMAN/SHT smoke tests are skipped and collected for batch presentation at feature end. Set during project setup (Phase 2 approval gate). Passed to FD in spawn prompt, flows through FD to Code. Defaults to false.</field>
       <field name="smoke_test_automation">Configuration for automated GUI smoke testing via synthetic-human-tester. Smoke testing is only for GUI environments (web, desktop, native) — CLI is self-verified by Code mode. Set during project setup (Phase 1 or Phase 2). Contains: enabled (boolean), environments (per-environment config with base_url/app_id/executable_path/window_title + mcp_available/mcp_name/verified populated by MCP verification step), and missing_prerequisites (list of unavailable MCPs). Passed through FD to Code mode to synthetic-human-tester. Defaults to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] } if never configured. The mcp_available/mcp_name/verified fields are populated once during setup and passed downstream — synthetic-human-tester uses them for better error messages and skip decisions.</field>
       <field name="total_replans">Running count of how many times the roadmap has been re-planned (via major vision drift or user request). Incremented on each re-plan. Two independent triggers fire the re-plan loop detector: (A) 3+ consecutive re-plans without any feature completing Phase 4 (tracked per-session), and (B) total_replans >= 5 (persisted across sessions). Either trigger fires the detector. Reset to 0 when status is set to "complete". Initialized to 0.</field>
       <field name="current_branch_name">The git branch name for the current feature, extracted from FD's completion summary. null if FD skipped git. Populated in Phase 3 Step 4, cleared (set to null) in Phase 5 Step 5 cleanup.</field>
@@ -93,7 +97,7 @@
     <trigger>When the user presents a grand vision for a multi-feature project, or resumes/continues an existing project</trigger>
 
     <preamble priority="critical">
-      All 3 steps in Phase 0 run sequentially on EVERY invocation — fresh project or resume. Resume-intent does NOT skip any step. Step 3 (Smart Resume Routing) branches on state.json existence and resume-intent, but Steps 1 and 2 always execute first in numbered order regardless of whether the user is starting fresh or resuming.
+      All steps in Phase 0 run sequentially on EVERY invocation — fresh project or resume. Resume-intent does NOT skip any step. Step 3 (Smart Resume Routing) branches on state.json existence and resume-intent, but Steps 1, 2, and 2b always execute first in numbered order regardless of whether the user is starting fresh or resuming.
     </preamble>
 
     <steps>
@@ -205,7 +209,7 @@
 
         <decision_tree>
           <branch condition="state.json EXISTS and is valid JSON">
-            <action>Read state.json. Proceed to the resume routing table below — match the first route that applies.</action>
+            <action>Read state.json. Verify these required fields are present: project_vision, current_phase, total_features, current_feature_index, status, fd_status, hands_off_mode, smoke_test_automation, git_automation_enabled, total_replans. If any required field is missing: default hands_off_mode to false, smoke_test_automation to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] }, and warn the user that state.json was pre-overhaul and fields were defaulted. Then proceed to the resume routing table below — match the first route that applies.</action>
           </branch>
 
           <branch condition="state.json does NOT exist OR is malformed">
@@ -263,19 +267,20 @@
                 </branch>
               </decision_tree>
             </action>
-            <action>If vision docs do NOT exist (fresh project): Ensure agent-workspace/project-director/ directory exists (create if missing — user confirmed fresh project above). Ensure agent-workspace/project-director/vision/ directory and subdirectories (features/, data/, screens/, flows/) exist. Create state.json with: project_vision (from user's vision), current_phase=1,
+            <action>If vision docs do NOT exist (fresh project): Ensure agent-workspace/project-director/ directory exists (create if missing — user confirmed fresh project above). Ensure agent-workspace/project-director/vision/ directory exists (subdirectories will be created by Phase 1 Step 0/1 based on detected project type). Ensure the project test directory structure exists: create tests/unit/, tests/integration/, and tests/e2e/ directories at the project root (use `mkdir` via command — these are empty scaffolding directories, not code). Create state.json with: project_vision (from user's vision), current_phase=1,
               total_features=0, current_feature_index=0, status="planning",
-              fd_status="idle", phase_2_substep=null, phase_4_substep=null, git_automation_enabled=true, total_replans=0, current_branch_name=null.</action>
+              fd_status="idle", phase_2_substep=null, phase_4_substep=null, git_automation_enabled=true, total_replans=0, current_branch_name=null,
+              hands_off_mode=false, smoke_test_automation={ enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] }.</action>
             <action>Create backlog.md from the dashboard_templates pattern in common patterns.</action>
             <action>Create current-state.md from the dashboard_templates pattern in common patterns.</action>
-            <goto>Phase 1 Step 2 — Spawn Vision Hasher for guided discovery</goto>
+            <goto>Phase 1 Step 0 — Detect Project Type (then routes to template writing and Vision Hasher spawn)</goto>
           </route>
 
           <!-- PHASE 1: Vision discovery interrupted -->
           <route condition="current_phase=1 AND status='planning'">
             <action>Check if vision docs exist in agent-workspace/project-director/vision/. If the vision/ directory does not exist, treat as "no vision docs."</action>
             <goto condition="vision-summary.md EXISTS">Phase 1 Step 3 — Vision Approval Gate (vision docs exist but never approved)</goto>
-            <goto condition="no vision docs">Phase 1 Step 2 — spawn fresh Vision Hasher</goto>
+            <goto condition="no vision docs">Phase 1 Step 0 — Detect Project Type (vision was never started)</goto>
             <goto condition="partial vision docs exist">Phase 1 Step 2 — re-spawn Vision Hasher to complete</goto>
           </route>
 
@@ -341,16 +346,16 @@
           <route condition="current_phase=4">
             <action>Phase 4 (QA & Audit) was in progress when context was lost. Use phase_4_substep and fd_status to determine exact resume point.</action>
             <subroute fd_status="completed">
-              <goto condition="phase_4_substep='pending_verification'">Phase 3 Step 4 — resume independent verification (verification was in progress when context was lost)</goto>
+              <goto condition="phase_4_substep='pending_verification'">Phase 3 Step 4 — resume independent verification</goto>
               <goto condition="phase_4_substep is null">Phase 4 Step 1 (Unit Tests)</goto>
-              <goto condition="phase_4_substep='unit_tests_passed'">Phase 4 Step 2 (Generate E2E)</goto>
-              <goto condition="phase_4_substep='e2e_generated'">Phase 4 Step 3 (Run E2E Suite)</goto>
-              <goto condition="phase_4_substep='e2e_passed'">
-                <action priority="critical">Verify the E2E test file exists: derive feature name from roadmap.md at position current_feature_index, sanitize, check for tests/e2e/feature-[sanitized-name].*. If the file EXISTS: proceed to Phase 4 Step 4 (Architectural Audit). If the file is MISSING: set phase_4_substep="unit_tests_passed" in state.json and route to Phase 4 Step 2 (re-generate E2E tests). Announce: "E2E test file for feature [N] was missing — re-generating." Do NOT proceed to Step 4 until the file is regenerated and Step 3 passes.</action>
-              </goto>
-              <goto condition="phase_4_substep='audited'">Phase 4 Step 5 (Vision Re-evaluation)</goto>
-              <goto condition="phase_4_substep='replan_in_progress'">Phase 4 Step 5 — re-plan was in progress. Check if roadmap.md was updated (compare features count with state.json total_features). If roadmap was updated: skip re-spawning Architect, proceed to presenting revised roadmap for approval. If not updated: re-enter re-plan decision tree.</goto>
-              <goto condition="phase_4_substep='vision_reevaluated'">Phase 4 Step 6 (Update Dashboard)</goto>
+              <goto condition="phase_4_substep='unit_tests_passed'">Phase 4 Step 2 (Run Existing E2E Suite)</goto>
+              <goto condition="phase_4_substep='e2e_regression_passed'">Phase 4 Step 3 (Evaluate Scope Drift)</goto>
+              <goto condition="phase_4_substep='scope_evaluated'">Phase 4 Step 4 (Generate New E2E from Roadmap)</goto>
+              <goto condition="phase_4_substep='e2e_generated'">Phase 4 Step 5 (Validate New E2E Test)</goto>
+              <goto condition="phase_4_substep='e2e_validated'">Phase 4 Step 6 (Architectural Audit)</goto>
+              <goto condition="phase_4_substep='audited'">Phase 4 Step 7 (Vision Re-evaluation)</goto>
+              <goto condition="phase_4_substep='replan_in_progress'">Phase 4 Step 3 or 7 — re-plan was in progress. Check if roadmap.md was updated. If updated: skip re-spawning Architect, proceed to presenting revised roadmap. If not: re-enter re-plan decision tree.</goto>
+              <goto condition="phase_4_substep='vision_reevaluated'">Phase 4 Step 8 (Update Dashboard)</goto>
               <goto condition="phase_4_substep='dashboarded'">Phase 5 Step 1 (Completion Report)</goto>
             </subroute>
             <subroute condition="fd_status is NOT 'completed'">
@@ -360,10 +365,14 @@
 
           <!-- PHASE 5: PR Gate interrupted — state.json persisted with current_phase=5 after crash -->
           <route condition="current_phase=5">
-            <action>Phase 5 (PR Gate) was in progress. Check if the feature branch still exists locally.</action>
-            <goto condition="fd_status='completed' AND phase_4_substep='dashboarded'">Phase 5 Step 1 — present completion report (full Phase 4 done, PR gate not yet started)</goto>
-            <goto condition="fd_status='idle' AND phase_4_substep is null">Phase 3 Step 1 — cleanup was already done, proceed to next feature</goto>
-            <action condition="neither of the above">Present to user via ask_followup_question: "state.json indicates Phase 5 was in progress but the exact substep is ambiguous. How proceed?" Options: "Resume from Phase 5 Step 1 (present report)", "Skip to post-PR cleanup (Phase 5 Step 4)", "I will manually specify."</action>
+            <action>Phase 5 (PR Gate) was in progress. Check phase_5_substep for precise resume point.</action>
+            <goto condition="phase_5_substep is null OR phase_5_substep='phase_set'">Phase 5 Step 0 — set current_phase=5 and phase_5_substep, then proceed to Step 1</goto>
+            <goto condition="phase_5_substep='report_presented'">Phase 5 Step 2 — re-present the PR offer (Step 1 was already done)</goto>
+            <goto condition="phase_5_substep='pr_offered'">Phase 5 Step 2 — re-present the PR offer (user may not have responded before crash)</goto>
+            <goto condition="phase_5_substep='pr_handled'">Phase 5 Step 4 — PR was handled (created or user confirmed), proceed to cleanup</goto>
+            <goto condition="phase_5_substep='state_updated'">Phase 5 Step 4 substep 0 or 1 — state was updated (index incremented) but cleanup may not be complete. Check if feature branch still exists: if yes, proceed with Step 4 cleanup substeps. If branch already deleted: set phase_5_substep="cleaned_up" and proceed to Step 5.</goto>
+            <goto condition="phase_5_substep='cleaned_up'">Phase 5 Step 5 — cleanup was done, proceed to course correction (which sets current_phase=3 and routes to next feature)</goto>
+            <action condition="none of the above OR phase_5_substep is missing from state.json">Present to user via ask_followup_question: "state.json indicates Phase 5 was in progress but phase_5_substep is unrecognized: [value]. How proceed?" Options: "Resume from Phase 5 Step 1 (present report)", "Proceed to Phase 5 Step 4 (cleanup)", "I will manually specify."</action>
           </route>
 
           <!-- PHASE 3: Execution interrupted -->
@@ -410,21 +419,23 @@
             <subroute fd_status="completed">
               <action priority="critical">Set current_phase=4 in state.json. (Ensures that even if a crash occurs mid-Phase-4, the Phase 4 resume route fires on next resume.)</action>
               <action>FD returned but QA/audit/PR interrupted. Use phase_4_substep to resume:</action>
-              <goto condition="phase_4_substep='pending_verification'">Phase 3 Step 4 — resume independent verification (verification was in progress when context was lost)</goto>
+              <goto condition="phase_4_substep='pending_verification'">Phase 3 Step 4 — resume independent verification</goto>
               <goto condition="phase_4_substep is null">Phase 4 Step 1 (Unit Tests)</goto>
-              <goto condition="phase_4_substep='unit_tests_passed'">Phase 4 Step 2 (Generate E2E)</goto>
-              <goto condition="phase_4_substep='e2e_generated'">Phase 4 Step 3 (Run E2E Suite)</goto>
-              <goto condition="phase_4_substep='e2e_passed'">Phase 4 Step 4 (Architectural Audit)</goto>
-              <goto condition="phase_4_substep='audited'">Phase 4 Step 5 (Vision Re-evaluation)</goto>
-              <goto condition="phase_4_substep='replan_in_progress'">Phase 4 Step 5 — re-plan was in progress. Check if roadmap.md was updated (compare features count with state.json total_features). If roadmap was updated: skip re-spawning Architect, proceed to presenting revised roadmap for approval. If not updated: re-enter re-plan decision tree.</goto>
-              <goto condition="phase_4_substep='vision_reevaluated'">Phase 4 Step 6 (Update Dashboard)</goto>
+              <goto condition="phase_4_substep='unit_tests_passed'">Phase 4 Step 2 (Run Existing E2E Suite)</goto>
+              <goto condition="phase_4_substep='e2e_regression_passed'">Phase 4 Step 3 (Evaluate Scope Drift)</goto>
+              <goto condition="phase_4_substep='scope_evaluated'">Phase 4 Step 4 (Generate New E2E from Roadmap)</goto>
+              <goto condition="phase_4_substep='e2e_generated'">Phase 4 Step 5 (Validate New E2E Test)</goto>
+              <goto condition="phase_4_substep='e2e_validated'">Phase 4 Step 6 (Architectural Audit)</goto>
+              <goto condition="phase_4_substep='audited'">Phase 4 Step 7 (Vision Re-evaluation)</goto>
+              <goto condition="phase_4_substep='replan_in_progress'">Phase 4 Step 3 or 7 — re-plan was in progress.</goto>
+              <goto condition="phase_4_substep='vision_reevaluated'">Phase 4 Step 8 (Update Dashboard)</goto>
               <goto condition="phase_4_substep='dashboarded'">Phase 5 Step 1 (Completion Report)</goto>
             </subroute>
           </route>
 
           <!-- ALL FEATURES DONE -->
           <route condition="current_phase=3 AND status='in_progress' AND current_feature_index >= total_features">
-            <action>Set status="complete" in state.json. Announce project completion.</action>
+            <action>Set status="complete" and total_replans=0 in state.json. Announce project completion.</action>
           </route>
           <route condition="status='complete'">
             <action>Announce project complete. If user requests more features, treat as scope-creep:
@@ -457,8 +468,67 @@
     <trigger>When Phase 0 routes here for a fresh project, or when resuming mid-vision-discovery</trigger>
 
     <steps>
+      <step number="0">
+        <title>Detect Project Type</title>
+        <description>
+          Before writing any templates, determine the project type from the user's vision brief.
+          The Vision Hasher has been generalized to support 6 project types, each with different
+          deliverable formats and phases. Write a vision/vision-config.json so the Vision Hasher
+          knows which workflows to execute.
+        </description>
+        <action>Analyze the user's vision brief for project type indicators:
+          - GUI application: screens, UI, pages, dashboard, visual design, forms, buttons, navigation, desktop, web app, mobile
+          - CLI tool: terminal, command-line, stdin/stdout, arguments, flags, shell, binary
+          - API/backend: REST, GraphQL, endpoints, HTTP, microservice, backend service
+          - Library/SDK: package, npm/pip/cargo, public API, import, module, SDK
+          - Game: gameplay, player, level, mechanics, score, engine (Unity/Unreal/Godot)
+          - Data pipeline: ETL, stream, batch, transform, ingest, Kafka, Spark, pipeline
+        </action>
+        <action>If the project type is clear from the vision brief: proceed to the routing below.</action>
+        <action>If unclear: use ask_followup_question — "What type of project is this?" Options:
+          1. "GUI application (web, desktop, or mobile)"
+          2. "CLI tool (terminal, command-line)"
+          3. "API/backend service"
+          4. "Library/SDK (package, module)"
+          5. "Game"
+          6. "Data pipeline (ETL, streaming)"
+        </action>
+        <decision_tree>
+          <branch condition="project_type = 'gui'">
+            <action>Write vision/vision-config.json with:
+              project_type="gui",
+              interface_surface="screen-based UI",
+              deliverable_format="Per-screen .md spec + interactive .html mock",
+              phases=["foundation", "screens", "flows", "edge_cases", "wire_up"]</action>
+            <goto>Step 1 — Write Vision Templates (standard GUI templates)</goto>
+          </branch>
+          <branch condition="project_type is non-GUI (cli|api|library|game|pipeline)">
+            <action>Write vision/vision-config.json with the correct project_type and appropriate
+              interface_surface, deliverable_format, and phases for that type:
+              - CLI: interface_surface="command-line interface", deliverable_format="Per-command .md spec + terminal session transcript", phases=["foundation", "commands", "workflows", "edge_cases", "wire_up"]
+              - API: interface_surface="HTTP endpoints", deliverable_format="Per-endpoint .md spec + OpenAPI contract", phases=["foundation", "endpoints", "integration_flows", "edge_cases", "wire_up"]
+              - Library: interface_surface="public API surface", deliverable_format="Per-module .md spec + runnable usage example", phases=["foundation", "public_api", "usage_flows", "edge_cases", "wire_up"]
+              - Game: interface_surface="game UI + mechanics", deliverable_format="Per-screen .md spec + .html mock + mechanics design docs", phases=["foundation", "screens_and_mechanics", "gameplay_flows", "edge_cases", "wire_up"]
+              - Pipeline: interface_surface="data pipeline stages", deliverable_format="Per-stage .md spec + Mermaid data flow diagram", phases=["foundation", "stages", "data_flows", "edge_cases", "wire_up"]</action>
+            <action priority="critical">Spawn Architect via new_task with: the project_type, the vision/vision-config.json, and this instruction:
+              "Study the GUI vision template structure in the PD's vision_templates section (3_common_patterns.xml) as a reference for quality and depth. Generate equivalent vision templates for this [project_type] project in agent-workspace/project-director/vision/. Templates must match the same level of detail: atomic files (app-overview.md, personas.md, feature-inventory.md, edge-cases.md), per-artifact subdirectories, and per-file template content appropriate to this project type. Use these VH-compatible subdirectory names:
+              - CLI: features/, data/, commands/, workflows/
+              - API: features/, data/, endpoints/, integration_flows/
+              - Library: features/, data/, public-api/, usage_flows/
+              - Game: features/, data/, screens/, mechanics/, gameplay_flows/
+              - Pipeline: features/, data/, pipeline-stages/, data_flows/
+              The Vision Hasher will fill these templates in-place. Do NOT write vision-summary.md or vision/state.json — the VH creates those."</action>
+            <action>Wait for Architect to return. Validate: all atomic templates exist, correct subdirectories
+              created with per-file templates matching project type. If Architect missed any: re-spawn with specific
+              gaps listed.</action>
+            <goto>Step 2 — Spawn Vision Hasher (skip Step 1 — Architect already wrote templates)</goto>
+          </branch>
+        </decision_tree>
+      </step>
+
       <step number="1">
-        <title>Write Vision Templates</title>
+        <title>Write Vision Templates (GUI Only)</title>
+        <description>This step runs only for GUI projects. Non-GUI projects skip here — Architect wrote templates in Step 0.</description>
         <action>Write default vision template files directly to agent-workspace/project-director/vision/ if they don't already exist. Use the vision_templates pattern from common patterns.</action>
         <action>Atomic templates: app-overview.md, personas.md, feature-inventory.md, edge-cases.md. Create empty subdirectories: features/, data/, screens/, flows/.</action>
       </step>
@@ -468,14 +538,16 @@
         <action priority="critical">Do NOT conduct the vision interview yourself. Spawn Vision Hasher via new_task
           using the vision_hasher_subtask_prompt from common patterns.</action>
         <action>Include: path to template files, the user's vision brief, any constraints.</action>
-        <action>Wait for the Vision Hasher to return with attempt_completion. The Vision Hasher will produce:
-          completed .md files across vision/ subdirectories (features/, data/, screens/, flows/), interactive .html mocks in vision/screens/, vision-summary.md, and vision/state.json.</action>
+        <action>Wait for the Vision Hasher to return with attempt_completion. The Vision Hasher will produce
+          completed .md files across vision/ subdirectories, project-type-specific deliverables (HTML mocks,
+          CLI transcripts, OpenAPI YAML, usage examples, Mermaid diagrams, or game mechanics docs — determined
+          by vision/vision-config.json), vision-summary.md, and vision/state.json.</action>
         <post_hasher_action priority="critical">
           When Vision Hasher completes:
           1. Read vision/state.json FIRST to determine completion status (current_phase, phase_status).
           2. If state.json current_phase="complete" and vision-summary.md EXISTS: read vision-summary.md. Note: total features described, total screens, flagged concerns. Then run validation checks 2a-2c below.
           2a. VALIDATE: If feature count = 0 AND screen count = 0, do NOT proceed to the approval gate. Flag to user: "The vision documents describe an app with zero features and zero screens. The Vision Hasher may not have completed successfully. Would you like to re-spawn the Vision Hasher with more specific guidance, or provide a written vision brief?" Options: "Re-spawn Vision Hasher with more context", "I'll provide a written vision brief", "Proceed anyway (accept empty vision)".
-          2b. VALIDATE: If feature count > 0 AND screen count = 0, add an informational flag: "This app has features but no UI screens — is this intentional (CLI/API-only app)?" No action required at the approval gate, but note this in the vision summary for the Architect's awareness during execution planning.
+          2b. VALIDATE: If feature count > 0 AND screen count = 0, verify against project_type from vision/vision-config.json. If project_type is "gui": flag "This GUI app has features but no UI screens — the Vision Hasher may not have completed screen generation. Would you like to re-spawn it?" Options: "Re-spawn Vision Hasher", "Proceed anyway (accept no screens)". If project_type is non-GUI (cli/api/library/game/pipeline): note in vision summary that zero screens is expected for this project type. No action required at the approval gate.
           2c. VALIDATE: Check vision-summary.md for template completion status. If any templates are marked incomplete (look for "⚠️ INCOMPLETE" markers), flag to user: "The Vision Hasher completed [N]/[M] templates. The following sections are incomplete: [list]. Would you like to re-spawn the Vision Hasher to complete them?" Options: "Re-spawn Vision Hasher for incomplete sections", "Proceed with what we have", "I'll fill the gaps manually".
           3. If state.json current_phase!="complete" (VH paused mid-discovery): do NOT expect vision-summary.md. Read state.json for progress: "Vision discovery is incomplete. Phase [N] ([phase]): [X]/[Y] artifacts complete. Last context: [last_context]." Ask user: "Re-spawn Vision Hasher to continue discovery?" Options: "Yes — re-spawn Vision Hasher", "No — proceed with what we have", "I'll fill the remaining gaps manually". If user selects "Yes — re-spawn": loop to Step 2 (Spawn Vision Hasher). VH will resume via state.json. If user selects "Proceed with what we have": continue to approval gate with partial vision (flag incomplete sections).
           4. Leave current_phase=1 — Approval Gate advances these.
@@ -642,7 +714,7 @@
           When Architect completes:
           1. Read roadmap.md.
           2. VALIDATE: Every feature has a name, 1-line description, and dependencies. Features are grouped by wave. No acceptance criteria are present (if they are, flag and ask Architect to remove them).
-          3. VALIDATE: If roadmap has zero features, flag to user: "The wave map has zero features. This is likely an error." Options: "Re-spawn Architect", "I'll provide a written plan", "Proceed anyway (accept empty roadmap)". If user chooses "Proceed anyway": set status="complete" in state.json and announce project completion.
+          3. VALIDATE: If roadmap has zero features, flag to user: "The wave map has zero features. This is likely an error." Options: "Re-spawn Architect", "I'll provide a written plan", "Proceed anyway (accept empty roadmap)". If user chooses "Proceed anyway": set status="complete" and total_replans=0 in state.json and announce project completion.
           4. Present for joint discussion — use ask_followup_question: "Wave map drafted: [N] features across [W] waves. These are the 'what' — the FD Architect will derive acceptance criteria from vision docs. Let's discuss before we finalize. What would you like to adjust?" Options:
              "Approved — proceed to assembly", "I need to review the wave map first", "I have feedback on specific features", "I'll make manual edits to roadmap.md."
           5. If user approves: set phase_2_substep="assembly" in state.json. Proceed to Step 5.
@@ -669,7 +741,7 @@
           When Architect completes:
           1. Read roadmap.md.
           2. Count TOTAL features (every numbered feature entry across all waves).
-          3. VALIDATE: If total_features = 0, flag to user: "The roadmap has zero features. This is likely an error." Options: "Re-spawn Architect", "I'll provide a written plan", "Proceed anyway (accept empty roadmap)". If user chooses "Proceed anyway": set status="complete" in state.json and announce project completion.
+          3. VALIDATE: If total_features = 0, flag to user: "The roadmap has zero features. This is likely an error." Options: "Re-spawn Architect", "I'll provide a written plan", "Proceed anyway (accept empty roadmap)". If user chooses "Proceed anyway": set status="complete" and total_replans=0 in state.json and announce project completion.
           4. Verify: every feature is numbered sequentially, dependencies flow forward (no feature depends on a later-numbered feature).
           5. Update state.json: total_features = count from roadmap.
           6. Set phase_2_substep="critic_review" in state.json. Proceed to Step 6 (Critic Review).
@@ -725,20 +797,38 @@
         </action>
         <decision_tree>
           <branch condition="Approved">
-            <action>Configure smoke test automation before proceeding to Phase 3.</action>
-            <smoke_test_configuration>
+            <action priority="critical">Read vision/vision-config.json to determine project_type.</action>
+
+            <!-- HANDS-OFF MODE: Always asked for all project types -->
+            <step number="hands_off_mode_config">
+              <title>Hands-Off Mode Configuration (All Project Types)</title>
+              <action>Use ask_followup_question: "Hands-off mode skips all user interaction during feature development. Model smoke tests (CLI/build/curl) are self-verified by Code. GUI smoke tests are collected and presented at the end of each feature. The next time you'll need to interact is when each feature completes. Enable hands-off mode?" Options:
+                1. "Yes — hands-off mode (no interruptions until each feature end)"
+                2. "No — I'll verify smoke tests as they come"
+              </action>
+              <action>Store the user's choice in state.json: hands_off_mode = true if option 1, false if option 2.</action>
+            </step>
+
+            <!-- SMOKE TEST AUTOMATION: Only for GUI/Game project types -->
+            <action condition="project_type is cli, api, library, or pipeline">
+              Smoke test automation using synthetic-human-tester is for GUI applications only (web, desktop, mobile, game UI). CLI, API, library, and pipeline projects use Model-only verification — all steps are automatically self-verified by Code mode. Auto-set smoke_test_automation.enabled = false. Skip ALL smoke test configuration steps below. Proceed directly to updating state.json for Phase 3 transition.
+              Store in state.json: smoke_test_automation: { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] }
+            </action>
+
+            <smoke_test_configuration condition="project_type is gui or game, or vision/vision-config.json does not exist (default GUI — backward compatible)">
               <description>
                 Ask the user whether to enable automated GUI smoke testing via synthetic-human-tester.
-                Smoke testing is only for GUI environments (web, desktop, native) — Code mode self-verifies CLI, build, and integration tests.
+                Smoke test automation using synthetic-human-tester is for GUI applications only (web, desktop, mobile, game UI). CLI, API, library, and pipeline projects use Model-only verification — all steps are automatically self-verified by Code mode.
                 If enabled, validate MCP prerequisites for each GUI environment.
               </description>
               <step number="1">
-                <action>Use ask_followup_question: "Would you like to enable automated GUI smoke testing? This spawns an AI agent to verify GUI interactions (web, desktop, native) that Code mode cannot self-verify. CLI, build, and integration tests are self-verified — no human or SHT needed for those." Options:
+                <action>Use ask_followup_question: "Would you like to enable automated GUI smoke testing? This spawns an AI agent to verify GUI interactions (web, desktop, native, game UI) that Code mode cannot self-verify. CLI, build, and integration tests are self-verified — no human or SHT needed for those. Note: smoke test automation is for GUI applications only." Options:
                   1. "Yes — enable automated GUI smoke testing"
                   2. "No — I'll test GUI manually"
                 </action>
               </step>
-              <step number="2">
+              <!-- Note: Hands-off mode was already configured above for all project types -->
+              <step number="3">
                 <action condition="User selects Yes">Validate MCP prerequisites. Check if smoke_test_automation already has environments configured (resume case) — if yes, skip to step 3.</action>
                 <action priority="high">Detect the project type from the tech stack in planning/tech-stack.md and roadmap.md. Scan for platform indicators:
                   - Web: "web app", "React", "Next.js", "Express", "Django", "Rails", "Vue", "Svelte", "Angular", "browser", "SPA", "SSR"
@@ -754,7 +844,7 @@
                   For each environment, note whether the recommended MCP is available. If not, warn with install instructions.
                 </action>
               </step>
-              <step number="3">
+              <step number="4">
                 <action>Store the configuration in state.json (mcp_available/mcp_name/verified initially false/null/false — populated by verification below):
                   smoke_test_automation: {
                     enabled: true,
@@ -767,7 +857,7 @@
                   }
                 </action>
               </step>
-              <step number="4">
+              <step number="5">
                 <action condition="User selects No">Store in state.json:
                   smoke_test_automation: {
                     enabled: false,
@@ -776,10 +866,10 @@
                   }
                 </action>
               </step>
-              <step number="5">
-                <action>Only when enabled is true: write the configuration to agent-workspace/testing-environments.json for persistence across features. Do NOT write the file when enabled is false.</action>
+              <step number="6">
+                <action>Write the configuration to agent-workspace/testing-environments.json for persistence across features. Always include hands_off_mode from state.json. Always write the smoke_test_automation block: when enabled is true, include full environment config; when disabled, write { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] }. This allows FD to read hands_off_mode from the file on standalone use.</action>
               </step>
-              <step number="6" condition="enabled is true">
+              <step number="7" condition="enabled is true">
                 <action priority="high">Verify each configured environment and populate mcp_available/mcp_name/verified in state.json:
                   - Web: Check for browser MCP tools. If yes: set mcp_available=true, mcp_name. Navigate → set verified. If no browser MCP: warn "Install Playwright from the Roo Code MCP tab → Marketplace (or manually: npx @playwright/mcp@latest, then add to Roo Code MCP settings)."
                   - Native: Check Appium MCP. Set fields. If unavailable: provide Appium install + Roo config instructions.
@@ -992,7 +1082,7 @@
 
       <step number="1">
         <title>Read State and Identify Next Feature</title>
-        <action>Read state.json. If current_feature_index == total_features: set status="complete" in state.json, announce project completion, and STOP. Do NOT read roadmap.md. Do NOT proceed to any further steps — the project is finished.</action>
+        <action>Read state.json. If current_feature_index == total_features: set status="complete" and total_replans=0 in state.json, announce project completion, and STOP. Do NOT read roadmap.md. Do NOT proceed to any further steps — the project is finished.</action>
         <action>If current_feature_index < total_features: read roadmap.md to locate the feature at position current_feature_index + 1. If no feature exists at that position (roadmap may have been edited), flag to user.</action>
       </step>
 
@@ -1003,11 +1093,23 @@
           <element number="1">Feature position: "You are building Feature [X] of [Y] — [Name] from [Wave]."</element>
           <element number="2">The feature line from the wave map (name, 1-line description, dependencies). The FD Architect uses this as the high-level scope.</element>
           <element number="3">Paths to the full planning/ directory (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md) — so the FD Architect understands the architecture and abstractions.</element>
-          <element number="4">Pre-resolved vision file paths: before constructing this prompt, read vision-summary.md's Feature Index table (Feature | Tier | Screens Used | Data Entities). Locate the target feature and extract the specific screens and data entities listed for it. Include the EXACT file paths — features/[feature-name].md, screens/[screen-a].md, screens/[screen-b].md (canonical AI-mode specs), data/[entity-x].md, data/[entity-y].md — plus vision-summary.md and feature-inventory.md for index context. Also note the HTML mock paths (screens/*.html) for visual reference. Do NOT dump entire directory paths — provide only the files relevant to this feature as determined by the Feature Index.</element>
+          <element number="4">Pre-resolved vision file paths: before constructing this prompt, read vision/vision-config.json to determine project_type. Then read vision-summary.md's Feature Index table (Feature | Tier | Artifacts Used | Data Entities). Locate the target feature and extract the specific artifacts and data entities listed for it.
+
+            Project-type-adaptive artifact paths (use the format matching vision/vision-config.json project_type):
+            - GUI: "screens/[name].md and screens/[name].html"
+            - CLI: "commands/[name].md and commands/[name].session.md"
+            - API: "endpoints/[name].md and endpoints/[name].openapi.yaml"
+            - Library: "public-api/[name].md and public-api/[name].example.*"
+            - Game: "screens/[name].md + screens/[name].html AND mechanics/[name].md"
+            - Pipeline: "pipeline-stages/[name].md with Mermaid diagrams"
+            If vision/vision-config.json does not exist: default to GUI (screens/) — backward compatible.
+
+            Include the EXACT file paths for the project type — features/[feature-name].md, [artifact-type]/[artifact-a].md, [artifact-type]/[artifact-b].md (canonical AI-mode specs), data/[entity-x].md, data/[entity-y].md — plus vision-summary.md and feature-inventory.md for index context. Also note any companion deliverable files (HTML mocks, OpenAPI YAML, session transcripts, usage examples, Mermaid diagrams) for reference. Do NOT dump entire directory paths — provide only the files relevant to this feature as determined by the Feature Index.</element>
           <element number="5">Instruction: "Read the vision docs for this feature. Derive acceptance criteria from the vision. Create an implementation plan using the architecture and abstractions from planning/." The FD Architect owns acceptance criteria — the wave map provides only the feature name, 1-line description, and dependencies. The specific vision files for this feature are listed above — read those exact files to derive acceptance criteria.</element>
           <element number="6">Completion instruction from common patterns feature_developer_prompt_construction.</element>
           <element number="7">Context about previously built features from current-state.md "What the App Can Currently Do". If more than 3 prior features, summarize concisely (≤2 sentences).</element>
-          <element number="8">Smoke test automation configuration: read the full smoke_test_automation block from state.json. Pass the entire block (enabled, environments with all fields including mcp_available/mcp_name/verified, missing_prerequisites) to FD as literal config in the spawn prompt. FD stores this in its state.json and passes it to Code mode subtasks. If smoke_test_automation.enabled is false or not yet configured, pass enabled: false.</element>
+          <element number="8">Hands-off mode: read hands_off_mode from state.json. Pass as literal boolean in the FD spawn prompt: "hands_off_mode: true" or "hands_off_mode: false". FD uses this to skip user interaction gates and defer GUI smoke tests to feature end.</element>
+          <element number="9">Smoke test automation configuration: read the full smoke_test_automation block from state.json. Pass the entire block (enabled, environments with all fields including mcp_available/mcp_name/verified, missing_prerequisites) to FD as literal config in the spawn prompt. FD stores this in its state.json and passes it to Code mode subtasks. If smoke_test_automation.enabled is false or not yet configured, pass enabled: false.</element>
         </required_elements>
       </step>
 
@@ -1057,18 +1159,22 @@
     <title>QA & Architectural Alignment Audit + Vision Re-evaluation</title>
     <trigger>When the feature-developer subtask returns successfully from Phase 3</trigger>
     <overview>
-      Three testing gates, then architectural audit, then vision re-evaluation:
+      Eight gates after every feature:
       (1) Run unit/integration tests — catch code regressions.
-      (2) Generate E2E tests via E2E generation subtask — E2E generation subtask analyzes project type and selects the appropriate E2E framework.
-      (3) Run full E2E suite — if all pass, feature is "locked in" to the regression suite.
-      Then (4) architectural audit, (5) vision re-evaluation, and (6) dashboard update.
+      (2) Run full existing E2E suite — regression check. MUST run, no exceptions.
+      (3) Evaluate scope drift — cross-reference FD completion, git diff, roadmap, vision.
+      (4) Generate new E2E test from roadmap E2E spec — spawn Code subtask.
+      (5) Validate new E2E test — read file, fix if broken.
+      (6) Architectural audit. (7) Vision re-evaluation. (8) Dashboard update.
     </overview>
 
     <steps>
+      <!-- STEP 1: Unit Tests -->
       <step number="1">
         <title>Unit & Integration Regression Testing</title>
-        <action>Run the project's unit test suite. Since the feature-developer enforces tests/unit/ as the
-          unit test directory, check for a test script in the project (package.json scripts, Makefile, etc.).
+        <action>Run the project's unit and integration test suites. Since the feature-developer enforces tests/unit/
+          and tests/integration/ as the test directories, check for test scripts in the project (package.json scripts,
+          Makefile, etc. — typically `npm test` or `npm run test:unit && npm run test:integration`).
           If no test script is found, ask the user for the command. If the user confirms no test suite exists,
           note "⚠️ No unit test suite configured" in the audit report and proceed to Step 2.</action>
         <decision_tree>
@@ -1093,161 +1199,255 @@
         </decision_tree>
       </step>
 
+      <!-- STEP 2: Run Existing E2E Suite — Regression Gate (MUST run) -->
       <step number="2" priority="critical">
-        <title>Generate E2E Regression Tests via E2E Generation Subtask</title>
+        <title>Run Full Existing E2E Suite — Regression Gate</title>
         <description>
-          Spawn an E2E generation subtask (Code mode) that analyzes the project type, selects the appropriate E2E
-          framework, and writes acceptance-criteria-driven E2E tests to tests/e2e/.
+          Run ALL existing E2E tests to verify the new feature hasn't broken anything. This gate MUST run — no exceptions, no silent skips.
         </description>
 
-        <sub_step number="1">
-          <action>Read the feature's entry from roadmap.md to extract: feature name, dependencies.</action>
-          <action>Sanitize feature name for file: lowercase, spaces/special-chars → hyphens.</action>
-          <action>Read the FD's archived plan (agent-workspace/feature/archive/plan-[sanitized].md) to extract the acceptance criteria the FD Architect derived from vision docs — these are the criteria the E2E tests must verify.</action>
-        </sub_step>
+        <action>Check if tests/e2e/ directory exists and contains any test files. If the directory is empty or doesn't exist (first feature, or no E2E tests generated yet): note "No existing E2E tests — regression gate skipped (nothing to regress)." Set phase_4_substep="e2e_regression_passed" in state.json. Proceed to Step 3.</action>
 
-        <sub_step number="2">
-          <title>Idempotency Check</title>
-          <action>Ensure tests/e2e/ directory exists. Check if tests/e2e/feature-[sanitized-name].* already exists (any extension — .spec.ts, .test.ts, .cs, .py, etc.). The exact extension will be determined by the E2E generation subtask based on the chosen framework. Note: the E2E generation subtask handles tests/e2e/ directory creation and file writes — the PD only checks for existence (read) and delegates all writes.</action>
-          <decision_tree>
-            <branch condition="E2E test file ALREADY EXISTS">
-              <action>Announce: "E2E test file already exists: [filename]. Skipping generation (resume)."</action>
-              <action>Set phase_4_substep="e2e_generated" in state.json. Skip to Step 3.</action>
-            </branch>
-          </decision_tree>
-        </sub_step>
+        <action>Determine the E2E run command. Check current-state.md's e2e_regression_suite section for the framework and run command from previous features. If current-state.md has no E2E info: scan tests/e2e/ for existing test files, infer the framework from file extensions (.spec.ts → Playwright, .cs → .NET, .py → pytest, etc.), and construct the run command. If the command cannot be determined: ask the user "What command runs the E2E test suite?"</action>
 
-        <sub_step number="3">
-          <title>Spawn the E2E Generation Subtask</title>
-          <action>Spawn code mode subtask via new_task using the e2e_test_generation_prompt from common patterns.</action>
-          <action>Include: tech stack context from planning/ directory and knowledge files, feature name (sanitized) and acceptance criteria (from FD's archived plan), target path tests/e2e/feature-[sanitized-name].{ext}.</action>
-          <action>Wait for completion.</action>
-        </sub_step>
+        <action priority="critical">Run the full E2E suite (all existing tests).</action>
 
-        <sub_step number="4">
-          <title>Process E2E Generation Subtask Completion</title>
-          <action>Extract from completion: E2E framework chosen, run command, test file created, setup notes/warnings.</action>
-          <action>Check if a test file was actually created. If yes, set phase_4_substep="e2e_generated" in state.json. If no, do NOT set "e2e_generated" — leave as "unit_tests_passed" and note the omission for Step 3.</action>
-        </sub_step>
-      </step>
-
-      <step number="3">
-        <title>Run the E2E Regression Suite — Lock-In Gate</title>
-        <action>Verify that phase_4_substep is "e2e_generated" (tests were successfully generated in Step 2). If phase_4_substep is NOT "e2e_generated": skip to Step 4 with a note "⚠️ E2E tests were not generated — lock-in skipped." Document in current-state.md as "⚠️ Feature not locked into E2E regression suite — tests not generated."</action>
-        <action>Run the E2E test command reported by the E2E generation subtask. If the command fails because the
-          framework isn't installed, re-spawn the E2E generation subtask with the error to fix setup.</action>
         <decision_tree>
-          <branch condition="ALL E2E tests PASS">
-            <action>Announce: "✅ E2E Regression Suite: [N] tests passed. Feature '[Name]' locked in."</action>
-            <action>Set phase_4_substep="e2e_passed". Proceed to Step 4.</action>
+          <branch condition="ALL existing E2E tests PASS">
+            <action>Announce: "✅ E2E Regression: All [N] existing tests pass. No regressions."</action>
+            <action>Set phase_4_substep="e2e_regression_passed" in state.json. Proceed to Step 3.</action>
           </branch>
-          <branch condition="E2E tests FAIL">
-            <action>Determine failure type:</action>
-            <sub_branch condition="New test fails (existing pass)">
-              Re-spawn E2E generation subtask with failure output to fix the test. Do NOT modify application code.
-            </sub_branch>
-            <sub_branch condition="Existing test fails (new passes)">
-              True regression — new feature broke locked-in behavior. Spawn code subtask to fix
-              application code. Do NOT modify the E2E test.
-            </sub_branch>
-            <sub_branch condition="Both fail">
-              Fix application code first, then re-spawn QA if needed.
-            </sub_branch>
-            <action>Wait for fix, re-run suite.</action>
+
+          <branch condition="EXISTING E2E tests FAIL">
+            <action priority="critical">TRUE REGRESSION — the new feature broke previously-locked-in behavior. The EXISTING test is the authority. Do NOT modify the E2E test.</action>
+            <action>Spawn a Code subtask to fix the APPLICATION CODE. Include: the failing E2E test output, the feature's roadmap entry, and instruction: "Existing E2E tests are failing after the latest feature. The E2E tests are correct — fix the application code to make them pass. Do NOT modify any files in tests/e2e/."</action>
+            <action>Wait for fix, then re-run the full E2E suite.</action>
             <decision_tree>
-              <branch condition="Still fail after fix">
-                <action>Present to user with options: "Retry", "Skip E2E lock-in (not recommended)", "I'll fix manually".
-                  If skipped: document in current-state.md as "⚠️ Feature not locked into E2E regression suite."</action>
+              <branch condition="All tests now pass">
+                <action>Set phase_4_substep="e2e_regression_passed". Proceed to Step 3.</action>
               </branch>
-              <branch condition="Now pass">
-                <action>Announce lock-in. Set phase_4_substep="e2e_passed". Proceed to Step 4.</action>
+              <branch condition="Tests still fail after fix">
+                <action priority="critical">Escalate to user via ask_followup_question: "E2E regression suite still failing after fix attempt. The new feature introduced a regression that couldn't be automatically resolved. How proceed?" Options:
+                  1. "Retry fix — spawn another Code subtask"
+                  2. "Skip E2E regression lock-in for this feature (not recommended — document as known risk)"
+                  3. "I'll fix the regression manually and come back"
+                </action>
+                <action>If user selects Retry: spawn another Code subtask with the failure output and previous fix attempt context. If still fails after retry: escalate again. Do NOT loop more than twice without user direction.</action>
+                <action>If user selects Skip: document in current-state.md as "⚠️ Feature [N] not locked into E2E regression suite — existing tests failed and couldn't be fixed." Set phase_4_substep="e2e_regression_passed" (acknowledging skip). Proceed to Step 3.</action>
+                <action>If user selects Manual fix: wait for user. When they confirm, re-run E2E suite. If passing: proceed to Step 3.</action>
               </branch>
             </decision_tree>
           </branch>
         </decision_tree>
       </step>
 
-      <step number="4" priority="critical">
-        <title>Architectural Alignment Audit</title>
-        <action>Check if all 4 knowledge files exist in agent-workspace/knowledge/. If any are missing,
-          see knowledge_files_do_not_exist in error_handling. If present, read all four.</action>
-        <audit_checklist>
-          <item>Spaghetti Code: circular dependencies or tightly coupled components?</item>
-          <item>Duplicated Logic: same patterns described in multiple places without shared abstraction?</item>
-          <item>Architectural Drift: new feature deviate from the planning/ directory's established architecture?</item>
-          <item>Wave Integrity: does this feature properly extend Wave N abstractions rather than modifying them?</item>
-          <item>Tech Debt Signals: TODO markers, "temporary" solutions, bypass patterns?</item>
-          <item>Knowledge Completeness: all four files populated with meaningful content?</item>
-          <item>Test Coverage Visibility: documentation reference tests/unit/ and tests/e2e/ coverage?</item>
-        </audit_checklist>
-        <action>Assign Architectural Health rating (Excellent/Good/Fair/Poor) with specific evidence.</action>
-        <action>Set phase_4_substep="audited" in state.json.</action>
-      </step>
-
-      <step number="5" priority="critical">
-        <title>Vision Re-evaluation — Keep the Vision Fluid</title>
+      <!-- STEP 3: Evaluate Scope Drift -->
+      <step number="3" priority="critical">
+        <title>Evaluate Scope Drift</title>
         <description>
-          Compare what was just built against the vision documents. The vision is fluid — it must
-          always reflect the true current understanding of the final app.
+          Cross-reference the FD's completion against the roadmap, vision, git diff, and actual project files.
+          Catching drift here — before E2E generation and audit — prevents building E2E tests for misaligned code.
         </description>
 
-        <action>Read all vision docs in agent-workspace/project-director/vision/.</action>
-        <action>Check the FD's completion summary for the scope-drift assessment. If the delivered feature diverges from the acceptance criteria derived by the FD Architect, note which criteria were affected and whether the adjustment was minor or major. This tells you where to focus during the vision comparison below.</action>
-        <action priority="critical">Roadmap alignment check: read the feature's entry from roadmap.md. Compare the acceptance criteria from the FD's archived plan against four sources: the FD's completion summary, the git diff (try to re-run `git diff --stat trunk...feature-branch` if the diff from Phase 3 Step 4 check (0) is stale or was never generated), the knowledge file updates, and the actual project files. If the git diff is completely unavailable (git disabled, branch null, or command fails): fall back to using knowledge/architecture.md for the structural file inventory and the FD's archived plan at agent-workspace/feature/archive/plan-[sanitized].md for the per-step file list — use these to reconstruct what files should exist and cross-reference against the project. When the diff IS available: use its file list as your systematic map — instead of spot-checking random files, use it to guide targeted reads of every modified directory. Pay special attention to: (i) Wave 1-2 abstraction files appearing in the diff — these should almost never be modified by Wave 3 features, (ii) directories that don't match the feature's domain, (iii) new shared utilities or config changes not mentioned in the roadmap. Do not attempt to verify code correctness (that was QA's job) — verify structural alignment: do the right files exist? Do they reference the expected patterns?</action>
-        <action>Compare against: FD's completion summary (including your independent verification from Phase 3 Step 4), the feature's roadmap entry, and what was
-          actually built (from knowledge files, audit findings, and project file spot-checks).</action>
+        <action>Read the feature's entry from roadmap.md: feature name, 1-line description, dependencies, and E2E spec.</action>
+        <action>Read the FD's completion summary for the scope-drift self-assessment.</action>
+        <action priority="critical">Cross-reference four sources: (a) the roadmap entry for this feature, (b) the FD's completion summary and archived plan (agent-workspace/feature/archive/plan-[sanitized].md), (c) the git diff of the feature branch (if available — same diff from Phase 3 Step 4), and (d) the actual project files. If git diff is unavailable: use knowledge/architecture.md for structural file inventory and the archived plan for the per-step file list.</action>
+        <action>When the git diff IS available: use its file list as a systematic map. Pay special attention to: (i) Wave 1-2 abstraction files appearing in the diff — these should almost never be modified by Wave 3+ features, (ii) directories that don't match the feature's domain, (iii) new shared utilities or config changes not mentioned in the roadmap.</action>
 
-        <re_evaluation_decision_tree>
-          <branch condition="NO DRIFT — built feature matches vision exactly">
-            <action>No changes to vision docs. Note in current-state.md under "Vision Updates": "Feature [N] built as envisioned — no vision changes."</action>
+        <drift_decision_tree>
+          <branch condition="NO DRIFT — built feature matches roadmap entry and vision">
+            <action>Set phase_4_substep="scope_evaluated" in state.json. Proceed to Step 4.</action>
           </branch>
 
           <branch condition="MINOR DRIFT — small discrepancies that don't affect other features">
-            <action>PD edits the relevant vision .md file(s) directly to reflect reality.
-              Examples: layout changed from 3-column to 2-column, added a button not in vision,
-              feature behavior slightly simpler than described.</action>
-            <action>Note in current-state.md under "Vision Updates": what changed and why.</action>
+            <action>PD edits the relevant vision .md file(s) directly to reflect reality. Note in current-state.md under "Vision Updates": what changed and why.</action>
+            <action>If the drift changes what should be tested end-to-end, update the feature's roadmap E2E spec directly in roadmap.md.</action>
+            <action>Set phase_4_substep="scope_evaluated" in state.json. Proceed to Step 4.</action>
           </branch>
 
-          <branch condition="MAJOR DRIFT — changes that affect remaining roadmap features">
-            <action>Flag for user via ask_followup_question: "The vision and what we built have diverged.
-              [Describe the specific divergence and which remaining features it affects.] How should we proceed?"
-              Provide options:
+          <branch condition="MAJOR DRIFT — changes that affect remaining roadmap features OR unexpected modification of Wave 1-2 infrastructure">
+            <action>Flag for user via ask_followup_question: "Major scope drift detected. [Describe the specific divergence and which remaining features it affects.] How proceed?"
+              Options:
               1. "Re-plan remaining features with updated vision"
               2. "Accept the divergence — update vision docs but don't re-plan"
               3. "I'll manually update the vision and roadmap"
             </action>
             <decision_tree>
               <branch condition="Re-plan">
-                <action>Set phase_4_substep="replan_in_progress" in state.json (crash guard: if context is lost during re-plan, resume knows Architect was spawned).</action>
-                <action>Spawn Architect with: updated vision docs, list of completed features (1 through current_feature_index), and instruction to revise roadmap for remaining features only.</action>
-                <action>After Architect returns: VALIDATE that new total_features >= current_feature_index. If new total_features < current_feature_index: flag to user via ask_followup_question — "The re-plan removed [N] features that were already built (total_features dropped from [old] to [new], but current_feature_index is [index]). How proceed?" Options: "Restore removed features to roadmap", "Mark project complete with remaining features as backlog", "I will manually adjust the roadmap." Do NOT proceed until resolved.</action>
-                <action>Perform a generalization audit on the new/revised features: scan for over-specific vendor references, ensure all integration points use abstraction patterns. If issues found, re-spawn Architect with specific revision targets (same as Phase 2 Step 7). If Architect fails after a second attempt: escalate to user with documented risk note. Present the remaining over-specific features and let the user choose: "Accept with risk note", "I will provide manual guidance", or "Restart execution planning from scratch."</action>
-                <action priority="critical">Present the revised roadmap for user approval using the same gate format as Phase 2 Step 4 (summary, 4 response options, human approval required). Do NOT proceed until approved.</action>
-                <action priority="critical">Only AFTER user approves the revised roadmap: update total_features in state.json if count changed. Increment total_replans in state.json by 1. If user rejects (asks for revision or manual edits): do NOT update total_features or total_replans — handle the revision/review path without mutating state, then re-present for approval. Only mutate state.json after final approval.</action>
+                <action>Set phase_4_substep="replan_in_progress" in state.json.</action>
+                <action>Spawn Architect with: updated vision docs, list of completed features (1 through current_feature_index), and instruction to revise roadmap for remaining features only — including their E2E specs.</action>
+                <action>After Architect returns: validate total_features >= current_feature_index. Present revised roadmap for user approval (same gate as Phase 2 Step 4). Update total_features and increment total_replans after approval.</action>
+                <action>After re-plan approved: set phase_4_substep="scope_evaluated". Proceed to Step 4.</action>
               </branch>
               <branch condition="Accept divergence">
-                <action>PD edits vision docs to match reality. Document gap in current-state.md.</action>
+                <action>PD edits vision docs to match reality. Update roadmap E2E spec if needed. Set phase_4_substep="scope_evaluated". Proceed to Step 4.</action>
               </branch>
               <branch condition="Manual edits">
-                <action>Wait for user. When ready, re-read vision docs and roadmap. Update total_features in state.json if changed.</action>
+                <action>Wait for user. When ready, re-read vision docs and roadmap. Set phase_4_substep="scope_evaluated". Proceed to Step 4.</action>
               </branch>
             </decision_tree>
+          </branch>
+        </drift_decision_tree>
+      </step>
+
+      <!-- STEP 4: Generate New E2E from Roadmap Spec -->
+      <step number="4" priority="critical">
+        <title>Generate New E2E Test from Roadmap E2E Spec</title>
+        <description>
+          Read the feature's E2E spec from roadmap.md (written by Architect during wave map). Spawn a Code subtask to generate the E2E test.
+        </description>
+
+        <sub_step number="1">
+          <title>Read Roadmap E2E Spec</title>
+          <action>Read the feature's entry from roadmap.md. Extract the E2E spec line.</action>
+          <decision_tree>
+            <branch condition="E2E spec is 'Not applicable — [reason]'">
+              <action>Announce: "E2E not applicable for this feature — [reason from roadmap]."</action>
+              <action>Set phase_4_substep="e2e_validated" in state.json. Skip to Step 6 (Audit) — no E2E test to generate or validate. (Setting e2e_validated (not e2e_generated) ensures resume routing goes directly to Step 6, not Step 5 which would try to read a non-existent file.)</action>
+            </branch>
+          </decision_tree>
+          <action>Sanitize feature name for file: lowercase, spaces/special-chars → hyphens.</action>
+        </sub_step>
+
+        <sub_step number="2">
+          <title>Idempotency Check</title>
+          <action>Ensure tests/e2e/ directory exists. Check if tests/e2e/feature-[sanitized-name].* already exists.</action>
+          <decision_tree>
+            <branch condition="E2E test file ALREADY EXISTS">
+              <action>Announce: "E2E test file already exists: [filename]. Skipping generation (resume)."</action>
+              <action>Set phase_4_substep="e2e_generated" in state.json. Proceed to Step 5 (validate existing file).</action>
+            </branch>
+          </decision_tree>
+        </sub_step>
+
+        <sub_step number="3">
+          <title>Spawn the E2E Generation Subtask</title>
+          <action>Spawn Code mode subtask via new_task using the e2e_test_generation_prompt from common patterns.</action>
+          <action>Include: tech stack context from planning/, feature name (sanitized), and the EXACT E2E spec from roadmap.md (NOT from FD's archived plan).</action>
+          <action>Wait for completion.</action>
+        </sub_step>
+
+        <sub_step number="4">
+          <title>Process E2E Generation Subtask Completion</title>
+          <action>Extract from completion: E2E framework chosen, run command, test file created, setup notes/warnings.</action>
+          <action priority="critical">Verify the test file was actually created at tests/e2e/feature-[sanitized-name].*.</action>
+          <decision_tree>
+            <branch condition="Test file EXISTS">
+              <action>Set phase_4_substep="e2e_generated" in state.json. Proceed to Step 5.</action>
+            </branch>
+            <branch condition="Test file does NOT exist">
+              <action priority="critical">Escalate to user via ask_followup_question: "E2E generation subtask completed but did not create the test file. How proceed?" Options:
+                1. "Retry — re-spawn E2E generation subtask"
+                2. "Skip E2E for this feature (not recommended)"
+                3. "I'll write the E2E test manually"
+              </action>
+              <action>If user selects Retry: re-spawn with more context. If still no file: escalate again — do NOT loop more than twice.</action>
+              <action>If user selects Skip: document in current-state.md as "⚠️ Feature not locked into E2E regression suite — test generation failed." Set phase_4_substep="e2e_generated" (acknowledging skip). Proceed to Step 6 (skip Step 5).</action>
+              <action>If user selects Manual: wait for user. When they confirm the test file exists, set phase_4_substep="e2e_generated". Proceed to Step 5.</action>
+            </branch>
+          </decision_tree>
+        </sub_step>
+      </step>
+
+      <!-- STEP 5: Validate New E2E Test -->
+      <step number="5" priority="critical">
+        <title>Validate New E2E Test</title>
+        <description>
+          Read the newly generated E2E test file. Verify it correctly implements the roadmap E2E spec. If the test has bugs, spawn Code to fix the E2E TEST (not the app — already verified in Step 2).
+        </description>
+
+        <action>Read the new E2E test file at tests/e2e/feature-[sanitized-name].*.</action>
+        <action>Compare against the roadmap E2E spec: does the test cover every point? Are the selectors reasonable? Does the test structure follow project conventions?</action>
+
+        <decision_tree>
+          <branch condition="Test looks correct — covers all E2E spec points, no obvious issues">
+            <action>Set phase_4_substep="e2e_validated" in state.json. Proceed to Step 6 (Audit).</action>
+          </branch>
+
+          <branch condition="Test has bugs or issues — missing spec points, broken selectors, logical errors">
+            <action>Spawn a Code subtask to fix the E2E TEST FILE. Include: the test file path, the roadmap E2E spec, and a description of what's wrong. Instruction: "Fix the E2E test. Do NOT modify application code — the app is already verified. Only fix the test file."</action>
+            <action>Wait for completion. Re-read the test file.</action>
+            <decision_tree>
+              <branch condition="Test now looks correct">
+                <action>Set phase_4_substep="e2e_validated". Proceed to Step 6.</action>
+              </branch>
+              <branch condition="Test still has issues">
+                <action>Escalate to user via ask_followup_question: "E2E test still has issues after fix attempt. How proceed?" Options:
+                  1. "Retry fix"
+                  2. "Accept test as-is (document known issues)"
+                  3. "I'll fix the test manually"
+                </action>
+                <action>If user selects Retry: re-spawn Code. If still broken: escalate again — do NOT loop more than twice.</action>
+                <action>If user accepts or fixes manually: set phase_4_substep="e2e_validated". Proceed to Step 6.</action>
+              </branch>
+            </decision_tree>
+          </branch>
+        </decision_tree>
+      </step>
+
+      <!-- STEP 6: Architectural Audit -->
+      <step number="6" priority="critical">
+        <title>Architectural Alignment Audit</title>
+        <action>Read vision/vision-config.json to determine project_type. Based on project_type, determine the expected knowledge file set:
+          - GUI (default): architecture.md, database.md, api-routes.md, frontend-ui.md
+          - CLI: architecture.md, database.md, command-reference.md, cli-interface.md
+          - API: architecture.md, database.md, api-routes.md (frontend-ui.md is NOT expected)
+          - Library: architecture.md, database.md, integration-patterns.md, public-api-surface.md
+          - Game: architecture.md, database.md, api-routes.md, frontend-ui.md, game-mechanics.md
+          - Pipeline: architecture.md, database.md, data-contracts.md, pipeline-topology.md
+          If vision/vision-config.json does not exist: default to GUI (4 files) — backward compatible.</action>
+        <action>Check if the project-type-relevant knowledge files exist in agent-workspace/knowledge/. If any project-type-relevant files are missing, see knowledge_files_do_not_exist in error_handling. If present, read all project-type-relevant files.</action>
+        <audit_checklist>
+          <item>Spaghetti Code: circular dependencies or tightly coupled components?</item>
+          <item>Duplicated Logic: same patterns described in multiple places without shared abstraction?</item>
+          <item>Architectural Drift: new feature deviate from the planning/ directory's established architecture?</item>
+          <item>Wave Integrity: does this feature properly extend Wave N abstractions rather than modifying them?</item>
+          <item>Tech Debt Signals: TODO markers, "temporary" solutions, bypass patterns?</item>
+          <item>Knowledge Completeness: all project-type-relevant knowledge files populated with meaningful content? Do NOT flag legitimately empty files that are not relevant to this project type (e.g., frontend-ui.md being empty for a CLI project is expected, not a gap).</item>
+          <item>Test Coverage Visibility: documentation reference tests/unit/, tests/integration/, and tests/e2e/ coverage?</item>
+        </audit_checklist>
+        <action>Assign Architectural Health rating (Excellent/Good/Fair/Poor) with specific evidence.</action>
+        <action>Set phase_4_substep="audited" in state.json.</action>
+      </step>
+
+      <!-- STEP 7: Vision Re-evaluation -->
+      <step number="7" priority="critical">
+        <title>Vision Re-evaluation — Keep the Vision Fluid</title>
+        <description>
+          Compare what was just built against the vision documents. Scope drift was already evaluated in Step 3 — this step focuses on vision alignment after audit.
+        </description>
+
+        <action>Read all vision docs in agent-workspace/project-director/vision/.</action>
+        <action>Compare the audit findings (Step 6), the drift evaluation (Step 3), and the FD's completion summary against the vision docs. Is the vision still an accurate description of the intended final app?</action>
+
+        <re_evaluation_decision_tree>
+          <branch condition="NO DRIFT — vision still accurate">
+            <action>No changes to vision docs. Note in current-state.md under "Vision Updates": "Feature [N] built as envisioned — no vision changes."</action>
+          </branch>
+
+          <branch condition="MINOR DRIFT — small discrepancies that don't affect other features">
+            <action>PD edits the relevant vision .md file(s) directly to reflect reality. Note in current-state.md under "Vision Updates": what changed and why.</action>
+          </branch>
+
+          <branch condition="MAJOR DRIFT — changes that affect remaining roadmap features (not already handled in Step 3)">
+            <action>If this drift wasn't already caught in Step 3: follow the same major drift escalation as Step 3 — flag to user, offer re-plan/accept/manual options.</action>
+            <action>If already handled in Step 3: note that the re-plan is in progress or completed.</action>
           </branch>
         </re_evaluation_decision_tree>
 
         <action>Set phase_4_substep="vision_reevaluated" in state.json.</action>
       </step>
 
-      <step number="6">
+      <!-- STEP 8: Dashboard Update -->
+      <step number="8">
         <title>Update the Current State Dashboard</title>
-        <action priority="high">Verify current-state.md exists on disk before reading. If missing: recreate from the dashboard template in common patterns (same as Phase 1 Step 2 fresh project path). The dashboard content will be repopulated during this step's updates. Announce: "current-state.md was missing — recreated from template."</action>
+        <action priority="high">Verify current-state.md exists on disk before reading. If missing: recreate from the dashboard template in common patterns. Announce: "current-state.md was missing — recreated from template."</action>
         <action>Read current-state.md and update:</action>
         <update_sections>
           <section name="what_app_can_do">Append 2-4 bullet points for the new feature's capabilities.</section>
           <section name="ui_map">Update UI layout based on FD's report and frontend-ui.md.</section>
           <section name="architectural_health">Replace with new Health rating and bullet-point findings.</section>
-          <section name="vision_updates">Document any vision changes from Step 5 (what changed, why, re-plan status).</section>
+          <section name="vision_updates">Document any vision changes from Step 7 (what changed, why, re-plan status).</section>
           <section name="e2e_regression_suite">Add/update: total E2E tests, framework used, run command,
             list of locked-in features, any features not locked in (with reason).</section>
         </update_sections>
@@ -1270,17 +1470,19 @@
     <steps>
       <step number="0">
         <title>Set Phase State</title>
-        <action>Set current_phase=5 in state.json.</action>
+        <action>Set current_phase=5 and phase_5_substep="phase_set" in state.json.</action>
       </step>
 
       <step number="1">
         <title>Present the Completion Report</title>
         <action>Present a concise report: feature name/number, wave, branch, unit test results, E2E lock-in status
           (framework + test file), Architectural Health rating with evidence, vision changes, tech debt items.</action>
+        <action>Set phase_5_substep="report_presented" in state.json.</action>
       </step>
 
       <step number="2">
         <title>The PR Offer</title>
+        <action>Set phase_5_substep="pr_offered" in state.json.</action>
         <action>Read git_automation_enabled from state.json.</action>
         <action>Use ask_followup_question: "Feature [Name] complete on branch [branch]. Unit tests passed. E2E: [locked ✅ / not locked ⚠️]. Architectural health: [Rating]. Vision: [no changes / minor updates / major re-plan]. How proceed?"
           <responses>
@@ -1301,8 +1503,8 @@
         <warning>Options 2 and 3 will delete the local feature branch. Ensure the PR has been merged before proceeding.</warning>
         <decision_tree>
           <branch condition="Option 1">Proceed to Step 3 (Handle PR Creation).</branch>
-          <branch condition="Option 2">Proceed to Step 4 (Post-Merge Cleanup).</branch>
-          <branch condition="Option 3">Proceed to Step 4 (Post-Merge Cleanup). Refactoring injection happens in Step 5.</branch>
+          <branch condition="Option 2">Set phase_5_substep="pr_handled" in state.json. Proceed to Step 4 (Post-Merge Cleanup).</branch>
+          <branch condition="Option 3">Set phase_5_substep="pr_handled" in state.json. Proceed to Step 4 (Post-Merge Cleanup). Refactoring injection happens in Step 5.</branch>
           <branch condition="Option 4">Wait for user. When ready, re-present the PR Offer.</branch>
         </decision_tree>
       </step>
@@ -1311,6 +1513,7 @@
         <title>Handle PR Creation (if selected)</title>
         <trigger>User selects "Push branch and create PR for me"</trigger>
         <action>Read git_automation_enabled from state.json. If false: skip. Announce "Git automation disabled. Please push and create PR manually." and present post-PR options.</action>
+        <action>Set phase_5_substep="pr_handled" in state.json.</action>
         <sub_steps>
           <sub_step number="1">
             <action>Push the feature branch to the remote tracking branch. If the push fails, report error to user per error_handling pr_creation_fails scenario.</action>
@@ -1329,28 +1532,40 @@
 
       <step number="4">
         <title>Post-Merge Cleanup & Verification</title>
-        <trigger>After user confirms merge</trigger>
-        <action priority="critical">Before cleanup, read current_branch_name from state.json.
-          If current_branch_name is null (FD skipped git), skip all cleanup and announce: "No feature branch to clean up. Proceeding."</action>
-        <action>Read git_automation_enabled from state.json. If false: skip all cleanup, announce "Git automation disabled. Please clean up branches manually."</action>
+        <trigger>After user confirms merge (or after PR handled in Step 3)</trigger>
+
+        <!-- SUBSTEP 0: Update state BEFORE any destructive actions (crash-safe) -->
+        <sub_step number="0" priority="critical">
+          <title>Update State Before Cleanup (Crash-Safe)</title>
+          <action priority="critical">FIRST: read current_branch_name from state.json and store it in memory as captured_branch_name (needed for substeps 2-3 after we nullify it below).</action>
+          <action priority="critical">THEN update state.json BEFORE any branch deletion: increment current_feature_index by 1, set fd_status="idle", phase_4_substep=null, phase_5_substep="state_updated", current_branch_name=null. Keep current_phase=5, status="in_progress". This ensures that if a crash occurs during cleanup, the feature is marked as done and will not be re-executed.</action>
+        </sub_step>
+
+        <!-- SUBSTEPS 1-4: Destructive cleanup (safe to retry — branch may already be deleted) -->
         <sub_step number="1">
+          <title>Verify Branch State</title>
+          <action priority="critical">Check captured_branch_name (stored in substep 0 before state update). If captured_branch_name was null (FD skipped git), skip all destructive cleanup substeps and announce: "No feature branch to clean up. Proceeding." Set phase_5_substep="cleaned_up" and proceed to Step 5.</action>
+          <action>Read git_automation_enabled from state.json. If false: skip all destructive cleanup, announce "Git automation disabled. Please clean up branches manually." Set phase_5_substep="cleaned_up" and proceed to Step 5.</action>
+        </sub_step>
+        <sub_step number="2">
           <action>Identify the trunk branch (main, master, develop, or trunk — whichever exists).
             Checkout the trunk and pull the latest changes.</action>
         </sub_step>
-        <sub_step number="2">
-          <action>Delete the feature branch locally.</action>
-        </sub_step>
         <sub_step number="3">
+          <action>Delete the feature branch locally. If the branch doesn't exist (already deleted in a previous partial run): note and continue — this is expected on resume.</action>
+        </sub_step>
+        <sub_step number="4">
           <action>Verify the current branch is the trunk branch.</action>
         </sub_step>
         <action>Announce: "Cleanup complete. On branch [current-branch]. Ready for next feature."</action>
+        <action>Set phase_5_substep="cleaned_up" in state.json.</action>
       </step>
 
       <step number="5">
-        <title>Course Correction & State Update</title>
+        <title>Course Correction & Final State Update</title>
         <action>If user selected to inject a refactoring feature: edit roadmap.md following these rules:
           <injection_rules>
-            <rule number="1">Insert at position current_feature_index + 1. Increment subsequent feature numbers.</rule>
+            <rule number="1">Insert at position current_feature_index (the feature just completed) + 1. Increment subsequent feature numbers.</rule>
             <rule number="2">Name descriptively based on audit findings (e.g., "Feature [N]: Refactoring — Extract Shared Auth Hook").</rule>
             <rule number="3">Place in same wave unless refactoring spans entire codebase.</rule>
             <rule number="4">Cite specific evidence from architectural audit.</rule>
@@ -1358,8 +1573,7 @@
           </injection_rules>
         </action>
         <action>If scope-creep ideas were mentioned: add to backlog.md with date and proposed-by.</action>
-        <action>Update state.json: increment current_feature_index by 1, set fd_status="idle",
-          phase_4_substep=null, current_branch_name=null. Keep current_phase=3, status="in_progress".</action>
+        <action>Set current_phase=3, phase_5_substep=null in state.json. (current_feature_index was already incremented in Step 4 substep 0; fd_status="idle", phase_4_substep=null, current_branch_name=null also already set.) Keep status="in_progress".</action>
         <action>Loop back to Phase 3 Step 1 for the next feature.</action>
       </step>
     </steps>

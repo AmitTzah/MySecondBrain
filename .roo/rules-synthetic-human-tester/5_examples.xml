@@ -242,8 +242,8 @@ SUMMARY: 2 passed, 0 failed, 0 skipped
 
     <note>
       Even though STATUS is all_passed, the VISUAL section flags obvious UI breakage.
-      The downstream mode (Code mode) can detect the 🔴 VISUAL status and auto-launch
-      a UI Designer subtask without requiring human intervention.
+      The caller can detect the 🔴 VISUAL status from the completion summary and
+      auto-launch a UI Designer subtask without requiring human intervention.
     </note>
   </example>
 </complete_examples>

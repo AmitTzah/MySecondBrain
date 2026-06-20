@@ -228,6 +228,72 @@
         The user only verifies GUI behavior that cannot be verified programmatically.
       </critical_rule>
 
+      <smoke_test_classification_routing priority="high">
+        <description>
+          Your instructions may include a smoke_test_classification field and a hands_off_mode flag.
+          If present, these determine which verification path to take BEFORE the self-verification
+          tier. If neither is present, fall through to the existing self_verification_tier.
+          You are caller-agnostic: you check for what parameters you received, not who sent them.
+        </description>
+
+        <decision_tree>
+          <branch condition="smoke_test_classification is 'Model'">
+            <description>
+              This step's smoke test is classified as Model: verifiable by the AI via terminal
+              without human interaction. The Live Smoke Test in your prompt describes exactly
+              what to verify (build, launch, curl, CLI command, file check, etc.).
+            </description>
+            <action priority="high">
+              1. Follow the existing self_verification_tier below, but use the Live Smoke Test from
+                  your prompt as the authoritative verification checklist.
+              2. Execute each verification step described in the Live Smoke Test: build, launch binary,
+                  run curl/HTTP requests, execute CLI commands, check file contents, run temp scripts.
+              3. Report results: "Model smoke test: ✅ [what passed]" or "Model smoke test: ❌ [what failed]".
+              4. If all Model smoke tests pass: proceed directly to user_confirms_works branch —
+                  run final automated tests and call attempt_completion. Do NOT ask the user. Do NOT spawn SHT.
+              5. If any Model smoke test fails: apply minimal fix, re-run quality loop, re-verify.
+                  If it fails after 2 attempts: report failure with details and call attempt_completion.
+            </action>
+            <note>Skip the escalation_tier and automated_smoke_test/manual verification branches below.
+              Model smoke tests are self-verified — they never escalate to SHT or human.</note>
+          </branch>
+
+          <branch condition="smoke_test_classification is 'HUMAN/SHT REQUIRED' AND hands_off_mode is true">
+            <description>
+              This step's smoke test is classified as HUMAN/SHT REQUIRED (needs GUI interaction)
+              AND hands-off mode is active. Skip the smoke test entirely.
+            </description>
+            <action priority="high">
+              1. Do NOT perform any smoke test verification. Do NOT ask the user. Do NOT spawn SHT.
+              2. Run ALL automated tests one final time.
+              3. If all pass: call attempt_completion immediately. In your completion summary, include
+                  exactly this structured marker followed by the verbatim smoke test description:
+                  "<!--SMOKE_TEST_SKIPPED--> [paste the Live Smoke Test description verbatim from your prompt]"
+                  This marker enables reliable automated detection of skipped tests.
+              4. If any test fails: apply minimal fix, re-run tests, then call attempt_completion.
+            </action>
+            <note>Skip the entire verification_gate workflow below. Skip self_verification_tier,
+              escalation_tier, automated_smoke_test, and manual verification. Just final tests + complete.</note>
+          </branch>
+
+          <branch condition="smoke_test_classification is 'HUMAN/SHT REQUIRED' AND hands_off_mode is false or absent">
+            <description>
+              This step's smoke test is classified as HUMAN/SHT REQUIRED. Hands-off mode is NOT
+              active — proceed with normal GUI verification. Use the Live Smoke Test from your
+              prompt as the authoritative checklist for GUI verification.
+            </description>
+            <action>Skip the self_verification_tier classification below. Proceed directly to the escalation_tier
+              to determine SHT vs manual GUI verification. Use the Live Smoke Test from your prompt
+              as the test plan for GUI verification.</action>
+          </branch>
+
+          <branch condition="smoke_test_classification is NOT present">
+            <description>No smoke test classification provided in your instructions. Fall through to the existing self_verification_tier.</description>
+            <action>Proceed to self_verification_tier below — use the original self-verification flow.</action>
+          </branch>
+        </decision_tree>
+      </smoke_test_classification_routing>
+
       <self_verification_tier priority="high">
         <description>
           Before considering SHT or human verification, exhaust what you can verify yourself.
@@ -290,11 +356,20 @@
 
         <decision_tree>
           <branch condition="smoke_test_automation.enabled is true AND smoke_test_automation.environments has at least one GUI environment (web, desktop, or native configured)">
-            <action>Proceed to automated_smoke_test branch below — compile a GUI-only test plan and spawn synthetic-human-tester.</action>
+            <mcp_availability_gate>
+              <description>Before spawning SHT, check whether the target environment's mcp_available field is explicitly false. If mcp_available is false, MCP servers are known-unavailable and SHT will immediately return mcp_unavailable — skip the spawn to avoid a wasted round-trip.</description>
+              <sub_branch condition="All configured GUI environments have mcp_available: false">
+                <action>Skip SHT entirely — MCP is known-unavailable for all GUI environments. Fall through to manual verification.</action>
+              </sub_branch>
+              <sub_branch condition="At least one GUI environment has mcp_available: true or mcp_available is unset (unknown)">
+                <action>Proceed to automated_smoke_test branch below — compile a GUI-only test plan and spawn synthetic-human-tester. Only include environments where mcp_available is not explicitly false.</action>
+              </sub_branch>
+            </mcp_availability_gate>
           </branch>
-          <branch condition="smoke_test_automation is disabled or absent, OR smoke_test_automation.enabled is true but zero GUI environments are configured">
+          <branch condition="smoke_test_automation is disabled or absent, OR smoke_test_automation.enabled is true but zero GUI environments are configured, OR all GUI environments have mcp_available: false">
             <action>Proceed to manual verification — ask the user to test ONLY the unverified GUI interactions. Do NOT ask them to verify things you already verified yourself.</action>
             <action>If smoke_test_automation flag is ABSENT: use ask_followup_question once: "I've verified everything I can (build, launch, integration tests, CLI). The remaining items need GUI testing. Would you like automated GUI smoke testing via synthetic-human-tester for future sessions?" Options: 1. "Yes — set up automated GUI smoke testing", 2. "No — I'll test GUI manually." If option 1: guide through setup, store in agent-workspace/testing-environments.json. If option 2: proceed to manual verification steps below.</action>
+            <action>If all GUI environments have mcp_available: false: inform the user: "Automated GUI smoke testing is configured but MCP servers are unavailable for all GUI environments. Please verify manually." Then proceed to manual verification steps.</action>
           </branch>
         </decision_tree>
       </escalation_tier>
@@ -490,9 +565,9 @@
           1. Run ALL automated tests one final time.
           2. If all pass: call attempt_completion immediately.
           3. If any test fails: apply the minimal fix to make it pass, re-run tests, then call attempt_completion.
-             (Test failures at this stage are extremely rare since the quality loop already ran them multiple times.)
+              (Test failures at this stage are extremely rare since the quality loop already ran them multiple times.)
           4. Do NOT refactor. Do NOT run QA. Do NOT make any code changes beyond the minimal test fix described in step 3.
-             The work is verified and done — stop.
+              The work is verified and done — stop.
         </critical_rule>
       </branch>
 
