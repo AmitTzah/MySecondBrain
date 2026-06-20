@@ -79,7 +79,7 @@ This feature follows the existing **Provider/Adapter** pattern for LLM providers
 
 ## 5. Execution Steps
 
-### [ ] Step 1: Real DPAPI Encryption + Domain Model Completion + Repository Field Mapping
+### [x] Step 1: Real DPAPI Encryption + Domain Model Completion + Repository Field Mapping
 - **Goal:** Replace the DpapiEncryptionService stub with real Windows DPAPI encryption, complete all three domain models (ApiKey, ModelConfiguration, Persona) with missing fields matching the entity specs, and fix repository mapping gaps to ensure all entity fields round-trip correctly through the domain layer.
 - **Actions:**
   - Implement `DpapiEncryptionService.Protect()`/`Unprotect()` using `System.Security.Cryptography.ProtectedData.Protect()`/`Unprotect()` with `DataProtectionScope.CurrentUser`
@@ -214,3 +214,4 @@ This feature follows the existing **Provider/Adapter** pattern for LLM providers
 ## 6. Shared Technical Context
 *(Append-only log managed by the Feature Developer. Stores API endpoints, JSON payloads, state shapes, and abstractions created in earlier steps that later steps might need to read).*
 - [Initial State]: No shared context yet.
+- **Step 1 — Domain Model Fields:** ApiKey gains: CustomProviderName (string?), CustomEndpointUrl (string?), CreatedAt (DateTimeOffset), LastTestedAt (DateTimeOffset?), IsValid (bool). ModelConfiguration gains: ApiKeyId (string?), MaxContextWindow (int, default 128000), PricingInputPer1K (decimal?), PricingOutputPer1K (decimal?), ContextOverflowStrategy (string, default "SlidingWindow"), CreatedAt (DateTimeOffset), UpdatedAt (DateTimeOffset). Persona gains: DefaultModelConfigId (string?), DefaultChatMode (string, default "Standard"), CreatedAt (DateTimeOffset), UpdatedAt (DateTimeOffset). DpapiEncryptionService real implementation using System.Security.Cryptography.ProtectedData with DataProtectionScope.CurrentUser, string methods as Base64 wrappers. All three repository MapToDomain/MapToEntity/UpdateAsync methods map all new fields. All CreateAsync methods use MapToEntity() — new fields not silently dropped.
