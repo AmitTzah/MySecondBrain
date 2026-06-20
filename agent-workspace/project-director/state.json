@@ -7,7 +7,9 @@
   "fd_status": "idle",
   "phase_2_substep": null,
   "phase_4_substep": null,
+  "phase_5_substep": null,
   "git_automation_enabled": true,
+  "hands_off_mode": true,
   "smoke_test_automation": {
     "enabled": false,
     "environments": {

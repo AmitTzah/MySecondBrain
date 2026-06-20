@@ -18,6 +18,7 @@ Core infrastructure that everything else depends on. Built first, extended by al
 .NET 8.0 WPF solution with 7 projects (Core, Data, Services, UI, Package, Tests.Unit, Tests.Integration), 15 OSS NuGet packages, MSIX packaging placeholder, and GitHub Actions CI/CD skeleton.
 
 Dependencies: none.
+E2E: Not applicable — Wave 1 foundation infrastructure, verified via CI build pipeline.
 Status: Built.
 
 ### Feature 2 — Dependency Injection Container ✅
@@ -25,6 +26,7 @@ Status: Built.
 All service, repository, and ViewModel registrations via `Microsoft.Extensions.DependencyInjection`. 76+ registrations, 42+ C# interfaces, 13 entity stubs, 8 repository stubs, all provider stubs, 11 ViewModels, and 7 content block renderers.
 
 Dependencies: 1.
+E2E: Not applicable — Wave 1 foundation infrastructure, verified via 8 unit tests.
 Status: Built.
 
 ### Feature 3 — Logging Infrastructure ✅
@@ -32,6 +34,7 @@ Status: Built.
 Serilog with rolling file sink to `%LOCALAPPDATA%\MySecondBrain\logs\`, JSON structured output, and thread/machine enrichment.
 
 Dependencies: 2.
+E2E: Not applicable — Wave 1 foundation infrastructure, verified via unit tests.
 Status: Built.
 
 ### Feature 4 — Data Layer: All Entities, DbContext & Repositories ✅
@@ -39,6 +42,7 @@ Status: Built.
 EF Core `AppDbContext` with SQLite, all 13 entity classes, FTS5 virtual tables, 8 repository implementations, repository interfaces, initial database migration, and migration strategy.
 
 Dependencies: 2.
+E2E: Not applicable — Wave 1 foundation infrastructure, verified via 104 data layer unit tests.
 Status: Built.
 
 ---
@@ -54,6 +58,7 @@ MainWindow three-region shell (sidebar + content + right panel), tabbed navigati
 HTML mock reference: [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html) (shell layout: sidebar, tab bar, right panel).
 
 Dependencies: 2, 4.
+E2E: Launch app via FlaUI, verify MainWindow title is "MySecondBrain" and three-region shell renders (NavChats sidebar radio button, ChatView content area, RightPanelSplitter with 📄 Artifacts header visible). Click each navigation button (NavChats, NavWiki, NavMedia, NavArtifacts, NavUsage, NavSettings) and verify the corresponding view UserControl appears and the right panel hides on non-chat screens. Click ThemeToggleBtn to switch between Dark/Light themes and verify the icon toggles between ☀ and 🌙 with round-trip consistency. Expand ChatThemeCombo and verify Classic, Compact, and Bubble options are present and selectable. Click IncreaseFontBtn and DecreaseFontBtn and verify FontSizeDisplay updates. Verify all 7 ContentBlockRenderer implementations have correct ascending priority values (MarkdownText=100 through ToolCall=700).
 Vision groups: none (infrastructure — enables all screens).
 
 ### Feature 6 — Windows OS Platform Infrastructure
@@ -61,6 +66,7 @@ Vision groups: none (infrastructure — enables all screens).
 System tray integration (`NotifyIcon` with context menu, minimize-to-tray, generation indicator), global hotkey registration (`RegisterHotKey` with `WH_KEYBOARD_LL` fallback for Tier 1 and Tier 2), per-monitor DPI awareness (`PerMonitorV2`), local WebSocket server (Kestrel on 127.0.0.1 with token auth), auto-update framework (`AutoUpdater.NET`), and MSIX packaging with code signing and `.appinstaller` generation.
 
 Dependencies: 2, 5.
+E2E: Verify ISystemTrayService resolves as WinFormsSystemTrayService from DI with an 8-item context menu in order (New Chat, Open Studio, Command Bar, separator, Recent Chats, Settings, separator, Exit) and all 5 menu click events fire correctly. Verify UpdateRecentChats populates the Recent Chats submenu with clickable items and shows a disabled placeholder when empty. Verify SetGenerationIndicator swaps the NotifyIcon between normal and generating icons, and restores correctly. Verify IGlobalHotkeyService resolves with 6 default hotkeys registered (CommandBar, Rewrite, Summarize, Explain, Translate, ContinueWriting), system hotkey conflict detection works (Win+D, Win+L, Alt+F4, Alt+Tab detected; Ctrl+Alt+Z not), and register/unregister lifecycle succeeds. Verify PerMonitorV2 is configured in the .csproj and the launched window has positive bounds >200px. Verify ILocalWebSocketServer resolves as KestrelWebSocketServer with a 64-character hex auth token, RegenerateAuthToken produces a new valid token, and the health endpoint at http://127.0.0.1:{port}/health returns 200 OK. Verify IUpdateChecker resolves with both AutoUpdaterDotNet and MsixAppInstallerUpdater implementations, CurrentVersion is non-zero, and UpdateFeedUrl is a valid HTTPS URL. Verify all 4 platform services (ISystemTrayService, IGlobalHotkeyService, ILocalWebSocketServer, IUpdateChecker) are registered as Singletons in DI and resolve concretely.
 Vision groups: P (P1, P2, P5, P6, P8 — core platform infrastructure).
 
 ### Feature 5b — Visual Design System: Colors, Typography & Spacing
@@ -70,6 +76,7 @@ Define a comprehensive design token system — color palette (brand, semantic, n
 HTML mock reference: (cross-cutting — applies to all 8 vision screens; tokens designed to match the visual language implied by [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html) color scheme).
 
 Dependencies: 5.
+E2E: Not applicable — design tokens verified via visual regression tests planned within Feature 19.
 Vision groups: cross-cutting (affects all screens).
 
 ---
@@ -83,6 +90,7 @@ End-to-end features spanning database → service → UI. Each feature adds new 
 API key management (add, edit, delete, test, DPAPI encryption, 8 provider types: OpenAI, Anthropic, Google, DeepSeek, MiMo, Moonshot, Mistral, OpenAI-Compatible). Model Configuration CRUD (temperature, max tokens, thinking toggle, pricing, context overflow strategy — SlidingWindow/HardStop/AutoSummarize). Auto-fetch available models from provider APIs. Persona CRUD (system prompt, default model config, chat mode). Persona selection per chat with recently-used ordering. Local open-source model support via OpenAI-Compatible provider. Default profile selection (A2). Speech-to-text provider configuration (A10 — OpenAI Whisper API, local Whisper, Windows Speech).
 
 Dependencies: 4, 5.
+E2E: Navigate to Settings → Providers, click Add API Key, select OpenAI from provider dropdown, enter test key, click Test Key and verify green checkmark "API key validated successfully" appears. Save the key and verify it appears masked with a copy button. Navigate to Profiles, click New Model Configuration, set display name, select provider and model from auto-fetched dropdown, set temperature slider to 0.7, configure context overflow to SlidingWindow, and save. Click New Persona, set name and system prompt, select the saved model configuration, choose Standard chat mode, and save. Navigate to Studio Chat, press Ctrl+N, select the persona from the picker, and verify chat header shows the persona name. Verify persona appears in textbox toolbar dropdown with recently-used ordering.
 Vision groups: B, A2, A10.
 
 ### Feature 8 — Settings, Onboarding & Diagnostics
@@ -92,6 +100,7 @@ Full Settings screen with 16 categories (Providers, Profiles, Appearance, Wiki, 
 HTML mock references: [`vision/screens/settings.html`](vision/screens/settings.html), [`vision/screens/onboarding-wizard.html`](vision/screens/onboarding-wizard.html).
 
 Dependencies: 4, 5, 6, 7. (Soft dependency on 18 for onboarding import button functionality.)
+E2E: First launch of app triggers Onboarding Wizard: verify 5-step flow — Welcome (Get Started button), API Keys (add provider key with skip available), Persona (create first persona with skip), Wiki Directory (select folder via picker with skip), Hotkeys (review defaults with skip). Click Finish and verify Studio opens. Navigate to Settings, verify all 16 category sections render. Toggle Dark/Light theme switch and verify UI transitions instantly. In Diagnostics section, change log level from Information to Debug, toggle LLM API Calls category off then on, click Open Logs Folder and verify Explorer opens to the logs directory.
 Vision groups: A (A1, A3–A9, A11), A8, V.
 
 ### Feature 9 — Studio Chat — Core Workspace
@@ -105,6 +114,7 @@ Chat Modes (E): Standard chat mode. Text Completion mode. Thinking toggle with r
 HTML mock reference: [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html) (conversation area, thinking blocks, message actions, right panel artifacts + chat nav).
 
 Dependencies: 4, 5, 7.
+E2E: Create a new chat with a persona that has a configured API key. Type a message requesting code generation and press Enter. Verify streaming response begins token-by-token with progressive Markdown rendering including a fenced code block with syntax highlighting and a Copy button on hover. Verify Stop button is visible during generation. After completion, verify message footer shows generation time. Click Copy MD on the assistant message, paste into Notepad, verify raw Markdown was copied. Click Copy Rich and verify formatted content on clipboard. Click Regenerate and verify a new response replaces the old one with the original preserved as a branch. Verify chat header shows auto-generated title, persona name, and context window bar. Open the ⋯ menu and verify Clear Conversation, Export Chat, Duplicate Chat, Chat Tree, and Edit System Message options are present.
 Vision groups: C (core messaging/rendering), E, Q.
 
 ### Feature 10 — Studio Chat — Input, Media & Prompts
@@ -116,6 +126,7 @@ Prompt Library (J): Saved reusable prompts with dynamic variables ({{clipboard}}
 HTML mock reference: [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html) (input area, toolbar, attachment row, textbox + send, token count).
 
 Dependencies: 4, 5, 7, 9.
+E2E: In an active Studio Chat, click the 📎 Attach File button in the textbox toolbar, select a .txt file and a .png image from the file picker, and verify both appear as attachment cards below the textbox with filenames and remove buttons. Verify model-aware compatibility warnings appear on unsupported file types. Paste an image from clipboard via Ctrl+V and verify it appears as a thumbnail in the attachment row. Click the microphone button, verify recording indicator pulses red, click again to stop, and verify transcribed text appears in the textbox. Open the Prompt Library, select a saved template, and verify it inserts into the textbox with variables resolved. Verify the real-time token counter in the chat header updates as text is typed, showing a colored bar transitioning from green to yellow to red as the context limit approaches.
 Vision groups: C (input/media), J.
 
 ### Feature 11 — Message Branching & Chat Organization
@@ -127,6 +138,7 @@ Chat Organization (L): Sidebar chat list with sort options, date grouping, pinne
 HTML mock reference: [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html) (sidebar chat list with tags, folders, sort; branching UI with indicators; message action buttons).
 
 Dependencies: 4, 5, 9.
+E2E: In a chat with multiple messages, click the edit icon on a past user message, modify text, select Edit as Branch, and verify branch indicator "2/2" appears. Click the ↳ Branch button on an assistant message and verify a new branch is created instantly. Click branch navigation arrows to cycle between versions and verify subsequent messages re-render. Open the Chat Tree visualization, verify nodes represent messages, click a node to navigate to that branch point. Select text in a past message, click Quote, and verify the selected text is inserted as a Markdown blockquote in the textbox. In the sidebar, favorite a chat via star icon, assign tags, pin a chat to the top, and verify all persist. Press Ctrl+Shift+F to open global search, type a query, verify FTS5 results appear with highlighted snippets grouped by chat, click a result to navigate to the matching message.
 Vision groups: D, L.
 
 ### Feature 12 — Data Lifecycle & Soft-Delete Trash
@@ -136,6 +148,7 @@ Data Lifecycle (O): Unified ChatThread model (Tier 1/2/3 all create identical Ch
 Soft-Delete Trash (U): Soft-delete on chat deletion (30-day Trash). Trash view with Restore and Delete Permanently. 30-day auto-purge. Restore preserves folder, tags, pinned status. Permanent delete with garbage collection cascade. Empty Trash with confirmation.
 
 Dependencies: 4, 5, 11.
+E2E: Right-click a chat in the sidebar and select Delete. Verify confirmation dialog warns about 30-day retention. Click Move to Trash and verify toast confirms the action. Navigate to 🗑️ Trash tab, verify the deleted chat appears with deletion date, Restore button, and Delete Permanently button. Click Restore and verify the chat reappears in the main list with its original folder, tags, and pinned status preserved. Delete another chat, navigate to Trash, click Delete Permanently, verify confirmation dialog warns about permanent data loss, confirm, and verify the chat is gone. Click Empty Trash, verify confirmation with item count, confirm, and verify all items are permanently removed.
 Vision groups: O, U.
 
 ### Feature 13 — Artifacts & Media Library
@@ -147,6 +160,7 @@ Vision groups: O, U.
 HTML mock references: [`vision/screens/global-artifacts-browser.html`](vision/screens/global-artifacts-browser.html), [`vision/screens/media-library.html`](vision/screens/media-library.html).
 
 Dependencies: 4, 5, 9.
+E2E: Trigger an AI generation that produces an artifact (e.g., "Create a Python Flask app in an artifact"). Verify the artifact appears in the right panel under 📄 Artifacts with its name and type. Click the artifact to view its content with syntax highlighting. Request a change and verify version v2 is created. Open version history, select v1 and v2, click Compare, and verify DiffPlex side-by-side diff shows red/green changes. Click Save to Disk and verify the file is written. Navigate to Global Artifacts Browser via sidebar, verify all artifacts across chats are listed with name, type, parent chat, date, and version count, and filter by type. Navigate to Media Library screen, verify a gallery grid of all media items with filtering by type, click an image to view full resolution, and verify View in Library navigates to the source chat.
 Vision groups: F, G.
 
 ### Feature 14 — Tool Use & Agent Capabilities
@@ -154,6 +168,7 @@ Vision groups: F, G.
 Web search tool (AI requests web search via Google Custom Search or Bing API → app executes → results fed back to AI). Terminal/shell execution (ALWAYS requires explicit user confirmation, command displayed with risk-level detection, stdout/stderr captured and returned). File generation (save dialog → AI generates → preview → user confirms). File editing (file picker → AI suggests changes → DiffPlex preview → user confirms). Wiki directory excluded from all file operations. Tool auto-approval settings (global defaults in Settings + per-chat overrides in textbox toolbar). Deep Research — autonomous multi-step research (Plan → Search → Read → Synthesize → Report state machine, real-time progress display, cancelable, cited output). Wiki search tool (AI queries local FTS5 wiki index, incorporates results into responses).
 
 Dependencies: 4, 5, 9.
+E2E: In Studio Chat with tools enabled, send a message requesting a web search. Verify the tool call appears as a styled system message showing the search query, results feed back to the AI, and a summarized response appears. Request file generation, verify a save dialog appears, the AI generates content, a DiffPlex preview shows the content, and confirming writes the file with a success toast. Request terminal execution, verify a confirmation dialog appears showing the exact command, working directory, and risk level. Click Deny and verify AI is notified execution was denied. Click Approve on a subsequent attempt and verify stdout is captured and displayed. Trigger Deep Research with a query, verify the Plan→Search→Read→Synthesize→Report state machine displays real-time progress with Searching, Reading N of M sources, and Synthesizing status messages, and the final report appears with clickable inline citations.
 Vision groups: H.
 
 ### Feature 15 — Text Actions & Three-Tier System
@@ -169,6 +184,7 @@ Text Actions CRUD with three-dimensional configuration: capture scope (any combi
 HTML mock reference: (no dedicated screen mock — Tier 1/2 are overlay windows; Text Actions configuration lives in [`vision/screens/settings.html`](vision/screens/settings.html) categories ⚡ Text Actions and ⌨️ Hotkeys).
 
 Dependencies: 4, 5, 6, 7, 9.
+E2E: Press Alt+Space to invoke Tier 2 Command Bar. Verify a centered overlay appears with placeholder "Ask anything…". Type a question, press Enter, and verify the bar expands with streaming compact Markdown response. Click the Pop-out button and verify the bar detaches into a floating resizable mini-window with Open in Studio, Pin, Minimize, and Close controls. Click Open in Studio and verify the conversation becomes a permanent ChatThread. Press Alt+Q (Rewrite) in a text editor with text selected, verify the Thinking… pill overlay appears near cursor, then the result popup shows the Text Action name, source application, editable transformed text, and Accept/Discard/Open in Studio/Save to Wiki/Retry buttons. Click Accept and verify the result applies to the source editor per the apply mode with a confirmation toast. Navigate to Settings → Text Actions, verify 10 built-in defaults are listed. Create a custom Text Action with capture scope fullDocument+screenshot and apply mode clipboardOnly, assign a hotkey, and verify it appears in the list.
 Vision groups: K, P9.
 
 ### Feature 16 — Personal Wiki / Second Brain
@@ -184,6 +200,7 @@ Wiki directory configuration (user selects directory of .md files, FileSystemWat
 HTML mock reference: [`vision/screens/wiki-browser.html`](vision/screens/wiki-browser.html).
 
 Dependencies: 4, 5.
+E2E: In Settings → Wiki, select a wiki directory containing .md files and verify the path displays. Navigate to Wiki Browser via sidebar, verify the three-region split: left file tree, center Markdown viewer rendering the selected file with headings/links/code blocks, right info panel with Related Sections, Backlinks, and File Info tabs. Click a file in the tree and verify File Info tab shows word count, reading time, and heading count. Click Open in External Editor and verify the file opens in the system default .md editor. Click 💬 Discuss with AI and verify a new Studio chat opens with the file's content pre-loaded as context. In Studio, have a conversation, click Write to Wiki, choose Create new wiki file, enter a filename, and verify AI generates a polished .md summary with suggested cross-links highlighted. Review and edit in the Preview Panel, click Save to Wiki, and verify the file is written with a confirmation toast. For an update to an existing file, verify the mandatory Diff Viewer appears before Commit to Wiki is clickable.
 Vision groups: N.
 
 ---
@@ -201,6 +218,7 @@ Features that span across vertical slices. Smaller independent features combined
 HTML mock reference: [`vision/screens/model-comparison.html`](vision/screens/model-comparison.html).
 
 Dependencies: 4, 5, 7, 9.
+E2E: In Studio Chat, click the ⚖ Compare button in the textbox toolbar. Select 2-3 Personas via checkboxes (verify Start Comparison is disabled until ≥2 selected), enter a prompt, choose horizontal layout, and click Start Comparison. Verify side-by-side panels stream responses independently with persona name, model name, and real-time metrics. Toggle 🔗 Broadcast mode on and verify per-panel inputs are replaced by a single centered broadcast input. Send a follow-up and verify it goes to all panels. Click Accept on one panel and verify the accepted conversation is appended to the originating chat with other conversations auto-saved as branches, confirmed by toast. Navigate to Settings → Backup, configure a local folder backup destination, click Backup Now, verify progress bar completes with a confirmation toast. Set backup schedule to Daily. Click Restore from Backup, verify available backups are listed with dates and sizes, select one, confirm the warning dialog, and verify restore completes.
 Vision groups: M, R.
 
 ### Feature 18 — Data Portability, Analytics, Localization & Hardening
@@ -216,6 +234,7 @@ Vision groups: M, R.
 HTML mock references: [`vision/screens/usage-dashboard.html`](vision/screens/usage-dashboard.html), [`vision/screens/settings.html`](vision/screens/settings.html) (import/export, analytics sections).
 
 Dependencies: all Wave 3 features.
+E2E: In a chat with multiple messages, press Ctrl+S, select Markdown format, pick a save location, and verify the exported .md file contains all messages with roles, timestamps, and code blocks. Export as PDF and verify the .pdf renders with formatting preserved. Navigate to Settings → Import, select a ChatGPT export JSON file, verify the preview shows chat title, message count, and date range, click Import, and verify a new ChatThread appears in the sidebar with messages and timestamps preserved. Repeat with a Claude export JSON. Navigate to Usage Dashboard, verify summary cards display total tokens, total cost, most used model, and most used Persona. Select This Month filter, verify line chart (tokens/time), bar chart (cost/time), and pie charts (by provider, by model) update. Click a row in the per-chat breakdown table to open that chat. Verify AI Feedback Summary shows approval percentages per Persona and Model with trend charts. Close and relaunch the app, verify session restore reopens all previously open chats and tabs when enabled in Settings → Startup. Verify the Tier 1 [Apply] button is grayed out with "Source application is no longer available" when the source window has been closed.
 Vision groups: I, S, P (P3, P4, P7 — platform refinements).
 
 ### Feature 19 — UI Polish: All Screens Visual Refinement Pass
@@ -225,6 +244,7 @@ Apply the Visual Design System (Feature 5b) consistently across all 8 screens. I
 HTML mock references: all 8 vision screens as visual targets — [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html), [`vision/screens/wiki-browser.html`](vision/screens/wiki-browser.html), [`vision/screens/media-library.html`](vision/screens/media-library.html), [`vision/screens/global-artifacts-browser.html`](vision/screens/global-artifacts-browser.html), [`vision/screens/usage-dashboard.html`](vision/screens/usage-dashboard.html), [`vision/screens/settings.html`](vision/screens/settings.html), [`vision/screens/onboarding-wizard.html`](vision/screens/onboarding-wizard.html), [`vision/screens/model-comparison.html`](vision/screens/model-comparison.html).
 
 Dependencies: all Wave 3 features, 5b.
+E2E: Not applicable — visual consistency verified via planned visual regression test snapshots for all 8 screens in Dark and Light themes.
 Vision groups: cross-cutting (affects all screens).
 
 ### Feature 20 — UI Polish: Micro-interactions & Motion Design
@@ -234,6 +254,7 @@ Add subtle motion and interaction feedback throughout the app: hover transitions
 HTML mock reference: (cross-cutting — tooltip toast behavior and hover states shown in [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html); animation timing inspired by Windows 11 Fluent design language).
 
 Dependencies: 5b, 19.
+E2E: Not applicable — motion design verified via automated animation timing tests and visual inspection; all animations respect Windows accessibility setting.
 Vision groups: cross-cutting (affects all screens).
 
 ---
