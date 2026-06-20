@@ -16,6 +16,138 @@
                 </StackPanel>
             </DataTemplate>
 
+            <!-- Model Configuration list item template -->
+            <DataTemplate x:Key="ModelConfigListItemTemplate" DataType="vm:ModelConfigurationDisplayItem">
+                <Border Padding="10,8" Margin="0,0,0,2"
+                        Background="{DynamicResource CardBackground}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1" CornerRadius="6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="{Binding DisplayName}" FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ContentForeground}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <TextBlock Text="{Binding ProviderLabel}" FontSize="10"
+                                           Foreground="{DynamicResource SubtleBrush}"
+                                           Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding ModelIdentifier}" FontSize="10"
+                                           Foreground="{DynamicResource SubtleBrush}"/>
+                            </StackPanel>
+                            <TextBlock FontSize="10"
+                                       Foreground="{DynamicResource SubtleBrush}">
+                                <Run Text="Temp:"/>
+                                <Run Text="{Binding Temperature, StringFormat={}{0:F1}}"/>
+                                <Run Text="• Context:"/>
+                                <Run Text="{Binding MaxContextWindow}"/>
+                                <Run Text="• Overflow:"/>
+                                <Run Text="{Binding ContextOverflowStrategy}"/>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <!-- Action buttons -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <Button Content="📋" Width="28" Height="24" FontSize="11"
+                                    ToolTip="Duplicate"
+                                    Command="{Binding DataContext.DuplicateModelConfigCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Foreground="{DynamicResource SubtleBrush}"
+                                    Margin="2,0"/>
+                            <Button Content="✏️" Width="28" Height="24" FontSize="11"
+                                    ToolTip="Edit"
+                                    Command="{Binding DataContext.EditModelConfigCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Foreground="{DynamicResource SubtleBrush}"
+                                    Margin="2,0"/>
+                            <Button Content="🗑️" Width="28" Height="24" FontSize="11"
+                                    ToolTip="Delete"
+                                    Command="{Binding DataContext.DeleteModelConfigCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Foreground="{DynamicResource SubtleBrush}"
+                                    Margin="2,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+
+            <!-- Persona list item template -->
+            <DataTemplate x:Key="PersonaListItemTemplate" DataType="vm:PersonaDisplayItem">
+                <Border Padding="10,8" Margin="0,0,0,2"
+                        Background="{DynamicResource CardBackground}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1" CornerRadius="6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding DisplayName}" FontSize="12"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ContentForeground}"/>
+                                <Border Padding="4,1" CornerRadius="3" Margin="6,0,0,0"
+                                        Background="{DynamicResource AccentBrush}" Opacity="0.7"
+                                        BorderThickness="0">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsBuiltIn}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="Built-in" FontSize="8" Foreground="White"/>
+                                </Border>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <TextBlock Text="{Binding DefaultModelConfigName}" FontSize="10"
+                                           Foreground="{DynamicResource SubtleBrush}"
+                                           Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding DefaultChatMode}" FontSize="10"
+                                           Foreground="{DynamicResource SubtleBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Action buttons -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <Button Content="✏️" Width="28" Height="24" FontSize="11"
+                                    ToolTip="Edit"
+                                    Command="{Binding DataContext.EditPersonaCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Foreground="{DynamicResource SubtleBrush}"
+                                    Margin="2,0"/>
+                            <Button Content="🗑️" Width="28" Height="24" FontSize="11"
+                                    ToolTip="Delete"
+                                    Command="{Binding DataContext.DeletePersonaCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Foreground="{DynamicResource SubtleBrush}"
+                                    Margin="2,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+
             <!-- API Key list item template -->
             <DataTemplate x:Key="ApiKeyListItemTemplate" DataType="vm:ApiKeyDisplayItem">
                 <Border Padding="10,8" Margin="0,0,0,2"
@@ -449,6 +581,460 @@
                     </Grid>
                 </Grid>
 
+                <!-- Profiles Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Profiles">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <TextBlock Grid.Row="0" Text="👤 Profiles" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Manage model configurations and personas. Model configurations define the engine (provider, model, temperature). Personas define the behavior (system prompt, default model config, chat mode)."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <!-- Main content: two sections -->
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <StackPanel>
+                            <!-- ============================================================ -->
+                            <!-- Model Configurations Section -->
+                            <!-- ============================================================ -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Section header -->
+                                    <Grid Grid.Row="0" Margin="12,10,12,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Model Configurations" FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ContentForeground}"
+                                                   VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="+ New Model Configuration"
+                                                FontSize="11" Padding="8,4"
+                                                Command="{Binding AddModelConfigCommand}"
+                                                Background="{DynamicResource AccentBrush}"
+                                                Foreground="White"
+                                                BorderThickness="0"
+                                                AutomationProperties.AutomationId="AddModelConfigButton"/>
+                                    </Grid>
+
+                                    <!-- Model config list or form -->
+                                    <Grid Grid.Row="1" Margin="10,0,10,8">
+                                        <!-- When NOT editing: show the list -->
+                                        <Grid>
+                                            <Grid.Style>
+                                                <Style TargetType="Grid">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsEditingModelConfig}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Grid.Style>
+
+                                            <ItemsControl ItemsSource="{Binding ModelConfigurations}"
+                                                          ItemTemplate="{StaticResource ModelConfigListItemTemplate}">
+                                                <ItemsControl.Style>
+                                                    <Style TargetType="ItemsControl">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding ModelConfigurations.Count}" Value="0">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ItemsControl.Style>
+                                            </ItemsControl>
+
+                                            <TextBlock Text="No model configurations yet. Click '+ New Model Configuration' to create one."
+                                                       FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                                                       TextWrapping="Wrap" HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center" Margin="20">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding ModelConfigurations.Count}" Value="0">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+
+                                        <!-- When editing: show the form -->
+                                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1" CornerRadius="6"
+                                                Background="{DynamicResource CardBackground}"
+                                                Padding="12">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsEditingModelConfig}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding EditingModelConfig.DisplayName, TargetNullValue='New Model Configuration'}"
+                                                           FontSize="13" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ContentForeground}"
+                                                           Margin="0,0,0,12"/>
+
+                                                <!-- Display Name -->
+                                                <TextBlock Text="Display Name" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <TextBox Text="{Binding EditingModelConfig.DisplayName, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="11" Margin="0,0,0,8"/>
+
+                                                <!-- Provider -->
+                                                <TextBlock Text="Provider" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <ComboBox ItemsSource="{Binding AvailableApiKeys}"
+                                                          SelectedItem="{Binding SelectedModelConfigApiKey}"
+                                                          DisplayMemberPath="DisplayName"
+                                                          FontSize="11" Margin="0,0,0,8"/>
+
+                                                <!-- Model Identifier + Fetch -->
+                                                <Grid Margin="0,0,0,8">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock Text="Model Identifier" FontSize="11"
+                                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                                   Margin="0,0,0,3"/>
+                                                        <ComboBox ItemsSource="{Binding AvailableModels}"
+                                                                  Text="{Binding EditingModelConfig.ModelIdentifier, UpdateSourceTrigger=PropertyChanged}"
+                                                                  IsEditable="True"
+                                                                  FontSize="11"
+                                                                  AutomationProperties.AutomationId="ModelIdentifierCombo"/>
+                                                    </StackPanel>
+                                                    <Button Grid.Column="1" Content="⟳ Fetch" Width="50"
+                                                            FontSize="10" Margin="6,18,0,0"
+                                                            Command="{Binding FetchModelsCommand}"
+                                                            Background="{DynamicResource AccentBrush}"
+                                                            Foreground="White"
+                                                            BorderThickness="0"
+                                                            VerticalAlignment="Bottom"
+                                                            Height="22"
+                                                            AutomationProperties.AutomationId="FetchModelsButton">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button">
+                                                                <Setter Property="IsEnabled" Value="True"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsFetchingModels}" Value="True">
+                                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                                        <Setter Property="Content" Value="⟳"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+                                                </Grid>
+
+                                                <!-- Temperature Slider -->
+                                                <TextBlock Text="Temperature" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                                    <Slider Minimum="0" Maximum="2" SmallChange="0.1" LargeChange="0.2"
+                                                            Value="{Binding EditingModelConfig.Temperature}" Width="180"
+                                                            TickFrequency="0.1" IsSnapToTickEnabled="True"/>
+                                                    <TextBlock Text="{Binding EditingModelConfig.Temperature, StringFormat={}{0:F1}}"
+                                                               Width="30" TextAlignment="Center" VerticalAlignment="Center"
+                                                               FontSize="11" Foreground="{DynamicResource ContentForeground}"/>
+                                                </StackPanel>
+
+                                                <!-- Max Output Tokens -->
+                                                <TextBlock Text="Max Output Tokens" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <TextBox Text="{Binding EditingModelConfig.MaxOutputTokens, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="11" Margin="0,0,0,8"/>
+
+                                                <!-- Max Context Window -->
+                                                <TextBlock Text="Max Context Window" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <TextBox Text="{Binding EditingModelConfig.MaxContextWindow, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="11" Margin="0,0,0,8"/>
+
+                                                <!-- Thinking Enabled -->
+                                                <CheckBox Content="Thinking Enabled"
+                                                          IsChecked="{Binding EditingModelConfig.ThinkingEnabled}"
+                                                          FontSize="11" Margin="0,0,0,8"
+                                                          Foreground="{DynamicResource ContentForeground}"/>
+
+                                                <!-- Pricing fields -->
+                                                <TextBlock Text="Pricing Input (per 1K tokens)" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <TextBox Text="{Binding EditingModelConfig.PricingInputPer1K, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="11" Margin="0,0,0,8"/>
+
+                                                <TextBlock Text="Pricing Output (per 1K tokens)" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <TextBox Text="{Binding EditingModelConfig.PricingOutputPer1K, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="11" Margin="0,0,0,8"/>
+
+                                                <!-- Context Overflow Strategy -->
+                                                <TextBlock Text="Context Overflow Strategy" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <ComboBox ItemsSource="{Binding ContextOverflowStrategyOptions}"
+                                                          SelectedItem="{Binding EditingModelConfig.ContextOverflowStrategy}"
+                                                          FontSize="11" Margin="0,0,0,8"/>
+
+                                                <!-- Save / Cancel buttons -->
+                                                <Grid Margin="0,6,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Text="{Binding StatusMessage}"
+                                                               FontSize="10"
+                                                               Foreground="{DynamicResource SubtleBrush}"
+                                                               VerticalAlignment="Center"/>
+
+                                                    <Button Grid.Column="1" Content="Cancel"
+                                                            FontSize="11" Padding="12,5" Margin="0,0,8,0"
+                                                            Command="{Binding CancelModelConfigEditCommand}"
+                                                            Background="Transparent"
+                                                            BorderBrush="{DynamicResource BorderBrush}"
+                                                            BorderThickness="1"
+                                                            Foreground="{DynamicResource ContentForeground}"/>
+
+                                                    <Button Grid.Column="2" Content="Save"
+                                                            FontSize="11" Padding="12,5"
+                                                            Command="{Binding SaveModelConfigCommand}"
+                                                            Background="{DynamicResource AccentBrush}"
+                                                            Foreground="White"
+                                                            BorderThickness="0"
+                                                            AutomationProperties.AutomationId="SaveModelConfigButton"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <!-- ============================================================ -->
+                            <!-- Personas Section -->
+                            <!-- ============================================================ -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Section header -->
+                                    <Grid Grid.Row="0" Margin="12,10,12,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Personas" FontSize="12"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ContentForeground}"
+                                                   VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1" Content="+ New Persona"
+                                                FontSize="11" Padding="8,4"
+                                                Command="{Binding AddPersonaCommand}"
+                                                Background="{DynamicResource AccentBrush}"
+                                                Foreground="White"
+                                                BorderThickness="0"
+                                                AutomationProperties.AutomationId="AddPersonaButton"/>
+                                    </Grid>
+
+                                    <!-- Persona list or form -->
+                                    <Grid Grid.Row="1" Margin="10,0,10,8">
+                                        <!-- When NOT editing: show the list -->
+                                        <Grid>
+                                            <Grid.Style>
+                                                <Style TargetType="Grid">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsEditingPersona}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Grid.Style>
+
+                                            <ItemsControl ItemsSource="{Binding Personas}"
+                                                          ItemTemplate="{StaticResource PersonaListItemTemplate}">
+                                                <ItemsControl.Style>
+                                                    <Style TargetType="ItemsControl">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Personas.Count}" Value="0">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ItemsControl.Style>
+                                            </ItemsControl>
+
+                                            <TextBlock Text="No personas yet. Click '+ New Persona' to create one."
+                                                       FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                                                       TextWrapping="Wrap" HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center" Margin="20">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Personas.Count}" Value="0">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+
+                                        <!-- When editing: show the form -->
+                                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1" CornerRadius="6"
+                                                Background="{DynamicResource CardBackground}"
+                                                Padding="12">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsEditingPersona}" Value="True">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding EditingPersona.DisplayName, TargetNullValue='New Persona'}"
+                                                           FontSize="13" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource ContentForeground}"
+                                                           Margin="0,0,0,12"/>
+
+                                                <!-- Display Name -->
+                                                <TextBlock Text="Display Name" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <TextBox Text="{Binding EditingPersona.DisplayName, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="11" Margin="0,0,0,8"
+                                                         AutomationProperties.AutomationId="PersonaDisplayNameInput"/>
+
+                                                <!-- System Prompt -->
+                                                <TextBlock Text="System Prompt" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <TextBox Text="{Binding EditingPersona.SystemPrompt, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="11" Margin="0,0,0,4"
+                                                         AcceptsReturn="True" TextWrapping="Wrap"
+                                                         MinHeight="80" MaxHeight="160"
+                                                         VerticalScrollBarVisibility="Auto"
+                                                         AutomationProperties.AutomationId="PersonaSystemPromptInput"/>
+                                                <TextBlock Text="Available variables: {{date}}, {{time}}, {{user_name}} — resolved at message send time"
+                                                           FontSize="9" Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,8" TextWrapping="Wrap"/>
+
+                                                <!-- Default Model Config -->
+                                                <TextBlock Text="Default Model Configuration" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <ComboBox ItemsSource="{Binding ModelConfigurations}"
+                                                          SelectedValue="{Binding EditingPersona.DefaultModelConfigId}"
+                                                          SelectedValuePath="Id"
+                                                          DisplayMemberPath="DisplayName"
+                                                          FontSize="11" Margin="0,0,0,8"
+                                                          AutomationProperties.AutomationId="PersonaDefaultModelConfigCombo"/>
+
+                                                <!-- Default Chat Mode -->
+                                                <TextBlock Text="Default Chat Mode" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <ComboBox ItemsSource="{Binding ChatModeOptions}"
+                                                          SelectedItem="{Binding EditingPersona.DefaultChatMode}"
+                                                          FontSize="11" Margin="0,0,0,8"
+                                                          AutomationProperties.AutomationId="PersonaChatModeCombo"/>
+
+                                                <!-- Save / Cancel buttons -->
+                                                <Grid Margin="0,6,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <TextBlock Grid.Column="0" Text="{Binding StatusMessage}"
+                                                               FontSize="10"
+                                                               Foreground="{DynamicResource SubtleBrush}"
+                                                               VerticalAlignment="Center"/>
+
+                                                    <Button Grid.Column="1" Content="Cancel"
+                                                            FontSize="11" Padding="12,5" Margin="0,0,8,0"
+                                                            Command="{Binding CancelPersonaEditCommand}"
+                                                            Background="Transparent"
+                                                            BorderBrush="{DynamicResource BorderBrush}"
+                                                            BorderThickness="1"
+                                                            Foreground="{DynamicResource ContentForeground}"/>
+
+                                                    <Button Grid.Column="2" Content="Save Persona"
+                                                            FontSize="11" Padding="12,5"
+                                                            Command="{Binding SavePersonaCommand}"
+                                                            Background="{DynamicResource AccentBrush}"
+                                                            Foreground="White"
+                                                            BorderThickness="0"
+                                                            AutomationProperties.AutomationId="SavePersonaButton"/>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
                 <!-- Other categories placeholder -->
                 <TextBlock Text="Select a category"
                            Foreground="{DynamicResource SubtleBrush}"
@@ -460,6 +1046,9 @@
                             <Setter Property="Visibility" Value="Visible"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Providers">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Profiles">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
                             </Style.Triggers>
