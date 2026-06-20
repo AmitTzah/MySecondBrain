@@ -15,7 +15,7 @@ using MySecondBrain.UI.ViewModels;
 
 namespace MySecondBrain.Tests.Unit;
 
-public class DiContainerTests
+public class DiContainerTests : IDisposable
 {
     private readonly IServiceProvider _provider;
 
@@ -27,6 +27,11 @@ public class DiContainerTests
         {
             ValidateOnBuild = true
         });
+    }
+
+    public void Dispose()
+    {
+        (_provider as IDisposable)?.Dispose();
     }
 
     [Fact]
