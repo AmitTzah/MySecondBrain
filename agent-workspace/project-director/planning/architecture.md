@@ -279,12 +279,45 @@ Chat messages contain heterogeneous content blocks (Markdown text, code blocks w
 | `MarkdownTextRenderer` | Paragraphs, headings, bold, italic, lists, links, tables, blockquotes | WPF `FlowDocument` elements |
 | `CodeBlockRenderer` | Fenced code blocks with language declaration | Syntax-highlighted `FlowDocument` via AvalonEdit highlighting engine + copy button |
 | `ArtifactReferenceRenderer` | Artifact references | Clickable artifact card → opens in side panel |
+| `CitationRenderer` | Inline citation markers (`[1]`, `[2]`) from Deep Research / web search | Clickable superscript links that scroll to Sources footnote section. Each footnote shows index number, linked title, domain, and date-accessed. |
 | `ImageRenderer` | Inline images (`![alt](url)`) | WPF `Image` control with click-to-enlarge |
 | `MediaRenderer` | Audio/video embeds | NAudio mini player, WPF `MediaElement` |
 | `ThinkingRenderer` | Thinking/reasoning tokens | Collapsible "Thinking…" accordion |
 | `ToolCallRenderer` | Tool call/result system messages | Styled border with tool name, parameters, result summary |
 
 Renderers are registered in `ContentRendererRegistry` at startup. The `MarkdownStreamRenderer` resolves the appropriate renderer for each AST node during progressive rendering.
+
+### Citation Rendering Pipeline
+
+Citations flow through a dedicated rendering path within the content block renderer system:
+
+```
+Message.content (Markdown with [1] markers + [^1]: footnotes)
+        │
+        ▼
+Markdig parses → AST with inline LinkInline nodes and Footnote nodes
+        │
+        ▼
+ContentRendererRegistry.Resolve(node)
+        │
+        ├── For [1], [2] markers: CitationRenderer (priority 350)
+        │   └── Renders as clickable superscript Hyperlink
+        │       └── On click: FrameworkElement.BringIntoView()
+        │           to navigate to [^1]: footnote Paragraph
+        │
+        ├── For [^1]: footnotes: CitationRenderer
+        │   └── Renders as styled Paragraph with:
+        │       • Index number
+        │       • Bold Hyperlink (title → source URL)
+        │       • Domain in secondary foreground color
+        │       • Date-accessed in muted foreground color
+        │
+        └── For all other nodes: standard renderer chain (MarkdownText, etc.)
+```
+
+The citation data itself (index, title, domain, date-accessed) is **not stored in a separate entity** — it is embedded directly in the Message's Markdown `content` field as structured footnotes (see [`data-model.md`](data-model.md#deep-research-citations-embedded-in-message-content)). The `CitationRenderer` is purely a rendering concern: it parses the footnote format from Markdown and produces WPF UI elements with click-to-scroll behavior. This keeps the data model simple (no new entity) while providing the interactive citation experience specified in the vision ([`deep-research.md`](../vision/flows/deep-research.md#step-6-final-output--structured-report)).
+
+**Priority rationale (350):** CitationRenderer sits between `ArtifactReferenceRenderer` (300) and `ImageRenderer` (400) because citation markers (`[1]`) are more specific than generic link rendering but less specific than artifact references. The `ContentRendererRegistry` scans renderers in ascending priority order, so CitationRenderer intercepts footnote-style links before `ImageRenderer` or `MarkdownTextRenderer` process them as generic links.
 
 ---
 

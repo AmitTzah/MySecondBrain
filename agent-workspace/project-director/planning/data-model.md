@@ -557,6 +557,39 @@ The `threadId` is denormalized onto UsageRecord to avoid JOIN through Message fo
 
 ---
 
+### Deep Research Citations (Embedded in Message Content)
+
+Citations from Deep Research (Feature 14, H6) and web search results are **embedded directly in the Message `content` field** as structured Markdown footnotes. No separate `Citation` entity is required.
+
+**Architectural Decision — Embedded Footnotes over Separate Entity:**
+- **Rationale:** Citations are an ephemeral rendering concern — they exist to be displayed inline and clicked. A separate entity would add a FK relationship from Message, require citation CRUD, and complicate the data model for data that is authored by the AI, never independently queried, and has no lifecycle beyond the parent message.
+- **Trade-off acknowledged:** Citations cannot be independently searched, aggregated, or analyzed across messages. If cross-message citation analysis becomes a future requirement, a separate `Citation` entity can be introduced without breaking the footnote-based rendering approach (the Markdown content is already structured).
+
+**Citation Markdown Format:**
+```markdown
+## Sources
+[^1]: "Source Title" — domain.com — accessed 2026-06-15
+[^2]: "Another Source" — example.org — accessed 2026-06-15
+```
+
+Inline citation markers (`[1]`, `[2]`, etc.) in the report body are standard Markdown text that the `CitationRenderer` (see [`abstractions.md §8`](abstractions.md#8-content-block-renderer)) detects and renders as clickable superscript links scrolling to the corresponding `[^N]:` footnote in the Sources section.
+
+**Citation data captured per source:**
+
+| Field | Type | Required | Example |
+|-------|------|----------|---------|
+| Index number | `[^N]:` prefix | Yes | `[^1]:` |
+| Source title | Quoted string, hyperlinked when URL available | Yes | `"Fusion Energy Outlook 2025"` |
+| Domain | Plain text after em-dash | Yes | `iter.org` |
+| Date accessed | `accessed YYYY-MM-DD` | Yes | `accessed 2026-06-15` |
+
+**Renderer behavior** (detailed in [`abstractions.md §8`](abstractions.md#8-content-block-renderer)):
+- `CitationRenderer` scans the Markdig AST for inline `[N]` markers
+- On click, navigates to the `[^N]:` footnote via WPF anchor navigation
+- Graceful degradation: missing footnotes render as plain text; missing URLs render title as plain text
+
+---
+
 ## AppSetting Keys for Diagnostics (V)
 
 The Diagnostics feature (V, A11a-A11d) stores 9 settings in the existing `AppSetting` key-value table via `ISettingsRepository`. No new entity is required.

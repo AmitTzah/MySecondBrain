@@ -69,7 +69,7 @@ This file is the index of the `planning/` directory. It is what the Feature Deve
 | `IChatImporter` | ChatGPTImporter, ClaudeImporter | Chat history import |
 | `IToolExecutor` | WebSearchToolExecutor, TerminalToolExecutor, FileGenerateToolExecutor, FileEditToolExecutor, WikiSearchToolExecutor | Tool execution for AI agents |
 | `IToolOrchestrator` | ToolOrchestrator | Function-calling loop |
-| `IContentBlockRenderer` | MarkdownTextRenderer, CodeBlockRenderer, ArtifactReferenceRenderer, ImageRenderer, MediaRenderer, ThinkingRenderer, ToolCallRenderer | Markdig AST → WPF elements |
+| `IContentBlockRenderer` | MarkdownTextRenderer, CodeBlockRenderer, ArtifactReferenceRenderer, CitationRenderer, ImageRenderer, MediaRenderer, ThinkingRenderer, ToolCallRenderer | Markdig AST → WPF elements |
 | `IThemeProvider` | WpfThemeProvider | Dark/light + chat themes |
 | `IUpdateChecker` | AutoUpdaterDotNet, MsixAppInstallerUpdater | Version check + update |
 | `IChatThreadService` | ChatThreadService | Central chat/message/branching service |
@@ -202,7 +202,7 @@ Every vision feature group (A-U) is addressed in the planning documents:
 | E. Chat Modes | ChatThreadService | — | ChatThread (chatMode, thinkingEnabled) | IChatThreadService |
 | F. Artifacts | Artifact Renderer | DiffPlex | Artifact | IContentBlockRenderer (ArtifactReferenceRenderer) |
 | G. Media Library | Media Renderer | NAudio, AForge, MediaElement | MediaItem | IContentBlockRenderer (MediaRenderer) |
-| H. Tool Use | Tool Orchestrator | System.Diagnostics.Process, HttpClient | ChatThread, Message | IToolOrchestrator, IToolExecutor |
+| H. Tool Use | Tool Orchestrator, CitationRenderer | System.Diagnostics.Process, HttpClient | ChatThread, Message (citations embedded as Markdown footnotes) | IToolOrchestrator, IToolExecutor, IContentBlockRenderer (CitationRenderer) |
 | I. Import/Export | ChatImportService | System.Text.Json, QuestPDF | ChatThread, Message | IChatImporter |
 | J. Prompt Library | — | SQLite | PromptTemplate | — |
 | K. Text Actions & Three-Tier | Three window types + ChatThreadService + graduated UIA capture pipeline | P/Invoke, UIA (TextPattern, ValuePattern, TreeWalker, DocumentRange), Clipboard, Win32 GDI | TextAction (captureScope + applyMode), ChatThread, Message | IGlobalHotkeyService, IHwndCaptureService, ITextInjectionService |
@@ -220,4 +220,4 @@ Every vision feature group (A-U) is addressed in the planning documents:
 
 ---
 
-*Planning summary document — the index for the complete `planning/` directory. Batch 2 of 2. Planning directory is now complete (7 files). Updated 2026-06-18 with V. Diagnostics & Debug Logging. See [`tech-sourcing.md`](../tech-sourcing.md) for upstream sourcing decisions.*
+*Planning summary document — the index for the complete `planning/` directory. Batch 2 of 2. Planning directory is now complete (7 files). Updated 2026-06-20 with CitationRenderer abstraction (content block renderer #8), citation data model footnote, and citation rendering pipeline. See [`tech-sourcing.md`](../tech-sourcing.md) for upstream sourcing decisions.*

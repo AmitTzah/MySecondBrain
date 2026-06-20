@@ -391,7 +391,7 @@ Plugin/registry pattern for rendering heterogeneous content blocks within chat m
 public interface IContentBlockRenderer
 {
     string RendererName { get; }
-    int Priority { get; }  // Higher = checked first
+    int Priority { get; }  // Lower = checked first (ascending priority scan)
 
     // Can this renderer handle the given Markdig block/inline?
     bool CanRender(MarkdownObject markdownNode);
@@ -414,6 +414,19 @@ public record RenderContext(
 );
 ```
 
+**Priority Ordering:** The `ContentRendererRegistry` scans renderers in ascending priority order (lowest number first) and returns the first `CanRender()` match. Lower numbers = checked earlier. This allows specific renderers (e.g., code blocks) to take precedence over general-purpose renderers (e.g., Markdown text).
+
+| Priority | Renderer | Rationale |
+|----------|----------|-----------|
+| 100 | `MarkdownTextRenderer` | General-purpose fallback — handles all standard Markdown constructs |
+| 200 | `CodeBlockRenderer` | Must precede MarkdownText to intercept fenced code blocks before generic paragraph handling |
+| 300 | `ArtifactReferenceRenderer` | Intercepts artifact citation nodes before generic link rendering |
+| 350 | `CitationRenderer` | Intercepts footnote-style citation markers (`[1]`, `[2]`) before generic link rendering; renders as clickable superscript anchors |
+| 400 | `ImageRenderer` | Intercepts image nodes before generic paragraph/inline handling |
+| 500 | `MediaRenderer` | Audio/video embeds |
+| 600 | `ThinkingRenderer` | Thinking/reasoning tokens |
+| 700 | `ToolCallRenderer` | Tool call/result system messages |
+
 **Concrete implementations:**
 
 | Implementation | Handles | Output |
@@ -421,10 +434,27 @@ public record RenderContext(
 | `MarkdownTextRenderer` | Paragraphs, headings, bold, italic, lists, links, tables, blockquotes, horizontal rules | WPF `Paragraph`, `Run`, `Bold`, `Italic`, `Hyperlink`, `List`, `Table` elements |
 | `CodeBlockRenderer` | Fenced code blocks (` ```language ... ``` `) | Syntax-highlighted `Section` with `Paragraph` elements + copy button. Uses AvalonEdit highlighting engine. |
 | `ArtifactReferenceRenderer` | Artifact citations/references | Clickable artifact card (`Border` with artifact name, type, version) |
+| `CitationRenderer` | Inline citation markers (`[1]`, `[2]`, etc.) from Deep Research and web search results | Clickable superscript link that scrolls to the Sources footnote section at the bottom of the message. Each source footnote shows: index number, **title** (linked to URL when available), **domain**, and **date-accessed**. |
 | `ImageRenderer` | Inline images (`![alt](url)`) | WPF `Image` control with click-to-enlarge |
 | `MediaRenderer` | Audio/video embeds | NAudio mini player / WPF `MediaElement` |
 | `ThinkingRenderer` | Thinking/reasoning tokens (E3) | Collapsible `Expander` with "Thinking…" header |
 | `ToolCallRenderer` | Tool call/result system messages | Styled border with tool name, parameters, result summary |
+
+### Citation Rendering Details
+
+Citations originate from Feature 14 — Tool Use & Agent Capabilities (H6 Deep Research), where the AI produces a report with inline citation markers (`[1]`, `[2]`, etc.) that reference a **Sources** section at the bottom of the message. The citation format is embedded directly in the Message's Markdown `content` field as structured Markdown footnotes:
+
+```markdown
+## Sources
+[^1]: "Fusion Energy Outlook 2025" — iter.org — accessed 2026-06-15
+[^2]: "Private Fusion Investment Hits $6B" — techcrunch.com — accessed 2026-06-15
+```
+
+**CitationRenderer behavior:**
+1. **Inline markers:** Scans for `[1]`, `[2]`, etc. in the Markdown AST and renders them as clickable superscript links (WPF `Hyperlink` inside a `Span` with `Typography.Variants=Superscript`).
+2. **Click action:** On click, scrolls the `FlowDocument` to the corresponding `[^N]:` footnote in the Sources section via WPF `BringIntoView()` or named-anchor navigation.
+3. **Source footnote rendering:** Each `[^N]:` footnote is rendered as a styled `Paragraph` with index number, **bold linked title** (wrapped in `Hyperlink` pointing to source URL), domain in secondary color, and date-accessed in muted color.
+4. **Graceful degradation:** If a footnote definition is missing (citation references a non-existent source), the inline marker renders as plain text (no link). If a URL is unavailable, the title is rendered as plain text (not hyperlinked).
 
 **Ref:** [tech-sourcing #4](../tech-sourcing.md#4-markdown--code-rendering-engine)
 
@@ -1242,7 +1272,7 @@ UI Layer (Tier1Overlay, Tier2CommandBar, MainWindow)
     │       └── ISearchProvider
     │
     ├── IThemeProvider
-    ├── IContentRendererRegistry → IContentBlockRenderer × 7
+    ├── IContentRendererRegistry → IContentBlockRenderer × 8
     ├── ISTTProvider
     ├── IBackupProvider
     ├── IUpdateChecker
