@@ -12,11 +12,18 @@
     },
     "missing_prerequisites": []
   },
-  "skipped_smoke_tests": [],
+  "skipped_smoke_tests": [
+    {
+      "step": 3,
+      "name": "Settings UI — Providers Section (API Key Management)",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "Launch the app, navigate to Settings → Providers. Click \"Add API Key\". Select \"OpenAI\" from provider dropdown. Enter a test API key. Click \"Test Key\" — verify green checkmark and \"API key validated successfully\" message appears. Click \"Save\" — verify key appears in the list with masked display (e.g., \"sk-...abc123\"). Click the copy button — verify key is copied to clipboard (paste into Notepad to confirm). Click \"Delete\" and confirm dialog. Verify key is removed from list."
+    }
+  ],
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 5,
-  "current_step": 2,
+  "current_step": 3,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }
