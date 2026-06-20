@@ -549,6 +549,22 @@ public class SettingsViewModelTests
     }
 
     [Fact]
+    public void CopyKeyCommand_NullEncryptedValue_DoesNothing()
+    {
+        _sut.CopyKeyCommand.Execute(new ApiKeyDisplayItem { EncryptedValue = null! });
+        _encryptionServiceMock.Verify(e => e.UnprotectString(It.IsAny<string>()), Times.Never);
+        _clipboardServiceMock.Verify(c => c.SetText(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public void CopyKeyCommand_EmptyEncryptedValue_DoesNothing()
+    {
+        _sut.CopyKeyCommand.Execute(new ApiKeyDisplayItem { EncryptedValue = string.Empty });
+        _encryptionServiceMock.Verify(e => e.UnprotectString(It.IsAny<string>()), Times.Never);
+        _clipboardServiceMock.Verify(c => c.SetText(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
     public void CopyKeyCommand_ValidItem_DecryptsKeyAndCopiesToClipboard()
     {
         _encryptionServiceMock
