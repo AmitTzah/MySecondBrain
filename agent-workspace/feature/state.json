@@ -24,12 +24,18 @@
       "name": "Settings UI — Profiles Section (Model Configurations & Personas)",
       "classification": "HUMAN/SHT REQUIRED",
       "description": "Launch the app, navigate to Settings → Profiles. Verify \"Model Configurations\" and \"Personas\" sections are visible. Click \"New Model Configuration\". Set display name to \"GPT-4o Test\". Select a provider. Verify model dropdown populates from auto-fetch. Set temperature slider to 0.7. Select SlidingWindow for context overflow. Click Save — verify it appears in the list. Click \"Duplicate\" — verify a copy appears with \"(Copy)\" suffix. Click \"New Persona\". Set name to \"Test Persona\", enter system prompt \"You are a test assistant. Today is {{date}}.\", select the saved model config, choose Standard chat mode, save. Verify persona appears in list. Delete the persona and model config — verify both are removed."
+    },
+    {
+      "step": 5,
+      "name": "Persona Selection per Chat (B4)",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "Launch the app. Navigate to Studio Chat. Verify the chat header shows the active persona name. Click the persona dropdown in the toolbar — verify all personas appear, with recently-used ones at top. Press Ctrl+N — verify the persona picker opens, showing all personas. Select a different persona — verify the chat header updates. Verify the persona dropdown reflects the change. Select a persona, close the app, reopen — verify the persona persists."
     }
   ],
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 5,
-  "current_step": 4,
+  "current_step": 5,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }

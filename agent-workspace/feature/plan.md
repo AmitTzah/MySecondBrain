@@ -185,7 +185,7 @@ This feature follows the existing **Provider/Adapter** pattern for LLM providers
 
 ---
 
-### [ ] Step 5: Persona Selection per Chat (B4)
+### [x] Step 5: Persona Selection per Chat (B4)
 - **Goal:** Wire persona selection into the Studio Chat screen. The hardcoded "Default Persona" header and "🤖 Default Persona ▾" toolbar button are replaced with live persona data. Ctrl+N opens a persona picker dialog. The in-chat persona dropdown shows all personas with recently-used ordering (top 5). The chat header displays the active persona name. Changing the persona mid-chat updates the system prompt and model config for subsequent messages.
 - **Actions:**
   - Extend `ChatThreadViewModel` constructor to inject `IPersonaRepository`, `IModelConfigurationRepository`, `ILogger<ChatThreadViewModel>`
