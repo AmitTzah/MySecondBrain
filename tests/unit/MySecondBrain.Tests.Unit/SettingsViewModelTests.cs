@@ -580,11 +580,10 @@ public class SettingsViewModelTests
 
         _encryptionServiceMock.Verify(e => e.UnprotectString("encrypted-value"), Times.Once);
         _clipboardServiceMock.Verify(c => c.SetText("decrypted-key"), Times.Once);
-        Assert.Equal("API key copied to clipboard.", _sut.StatusMessage);
     }
 
     [Fact]
-    public void CopyKeyCommand_Exception_ShowsErrorMessage()
+    public void CopyKeyCommand_Exception_DoesNotThrow()
     {
         _encryptionServiceMock
             .Setup(e => e.UnprotectString(It.IsAny<string>()))
@@ -595,9 +594,11 @@ public class SettingsViewModelTests
             EncryptedValue = "bad-data",
         };
 
-        _sut.CopyKeyCommand.Execute(item);
+        // Should not throw — the catch block handles it gracefully
+        var exception = Record.Exception(() => _sut.CopyKeyCommand.Execute(item));
+        Assert.Null(exception);
 
-        Assert.Contains("Failed", _sut.StatusMessage);
+        _clipboardServiceMock.Verify(c => c.SetText(It.IsAny<string>()), Times.Never);
     }
 
     // ================================================================

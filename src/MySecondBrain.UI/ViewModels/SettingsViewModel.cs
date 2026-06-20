@@ -459,16 +459,14 @@ public partial class SettingsViewModel : ObservableObject
         {
             var decrypted = _encryptionService.UnprotectString(item.EncryptedValue);
             _clipboardService.SetText(decrypted);
-            StatusMessage = "API key copied to clipboard.";
 
-            // Show checkmark on the copy button
+            // Show checkmark on the copy button as visual feedback
             item.IsCopied = true;
             ScheduleCopyFeedbackReset(item);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to copy API key to clipboard");
-            StatusMessage = "Failed to copy API key.";
         }
     }
 
