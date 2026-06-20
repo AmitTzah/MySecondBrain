@@ -42,7 +42,11 @@ public class Persona
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public string DisplayName { get; set; } = string.Empty;
     public string? SystemPrompt { get; set; }
+    public string? DefaultModelConfigId { get; set; }
+    public string DefaultChatMode { get; set; } = "Standard";
     public bool IsBuiltIn { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
 public class ModelConfiguration
@@ -52,6 +56,7 @@ public class ModelConfiguration
     public ProviderType ProviderType { get; set; }
     public string ModelIdentifier { get; set; } = string.Empty;
     public string? EndpointUrl { get; set; }
+    public string? ApiKeyId { get; set; }
     public double Temperature { get; set; } = 1.0;
     public int MaxOutputTokens { get; set; } = 4096;
     public int MaxContextWindow { get; set; } = 128000;
@@ -60,6 +65,8 @@ public class ModelConfiguration
     public decimal? PricingInputPer1K { get; set; }
     public decimal? PricingOutputPer1K { get; set; }
     public string ContextOverflowStrategy { get; set; } = "SlidingWindow";
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
 public class ApiKey
@@ -68,6 +75,11 @@ public class ApiKey
     public ProviderType ProviderType { get; set; }
     public string EncryptedValue { get; set; } = string.Empty;
     public string? Label { get; set; }
+    public string? CustomProviderName { get; set; }
+    public string? CustomEndpointUrl { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? LastTestedAt { get; set; }
+    public bool IsValid { get; set; }
 }
 
 public class WikiFile

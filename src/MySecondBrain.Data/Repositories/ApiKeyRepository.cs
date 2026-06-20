@@ -44,6 +44,10 @@ public class ApiKeyRepository : IApiKeyRepository
         entity.DisplayName = key.Label ?? string.Empty;
         entity.Provider = key.ProviderType.ToString();
         entity.KeyValue = key.EncryptedValue;
+        entity.CustomProviderName = key.CustomProviderName;
+        entity.CustomEndpointUrl = key.CustomEndpointUrl;
+        entity.IsValid = key.IsValid;
+        entity.LastTestedAt = key.LastTestedAt;
 
         _db.Entry(entity).State = EntityState.Modified;
         await _db.SaveChangesAsync();
@@ -75,6 +79,11 @@ public class ApiKeyRepository : IApiKeyRepository
             ProviderType = Enum.TryParse<ProviderType>(entity.Provider, out var pt) ? pt : ProviderType.OpenAI,
             EncryptedValue = entity.KeyValue,
             Label = entity.DisplayName,
+            CustomProviderName = entity.CustomProviderName,
+            CustomEndpointUrl = entity.CustomEndpointUrl,
+            CreatedAt = entity.CreatedAt,
+            LastTestedAt = entity.LastTestedAt,
+            IsValid = entity.IsValid,
         };
     }
 
@@ -86,6 +95,11 @@ public class ApiKeyRepository : IApiKeyRepository
             DisplayName = model.Label ?? string.Empty,
             Provider = model.ProviderType.ToString(),
             KeyValue = model.EncryptedValue,
+            CustomProviderName = model.CustomProviderName,
+            CustomEndpointUrl = model.CustomEndpointUrl,
+            IsValid = model.IsValid,
+            LastTestedAt = model.LastTestedAt,
+            CreatedAt = model.CreatedAt,
         };
     }
 }

@@ -46,8 +46,9 @@ public class ModelConfigurationRepository : IModelConfigurationRepository
         entity.ModelIdentifier = config.ModelIdentifier;
         entity.Temperature = config.Temperature;
         entity.MaxOutputTokens = config.MaxOutputTokens;
-        entity.MaxContextWindow = config.ThinkingTokens ?? config.MaxContextWindow;
+        entity.MaxContextWindow = config.MaxContextWindow;
         entity.ThinkingEnabled = config.ThinkingEnabled;
+        entity.ApiKeyId = config.ApiKeyId;
         entity.PricingInputPer1K = config.PricingInputPer1K;
         entity.PricingOutputPer1K = config.PricingOutputPer1K;
         entity.ContextOverflowStrategy = config.ContextOverflowStrategy;
@@ -84,14 +85,18 @@ public class ModelConfigurationRepository : IModelConfigurationRepository
             DisplayName = entity.DisplayName,
             ProviderType = Enum.TryParse<ProviderType>(entity.Provider, out var pt) ? pt : ProviderType.OpenAI,
             ModelIdentifier = entity.ModelIdentifier ?? string.Empty,
+            EndpointUrl = null, // Not stored in entity; set by caller if needed
+            ApiKeyId = entity.ApiKeyId,
             Temperature = entity.Temperature,
             MaxOutputTokens = entity.MaxOutputTokens,
             MaxContextWindow = entity.MaxContextWindow,
             ThinkingEnabled = entity.ThinkingEnabled,
-            ThinkingTokens = entity.MaxContextWindow,
+            ThinkingTokens = null, // Domain-only concept; not stored in entity
             PricingInputPer1K = entity.PricingInputPer1K,
             PricingOutputPer1K = entity.PricingOutputPer1K,
             ContextOverflowStrategy = entity.ContextOverflowStrategy,
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.UpdatedAt,
         };
     }
 
@@ -103,13 +108,16 @@ public class ModelConfigurationRepository : IModelConfigurationRepository
             DisplayName = model.DisplayName,
             Provider = model.ProviderType.ToString(),
             ModelIdentifier = model.ModelIdentifier,
+            ApiKeyId = model.ApiKeyId,
             Temperature = model.Temperature,
             MaxOutputTokens = model.MaxOutputTokens,
-            MaxContextWindow = model.ThinkingTokens ?? model.MaxContextWindow,
+            MaxContextWindow = model.MaxContextWindow,
             ThinkingEnabled = model.ThinkingEnabled,
             PricingInputPer1K = model.PricingInputPer1K,
             PricingOutputPer1K = model.PricingOutputPer1K,
             ContextOverflowStrategy = model.ContextOverflowStrategy,
+            CreatedAt = model.CreatedAt,
+            UpdatedAt = model.UpdatedAt,
         };
     }
 }

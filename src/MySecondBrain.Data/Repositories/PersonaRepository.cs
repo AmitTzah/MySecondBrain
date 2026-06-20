@@ -55,6 +55,8 @@ public class PersonaRepository : IPersonaRepository
         entity.DisplayName = persona.DisplayName;
         entity.SystemPrompt = persona.SystemPrompt;
         entity.IsBuiltIn = persona.IsBuiltIn;
+        entity.DefaultModelConfigId = persona.DefaultModelConfigId;
+        entity.DefaultChatMode = persona.DefaultChatMode;
         entity.UpdatedAt = DateTimeOffset.UtcNow;
 
         _db.Entry(entity).State = EntityState.Modified;
@@ -79,7 +81,11 @@ public class PersonaRepository : IPersonaRepository
             Id = entity.Id,
             DisplayName = entity.DisplayName,
             SystemPrompt = entity.SystemPrompt,
+            DefaultModelConfigId = entity.DefaultModelConfigId,
+            DefaultChatMode = entity.DefaultChatMode,
             IsBuiltIn = entity.IsBuiltIn,
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.UpdatedAt,
         };
     }
 
@@ -90,7 +96,11 @@ public class PersonaRepository : IPersonaRepository
             Id = model.Id,
             DisplayName = model.DisplayName,
             SystemPrompt = model.SystemPrompt,
+            DefaultModelConfigId = model.DefaultModelConfigId,
+            DefaultChatMode = model.DefaultChatMode,
             IsBuiltIn = model.IsBuiltIn,
+            CreatedAt = model.CreatedAt,
+            UpdatedAt = model.UpdatedAt,
         };
     }
 }

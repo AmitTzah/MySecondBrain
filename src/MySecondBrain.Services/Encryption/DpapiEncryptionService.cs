@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 
@@ -12,11 +14,39 @@ public class DpapiEncryptionService : IEncryptionService
         _logger = logger;
     }
 
-    public byte[] Protect(byte[] data) => Array.Empty<byte>();
+    public byte[] Protect(byte[] data)
+    {
+        if (data is null || data.Length == 0)
+            return Array.Empty<byte>();
 
-    public byte[] Unprotect(byte[] data) => Array.Empty<byte>();
+        return ProtectedData.Protect(data, optionalEntropy: null, DataProtectionScope.CurrentUser);
+    }
 
-    public string ProtectString(string plaintext) => string.Empty;
+    public byte[] Unprotect(byte[] data)
+    {
+        if (data is null || data.Length == 0)
+            return Array.Empty<byte>();
 
-    public string UnprotectString(string ciphertext) => string.Empty;
+        return ProtectedData.Unprotect(data, optionalEntropy: null, DataProtectionScope.CurrentUser);
+    }
+
+    public string ProtectString(string plaintext)
+    {
+        if (string.IsNullOrEmpty(plaintext))
+            return string.Empty;
+
+        var plainBytes = Encoding.UTF8.GetBytes(plaintext);
+        var cipherBytes = ProtectedData.Protect(plainBytes, optionalEntropy: null, DataProtectionScope.CurrentUser);
+        return Convert.ToBase64String(cipherBytes);
+    }
+
+    public string UnprotectString(string ciphertext)
+    {
+        if (string.IsNullOrEmpty(ciphertext))
+            return string.Empty;
+
+        var cipherBytes = Convert.FromBase64String(ciphertext);
+        var plainBytes = ProtectedData.Unprotect(cipherBytes, optionalEntropy: null, DataProtectionScope.CurrentUser);
+        return Encoding.UTF8.GetString(plainBytes);
+    }
 }

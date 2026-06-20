@@ -1639,16 +1639,21 @@ public class DataLayerTests
                 ModelIdentifier = "gemini-pro",
                 Temperature = 0.5,
                 MaxOutputTokens = 2048,
+                MaxContextWindow = 64000,
                 ThinkingEnabled = false,
-                ThinkingTokens = 64000
+                ContextOverflowStrategy = "SlidingWindow"
             });
             created.DisplayName = "Updated Config";
             created.ProviderType = CoreModels.ProviderType.Anthropic;
             created.ModelIdentifier = "claude-3-opus";
             created.Temperature = 0.9;
             created.MaxOutputTokens = 8192;
+            created.MaxContextWindow = 128000;
             created.ThinkingEnabled = true;
-            created.ThinkingTokens = 32000;
+            created.ApiKeyId = null; // Nullable FK; set to null to avoid FK constraint
+            created.PricingInputPer1K = 2.50m;
+            created.PricingOutputPer1K = 10.00m;
+            created.ContextOverflowStrategy = "AutoSummarize";
             await repo.UpdateAsync(created);
             var updated = await repo.GetByIdAsync(created.Id);
             Assert.Equal("Updated Config", updated!.DisplayName);
@@ -1656,8 +1661,12 @@ public class DataLayerTests
             Assert.Equal("claude-3-opus", updated.ModelIdentifier);
             Assert.Equal(0.9, updated.Temperature);
             Assert.Equal(8192, updated.MaxOutputTokens);
+            Assert.Equal(128000, updated.MaxContextWindow);
             Assert.True(updated.ThinkingEnabled);
-            Assert.Equal(32000, updated.ThinkingTokens);
+            Assert.Null(updated.ApiKeyId); // Set to null in update to avoid FK constraint
+            Assert.Equal(2.50m, updated.PricingInputPer1K);
+            Assert.Equal(10.00m, updated.PricingOutputPer1K);
+            Assert.Equal("AutoSummarize", updated.ContextOverflowStrategy);
         }
     }
 
@@ -2818,6 +2827,211 @@ public class DataLayerTests
             Assert.Equal(0, result.PositiveCount);
             Assert.Equal(0, result.NegativeCount);
             Assert.Equal(0, result.AverageRating);
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Step 1 tests: Domain model field mappings for
+    // ApiKey, ModelConfiguration, Persona repositories
+    // ════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task ApiKeyRepository_CreateAsync_WithAllFields_ReturnsMappedKey()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var repo = new ApiKeyRepository(db);
+            var key = new CoreModels.ApiKey
+            {
+                ProviderType = CoreModels.ProviderType.OpenAICompatible,
+                EncryptedValue = "encrypted-test-value",
+                Label = "Custom OpenAI",
+                CustomProviderName = "My Local AI",
+                CustomEndpointUrl = "https://localhost:8080/v1",
+                IsValid = true,
+                LastTestedAt = DateTimeOffset.UtcNow.AddDays(-1)
+            };
+            var result = await repo.CreateAsync(key);
+
+            Assert.NotNull(result);
+            Assert.Equal(CoreModels.ProviderType.OpenAICompatible, result.ProviderType);
+            Assert.Equal("encrypted-test-value", result.EncryptedValue);
+            Assert.Equal("Custom OpenAI", result.Label);
+            Assert.Equal("My Local AI", result.CustomProviderName);
+            Assert.Equal("https://localhost:8080/v1", result.CustomEndpointUrl);
+            Assert.True(result.IsValid);
+            Assert.NotNull(result.LastTestedAt);
+            Assert.NotEqual(default, result.CreatedAt);
+        }
+    }
+
+    [Fact]
+    public async Task ApiKeyRepository_UpdateAsync_UpdatesNewFields()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var repo = new ApiKeyRepository(db);
+            var created = await repo.CreateAsync(new CoreModels.ApiKey
+            {
+                ProviderType = CoreModels.ProviderType.OpenAI,
+                EncryptedValue = "initial-value",
+                Label = "Initial"
+            });
+
+            created.Label = "Updated";
+            created.ProviderType = CoreModels.ProviderType.Anthropic;
+            created.EncryptedValue = "updated-value";
+            created.CustomProviderName = "CustomName";
+            created.CustomEndpointUrl = "https://custom.endpoint";
+            created.IsValid = true;
+            created.LastTestedAt = DateTimeOffset.UtcNow;
+
+            await repo.UpdateAsync(created);
+            var updated = await repo.GetByIdAsync(created.Id);
+
+            Assert.Equal("Updated", updated!.Label);
+            Assert.Equal(CoreModels.ProviderType.Anthropic, updated.ProviderType);
+            Assert.Equal("updated-value", updated.EncryptedValue);
+            Assert.Equal("CustomName", updated.CustomProviderName);
+            Assert.Equal("https://custom.endpoint", updated.CustomEndpointUrl);
+            Assert.True(updated.IsValid);
+            Assert.NotNull(updated.LastTestedAt);
+        }
+    }
+
+    [Fact]
+    public async Task ModelConfigurationRepository_CreateAsync_WithAllFields_ReturnsMappedConfig()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            // Create a prerequisite ApiKey to satisfy FK constraint
+            var apiKeyEntity = new ApiKey
+            {
+                Id = "test-key-for-config",
+                DisplayName = "Test Key",
+                Provider = "OpenAI",
+                KeyValue = "test-value"
+            };
+            db.ApiKeys.Add(apiKeyEntity);
+            await db.SaveChangesAsync();
+
+            var repo = new ModelConfigurationRepository(db);
+            var config = new CoreModels.ModelConfiguration
+            {
+                DisplayName = "GPT-4o Custom",
+                ProviderType = CoreModels.ProviderType.OpenAI,
+                ModelIdentifier = "gpt-4o",
+                Temperature = 0.7,
+                MaxOutputTokens = 4096,
+                MaxContextWindow = 128000,
+                ThinkingEnabled = true,
+                ApiKeyId = "test-key-for-config",
+                PricingInputPer1K = 2.50m,
+                PricingOutputPer1K = 10.00m,
+                ContextOverflowStrategy = "AutoSummarize"
+            };
+            var result = await repo.CreateAsync(config);
+
+            Assert.NotNull(result);
+            Assert.Equal("GPT-4o Custom", result.DisplayName);
+            Assert.Equal(CoreModels.ProviderType.OpenAI, result.ProviderType);
+            Assert.Equal("gpt-4o", result.ModelIdentifier);
+            Assert.Equal(0.7, result.Temperature);
+            Assert.Equal(4096, result.MaxOutputTokens);
+            Assert.Equal(128000, result.MaxContextWindow);
+            Assert.True(result.ThinkingEnabled);
+            Assert.Equal("test-key-for-config", result.ApiKeyId);
+            Assert.Equal(2.50m, result.PricingInputPer1K);
+            Assert.Equal(10.00m, result.PricingOutputPer1K);
+            Assert.Equal("AutoSummarize", result.ContextOverflowStrategy);
+            Assert.NotEqual(default, result.CreatedAt);
+            Assert.NotEqual(default, result.UpdatedAt);
+        }
+    }
+
+    [Fact]
+    public async Task PersonaRepository_CreateAsync_WithAllFields_ReturnsMappedPersona()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            // Create a prerequisite ModelConfiguration to satisfy FK constraint (Restrict)
+            var configEntity = new ModelConfiguration
+            {
+                Id = "test-config-for-persona",
+                DisplayName = "Prerequisite Config",
+                Provider = "OpenAI"
+            };
+            db.ModelConfigurations.Add(configEntity);
+            await db.SaveChangesAsync();
+
+            var repo = new PersonaRepository(db);
+            var persona = new CoreModels.Persona
+            {
+                DisplayName = "Custom Persona",
+                SystemPrompt = "You are a specialized assistant.",
+                DefaultModelConfigId = "test-config-for-persona",
+                DefaultChatMode = "TextCompletion",
+                IsBuiltIn = false
+            };
+            var result = await repo.CreateAsync(persona);
+
+            Assert.NotNull(result);
+            Assert.Equal("Custom Persona", result.DisplayName);
+            Assert.Equal("You are a specialized assistant.", result.SystemPrompt);
+            Assert.Equal("test-config-for-persona", result.DefaultModelConfigId);
+            Assert.Equal("TextCompletion", result.DefaultChatMode);
+            Assert.False(result.IsBuiltIn);
+            Assert.NotEqual(default, result.CreatedAt);
+            Assert.NotEqual(default, result.UpdatedAt);
+        }
+    }
+
+    [Fact]
+    public async Task PersonaRepository_UpdateAsync_UpdatesDefaultModelConfigIdAndChatMode()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            // Create a prerequisite ModelConfiguration to satisfy FK constraint (Restrict)
+            var configEntity = new ModelConfiguration
+            {
+                Id = "test-config-for-update",
+                DisplayName = "Config for Update Test",
+                Provider = "Anthropic"
+            };
+            db.ModelConfigurations.Add(configEntity);
+            await db.SaveChangesAsync();
+
+            var repo = new PersonaRepository(db);
+            var created = await repo.CreateAsync(new CoreModels.Persona
+            {
+                DisplayName = "Original",
+                SystemPrompt = "Original prompt",
+                DefaultModelConfigId = null,
+                DefaultChatMode = "Standard"
+            });
+
+            created.DisplayName = "Updated";
+            created.SystemPrompt = "Updated prompt";
+            created.DefaultModelConfigId = "test-config-for-update";
+            created.DefaultChatMode = "TextCompletion";
+
+            await repo.UpdateAsync(created);
+            var updated = await repo.GetByIdAsync(created.Id);
+
+            Assert.Equal("Updated", updated!.DisplayName);
+            Assert.Equal("Updated prompt", updated.SystemPrompt);
+            Assert.Equal("test-config-for-update", updated.DefaultModelConfigId);
+            Assert.Equal("TextCompletion", updated.DefaultChatMode);
         }
     }
 }
