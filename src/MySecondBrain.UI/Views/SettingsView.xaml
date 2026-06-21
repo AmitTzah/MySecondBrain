@@ -548,10 +548,14 @@
                                         </Button>
 
                                         <!-- Test result indicator -->
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal"
-                                                    Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <Grid Grid.Column="1" Margin="10,0,0,0"
+                                              VerticalAlignment="Center">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
                                             <!-- Success checkmark (only shown on success) -->
-                                            <TextBlock Text="✅" FontSize="14">
+                                            <TextBlock Grid.Column="0" Text="✅" FontSize="14">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
@@ -564,12 +568,13 @@
                                                 </TextBlock.Style>
                                             </TextBlock>
                                             <!-- Result message — always visible when there's content -->
-                                            <TextBlock Text="{Binding TestResultMessage}"
+                                            <TextBlock Grid.Column="1" Text="{Binding TestResultMessage}"
                                                        FontSize="10" Margin="4,0,0,0"
                                                        VerticalAlignment="Center"
+                                                       TextWrapping="Wrap"
                                                        Foreground="{DynamicResource SubtleBrush}"/>
                                             <!-- Testing... indicator -->
-                                            <TextBlock Text="Testing..." FontSize="10"
+                                            <TextBlock Grid.Column="1" Text="Testing..." FontSize="10"
                                                        VerticalAlignment="Center"
                                                        Foreground="{DynamicResource SubtleBrush}">
                                                 <TextBlock.Style>
@@ -583,7 +588,7 @@
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                                        </StackPanel>
+                                        </Grid>
 
                                         <!-- Cancel button -->
                                         <Button Grid.Column="2" Content="Cancel"
