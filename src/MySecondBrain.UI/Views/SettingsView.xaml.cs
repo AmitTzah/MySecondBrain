@@ -49,11 +49,18 @@ public partial class SettingsView : UserControl
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(SettingsViewModel.ApiKeyInputValue)
-            && string.IsNullOrEmpty(_viewModel?.ApiKeyInputValue))
+        if (e.PropertyName == nameof(SettingsViewModel.ApiKeyInputValue))
         {
-            // Clear PasswordBox when ViewModel clears the input value
-            ApiKeyPasswordBox.Password = string.Empty;
+            if (string.IsNullOrWhiteSpace(_viewModel?.ApiKeyInputValue))
+            {
+                // Clear PasswordBox when ViewModel clears the input value
+                ApiKeyPasswordBox.Password = string.Empty;
+            }
+            else
+            {
+                // Sync non-empty ViewModel value to PasswordBox (e.g., during edit pre-fill)
+                ApiKeyPasswordBox.Password = _viewModel.ApiKeyInputValue;
+            }
         }
         else if (e.PropertyName == nameof(SettingsViewModel.IsEditingKey)
                  && _viewModel?.IsEditingKey == true)

@@ -536,10 +536,28 @@ public partial class SettingsViewModel : ObservableObject
             CustomProviderNameValue = key.CustomProviderName ?? string.Empty;
             CustomEndpointUrlValue = key.CustomEndpointUrl ?? string.Empty;
             IsOpenAiCompatibleSelected = key.ProviderType == ProviderType.OpenAICompatible;
-            ApiKeyInputValue = string.Empty;
             TestResultMessage = string.Empty;
             IsTestSuccess = key.IsValid;
             IsEditingKey = true;
+
+            // Decrypt the stored key and pre-fill the input so the user can see/replace it
+            if (!string.IsNullOrEmpty(key.EncryptedValue))
+            {
+                try
+                {
+                    var decrypted = _encryptionService.UnprotectString(key.EncryptedValue);
+                    ApiKeyInputValue = decrypted;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to decrypt API key {KeyId} for edit pre-fill", key.Id);
+                    ApiKeyInputValue = string.Empty;
+                }
+            }
+            else
+            {
+                ApiKeyInputValue = string.Empty;
+            }
 
             if (key.IsValid)
                 TestResultMessage = "Key was valid on last test.";

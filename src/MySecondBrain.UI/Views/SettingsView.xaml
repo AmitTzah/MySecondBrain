@@ -7,6 +7,100 @@
              AutomationProperties.AutomationId="SettingsView">
     <UserControl.Resources>
         <ResourceDictionary>
+            <!-- Reusable style for icon buttons (Copy, Edit, Delete, Duplicate) with very subtle hover/press feedback -->
+            <Style x:Key="IconButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="28"/>
+                <Setter Property="Height" Value="24"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+                <Setter Property="Margin" Value="2,0"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Opacity" Value="0.85"/>
+                    </Trigger>
+                    <Trigger Property="IsPressed" Value="True">
+                        <Setter Property="Opacity" Value="0.7"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
+            <!-- Style for accent (primary action) buttons — suppresses default WPF chrome hover effects -->
+            <Style x:Key="AccentButtonStyle" TargetType="Button">
+                <Setter Property="OverridesDefaultStyle" Value="True"/>
+                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="Padding" Value="12,5"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="3"
+                                    Padding="{TemplateBinding Padding}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Opacity" Value="0.85"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Opacity" Value="0.7"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.5"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Style for secondary (Cancel) buttons — suppresses default WPF chrome hover effects -->
+            <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+                <Setter Property="OverridesDefaultStyle" Value="True"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Foreground" Value="{DynamicResource ContentForeground}"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="Padding" Value="12,5"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="3"
+                                    Padding="{TemplateBinding Padding}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Opacity" Value="0.85"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Opacity" Value="0.7"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.5"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
             <!-- Sidebar item template -->
             <DataTemplate x:Key="SidebarItemTemplate" DataType="vm:SettingsCategoryItem">
                 <StackPanel Orientation="Horizontal">
@@ -53,30 +147,18 @@
                         <!-- Action buttons -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal"
                                     VerticalAlignment="Center">
-                            <Button Content="📋" Width="28" Height="24" FontSize="11"
+                            <Button Content="📋" Style="{StaticResource IconButtonStyle}"
                                     ToolTip="Duplicate"
                                     Command="{Binding DataContext.DuplicateModelConfigCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Foreground="{DynamicResource SubtleBrush}"
-                                    Margin="2,0"/>
-                            <Button Content="✏️" Width="28" Height="24" FontSize="11"
+                                    CommandParameter="{Binding}"/>
+                            <Button Content="✏️" Style="{StaticResource IconButtonStyle}"
                                     ToolTip="Edit"
                                     Command="{Binding DataContext.EditModelConfigCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Foreground="{DynamicResource SubtleBrush}"
-                                    Margin="2,0"/>
-                            <Button Content="🗑️" Width="28" Height="24" FontSize="11"
+                                    CommandParameter="{Binding}"/>
+                            <Button Content="🗑️" Style="{StaticResource IconButtonStyle}"
                                     ToolTip="Delete"
                                     Command="{Binding DataContext.DeleteModelConfigCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Foreground="{DynamicResource SubtleBrush}"
-                                    Margin="2,0"/>
+                                    CommandParameter="{Binding}"/>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -127,22 +209,14 @@
                         <!-- Action buttons -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal"
                                     VerticalAlignment="Center">
-                            <Button Content="✏️" Width="28" Height="24" FontSize="11"
+                            <Button Content="✏️" Style="{StaticResource IconButtonStyle}"
                                     ToolTip="Edit"
                                     Command="{Binding DataContext.EditPersonaCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Foreground="{DynamicResource SubtleBrush}"
-                                    Margin="2,0"/>
-                            <Button Content="🗑️" Width="28" Height="24" FontSize="11"
+                                    CommandParameter="{Binding}"/>
+                            <Button Content="🗑️" Style="{StaticResource IconButtonStyle}"
                                     ToolTip="Delete"
                                     Command="{Binding DataContext.DeletePersonaCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Foreground="{DynamicResource SubtleBrush}"
-                                    Margin="2,0"/>
+                                    CommandParameter="{Binding}"/>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -193,16 +267,11 @@
                         <!-- Action buttons -->
                         <StackPanel Grid.Column="2" Orientation="Horizontal"
                                     VerticalAlignment="Center">
-                            <Button Width="28" Height="24" FontSize="11"
-                                    ToolTip="Copy API key to clipboard"
+                            <Button ToolTip="Copy API key to clipboard"
                                     Command="{Binding DataContext.CopyKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Foreground="{DynamicResource SubtleBrush}"
-                                    Margin="2,0">
+                                    CommandParameter="{Binding}">
                                 <Button.Style>
-                                    <Style TargetType="Button">
+                                    <Style TargetType="Button" BasedOn="{StaticResource IconButtonStyle}">
                                         <Setter Property="Content" Value="📋"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsCopied}" Value="True">
@@ -213,22 +282,14 @@
                                     </Style>
                                 </Button.Style>
                             </Button>
-                            <Button Content="✏️" Width="28" Height="24" FontSize="11"
+                            <Button Content="✏️" Style="{StaticResource IconButtonStyle}"
                                     ToolTip="Edit"
                                     Command="{Binding DataContext.EditApiKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Foreground="{DynamicResource SubtleBrush}"
-                                    Margin="2,0"/>
-                            <Button Content="🗑️" Width="28" Height="24" FontSize="11"
+                                    CommandParameter="{Binding}"/>
+                            <Button Content="🗑️" Style="{StaticResource IconButtonStyle}"
                                     ToolTip="Delete API key"
                                     Command="{Binding DataContext.DeleteApiKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                    CommandParameter="{Binding}"
-                                    Background="Transparent"
-                                    BorderThickness="0"
-                                    Foreground="{DynamicResource SubtleBrush}"
-                                    Margin="2,0"/>
+                                    CommandParameter="{Binding}"/>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -333,11 +394,9 @@
                                                Foreground="{DynamicResource ContentForeground}"
                                                VerticalAlignment="Center"/>
                                     <Button Grid.Column="1" Content="+ Add API Key"
-                                            FontSize="11" Padding="8,4"
+                                            Padding="8,4"
                                             Command="{Binding AddApiKeyCommand}"
-                                            Background="{DynamicResource AccentBrush}"
-                                            Foreground="White"
-                                            BorderThickness="0"
+                                            Style="{StaticResource AccentButtonStyle}"
                                             AutomationProperties.AutomationId="AddApiKeyButton"/>
                                 </Grid>
 
@@ -461,22 +520,21 @@
                                                  AutomationProperties.AutomationId="CustomEndpointUrlInput"/>
                                     </StackPanel>
 
-                                    <!-- Test Key button -->
-                                    <Grid Margin="0,4,0,10">
+                                    <!-- Combined action row: Test Key + Result + Cancel + Save -->
+                                    <Grid Margin="0,4,0,4">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
 
                                         <Button Grid.Column="0" Content="Test Key"
-                                                FontSize="11" Padding="12,5"
+                                                Padding="12,5"
                                                 Command="{Binding TestApiKeyCommand}"
-                                                Background="{DynamicResource AccentBrush}"
-                                                Foreground="White"
-                                                BorderThickness="0"
                                                 AutomationProperties.AutomationId="TestKeyButton">
                                             <Button.Style>
-                                                <Style TargetType="Button">
+                                                <Style TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
                                                     <Setter Property="Opacity" Value="1"/>
                                                     <Setter Property="IsEnabled" Value="True"/>
                                                     <Style.Triggers>
@@ -492,6 +550,7 @@
                                         <!-- Test result indicator -->
                                         <StackPanel Grid.Column="1" Orientation="Horizontal"
                                                     Margin="10,0,0,0" VerticalAlignment="Center">
+                                            <!-- Success checkmark (only shown on success) -->
                                             <TextBlock Text="✅" FontSize="14">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
@@ -504,22 +563,12 @@
                                                     </Style>
                                                 </TextBlock.Style>
                                             </TextBlock>
-                                            <TextBlock Text="❌" FontSize="14">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsTestSuccess}" Value="False">
-                                                                <Setter Property="Visibility" Value="Visible"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
+                                            <!-- Result message — always visible when there's content -->
                                             <TextBlock Text="{Binding TestResultMessage}"
                                                        FontSize="10" Margin="4,0,0,0"
                                                        VerticalAlignment="Center"
                                                        Foreground="{DynamicResource SubtleBrush}"/>
+                                            <!-- Testing... indicator -->
                                             <TextBlock Text="Testing..." FontSize="10"
                                                        VerticalAlignment="Center"
                                                        Foreground="{DynamicResource SubtleBrush}">
@@ -535,37 +584,26 @@
                                                 </TextBlock.Style>
                                             </TextBlock>
                                         </StackPanel>
-                                    </Grid>
 
-                                    <!-- Save / Cancel buttons -->
-                                    <Grid Margin="0,6,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <TextBlock Grid.Column="0" Text="{Binding StatusMessage}"
-                                                   FontSize="10"
-                                                   Foreground="{DynamicResource SubtleBrush}"
-                                                   VerticalAlignment="Center"/>
-
-                                        <Button Grid.Column="1" Content="Cancel"
-                                                FontSize="11" Padding="12,5" Margin="0,0,8,0"
+                                        <!-- Cancel button -->
+                                        <Button Grid.Column="2" Content="Cancel"
+                                                Margin="0,0,8,0"
                                                 Command="{Binding CancelEditCommand}"
-                                                Background="Transparent"
-                                                BorderBrush="{DynamicResource BorderBrush}"
-                                                BorderThickness="1"
-                                                Foreground="{DynamicResource ContentForeground}"/>
+                                                Style="{StaticResource SecondaryButtonStyle}"/>
 
-                                        <Button Grid.Column="2" Content="Save API Key"
-                                                FontSize="11" Padding="12,5"
+                                        <!-- Save button -->
+                                        <Button Grid.Column="3" Content="Save API Key"
+                                                Padding="12,5"
                                                 Command="{Binding SaveApiKeyCommand}"
-                                                Background="{DynamicResource AccentBrush}"
-                                                Foreground="White"
-                                                BorderThickness="0"
+                                                Style="{StaticResource AccentButtonStyle}"
                                                 AutomationProperties.AutomationId="SaveApiKeyButton"/>
                                     </Grid>
+
+                                    <!-- Status message below the action row -->
+                                    <TextBlock Text="{Binding StatusMessage}"
+                                               FontSize="10" Margin="0,0,0,0"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap"/>
                                 </StackPanel>
                             </ScrollViewer>
                         </Border>
@@ -647,11 +685,9 @@
                                                    Foreground="{DynamicResource ContentForeground}"
                                                    VerticalAlignment="Center"/>
                                         <Button Grid.Column="1" Content="+ New Model Configuration"
-                                                FontSize="11" Padding="8,4"
+                                                Padding="8,4"
                                                 Command="{Binding AddModelConfigCommand}"
-                                                Background="{DynamicResource AccentBrush}"
-                                                Foreground="White"
-                                                BorderThickness="0"
+                                                Style="{StaticResource AccentButtonStyle}"
                                                 AutomationProperties.AutomationId="AddModelConfigButton"/>
                                     </Grid>
 
@@ -758,14 +794,11 @@
                                                     <Button Grid.Column="1" Content="⟳ Fetch" Width="50"
                                                             FontSize="10" Margin="6,18,0,0"
                                                             Command="{Binding FetchModelsCommand}"
-                                                            Background="{DynamicResource AccentBrush}"
-                                                            Foreground="White"
-                                                            BorderThickness="0"
                                                             VerticalAlignment="Bottom"
                                                             Height="22"
                                                             AutomationProperties.AutomationId="FetchModelsButton">
                                                         <Button.Style>
-                                                            <Style TargetType="Button">
+                                                            <Style TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
                                                                 <Setter Property="IsEnabled" Value="True"/>
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding IsFetchingModels}" Value="True">
@@ -846,19 +879,14 @@
                                                                VerticalAlignment="Center"/>
 
                                                     <Button Grid.Column="1" Content="Cancel"
-                                                            FontSize="11" Padding="12,5" Margin="0,0,8,0"
+                                                            Margin="0,0,8,0"
                                                             Command="{Binding CancelModelConfigEditCommand}"
-                                                            Background="Transparent"
-                                                            BorderBrush="{DynamicResource BorderBrush}"
-                                                            BorderThickness="1"
-                                                            Foreground="{DynamicResource ContentForeground}"/>
+                                                            Style="{StaticResource SecondaryButtonStyle}"/>
 
                                                     <Button Grid.Column="2" Content="Save"
-                                                            FontSize="11" Padding="12,5"
+                                                            Padding="12,5"
                                                             Command="{Binding SaveModelConfigCommand}"
-                                                            Background="{DynamicResource AccentBrush}"
-                                                            Foreground="White"
-                                                            BorderThickness="0"
+                                                            Style="{StaticResource AccentButtonStyle}"
                                                             AutomationProperties.AutomationId="SaveModelConfigButton"/>
                                                 </Grid>
                                             </StackPanel>
@@ -890,11 +918,9 @@
                                                    Foreground="{DynamicResource ContentForeground}"
                                                    VerticalAlignment="Center"/>
                                         <Button Grid.Column="1" Content="+ New Persona"
-                                                FontSize="11" Padding="8,4"
+                                                Padding="8,4"
                                                 Command="{Binding AddPersonaCommand}"
-                                                Background="{DynamicResource AccentBrush}"
-                                                Foreground="White"
-                                                BorderThickness="0"
+                                                Style="{StaticResource AccentButtonStyle}"
                                                 AutomationProperties.AutomationId="AddPersonaButton"/>
                                     </Grid>
 
@@ -1022,19 +1048,14 @@
                                                                VerticalAlignment="Center"/>
 
                                                     <Button Grid.Column="1" Content="Cancel"
-                                                            FontSize="11" Padding="12,5" Margin="0,0,8,0"
+                                                            Margin="0,0,8,0"
                                                             Command="{Binding CancelPersonaEditCommand}"
-                                                            Background="Transparent"
-                                                            BorderBrush="{DynamicResource BorderBrush}"
-                                                            BorderThickness="1"
-                                                            Foreground="{DynamicResource ContentForeground}"/>
+                                                            Style="{StaticResource SecondaryButtonStyle}"/>
 
                                                     <Button Grid.Column="2" Content="Save Persona"
-                                                            FontSize="11" Padding="12,5"
+                                                            Padding="12,5"
                                                             Command="{Binding SavePersonaCommand}"
-                                                            Background="{DynamicResource AccentBrush}"
-                                                            Foreground="White"
-                                                            BorderThickness="0"
+                                                            Style="{StaticResource AccentButtonStyle}"
                                                             AutomationProperties.AutomationId="SavePersonaButton"/>
                                                 </Grid>
                                             </StackPanel>

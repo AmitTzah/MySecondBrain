@@ -506,6 +506,10 @@ public class SettingsViewModelTests
             .Setup(r => r.GetByIdAsync("key-1"))
             .ReturnsAsync(existingKey);
 
+        _encryptionServiceMock
+            .Setup(e => e.UnprotectString("encrypted-value"))
+            .Returns("decrypted-key");
+
         var displayItem = new ApiKeyDisplayItem
         {
             Id = "key-1",
@@ -519,8 +523,69 @@ public class SettingsViewModelTests
         Assert.Equal("key-1", _sut.EditingApiKey.Id);
         Assert.Equal(ProviderType.Anthropic, _sut.SelectedProviderType);
         Assert.Equal("My Key", _sut.DisplayNameInputValue);
-        Assert.Empty(_sut.ApiKeyInputValue); // Key not pre-filled
+        Assert.Equal("decrypted-key", _sut.ApiKeyInputValue); // Key decrypted and pre-filled
         Assert.True(_sut.IsTestSuccess);
+        _encryptionServiceMock.Verify(e => e.UnprotectString("encrypted-value"), Times.Once);
+    }
+
+    [Fact]
+    public async Task EditApiKeyCommand_NullEncryptedValue_LeavesInputEmpty()
+    {
+        var existingKey = new ApiKey
+        {
+            Id = "key-2",
+            ProviderType = ProviderType.OpenAI,
+            EncryptedValue = null!,
+            IsValid = false,
+        };
+
+        _apiKeyRepoMock
+            .Setup(r => r.GetByIdAsync("key-2"))
+            .ReturnsAsync(existingKey);
+
+        var displayItem = new ApiKeyDisplayItem
+        {
+            Id = "key-2",
+            EncryptedValue = null!,
+        };
+
+        await _sut.EditApiKeyCommand.ExecuteAsync(displayItem);
+
+        Assert.True(_sut.IsEditingKey);
+        Assert.Empty(_sut.ApiKeyInputValue);
+        _encryptionServiceMock.Verify(e => e.UnprotectString(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task EditApiKeyCommand_DecryptionFailure_LeavesInputEmpty()
+    {
+        var existingKey = new ApiKey
+        {
+            Id = "key-3",
+            ProviderType = ProviderType.Anthropic,
+            EncryptedValue = "corrupted-value",
+            IsValid = true,
+        };
+
+        _apiKeyRepoMock
+            .Setup(r => r.GetByIdAsync("key-3"))
+            .ReturnsAsync(existingKey);
+
+        _encryptionServiceMock
+            .Setup(e => e.UnprotectString("corrupted-value"))
+            .Throws(new InvalidOperationException("DPAPI decryption failed"));
+
+        var displayItem = new ApiKeyDisplayItem
+        {
+            Id = "key-3",
+            EncryptedValue = "corrupted-value",
+        };
+
+        await _sut.EditApiKeyCommand.ExecuteAsync(displayItem);
+
+        Assert.True(_sut.IsEditingKey);
+        Assert.Empty(_sut.ApiKeyInputValue); // Falls back to empty on failure
+        _encryptionServiceMock.Verify(e => e.UnprotectString("corrupted-value"), Times.Once);
     }
 
     [Fact]
