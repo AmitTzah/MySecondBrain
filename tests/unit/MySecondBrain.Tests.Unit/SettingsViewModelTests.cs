@@ -743,8 +743,8 @@ public class SettingsViewModelTests
         Assert.True(_sut.IsEditingModelConfig);
         Assert.NotNull(_sut.EditingModelConfig);
         Assert.Equal(1.0, _sut.EditingModelConfig.Temperature);
-        Assert.Equal(4096, _sut.EditingModelConfig.MaxOutputTokens);
-        Assert.Equal(128000, _sut.EditingModelConfig.MaxContextWindow);
+        Assert.Equal(131072, _sut.EditingModelConfig.MaxOutputTokens);
+        Assert.Equal(1000000, _sut.EditingModelConfig.MaxContextWindow);
         Assert.Equal("SlidingWindow", _sut.EditingModelConfig.ContextOverflowStrategy);
         Assert.Equal(ProviderType.OpenAI, _sut.SelectedModelConfigProvider);
         Assert.Empty(_sut.AvailableModels);

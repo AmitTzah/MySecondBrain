@@ -816,7 +816,22 @@
                                                     </Button>
                                                 </Grid>
 
-                                                <!-- Temperature Slider -->
+                                               <!-- Fetch error message -->
+                                               <TextBlock Text="{Binding FetchModelsErrorMessage}"
+                                                          FontSize="10" Foreground="#FF5252"
+                                                          TextWrapping="Wrap" Margin="0,0,0,8">
+                                                   <TextBlock.Style>
+                                                       <Style TargetType="TextBlock">
+                                                           <Style.Triggers>
+                                                               <Trigger Property="Text" Value="">
+                                                                   <Setter Property="Visibility" Value="Collapsed"/>
+                                                               </Trigger>
+                                                           </Style.Triggers>
+                                                       </Style>
+                                                   </TextBlock.Style>
+                                               </TextBlock>
+
+                                               <!-- Temperature Slider -->
                                                 <TextBlock Text="Temperature" FontSize="11"
                                                            Foreground="{DynamicResource SubtleBrush}"
                                                            Margin="0,0,0,3"/>
@@ -850,16 +865,28 @@
                                                           Foreground="{DynamicResource ContentForeground}"/>
 
                                                 <!-- Pricing fields -->
-                                                <TextBlock Text="Pricing Input (per 1K tokens)" FontSize="11"
+                                                <TextBlock Text="Input Price (per 1K tokens, $)" FontSize="11"
                                                            Foreground="{DynamicResource SubtleBrush}"
                                                            Margin="0,0,0,3"/>
                                                 <TextBox Text="{Binding EditingModelConfig.PricingInputPer1K, UpdateSourceTrigger=PropertyChanged}"
                                                          FontSize="11" Margin="0,0,0,8"/>
 
-                                                <TextBlock Text="Pricing Output (per 1K tokens)" FontSize="11"
+                                                <TextBlock Text="Output Price (per 1K tokens, $)" FontSize="11"
                                                            Foreground="{DynamicResource SubtleBrush}"
                                                            Margin="0,0,0,3"/>
                                                 <TextBox Text="{Binding EditingModelConfig.PricingOutputPer1K, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="11" Margin="0,0,0,8"/>
+
+                                                <TextBlock Text="Cache Hit Price (per 1K tokens, $)" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <TextBox Text="{Binding EditingModelConfig.PricingCacheHitPer1K, UpdateSourceTrigger=PropertyChanged}"
+                                                         FontSize="11" Margin="0,0,0,8"/>
+
+                                                <TextBlock Text="Cache Miss Price (per 1K tokens, $)" FontSize="11"
+                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                           Margin="0,0,0,3"/>
+                                                <TextBox Text="{Binding EditingModelConfig.PricingCacheMissPer1K, UpdateSourceTrigger=PropertyChanged}"
                                                          FontSize="11" Margin="0,0,0,8"/>
 
                                                 <!-- Context Overflow Strategy -->

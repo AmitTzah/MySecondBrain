@@ -18,11 +18,13 @@ public partial class ModelConfigurationDisplayItem : ObservableObject
     public string ModelIdentifier { get; set; } = string.Empty;
     public string? ApiKeyId { get; set; }
     public double Temperature { get; set; } = 1.0;
-    public int MaxOutputTokens { get; set; } = 4096;
-    public int MaxContextWindow { get; set; } = 128000;
+    public int MaxOutputTokens { get; set; } = 131072;
+    public int MaxContextWindow { get; set; } = 1000000;
     public bool ThinkingEnabled { get; set; }
     public decimal? PricingInputPer1K { get; set; }
     public decimal? PricingOutputPer1K { get; set; }
+    public decimal? PricingCacheHitPer1K { get; set; }
+    public decimal? PricingCacheMissPer1K { get; set; }
     public string ContextOverflowStrategy { get; set; } = "SlidingWindow";
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
@@ -636,6 +638,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _isFetchingModels;
 
+    [ObservableProperty]
+    private string _fetchModelsErrorMessage = string.Empty;
+
     /// <summary>
     /// Provider tracked on the model config editing form for auto-fetch.
     /// </summary>
@@ -711,6 +716,8 @@ public partial class SettingsViewModel : ObservableObject
                     ThinkingEnabled = config.ThinkingEnabled,
                     PricingInputPer1K = config.PricingInputPer1K,
                     PricingOutputPer1K = config.PricingOutputPer1K,
+                    PricingCacheHitPer1K = config.PricingCacheHitPer1K,
+                    PricingCacheMissPer1K = config.PricingCacheMissPer1K,
                     ContextOverflowStrategy = config.ContextOverflowStrategy,
                     CreatedAt = config.CreatedAt,
                     UpdatedAt = config.UpdatedAt,
@@ -803,14 +810,15 @@ public partial class SettingsViewModel : ObservableObject
         EditingModelConfig = new ModelConfiguration
         {
             Temperature = 1.0,
-            MaxOutputTokens = 4096,
-            MaxContextWindow = 128000,
+            MaxOutputTokens = 131072,
+            MaxContextWindow = 1000000,
             ContextOverflowStrategy = "SlidingWindow",
         };
         _isNewModelConfig = true;
         SelectedModelConfigProvider = ProviderType.OpenAI;
         SelectedModelConfigApiKey = null;
         AvailableModels = [];
+        FetchModelsErrorMessage = string.Empty;
         IsEditingModelConfig = true;
 
         await RefreshAvailableApiKeysAsync();
@@ -1162,6 +1170,7 @@ public partial class SettingsViewModel : ObservableObject
 
         IsFetchingModels = true;
         AvailableModels = [];
+        FetchModelsErrorMessage = string.Empty;
 
         try
         {
@@ -1170,7 +1179,7 @@ public partial class SettingsViewModel : ObservableObject
             var apiKey = await _apiKeyRepo.GetByIdAsync(apiKeyId);
             if (apiKey is null)
             {
-                StatusMessage = "API key not found for model fetching.";
+                FetchModelsErrorMessage = "API key not found for model fetching.";
                 IsFetchingModels = false;
                 return;
             }
@@ -1191,7 +1200,15 @@ public partial class SettingsViewModel : ObservableObject
             // If cancelled, don't update the UI
             ct.ThrowIfCancellationRequested();
 
-            AvailableModels = new ObservableCollection<string>(models.Select(m => m.Id));
+            if (models.Count == 0)
+            {
+                FetchModelsErrorMessage = "No models returned by the provider. Check API key validity.";
+            }
+            else
+            {
+                AvailableModels = new ObservableCollection<string>(models.Select(m => m.Id));
+            }
+
             _logger.LogDebug("Fetched {Count} models for {Provider}", models.Count, providerType);
         }
         catch (OperationCanceledException)
@@ -1201,7 +1218,7 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to fetch models for {Provider}", providerType);
-            StatusMessage = "Failed to fetch models. Check API key validity.";
+            FetchModelsErrorMessage = "Failed to fetch models. Check API key validity.";
         }
         finally
         {
@@ -1250,6 +1267,7 @@ public partial class SettingsViewModel : ObservableObject
         SelectedModelConfigProvider = ProviderType.OpenAI;
         SelectedModelConfigApiKey = null;
         AvailableModels = [];
+        FetchModelsErrorMessage = string.Empty;
     }
 
     private void ClearPersonaForm()

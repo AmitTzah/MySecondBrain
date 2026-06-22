@@ -51,6 +51,8 @@ public class ModelConfigurationRepository : IModelConfigurationRepository
         entity.ApiKeyId = config.ApiKeyId;
         entity.PricingInputPer1K = config.PricingInputPer1K;
         entity.PricingOutputPer1K = config.PricingOutputPer1K;
+        entity.PricingCacheHitPer1K = config.PricingCacheHitPer1K;
+        entity.PricingCacheMissPer1K = config.PricingCacheMissPer1K;
         entity.ContextOverflowStrategy = config.ContextOverflowStrategy;
         entity.UpdatedAt = DateTimeOffset.UtcNow;
 
@@ -94,6 +96,8 @@ public class ModelConfigurationRepository : IModelConfigurationRepository
             ThinkingTokens = null, // Domain-only concept; not stored in entity
             PricingInputPer1K = entity.PricingInputPer1K,
             PricingOutputPer1K = entity.PricingOutputPer1K,
+            PricingCacheHitPer1K = entity.PricingCacheHitPer1K,
+            PricingCacheMissPer1K = entity.PricingCacheMissPer1K,
             ContextOverflowStrategy = entity.ContextOverflowStrategy,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
@@ -115,6 +119,8 @@ public class ModelConfigurationRepository : IModelConfigurationRepository
             ThinkingEnabled = model.ThinkingEnabled,
             PricingInputPer1K = model.PricingInputPer1K,
             PricingOutputPer1K = model.PricingOutputPer1K,
+            PricingCacheHitPer1K = model.PricingCacheHitPer1K,
+            PricingCacheMissPer1K = model.PricingCacheMissPer1K,
             ContextOverflowStrategy = model.ContextOverflowStrategy,
             CreatedAt = model.CreatedAt,
             UpdatedAt = model.UpdatedAt,

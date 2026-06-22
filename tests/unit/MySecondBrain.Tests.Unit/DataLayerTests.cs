@@ -44,7 +44,7 @@ public class DataLayerTests
             [typeof(ChatThread)] = 23,           // Id, Title?, IsTransient, PersonaId?, ModelConfigId?, SystemMessage?, ChatMode, ThinkingEnabled, IsMuted, IsFavorite, IsPinned, IsArchived, ColorLabel?, Tags?, FolderId?, IsDeleted, DeletedAt?, SourceHWND?, SourceAppName?, SourceDocTitle?, OriginalHighlightedText?, CreatedAt, LastActivityAt
             [typeof(MediaItem)] = 15,            // Id, FileName, FilePath, MediaType, MimeType, FileSize, Source, ThreadId, MessageId?, GeneratedPrompt?, IsSavedToDisk, IsSavedToWiki, IsDeleted, DeletedAt?, CreatedAt
             [typeof(Message)] = 17,              // Id, ThreadId, Role, Content, RawContent?, PersonaId?, ModelConfigId?, TokenCount?, EstimatedCost?, GenerationTimeMs?, Feedback?, ParentMessageId?, VersionNumber, BranchId, IsActiveBranch, IsDirectTransformation?, CreatedAt
-            [typeof(ModelConfiguration)] = 14,   // Id, DisplayName, Provider, ApiKeyId?, ModelIdentifier?, Temperature, MaxOutputTokens, MaxContextWindow, ThinkingEnabled, PricingInputPer1K?, PricingOutputPer1K?, ContextOverflowStrategy, CreatedAt, UpdatedAt
+            [typeof(ModelConfiguration)] = 16,   // Id, DisplayName, Provider, ApiKeyId?, ModelIdentifier?, Temperature, MaxOutputTokens, MaxContextWindow, ThinkingEnabled, PricingInputPer1K?, PricingOutputPer1K?, PricingCacheHitPer1K?, PricingCacheMissPer1K?, ContextOverflowStrategy, CreatedAt, UpdatedAt
             [typeof(Persona)] = 8,               // Id, DisplayName, SystemPrompt?, DefaultModelConfigId?, DefaultChatMode, IsBuiltIn, CreatedAt, UpdatedAt
             [typeof(PromptTemplate)] = 7,        // Id, Name, Text, Tags?, FolderId?, CreatedAt, UpdatedAt
             [typeof(TextAction)] = 10,           // Id, DisplayName, SystemPrompt, ModelConfigId?, Hotkey?, CaptureScope, ApplyMode, IsBuiltIn, CreatedAt, UpdatedAt
@@ -192,7 +192,7 @@ public class DataLayerTests
 
         var modelConfig = new ModelConfiguration();
         Assert.Equal(1.0, modelConfig.Temperature);
-        Assert.Equal(4096, modelConfig.MaxOutputTokens);
+        Assert.Equal(131072, modelConfig.MaxOutputTokens);
         Assert.Equal("SlidingWindow", modelConfig.ContextOverflowStrategy);
 
         var appSetting = new AppSetting();

@@ -58,12 +58,14 @@ public class ModelConfiguration
     public string? EndpointUrl { get; set; }
     public string? ApiKeyId { get; set; }
     public double Temperature { get; set; } = 1.0;
-    public int MaxOutputTokens { get; set; } = 4096;
-    public int MaxContextWindow { get; set; } = 128000;
+    public int MaxOutputTokens { get; set; } = 131072;
+    public int MaxContextWindow { get; set; } = 1000000;
     public bool ThinkingEnabled { get; set; }
     public int? ThinkingTokens { get; set; }
     public decimal? PricingInputPer1K { get; set; }
     public decimal? PricingOutputPer1K { get; set; }
+    public decimal? PricingCacheHitPer1K { get; set; }
+    public decimal? PricingCacheMissPer1K { get; set; }
     public string ContextOverflowStrategy { get; set; } = "SlidingWindow";
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;

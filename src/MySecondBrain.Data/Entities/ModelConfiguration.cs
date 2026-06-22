@@ -32,9 +32,9 @@ public class ModelConfiguration
     [Range(0.0, 2.0)]
     public double Temperature { get; set; } = 1.0;
 
-    public int MaxOutputTokens { get; set; } = 4096;
+    public int MaxOutputTokens { get; set; } = 131072;
 
-    public int MaxContextWindow { get; set; } = 128000;
+    public int MaxContextWindow { get; set; } = 1000000;
 
     public bool ThinkingEnabled { get; set; }
 
@@ -47,6 +47,16 @@ public class ModelConfiguration
     /// USD per 1000 output tokens.
     /// </summary>
     public decimal? PricingOutputPer1K { get; set; }
+
+    /// <summary>
+    /// USD per 1000 tokens — cache hit (read from context cache).
+    /// </summary>
+    public decimal? PricingCacheHitPer1K { get; set; }
+
+    /// <summary>
+    /// USD per 1000 tokens — cache miss (written to context cache).
+    /// </summary>
+    public decimal? PricingCacheMissPer1K { get; set; }
 
     /// <summary>
     /// SlidingWindow, HardStop, or AutoSummarize.
