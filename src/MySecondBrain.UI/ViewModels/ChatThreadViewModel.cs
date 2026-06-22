@@ -178,7 +178,10 @@ public partial class ChatThreadViewModel : ObservableObject
             {
                 var match = PersonaList.FirstOrDefault(p => p.Id == persona.Id);
                 if (match is not null)
+                {
                     ActivePersona = match;
+                    persona = match; // Use the remapped instance for all downstream operations
+                }
             }
 
             // Update ActiveModelConfig from persona's default model config

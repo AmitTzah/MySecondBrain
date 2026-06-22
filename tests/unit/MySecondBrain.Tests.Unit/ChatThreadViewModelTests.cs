@@ -127,6 +127,7 @@ public class ChatThreadViewModelTests
         // Assert
         Assert.NotNull(vm.ActivePersona);
         Assert.Equal("Custom Writer", vm.ActivePersona!.DisplayName);
+        Assert.Contains(vm.ActivePersona, vm.PersonaList);
         Assert.NotNull(vm.ActiveModelConfig);
         Assert.Equal("Claude Sonnet", vm.ActiveModelConfig!.DisplayName);
     }
@@ -180,6 +181,11 @@ public class ChatThreadViewModelTests
         Assert.NotNull(vm.ActiveModelConfig);
         Assert.Equal("Claude Sonnet", vm.ActiveModelConfig!.DisplayName);
 
+        // Assert — ActivePersona was remapped to an object in PersonaList
+        Assert.NotNull(vm.ActivePersona);
+        Assert.Equal("Custom Writer", vm.ActivePersona!.DisplayName);
+        Assert.Contains(vm.ActivePersona, vm.PersonaList);
+
         // Assert — recently-used tracking should have been triggered
         _settingsRepoMock.Verify(r => r.SetAsync("RecentPersonaIds",
             It.Is<List<string>>(ids => ids[0] == "custom-001")), Times.AtLeastOnce);
@@ -206,16 +212,15 @@ public class ChatThreadViewModelTests
         Assert.Contains(vm.ActivePersona, vm.PersonaList);
 
         // Act — simulate ComboBox TwoWay binding setting ActivePersona to a different persona.
-        // Use the object from the current PersonaList to mirror real ComboBox behavior.
-        var codeHelperFromList = vm.PersonaList.First(p => p.Id == _codeHelper.Id);
-        vm.ActivePersona = codeHelperFromList;
+        // Use _customPersona (NOT from PersonaList) to verify the remap actually fires.
+        vm.ActivePersona = _customPersona;
 
         // Wait for fire-and-forget OnActivePersonaChanged → SetActivePersonaAsync to complete
         await Task.Delay(100);
 
-        // Assert — ActivePersona must still point to an object in PersonaList (no orphaned reference)
+        // Assert — ActivePersona must be remapped to an object in PersonaList
         Assert.NotNull(vm.ActivePersona);
-        Assert.Equal("Code Helper", vm.ActivePersona!.DisplayName);
+        Assert.Equal("Custom Writer", vm.ActivePersona!.DisplayName);
         Assert.Contains(vm.ActivePersona, vm.PersonaList);
     }
 
