@@ -19,11 +19,18 @@
     },
     "missing_prerequisites": []
   },
-  "skipped_smoke_tests": [],
+  "skipped_smoke_tests": [
+    {
+      "step": 1,
+      "name": "Diagnostics Infrastructure & Category UI",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "1. Build and launch: dotnet build src/MySecondBrain.UI/MySecondBrain.UI.csproj then launch src\\MySecondBrain.UI\\bin\\Debug\\net8.0-windows10.0.17763.0\\MySecondBrain.UI.exe\n2. Navigate to Settings → Diagnostics category\n3. Verify Log Level dropdown shows 'Information' (default)\n4. Verify 3 checkboxes checked (LLM API Calls, Tier 1 Hotkey, Tier 2 Command Bar), 5 unchecked\n5. Change Log Level to 'Debug' — verify the dropdown updates\n6. Toggle 'Database' checkbox ON — verify it checks\n7. Click 'Open Logs Folder' — verify Windows Explorer opens at %LOCALAPPDATA%\\MySecondBrain\\logs\\\n8. Close the app, relaunch, navigate back to Diagnostics — verify settings persisted (Debug level + Database checkbox ON)\n9. Click 'Clear Logs' — verify confirmation dialog appears, click Yes, verify 'All log files cleared' message"
+    }
+  ],
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 6,
-  "current_step": 0,
+  "current_step": 1,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }

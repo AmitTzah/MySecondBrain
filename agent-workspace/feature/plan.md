@@ -123,7 +123,7 @@ Below is the expected state after all implementation steps. `[MODIFIED]` marks e
 
 ## 5. Execution Steps
 
-### [ ] Step 1: Diagnostics Infrastructure & Category UI
+### [x] Step 1: Diagnostics Infrastructure & Category UI
 
 - **Goal:** Build the complete Diagnostics backend (ApiKeyDestructuringPolicy for API key redaction, runtime log level/category filter) and the Diagnostics settings category UI (log level dropdown, 8 per-category toggle checkboxes, "Open Logs Folder" button, "Clear Logs" button). After this step, the Diagnostics category is fully functional — the user can configure log verbosity and manage log files from the Settings screen.
 
