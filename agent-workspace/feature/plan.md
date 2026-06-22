@@ -429,7 +429,7 @@ Below is the expected state after all implementation steps. `[MODIFIED]` marks e
 
 ---
 
-### [ ] Step 6: First-Launch Detection, Startup Integration & Polish
+### [x] Step 6: First-Launch Detection, Startup Integration & Polish
 
 - **Goal:** Wire the Onboarding Wizard into the application lifecycle. On first launch (no existing settings), auto-open the wizard. Wire the Settings → "Re-run Onboarding Wizard" link. Wire the Finish screen's "Launch Studio" to close the wizard and open the main window. Add onboarding-related settings keys. Final integration testing.
 

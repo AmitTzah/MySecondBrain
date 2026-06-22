@@ -49,12 +49,21 @@
       "name": "Onboarding Wizard — Full Implementation",
       "classification": "HUMAN/SHT REQUIRED",
       "description": "1. Delete Onboarding_Step* keys from AppSettings table (or delete msb.db for clean first launch)\n2. Launch the app — verify Onboarding Wizard appears with Welcome screen\n3. Click 'Get Started' — verify Step 1 (API Keys) with step dots showing ●○○○\n4. Add an API key — verify it appears with 'Not tested' status\n5. Click 'Test All Keys' — verify status updates\n6. Click Skip — verify Step 2 (Persona) with ●●○○ dots\n7. Select 'Code Helper' card — verify customization panel pre-filled\n8. Click Skip — verify Step 3 (Wiki) with ●●●○ dots\n9. Click 'Create New Wiki Folder' — verify folder created\n10. Click Skip — verify Step 4 (Hotkeys) with ●●●● dots\n11. Verify default hotkey table, click Skip — verify Finish screen\n12. Verify summary: 1 API key, Persona: Code Helper, Wiki path, 5 hotkeys\n13. Click 'Import from ChatGPT or Claude' — verify 'Coming soon' toast\n14. Click 'Launch Studio' — verify Studio opens\n15. Close app, relaunch — verify wizard does NOT reappear"
+    },
+    {
+      "step": 6,
+      "name": "First-Launch Detection, Startup Integration & Polish",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "1. Delete all Onboarding_* keys from AppSettings table (or delete msb.db)\n2. Launch the app — verify Onboarding Wizard opens as dedicated window (NOT inside MainWindow)\n3. Complete all 4 steps (can Skip through them quickly)\n4. Click 'Launch Studio' — verify wizard window closes and MainWindow opens\n5. In Studio, navigate to Settings — verify 'Re-run Onboarding Wizard' link is visible at bottom of sidebar\n6. Click the link — verify wizard re-opens\n7. Close the wizard mid-way (X button) — verify 'Continue Setup / Close Anyway' dialog\n8. Restart the app — verify wizard resumes at first incomplete step\n9. Complete all steps again, Launch Studio\n10. Restart the app — verify wizard does NOT appear (goes directly to Studio)"
     }
   ],
-  "current_phase": 3,
+  "current_phase": 5,
   "plan_status": "validated",
   "total_steps": 6,
-  "current_step": 5,
+  "current_step": 6,
+  "pivot_in_progress": false,
+  "pivot_in_progress": false,
+  "phase_5_substep": null
   "pivot_in_progress": false,
   "phase_5_substep": null
 }
