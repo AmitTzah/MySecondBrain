@@ -940,6 +940,7 @@ public class SettingsViewModelTests
         await _sut.DeleteModelConfigCommand.ExecuteAsync(item);
 
         _modelConfigRepoMock.Verify(r => r.DeleteAsync("config-to-delete"), Times.Once);
+        _modelConfigRepoMock.Verify(r => r.GetAllAsync(), Times.AtLeastOnce);
         Assert.Equal("Model configuration deleted.", _sut.StatusMessage);
     }
 
