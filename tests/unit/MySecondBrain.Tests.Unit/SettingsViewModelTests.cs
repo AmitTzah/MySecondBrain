@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -2444,5 +2445,18 @@ public class SettingsViewModelTests
         _sut.ResetHotkeysToDefaultsCommand.Execute(null);
 
         _textActionRepoMock.Verify(r => r.GetAllAsync(), Times.Never);
+    }
+
+    // ================================================================
+    // Re-run Onboarding Wizard
+    // ================================================================
+
+    [Fact]
+    public void ReRunOnboardingCommand_DoesNotThrow()
+    {
+        // Verify the command executes without exception (the messenger fires but
+        // no recipient may be registered in a unit test context)
+        var exception = Record.Exception(() => _sut.ReRunOnboardingCommand.Execute(null));
+        Assert.Null(exception);
     }
 }

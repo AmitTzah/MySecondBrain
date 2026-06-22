@@ -8,6 +8,12 @@ public partial class OnboardingWizardWindow : Window
     private readonly OnboardingWizardViewModel _viewModel;
     private bool _isCloseConfirmed;
 
+    /// <summary>
+    /// Tracks whether the LaunchStudioRequested event has been handled to
+    /// avoid multiple close attempts when the event fires more than once.
+    /// </summary>
+    private bool _launchStudioHandled;
+
     public OnboardingWizardWindow(OnboardingWizardViewModel viewModel)
     {
         InitializeComponent();
@@ -33,6 +39,16 @@ public partial class OnboardingWizardWindow : Window
         viewModel.CloseConfirmed += () =>
         {
             _isCloseConfirmed = true;
+            Dispatcher.Invoke(Close);
+        };
+
+        // When "Launch Studio" is clicked (from first-launch or re-run),
+        // close this window so the main window is revealed.
+        viewModel.LaunchStudioRequested += () =>
+        {
+            if (_launchStudioHandled) return;
+            _launchStudioHandled = true;
+            _isCloseConfirmed = true; // Skip the closing confirmation
             Dispatcher.Invoke(Close);
         };
     }

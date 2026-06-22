@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.EntityFrameworkCore;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -1995,6 +1996,16 @@ public partial class SettingsViewModel : ObservableObject
             _logger.LogError(ex, "Failed to save API key");
             StatusMessage = $"Failed to save API key: {ex.Message}";
         }
+    }
+
+    // ================================================================
+    // Re-run Onboarding Wizard from Settings
+    // ================================================================
+
+    [RelayCommand]
+    private void ReRunOnboarding()
+    {
+        WeakReferenceMessenger.Default.Send(new ReRunOnboardingMessage());
     }
 
     [RelayCommand]

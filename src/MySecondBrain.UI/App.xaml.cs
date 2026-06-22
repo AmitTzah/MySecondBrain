@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Windows;
+using CommunityToolkit.Mvvm.Messaging;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -160,58 +162,120 @@ public partial class App : Application
 
     startupLogger.LogInformation("MySecondBrain started");
 
+    // ================================================================
+    // First-Launch Detection
+    // ================================================================
+    var settingsRepo = _serviceProvider.GetRequiredService<ISettingsRepository>();
+    var onboardingCompleted = await settingsRepo.GetAsync("Onboarding_Completed");
+
+    if (onboardingCompleted != "true")
+    {
+        // First launch or incomplete onboarding — show wizard as the only window
+        var wizardWindow = _serviceProvider.GetRequiredService<OnboardingWizardWindow>();
+        var wizardVm = (OnboardingWizardViewModel)wizardWindow.DataContext;
+
+        wizardVm.LaunchStudioRequested += () =>
+        {
+            wizardWindow.Dispatcher.Invoke(() =>
+            {
+                wizardWindow.Close();
+                var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                mainWindow.Show();
+                WireTrayService(mainWindow, startupLogger);
+                StartBackgroundServices(startupLogger);
+            });
+        };
+
+        wizardWindow.Show();
+    }
+    else
+    {
+        // Onboarding complete — normal launch
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
-
-        // Show the system tray icon and wire all 5 tray events to MainWindow actions
-        var trayService = _serviceProvider.GetRequiredService<ISystemTrayService>();
-        var mainWindowViewModel = mainWindow.DataContext as MainWindowViewModel;
-        if (mainWindowViewModel is null)
-            startupLogger.LogWarning("MainWindow.DataContext is not a MainWindowViewModel");
-        trayService.Show();
-
-        trayService.OpenStudioRequested += (s, args) =>
-        {
-            mainWindow.Dispatcher.Invoke(() =>
-            {
-                mainWindow.Show();
-                mainWindow.WindowState = WindowState.Normal;
-                mainWindow.Activate();
-            });
-        };
-
-        trayService.NewChatRequested += (s, args) =>
-        {
-            startupLogger.LogInformation("New chat requested — not yet implemented");
-        };
-
-        trayService.CommandBarRequested += (s, args) =>
-        {
-            startupLogger.LogInformation("Command bar requested — not yet implemented");
-        };
-
-        trayService.SettingsRequested += (s, args) =>
-        {
-            mainWindow.Dispatcher.Invoke(() =>
-            {
-                mainWindow.Show();
-                mainWindow.WindowState = WindowState.Normal;
-                mainWindow.Activate();
-                if (mainWindowViewModel is not null)
-                    mainWindowViewModel.SelectedScreen = ScreenType.Settings;
-            });
-        };
-
-        trayService.ExitRequested += (s, args) => App.Current.Shutdown();
-
-        // Start the embedded Kestrel WebSocket server (non-blocking)
-        _ = StartWebSocketServerAsync(startupLogger);
-
-        // Start global hotkey service — registers default hotkeys (Alt+Space, Ctrl+Shift+Q/W/E/R/C)
-        var hotkeyService = _serviceProvider.GetRequiredService<IGlobalHotkeyService>();
-        var hotkeyCount = hotkeyService.GetRegisteredHotkeys().Count;
-        startupLogger.LogInformation("Global hotkey service started with {Count} default hotkeys", hotkeyCount);
+        WireTrayService(mainWindow, startupLogger);
+        StartBackgroundServices(startupLogger);
     }
+
+    // ================================================================
+    // Wire Re-run Onboarding from Settings
+    // ================================================================
+    WeakReferenceMessenger.Default.Register<ReRunOnboardingMessage>(this, (_, _) =>
+    {
+        // Find the main window if it exists
+        var mainWindow = Current.Windows.OfType<MainWindow>().FirstOrDefault();
+        if (mainWindow is not null)
+        {
+            mainWindow.Dispatcher.Invoke(() =>
+            {
+                var wizardWindow = _serviceProvider.GetRequiredService<OnboardingWizardWindow>();
+                wizardWindow.Owner = mainWindow;
+                wizardWindow.ShowDialog(); // Modal — blocks until wizard closes
+            });
+        }
+    });
+}
+
+/// <summary>
+/// Wires the system tray service events after a main window is available.
+/// </summary>
+private void WireTrayService(Window mainWindow, ILogger<App> startupLogger)
+{
+    var trayService = _serviceProvider.GetRequiredService<ISystemTrayService>();
+    var mainWindowViewModel = mainWindow.DataContext as MainWindowViewModel;
+    if (mainWindowViewModel is null)
+        startupLogger.LogWarning("MainWindow.DataContext is not a MainWindowViewModel");
+
+    trayService.Show();
+
+    trayService.OpenStudioRequested += (_, _) =>
+    {
+        mainWindow.Dispatcher.Invoke(() =>
+        {
+            mainWindow.Show();
+            mainWindow.WindowState = WindowState.Normal;
+            mainWindow.Activate();
+        });
+    };
+
+    trayService.NewChatRequested += (_, _) =>
+    {
+        startupLogger.LogInformation("New chat requested — not yet implemented");
+    };
+
+    trayService.CommandBarRequested += (_, _) =>
+    {
+        startupLogger.LogInformation("Command bar requested — not yet implemented");
+    };
+
+    trayService.SettingsRequested += (_, _) =>
+    {
+        mainWindow.Dispatcher.Invoke(() =>
+        {
+            mainWindow.Show();
+            mainWindow.WindowState = WindowState.Normal;
+            mainWindow.Activate();
+            if (mainWindowViewModel is not null)
+                mainWindowViewModel.SelectedScreen = ScreenType.Settings;
+        });
+    };
+
+    trayService.ExitRequested += (_, _) => App.Current.Shutdown();
+}
+
+/// <summary>
+/// Starts background services (WebSocket server, global hotkeys) after the main window is shown.
+/// </summary>
+private void StartBackgroundServices(ILogger<App> startupLogger)
+{
+    // Start the embedded Kestrel WebSocket server (non-blocking)
+    _ = StartWebSocketServerAsync(startupLogger);
+
+    // Start global hotkey service
+    var hotkeyService = _serviceProvider.GetRequiredService<IGlobalHotkeyService>();
+    var hotkeyCount = hotkeyService.GetRegisteredHotkeys().Count;
+    startupLogger.LogInformation("Global hotkey service started with {Count} default hotkeys", hotkeyCount);
+}
 
     protected override async void OnExit(ExitEventArgs e)
     {

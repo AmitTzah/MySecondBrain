@@ -19,6 +19,12 @@ public partial class OnboardingWizardViewModel : ObservableObject
     /// </summary>
     public event Action? CloseConfirmed;
 
+    /// <summary>
+    /// Fired when the user clicks "Launch Studio" on the finish screen.
+    /// App.xaml.cs subscribes to this to close the wizard and open the main window.
+    /// </summary>
+    public event Action? LaunchStudioRequested;
+
     private readonly IApiKeyRepository _apiKeyRepo;
     private readonly ISettingsRepository _settingsRepo;
     private readonly IModelConfigurationRepository _modelConfigRepo;
@@ -665,7 +671,13 @@ public partial class OnboardingWizardViewModel : ObservableObject
         // Save all keys to the repository
         _ = SaveKeysToRepositoryAsync();
 
-        // Send message to close wizard and open Studio
+        // Mark onboarding as fully completed so it won't show on next launch
+        _ = _settingsRepo.SetAsync("Onboarding_Completed", "true");
+
+        // Fire event so App.xaml.cs can close wizard and open Studio
+        LaunchStudioRequested?.Invoke();
+
+        // Also send messenger message for loose coupling
         WeakReferenceMessenger.Default.Send(new LaunchStudioMessage());
     }
 

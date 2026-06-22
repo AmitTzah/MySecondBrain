@@ -196,6 +196,76 @@ public class OnboardingIntegrationTests : IDisposable
     // Helper
     // ================================================================
 
+    // ================================================================
+    // Test: First launch — no Onboarding_Completed key → wizard opens
+    // ================================================================
+
+    [Fact]
+    public async Task FirstLaunch_Detected_WizardOpens()
+    {
+        // No onboarding settings exist (fresh database)
+        // For the wizard to open, Onboarding_Completed must be null
+        var onboardingCompleted = await _settingsRepo.GetAsync("Onboarding_Completed");
+        Assert.Null(onboardingCompleted);
+
+        // Create the ViewModel — it should start at step 0 (first incomplete)
+        var vm = CreateViewModel();
+        Assert.Equal(0, vm.CurrentStep);
+
+        // Simulate completing all steps by persisting all step flags and Onboarding_Completed
+        vm.CurrentStep = 0;
+        await vm.GoNextCommand.ExecuteAsync(null); // Step 0 → 1
+        await vm.GoNextCommand.ExecuteAsync(null); // Step 1 → 2
+        await vm.GoNextCommand.ExecuteAsync(null); // Step 2 → 3
+        await vm.GoNextCommand.ExecuteAsync(null); // Step 3 → 4 (Finish)
+
+        // Verify all step keys and Onboarding_Completed are set
+        var step1 = await _settingsRepo.GetAsync("Onboarding_Step1_Completed");
+        var step2 = await _settingsRepo.GetAsync("Onboarding_Step2_Completed");
+        var step3 = await _settingsRepo.GetAsync("Onboarding_Step3_Completed");
+        var step4 = await _settingsRepo.GetAsync("Onboarding_Step4_Completed");
+
+        Assert.Equal("true", step1);
+        Assert.Equal("true", step2);
+        Assert.Equal("true", step3);
+        Assert.Equal("true", step4);
+
+        // Note: Onboarding_Completed is set when the user clicks "Launch Studio"
+        // Simulate that by calling LaunchStudio command
+        vm.LaunchStudioCommand.Execute(null);
+
+        // Verify Onboarding_Completed was set by LaunchStudio
+        var completed = await _settingsRepo.GetAsync("Onboarding_Completed");
+        Assert.Equal("true", completed);
+    }
+
+    // ================================================================
+    // Test: All steps completed — wizard should skip to Welcome
+    // ================================================================
+
+    [Fact]
+    public async Task AllStepsCompleted_WizardSkipped()
+    {
+        // Set all individual step keys AND Onboarding_Completed to true
+        await _settingsRepo.SetAsync("Onboarding_Step1_Completed", "true");
+        await _settingsRepo.SetAsync("Onboarding_Step2_Completed", "true");
+        await _settingsRepo.SetAsync("Onboarding_Step3_Completed", "true");
+        await _settingsRepo.SetAsync("Onboarding_Step4_Completed", "true");
+        await _settingsRepo.SetAsync("Onboarding_Completed", "true");
+
+        // Creating the ViewModel — it should detect all steps completed
+        // and stay at Welcome screen (CurrentStep = -1)
+        var vm = CreateViewModel();
+
+        // All steps complete → determineFirstIncompleteStep returns 4
+        // The ViewModel sets CurrentStep = -1 (Welcome) when all complete
+        Assert.Equal(-1, vm.CurrentStep);
+    }
+
+    // ================================================================
+    // Helper
+    // ================================================================
+
     private OnboardingWizardViewModel CreateViewModel()
     {
         var loggerMock = new Mock<ILogger<OnboardingWizardViewModel>>();

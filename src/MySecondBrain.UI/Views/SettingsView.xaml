@@ -330,7 +330,8 @@
 
                 <TextBlock Grid.Row="2" Margin="12,8,12,12">
                     <Hyperlink Foreground="{DynamicResource AccentBrush}" FontSize="11"
-                               TextDecorations="Underline">
+                               TextDecorations="Underline"
+                               Command="{Binding ReRunOnboardingCommand}">
                         🔄 Re-run Onboarding Wizard
                     </Hyperlink>
                 </TextBlock>
