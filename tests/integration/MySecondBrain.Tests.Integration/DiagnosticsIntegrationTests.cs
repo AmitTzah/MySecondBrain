@@ -5,6 +5,8 @@ using MySecondBrain.Data;
 using MySecondBrain.Data.Repositories;
 using MySecondBrain.Services.Logging;
 using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 using Serilog.Formatting.Json;
 
 namespace MySecondBrain.Tests.Integration;
@@ -251,15 +253,21 @@ public class DiagnosticsIntegrationTests : IDisposable
     // ================================================================
 
     [Fact]
-    public void ApiKeyDestructuringPolicy_RedactsKeysInLogOutput()
+    public void ApiKeyRedactionEnricher_RedactsKeysInLogOutput()
     {
         var logPath = Path.Combine(_logsPath, "redact-test-.log");
-        var logEventText = string.Empty;
+        var capturedEvents = new List<LogEvent>();
 
-        // Use a Serilog LoggerConfiguration with the destructuring policy
+        // Use a Serilog LoggerConfiguration with the enricher.
+        // NOTE: IDestructuringPolicy is NOT used here because Serilog's destructuring
+        // pipeline bypasses IDestructuringPolicy for string/primitive values even with
+        // the @ operator. The ILogEventEnricher approach post-processes the LogEvent
+        // properties and redacts any ScalarValue strings matching API key patterns,
+        // working for both {ApiKey} and {@ApiKey} message template formats.
         var logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .Destructure.With<ApiKeyDestructuringPolicy>()
+            .Enrich.With<ApiKeyRedactionEnricher>()
+            .WriteTo.Sink(new DelegatingSink(evt => capturedEvents.Add(evt)))
             .WriteTo.File(
                 formatter: new JsonFormatter(),
                 logPath,
@@ -267,13 +275,21 @@ public class DiagnosticsIntegrationTests : IDisposable
                 retainedFileCountLimit: 1)
             .CreateLogger();
 
-        // Log an API key — it should be redacted in the output
+        // Log an API key — it should be redacted in the output.
+        // Using {ApiKey} (without @) since the enricher works regardless.
         var apiKey = "sk-" + new string('a', 48);
         logger.Information("Using API key: {ApiKey}", apiKey);
         logger.Dispose();
 
+        // Verify the captured event has the redacted property
+        var evt = Assert.Single(capturedEvents);
+        Assert.True(evt.Properties.ContainsKey("ApiKey"));
+        var propValue = evt.Properties["ApiKey"];
+        Assert.Equal("[REDACTED]", (propValue as ScalarValue)?.Value?.ToString());
+
         // Read the log file and verify the key is redacted
-        var logContent = File.ReadAllText(Directory.GetFiles(_logsPath, "redact-test-*.log").First());
+        var logFiles = Directory.GetFiles(_logsPath, "redact-test-*.log");
+        var logContent = File.ReadAllText(logFiles.First());
         Assert.Contains("[REDACTED]", logContent);
         Assert.DoesNotContain(apiKey, logContent);
     }
@@ -311,5 +327,24 @@ public class DiagnosticsIntegrationTests : IDisposable
         {
             // Best-effort cleanup
         }
+    }
+}
+
+/// <summary>
+/// A Serilog sink that delegates each event to a callback, used for programmatic
+/// inspection of log events without serialization.
+/// </summary>
+public class DelegatingSink : ILogEventSink
+{
+    private readonly Action<LogEvent> _onEvent;
+
+    public DelegatingSink(Action<LogEvent> onEvent)
+    {
+        _onEvent = onEvent;
+    }
+
+    public void Emit(LogEvent logEvent)
+    {
+        _onEvent(logEvent);
     }
 }

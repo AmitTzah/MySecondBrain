@@ -450,6 +450,7 @@ private void StartBackgroundServices(ILogger<App> startupLogger)
             .MinimumLevel.Information()
 #endif
             .Destructure.With<ApiKeyDestructuringPolicy>()
+            .Enrich.With<ApiKeyRedactionEnricher>()
             .Enrich.WithThreadId()
             .Enrich.WithMachineName()
             .Enrich.WithProperty("AppVersion", appVersion)

@@ -14,7 +14,7 @@ public class ApiKeyDestructuringPolicy : IDestructuringPolicy
         ILogEventPropertyValueFactory propertyValueFactory,
         out LogEventPropertyValue result)
     {
-        if (value is string s && IsApiKey(s))
+        if (value is string s && IsApiKeyString(s))
         {
             result = new ScalarValue("[REDACTED]");
             return true;
@@ -28,7 +28,7 @@ public class ApiKeyDestructuringPolicy : IDestructuringPolicy
     /// Determines whether the given string looks like an API key.
     /// Returns true for strings >= 20 characters matching common API key prefixes.
     /// </summary>
-    private static bool IsApiKey(string value)
+    public static bool IsApiKeyString(string value)
     {
         if (string.IsNullOrEmpty(value) || value.Length < 20)
             return false;
