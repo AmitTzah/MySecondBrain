@@ -578,26 +578,38 @@
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                             CornerRadius="6" Padding="16,12" Margin="0,0,0,20">
                         <StackPanel>
-                            <TextBlock FontSize="12" Margin="0,0,0,6">
-                                <Run Text="🔑" FontSize="14"/>
-                                <Run Text="{Binding ConfiguredKeyCount, Mode=OneWay, StringFormat='{}{0} API key(s) added'}"
-                                     Foreground="{DynamicResource ContentForeground}"/>
-                            </TextBlock>
-                            <TextBlock FontSize="12" Margin="0,0,0,6">
-                                <Run Text="🤖" FontSize="14"/>
-                                <Run Text="{Binding ConfiguredPersonaName, Mode=OneWay, StringFormat='Persona: {0}'}"
-                                     Foreground="{DynamicResource ContentForeground}"/>
-                            </TextBlock>
-                            <TextBlock FontSize="12" Margin="0,0,0,6"
-                                       Foreground="{DynamicResource ContentForeground}">
-                                <Run Text="📝" FontSize="14"/>
-                                <Run Text="{Binding ConfiguredWikiPath, Mode=OneWay, StringFormat='Wiki: {0}'}"/>
-                            </TextBlock>
-                            <TextBlock FontSize="12" Margin="0,0,0,6">
-                                <Run Text="⌨️" FontSize="14"/>
-                                <Run Text="{Binding ConfiguredHotkeyCount, Mode=OneWay, StringFormat='{}{0} hotkeys configured'}"
-                                     Foreground="{DynamicResource ContentForeground}"/>
-                            </TextBlock>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="🔑" FontSize="14" VerticalAlignment="Center"
+                                           Margin="0,0,4,0"/>
+                                <TextBlock FontSize="12"
+                                           Text="{Binding ConfiguredKeyCount, StringFormat='{}{0} API key(s) added'}"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="🤖" FontSize="14" VerticalAlignment="Center"
+                                           Margin="0,0,4,0"/>
+                                <TextBlock FontSize="12"
+                                           Text="{Binding ConfiguredPersonaName, StringFormat='Persona: {0}'}"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="📝" FontSize="14" VerticalAlignment="Center"
+                                           Margin="0,0,4,0"/>
+                                <TextBlock FontSize="12"
+                                           Text="{Binding ConfiguredWikiPath, StringFormat='Wiki: {0}'}"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <TextBlock Text="⌨️" FontSize="14" VerticalAlignment="Center"
+                                           Margin="0,0,4,0"/>
+                                <TextBlock FontSize="12"
+                                           Text="{Binding ConfiguredHotkeyCount, StringFormat='{}{0} hotkeys configured'}"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 

@@ -139,11 +139,11 @@
                             <TextBlock FontSize="10"
                                        Foreground="{DynamicResource SubtleBrush}">
                                 <Run Text="Temp:"/>
-                                <Run Text="{Binding Temperature, StringFormat={}{0:F1}}"/>
+                                <Run Text="{Binding Temperature, Mode=OneWay, StringFormat={}{0:F1}}"/>
                                 <Run Text="• Context:"/>
-                                <Run Text="{Binding MaxContextWindow}"/>
+                                <Run Text="{Binding MaxContextWindow, Mode=OneWay}"/>
                                 <Run Text="• Overflow:"/>
-                                <Run Text="{Binding ContextOverflowStrategy}"/>
+                                <Run Text="{Binding ContextOverflowStrategy, Mode=OneWay}"/>
                             </TextBlock>
                         </StackPanel>
 
