@@ -341,9 +341,7 @@ public partial class SettingsViewModel : ObservableObject
         try
         {
             var providerType = SelectedProviderType;
-            var endpointUrl = providerType == ProviderType.OpenAICompatible
-                ? CustomEndpointUrlValue
-                : null;
+            var endpointUrl = GetProviderEndpoint(providerType);
 
             _logger.LogDebug(
                 "Testing API key for {Provider} (endpoint: {Endpoint})",
@@ -374,6 +372,25 @@ public partial class SettingsViewModel : ObservableObject
         {
             IsTesting = false;
         }
+    }
+
+    /// <summary>
+    /// Resolves the API endpoint URL for the given provider type.
+    /// Returns the custom endpoint for OpenAICompatible, a well-known default
+    /// for providers like DeepSeek/Mistral/Moonshot/MiMo, or null for providers
+    /// with built-in endpoints (OpenAI, Anthropic, Google).
+    /// </summary>
+    private string? GetProviderEndpoint(ProviderType type)
+    {
+        return type switch
+        {
+            ProviderType.OpenAICompatible => CustomEndpointUrlValue,
+            ProviderType.DeepSeek => "https://api.deepseek.com",
+            ProviderType.Mistral => "https://api.mistral.ai",
+            ProviderType.Moonshot => "https://api.moonshot.ai/v1",
+            ProviderType.MiMo => "https://api.xiaomimimo.com/v1",
+            _ => null // OpenAI, Anthropic, Google use built-in endpoints
+        };
     }
 
     [RelayCommand]

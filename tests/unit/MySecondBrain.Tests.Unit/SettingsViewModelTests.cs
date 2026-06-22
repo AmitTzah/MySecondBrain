@@ -220,6 +220,50 @@ public class SettingsViewModelTests
         Assert.True(_sut.IsTestSuccess);
     }
 
+    [Theory]
+    [InlineData(ProviderType.DeepSeek, "https://api.deepseek.com")]
+    [InlineData(ProviderType.Mistral, "https://api.mistral.ai")]
+    [InlineData(ProviderType.Moonshot, "https://api.moonshot.ai/v1")]
+    [InlineData(ProviderType.MiMo, "https://api.xiaomimimo.com/v1")]
+    public async Task TestApiKeyCommand_WellKnownProvider_UsesCorrectEndpoint(
+        ProviderType providerType, string expectedEndpoint)
+    {
+        _sut.SelectedProviderType = providerType;
+        _sut.ApiKeyInputValue = "test-key";
+
+        _llmProviderServiceMock
+            .Setup(s => s.ValidateApiKeyAsync(
+                providerType, "test-key", expectedEndpoint, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await _sut.TestApiKeyCommand.ExecuteAsync(null);
+
+        Assert.True(_sut.IsTestSuccess);
+        _llmProviderServiceMock.Verify(s => s.ValidateApiKeyAsync(
+            providerType, "test-key", expectedEndpoint, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(ProviderType.OpenAI)]
+    [InlineData(ProviderType.Anthropic)]
+    [InlineData(ProviderType.Google)]
+    public async Task TestApiKeyCommand_BuiltInProvider_PassesNullEndpoint(ProviderType providerType)
+    {
+        _sut.SelectedProviderType = providerType;
+        _sut.ApiKeyInputValue = "test-key";
+
+        _llmProviderServiceMock
+            .Setup(s => s.ValidateApiKeyAsync(
+                providerType, "test-key", null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await _sut.TestApiKeyCommand.ExecuteAsync(null);
+
+        Assert.True(_sut.IsTestSuccess);
+        _llmProviderServiceMock.Verify(s => s.ValidateApiKeyAsync(
+            providerType, "test-key", null, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task TestApiKeyCommand_Exception_CapturesError()
     {

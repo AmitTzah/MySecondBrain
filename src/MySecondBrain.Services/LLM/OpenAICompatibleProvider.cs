@@ -44,6 +44,8 @@ public class OpenAICompatibleProvider : ILLMProvider
     /// <summary>
     /// Validates API key using the stored CustomEndpointUrl from the repository.
     /// Falls back to http://localhost:1234 if no stored endpoint exists.
+    /// Well-known endpoint resolution is handled by the caller (SettingsViewModel)
+    /// which passes the correct endpointUrl parameter via the 3-param overload.
     /// </summary>
     public async Task<bool> ValidateKeyAsync(string apiKey, CancellationToken ct)
     {
