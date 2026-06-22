@@ -797,10 +797,13 @@ public class SettingsViewModelTests
     }
 
     [Fact]
-    public async Task SelectedSettingsCategory_Change_UpdatesStaticField()
+    public async Task SelectedSettingsCategory_DefaultsToProviders_OnNewInstance()
     {
-        // Verify the static field is updated when category changes
+        // Change VM1's category to verify it doesn't leak to a new VM instance
+        // (regression guard: E2E tests failed because a static field retained the
+        //  previous category across VM recreations — this must never happen again)
         _sut.SelectedSettingsCategory = SettingsCategory.Diagnostics;
+        Assert.Equal(SettingsCategory.Diagnostics, _sut.SelectedSettingsCategory);
 
         // Setup default returns for InitializeAsync on the shared mocks
         _apiKeyRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<ApiKey>());
@@ -809,10 +812,10 @@ public class SettingsViewModelTests
         _textActionRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<TextAction>());
         _backupProviderMock.Setup(b => b.ValidateCredentialsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
-        // Create a new ViewModel instance — InitializeAsync restores from the static field
+        // Create a new ViewModel instance — InitializeAsync always starts on Providers
         var vm2 = CreateFreshViewModel();
         await vm2.InitializeCommand.ExecuteAsync(null);
-        Assert.Equal(SettingsCategory.Diagnostics, vm2.SelectedSettingsCategory);
+        Assert.Equal(SettingsCategory.Providers, vm2.SelectedSettingsCategory);
     }
 
     /// <summary>

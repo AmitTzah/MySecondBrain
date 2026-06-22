@@ -236,12 +236,6 @@ public partial class SettingsViewModel : ObservableObject
     private bool _suppressFontPersistence;
 
     /// <summary>
-    /// Persists the last selected settings category across ViewModel recreations
-    /// (since SettingsViewModel is Transient — recreated on every navigation to Settings).
-    /// </summary>
-    private static SettingsCategory s_lastSelectedCategory = SettingsCategory.Providers;
-
-    /// <summary>
     /// Path to the application's logs directory under %LOCALAPPDATA%\MySecondBrain\logs\.
     /// </summary>
     private static string LogsFolderPath =>
@@ -352,7 +346,6 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnSelectedSettingsCategoryChanged(SettingsCategory value)
     {
         StatusMessage = string.Empty;
-        s_lastSelectedCategory = value;
     }
 
     // ================================================================
@@ -1649,8 +1642,9 @@ Welcome to your MySecondBrain wiki. Add `.md` files here and they will be indexe
     [RelayCommand]
     private async Task InitializeAsync()
     {
-        // Restore the last selected category from the static field (persists across transient ViewModel recreations)
-        SelectedSettingsCategory = s_lastSelectedCategory;
+        // Default to Providers category. SettingsViewModel is Transient — recreated on each navigation.
+        // Always start on Providers since it's the primary/default category.
+        SelectedSettingsCategory = SettingsCategory.Providers;
 
         await RefreshKeyListAsync();
         await RefreshAvailableApiKeysAsync();
