@@ -2256,6 +2256,467 @@
                     </ScrollViewer>
                 </Grid>
 
+                <!-- Text Actions Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="TextActions">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="⚡ Text Actions" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Manage text transformation actions that can be triggered via hotkey or command bar. Each action defines a capture scope, apply mode, and optional model configuration."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <Grid Grid.Row="2" Margin="16,0,16,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="420"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left: Text Actions list -->
+                        <Border Grid.Column="0" BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- List header -->
+                                <Grid Grid.Row="0" Margin="12,10,12,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Actions" FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="+ New Text Action"
+                                            Padding="8,4"
+                                            Command="{Binding AddTextActionCommand}"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            AutomationProperties.AutomationId="AddTextActionButton"/>
+                                </Grid>
+
+                                <!-- Text Action items -->
+                                <ScrollViewer Grid.Row="1" Margin="10,0,10,8"
+                                              VerticalScrollBarVisibility="Auto">
+                                    <Grid>
+                                        <ItemsControl ItemsSource="{Binding TextActions}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="vm:TextActionDisplayItem">
+                                                    <Border Padding="10,8" Margin="0,0,0,2"
+                                                            Background="{DynamicResource CardBackground}"
+                                                            BorderBrush="{DynamicResource BorderBrush}"
+                                                            BorderThickness="1" CornerRadius="6">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <StackPanel Grid.Column="0">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="{Binding DisplayName}" FontSize="12"
+                                                                               FontWeight="SemiBold"
+                                                                               Foreground="{DynamicResource ContentForeground}"/>
+                                                                    <Border Padding="4,1" CornerRadius="3" Margin="6,0,0,0"
+                                                                            Background="{DynamicResource AccentBrush}" Opacity="0.7"
+                                                                            BorderThickness="0">
+                                                                        <Border.Style>
+                                                                            <Style TargetType="Border">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsBuiltIn}" Value="True">
+                                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </Border.Style>
+                                                                        <TextBlock Text="Built-in" FontSize="8" Foreground="White"/>
+                                                                    </Border>
+                                                                </StackPanel>
+                                                                <TextBlock Text="{Binding TruncatedSystemPrompt}" FontSize="10"
+                                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                                           TextWrapping="Wrap" MaxHeight="32"/>
+                                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                                    <TextBlock Text="{Binding CaptureScopeBadges}" FontSize="10"
+                                                                               Foreground="{DynamicResource SubtleBrush}"
+                                                                               Margin="0,0,8,0"/>
+                                                                    <TextBlock Text="{Binding ApplyModeLabel}" FontSize="10"
+                                                                               Foreground="{DynamicResource SubtleBrush}"
+                                                                               Margin="0,0,8,0"/>
+                                                                    <TextBlock Text="{Binding Hotkey}" FontSize="10"
+                                                                               Foreground="{DynamicResource AccentBrush}"
+                                                                               FontWeight="SemiBold"/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+
+                                                            <!-- Action buttons -->
+                                                            <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                                        VerticalAlignment="Center">
+                                                                <Button Content="📋" Style="{StaticResource IconButtonStyle}"
+                                                                        ToolTip="Duplicate"
+                                                                        Command="{Binding DataContext.DuplicateTextActionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                        CommandParameter="{Binding}"/>
+                                                                <Button Content="✏️" Style="{StaticResource IconButtonStyle}"
+                                                                        ToolTip="Edit"
+                                                                        Command="{Binding DataContext.EditTextActionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                        CommandParameter="{Binding}"/>
+                                                                <Button Content="🗑️" Style="{StaticResource IconButtonStyle}"
+                                                                        ToolTip="Delete"
+                                                                        Command="{Binding DataContext.DeleteTextActionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                        CommandParameter="{Binding}"/>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                            <ItemsControl.Style>
+                                                <Style TargetType="ItemsControl">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding TextActions.Count}" Value="0">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ItemsControl.Style>
+                                        </ItemsControl>
+
+                                        <TextBlock Text="No text actions yet. Click '+ New Text Action' to create one."
+                                                   FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                                                   TextWrapping="Wrap" HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" Margin="20">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding TextActions.Count}" Value="0">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+
+                        <!-- Separator -->
+                        <GridSplitter Grid.Column="1" Width="4" Margin="0"
+                                      HorizontalAlignment="Center"
+                                      Background="Transparent"
+                                      IsEnabled="False"/>
+
+                        <!-- Right: Add/Edit form -->
+                        <Border Grid.Column="2" BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEditingTextAction}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="{Binding EditingTextAction.DisplayName, TargetNullValue='New Text Action'}"
+                                               FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,12"
+                                               AutomationProperties.AutomationId="TextActionFormTitle"/>
+
+                                    <!-- Display Name -->
+                                    <TextBlock Text="Display Name" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <TextBox Text="{Binding TextActionDisplayNameValue, UpdateSourceTrigger=PropertyChanged}"
+                                             FontSize="11" Margin="0,0,0,10"
+                                             AutomationProperties.AutomationId="TextActionDisplayNameInput"/>
+
+                                    <!-- System Prompt -->
+                                    <TextBlock Text="System Prompt" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <TextBox Text="{Binding TextActionSystemPromptValue, UpdateSourceTrigger=PropertyChanged}"
+                                             FontSize="11" Margin="0,0,0,10"
+                                             AcceptsReturn="True" TextWrapping="Wrap"
+                                             MinHeight="60" MaxHeight="120"
+                                             VerticalScrollBarVisibility="Auto"/>
+
+                                    <!-- Model Config -->
+                                    <TextBlock Text="Model Configuration (optional)" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <ComboBox ItemsSource="{Binding ModelConfigurations}"
+                                              SelectedValue="{Binding TextActionModelConfigId}"
+                                              SelectedValuePath="Id"
+                                              DisplayMemberPath="DisplayName"
+                                              FontSize="11" Margin="0,0,0,10"/>
+
+                                    <!-- Capture Scope (Multi-Select CheckBoxes) -->
+                                    <TextBlock Text="Capture Scope" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <CheckBox IsChecked="{Binding CaptureSelection}" Content="Selection" FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <CheckBox IsChecked="{Binding CaptureFocusedElement}" Content="Focused Element" FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <CheckBox IsChecked="{Binding CaptureSurroundingContext}" Content="Surrounding Context" FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <CheckBox IsChecked="{Binding CaptureFullDocument}" Content="Full Document" FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <CheckBox IsChecked="{Binding CaptureScreenshot}" Content="Screenshot" FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,10"/>
+
+                                    <!-- Apply Mode (RadioButtons) -->
+                                    <TextBlock Text="Apply Mode" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <RadioButton Content="Replace Selection" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=replaceSelection}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <RadioButton Content="Insert at Cursor" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=insertAtCursor}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <RadioButton Content="Replace Element" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=replaceFocusedElement}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <RadioButton Content="Append to Element" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=appendToFocusedElement}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <RadioButton Content="Prepend to Element" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=prependToFocusedElement}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <RadioButton Content="Clipboard Only" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=clipboardOnly}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <RadioButton Content="Show Only" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=showOnly}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,10"/>
+
+                                    <!-- Hotkey Assignment -->
+                                    <TextBlock Text="Hotkey" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding TextActionAssignedHotkey, TargetNullValue='(none)'}"
+                                                   FontSize="11" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource ContentForeground}"/>
+                                        <Button Grid.Column="1" Content="Assign Hotkey"
+                                                Padding="8,4" FontSize="10"
+                                                Command="{Binding AssignTextActionHotkeyCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}"/>
+                                    </Grid>
+
+                                    <!-- Action buttons -->
+                                    <Grid Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0" Text="{Binding StatusMessage}"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"
+                                                   TextWrapping="Wrap"/>
+
+                                        <Button Grid.Column="1" Content="Cancel"
+                                                Margin="0,0,8,0"
+                                                Command="{Binding CancelTextActionEditCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}"/>
+
+                                        <Button Grid.Column="2" Content="Save"
+                                                Padding="12,5"
+                                                Command="{Binding SaveTextActionCommand}"
+                                                Style="{StaticResource AccentButtonStyle}"
+                                                AutomationProperties.AutomationId="SaveTextActionButton"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- Form placeholder when not editing -->
+                        <Border Grid.Column="2" BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEditingTextAction}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="Select a text action or click '+ New Text Action' to create one."
+                                       FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       TextWrapping="Wrap" Margin="20"/>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- Hotkeys Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Hotkeys">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="⌨️ Hotkeys" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="View and customize keyboard shortcuts for text actions and the command bar. Click 'Change' to assign a new hotkey combo."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <!-- Main content -->
+                    <Grid Grid.Row="2" Margin="16,0,16,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Reset to Defaults link -->
+                        <TextBlock Grid.Row="0" Margin="0,0,0,8" HorizontalAlignment="Right">
+                            <Hyperlink Command="{Binding ResetHotkeysToDefaultsCommand}"
+                                       Foreground="{DynamicResource AccentBrush}" FontSize="11"
+                                       TextDecorations="Underline">
+                                🔄 Reset to Defaults
+                            </Hyperlink>
+                        </TextBlock>
+
+                        <!-- Hotkey assignments table -->
+                        <Border Grid.Row="1" BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <Grid>
+                                <ItemsControl ItemsSource="{Binding HotkeyAssignments}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:HotkeyAssignmentDisplayItem">
+                                            <Border Padding="10,8" Margin="0,0,0,2"
+                                                    Background="{DynamicResource CardBackground}"
+                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                    BorderThickness="0,0,0,1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="160"/>
+                                                        <ColumnDefinition Width="120"/>
+                                                        <ColumnDefinition Width="120"/>
+                                                        <ColumnDefinition Width="100"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock Text="{Binding ActionName}" FontSize="12"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource ContentForeground}"/>
+                                                        <TextBlock Text="{Binding Source}" FontSize="9"
+                                                                   Foreground="{DynamicResource SubtleBrush}"/>
+                                                    </StackPanel>
+
+                                                    <TextBlock Grid.Column="1" Text="{Binding CaptureScopeBadges}"
+                                                               FontSize="10" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource SubtleBrush}"/>
+
+                                                    <TextBlock Grid.Column="2" Text="{Binding ApplyModeLabel}"
+                                                               FontSize="10" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource SubtleBrush}"/>
+
+                                                    <TextBlock Grid.Column="3" Text="{Binding Hotkey, TargetNullValue='(none)'}"
+                                                               FontSize="11" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource AccentBrush}"
+                                                               FontWeight="SemiBold"/>
+
+                                                    <Button Grid.Column="4" Content="Change"
+                                                            Padding="8,3" FontSize="10"
+                                                            Command="{Binding DataContext.ChangeHotkeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource SecondaryButtonStyle}"
+                                                            VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                    <ItemsControl.Style>
+                                        <Style TargetType="ItemsControl">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HotkeyAssignments.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ItemsControl.Style>
+                                </ItemsControl>
+
+                                <!-- Empty state -->
+                                <TextBlock Text="No hotkey assignments configured."
+                                           FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Margin="20">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HotkeyAssignments.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
+                </Grid>
+
                 <!-- Other categories placeholder -->
                 <TextBlock Text="Select a category"
                            Foreground="{DynamicResource SubtleBrush}"
@@ -2306,6 +2767,12 @@
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Maintenance">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="TextActions">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Hotkeys">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
                             </Style.Triggers>

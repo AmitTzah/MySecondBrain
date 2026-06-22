@@ -4,4 +4,6 @@ global using System.Linq;
 global using System.Threading;
 global using System.Threading.Tasks;
 global using Moq;
+global using MySecondBrain.Core.Models;
+global using MySecondBrain.Data.Repositories;
 global using Xunit;

@@ -106,6 +106,104 @@ public partial class ApiKeyDisplayItem : ObservableObject
     }
 }
 
+/// <summary>
+/// Display wrapper for text actions in the settings list.
+/// </summary>
+public partial class TextActionDisplayItem : ObservableObject
+{
+    public string Id { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string SystemPrompt { get; set; } = string.Empty;
+    public string? ModelConfigId { get; set; }
+    public string ModelConfigName { get; set; } = string.Empty;
+    public string? Hotkey { get; set; }
+    public string CaptureScope { get; set; } = "selection";
+    public string ApplyMode { get; set; } = "replaceSelection";
+    public bool IsBuiltIn { get; set; }
+
+    public string TruncatedSystemPrompt => SystemPrompt.Length > 80
+        ? SystemPrompt[..77] + "..."
+        : SystemPrompt;
+
+    public string CaptureScopeBadges
+    {
+        get
+        {
+            var scopes = CaptureScope.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            return string.Join(", ", scopes.Select(MapCaptureScope));
+        }
+    }
+
+    public string ApplyModeLabel => ApplyMode switch
+    {
+        "replaceSelection" => "Replace Selection",
+        "insertAtCursor" => "Insert at Cursor",
+        "replaceFocusedElement" => "Replace Element",
+        "appendToFocusedElement" => "Append to Element",
+        "prependToFocusedElement" => "Prepend to Element",
+        "clipboardOnly" => "Clipboard Only",
+        "showOnly" => "Show Only",
+        _ => ApplyMode
+    };
+
+    private static string MapCaptureScope(string scope) => scope switch
+    {
+        "selection" => "Selection",
+        "focusedElement" => "Focused Element",
+        "surroundingContext" => "Surrounding Context",
+        "fullDocument" => "Full Document",
+        "screenshot" => "Screenshot",
+        _ => scope
+    };
+}
+
+/// <summary>
+/// Display wrapper for hotkey assignments in the settings list.
+/// </summary>
+public partial class HotkeyAssignmentDisplayItem : ObservableObject
+{
+    public string ActionId { get; set; } = string.Empty;
+    public string ActionName { get; set; } = string.Empty;
+    public string Source { get; set; } = "TextAction"; // TextAction or CommandBar
+    public string CaptureScope { get; set; } = "selection";
+    public string ApplyMode { get; set; } = "replaceSelection";
+    public string? Hotkey { get; set; }
+
+    [ObservableProperty]
+    private bool _isRecording;
+
+    public string ApplyModeLabel => ApplyMode switch
+    {
+        "replaceSelection" => "Replace Selection",
+        "insertAtCursor" => "Insert at Cursor",
+        "replaceFocusedElement" => "Replace Element",
+        "appendToFocusedElement" => "Append to Element",
+        "prependToFocusedElement" => "Prepend to Element",
+        "clipboardOnly" => "Clipboard Only",
+        "showOnly" => "Show Only",
+        _ => ApplyMode
+    };
+
+    public string CaptureScopeBadges
+    {
+        get
+        {
+            var scopes = CaptureScope.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            return string.Join(", ", scopes.Select(MapCaptureScope));
+        }
+    }
+
+    private static string MapCaptureScope(string scope) => scope switch
+    {
+        "selection" => "Selection",
+        "focusedElement" => "Focused Element",
+        "surroundingContext" => "Surrounding Context",
+        "fullDocument" => "Full Document",
+        "screenshot" => "Screenshot",
+        _ => scope
+    };
+}
+
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly ISettingsRepository _settingsRepo;
@@ -121,6 +219,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly ILogger<SettingsViewModel> _logger;
     private readonly IWikiService _wikiService;
     private readonly IBackupProvider _backupProvider;
+    private readonly ITextActionRepository _textActionRepo;
     private readonly Data.AppDbContext _db;
 
     /// <summary>
@@ -155,6 +254,7 @@ public partial class SettingsViewModel : ObservableObject
         ILogger<SettingsViewModel> logger,
         IWikiService wikiService,
         IBackupProvider backupProvider,
+        ITextActionRepository textActionRepo,
         Data.AppDbContext db)
     {
         _settingsRepo = settingsRepo;
@@ -170,6 +270,7 @@ public partial class SettingsViewModel : ObservableObject
         _logger = logger;
         _wikiService = wikiService;
         _backupProvider = backupProvider;
+        _textActionRepo = textActionRepo;
         _db = db;
 
         CurrentVersion = (_updateChecker.CurrentVersion ?? System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version)
@@ -974,6 +1075,490 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     // ================================================================
+    // Text Actions — list, form state, capture scope, apply mode
+    // ================================================================
+
+    [ObservableProperty]
+    private ObservableCollection<TextActionDisplayItem> _textActions = [];
+
+    [ObservableProperty]
+    private bool _isEditingTextAction;
+
+    [ObservableProperty]
+    private TextAction? _editingTextAction;
+
+    [ObservableProperty]
+    private string _textActionDisplayNameValue = string.Empty;
+
+    [ObservableProperty]
+    private string _textActionSystemPromptValue = string.Empty;
+
+    [ObservableProperty]
+    private string? _textActionModelConfigId;
+
+    /// <summary>
+    /// Whether this is a new (not yet persisted) text action.
+    /// </summary>
+    private bool _isNewTextAction;
+
+    // Capture scope flags (multi-select)
+    [ObservableProperty]
+    private bool _captureSelection = true;
+
+    [ObservableProperty]
+    private bool _captureFocusedElement;
+
+    [ObservableProperty]
+    private bool _captureSurroundingContext;
+
+    [ObservableProperty]
+    private bool _captureFullDocument;
+
+    [ObservableProperty]
+    private bool _captureScreenshot;
+
+    // Apply mode (radio — single select)
+    [ObservableProperty]
+    private string _selectedApplyMode = "replaceSelection";
+
+    [ObservableProperty]
+    private string? _textActionAssignedHotkey;
+
+    public IReadOnlyList<string> ApplyModeOptions { get; } =
+    [
+        "replaceSelection",
+        "insertAtCursor",
+        "replaceFocusedElement",
+        "appendToFocusedElement",
+        "prependToFocusedElement",
+        "clipboardOnly",
+        "showOnly",
+    ];
+
+    [RelayCommand]
+    private void AddTextAction()
+    {
+        EditingTextAction = null;
+        TextActionDisplayNameValue = string.Empty;
+        TextActionSystemPromptValue = string.Empty;
+        TextActionModelConfigId = null;
+        TextActionAssignedHotkey = null;
+        _isNewTextAction = true;
+
+        // Default: captureSelection = true, the rest false
+        CaptureSelection = true;
+        CaptureFocusedElement = false;
+        CaptureSurroundingContext = false;
+        CaptureFullDocument = false;
+        CaptureScreenshot = false;
+        SelectedApplyMode = "replaceSelection";
+
+        IsEditingTextAction = true;
+    }
+
+    [RelayCommand]
+    private async Task SaveTextActionAsync()
+    {
+        if (string.IsNullOrWhiteSpace(TextActionDisplayNameValue))
+        {
+            StatusMessage = "Cannot save: display name is required.";
+            return;
+        }
+
+        try
+        {
+            var captureScope = BuildCaptureScopeString();
+            var now = DateTimeOffset.UtcNow;
+
+            if (_isNewTextAction)
+            {
+                var action = new TextAction
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    DisplayName = TextActionDisplayNameValue,
+                    SystemPrompt = TextActionSystemPromptValue ?? string.Empty,
+                    ModelConfigId = TextActionModelConfigId,
+                    Hotkey = TextActionAssignedHotkey,
+                    CaptureScope = captureScope,
+                    ApplyMode = SelectedApplyMode,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                };
+
+                // Check for hotkey conflict
+                if (!string.IsNullOrEmpty(action.Hotkey))
+                {
+                    var conflicting = await _textActionRepo.GetByHotkeyAsync(action.Hotkey);
+                    if (conflicting.Count > 0 && conflicting[0].Id != action.Id)
+                    {
+                        if (!_confirmationService.Confirm(
+                            $"Hotkey '{action.Hotkey}' is already assigned to '{conflicting[0].DisplayName}'. Assign anyway?",
+                            "Hotkey Conflict"))
+                            return;
+                    }
+                }
+
+                await _textActionRepo.CreateAsync(action);
+                _logger.LogInformation("Created new text action '{Name}'", action.DisplayName);
+            }
+            else if (EditingTextAction is not null)
+            {
+                EditingTextAction.DisplayName = TextActionDisplayNameValue;
+                EditingTextAction.SystemPrompt = TextActionSystemPromptValue ?? string.Empty;
+                EditingTextAction.ModelConfigId = TextActionModelConfigId;
+                EditingTextAction.Hotkey = TextActionAssignedHotkey;
+                EditingTextAction.CaptureScope = captureScope;
+                EditingTextAction.ApplyMode = SelectedApplyMode;
+                EditingTextAction.UpdatedAt = now;
+
+                // Check for hotkey conflict
+                if (!string.IsNullOrEmpty(EditingTextAction.Hotkey))
+                {
+                    var conflicting = await _textActionRepo.GetByHotkeyAsync(EditingTextAction.Hotkey);
+                    if (conflicting.Count > 0 && conflicting[0].Id != EditingTextAction.Id)
+                    {
+                        if (!_confirmationService.Confirm(
+                            $"Hotkey '{EditingTextAction.Hotkey}' is already assigned to '{conflicting[0].DisplayName}'. Assign anyway?",
+                            "Hotkey Conflict"))
+                            return;
+                    }
+                }
+
+                await _textActionRepo.UpdateAsync(EditingTextAction);
+                _logger.LogInformation("Updated text action '{Name}'", EditingTextAction.DisplayName);
+            }
+            else
+            {
+                StatusMessage = "Cannot save: no text action being edited.";
+                return;
+            }
+
+            await RefreshTextActionListAsync();
+            ClearTextActionForm();
+            StatusMessage = "Text action saved successfully.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save text action");
+            StatusMessage = $"Failed to save text action: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void CancelTextActionEdit()
+    {
+        ClearTextActionForm();
+    }
+
+    [RelayCommand]
+    private async Task EditTextActionAsync(TextActionDisplayItem? item)
+    {
+        if (item is null) return;
+
+        try
+        {
+            var action = await _textActionRepo.GetByIdAsync(item.Id);
+            if (action is null)
+            {
+                StatusMessage = "Text action not found.";
+                return;
+            }
+
+            EditingTextAction = action;
+            _isNewTextAction = false;
+            TextActionDisplayNameValue = action.DisplayName;
+            TextActionSystemPromptValue = action.SystemPrompt;
+            TextActionModelConfigId = action.ModelConfigId;
+            TextActionAssignedHotkey = action.Hotkey;
+            SelectedApplyMode = action.ApplyMode;
+
+            // Parse capture scope flags from comma-separated string
+            var scopes = action.CaptureScope
+                .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .ToHashSet();
+            CaptureSelection = scopes.Contains("selection");
+            CaptureFocusedElement = scopes.Contains("focusedElement");
+            CaptureSurroundingContext = scopes.Contains("surroundingContext");
+            CaptureFullDocument = scopes.Contains("fullDocument");
+            CaptureScreenshot = scopes.Contains("screenshot");
+
+            IsEditingTextAction = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load text action for editing");
+            StatusMessage = "Failed to load text action.";
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteTextActionAsync(TextActionDisplayItem? item)
+    {
+        if (item is null) return;
+
+        if (!_confirmationService.Confirm(
+            $"Delete text action '{item.DisplayName}'?",
+            "Confirm Delete"))
+            return;
+
+        try
+        {
+            await _textActionRepo.DeleteAsync(item.Id);
+            await RefreshTextActionListAsync();
+            await RefreshHotkeyAssignmentsAsync();
+            StatusMessage = "Text action deleted.";
+            _logger.LogInformation("Deleted text action {ActionId}", item.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete text action {ActionId}", item.Id);
+            StatusMessage = "Failed to delete text action.";
+        }
+    }
+
+    [RelayCommand]
+    private async Task DuplicateTextActionAsync(TextActionDisplayItem? item)
+    {
+        if (item is null) return;
+
+        try
+        {
+            var original = await _textActionRepo.GetByIdAsync(item.Id);
+            if (original is null)
+            {
+                StatusMessage = "Text action not found.";
+                return;
+            }
+
+            var copy = new TextAction
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                DisplayName = original.DisplayName + " (Copy)",
+                SystemPrompt = original.SystemPrompt,
+                ModelConfigId = original.ModelConfigId,
+                CaptureScope = original.CaptureScope,
+                ApplyMode = original.ApplyMode,
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
+                // Don't copy hotkey — avoid conflicts
+                Hotkey = null,
+                IsBuiltIn = false,
+            };
+
+            await _textActionRepo.CreateAsync(copy);
+            await RefreshTextActionListAsync();
+            StatusMessage = $"Duplicated '{original.DisplayName}' as '{copy.DisplayName}'.";
+            _logger.LogInformation("Duplicated text action '{Original}' as '{Copy}'",
+                original.DisplayName, copy.DisplayName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to duplicate text action");
+            StatusMessage = $"Failed to duplicate text action: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void AssignTextActionHotkey()
+    {
+        // Set a transient flag that the key recorder overlay in XAML will observe.
+        // The overlay captures keyboard input and calls ApplyRecordedHotkey(string).
+        IsRecordingHotkey = true;
+    }
+
+    /// <summary>
+    /// Called by the key recorder overlay when a valid hotkey combo is pressed.
+    /// </summary>
+    public void ApplyRecordedHotkey(string combo)
+    {
+        TextActionAssignedHotkey = combo;
+        IsRecordingHotkey = false;
+    }
+
+    /// <summary>
+    /// Called by the key recorder overlay when Escape is pressed.
+    /// </summary>
+    public void CancelHotkeyRecording()
+    {
+        IsRecordingHotkey = false;
+    }
+
+    /// <summary>
+    /// Tracked on the editing form to show/hide the key recorder overlay for text actions.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isRecordingHotkey;
+
+    private string BuildCaptureScopeString()
+    {
+        var scopes = new List<string>();
+        if (CaptureSelection) scopes.Add("selection");
+        if (CaptureFocusedElement) scopes.Add("focusedElement");
+        if (CaptureSurroundingContext) scopes.Add("surroundingContext");
+        if (CaptureFullDocument) scopes.Add("fullDocument");
+        if (CaptureScreenshot) scopes.Add("screenshot");
+        return scopes.Count > 0 ? string.Join(",", scopes) : "selection";
+    }
+
+    private void ClearTextActionForm()
+    {
+        IsEditingTextAction = false;
+        EditingTextAction = null;
+        _isNewTextAction = false;
+        TextActionDisplayNameValue = string.Empty;
+        TextActionSystemPromptValue = string.Empty;
+        TextActionModelConfigId = null;
+        TextActionAssignedHotkey = null;
+        CaptureSelection = true;
+        CaptureFocusedElement = false;
+        CaptureSurroundingContext = false;
+        CaptureFullDocument = false;
+        CaptureScreenshot = false;
+        SelectedApplyMode = "replaceSelection";
+    }
+
+    // ================================================================
+    // Hotkeys — assignments, change command, reset to defaults
+    // ================================================================
+
+    [ObservableProperty]
+    private ObservableCollection<HotkeyAssignmentDisplayItem> _hotkeyAssignments = [];
+
+    /// <summary>
+    /// The hotkey currently being recorded (for the hotkey overlay).
+    /// </summary>
+    [ObservableProperty]
+    private string _recordingHotkeyCombo = string.Empty;
+
+    /// <summary>
+    /// The hotkey assignment item currently being changed (while recorder is open).
+    /// </summary>
+    private HotkeyAssignmentDisplayItem? _changingHotkeyItem;
+
+    [RelayCommand]
+    private void ChangeHotkey(HotkeyAssignmentDisplayItem? item)
+    {
+        if (item is null) return;
+        _changingHotkeyItem = item;
+        RecordingHotkeyCombo = item.Hotkey ?? string.Empty;
+        IsRecordingHotkey = true;
+    }
+
+    /// <summary>
+    /// Called by the key recorder overlay when a hotkey is confirmed for the current item.
+    /// </summary>
+    public async void ApplyHotkeyChange(string combo)
+    {
+        var item = _changingHotkeyItem;
+        if (item is null) return;
+
+        // Validate combo is non-empty
+        if (string.IsNullOrWhiteSpace(combo))
+        {
+            StatusMessage = "Hotkey combo cannot be empty.";
+            IsRecordingHotkey = false;
+            _changingHotkeyItem = null;
+            return;
+        }
+
+        // Check for conflict with other assignments
+        var conflict = HotkeyAssignments.FirstOrDefault(
+            h => h.Hotkey == combo && h.ActionId != item.ActionId);
+        if (conflict is not null)
+        {
+            if (!_confirmationService.Confirm(
+                $"Hotkey '{combo}' is already assigned to '{conflict.ActionName}'. Assign anyway?",
+                "Hotkey Conflict"))
+            {
+                IsRecordingHotkey = false;
+                _changingHotkeyItem = null;
+                return;
+            }
+        }
+
+        item.Hotkey = combo;
+        item.IsRecording = false;
+
+        // Persist to repository
+        await PersistHotkeyChangeAsync(item.ActionId, combo);
+
+        IsRecordingHotkey = false;
+    }
+
+    private async Task PersistHotkeyChangeAsync(string actionId, string? hotkey)
+    {
+        try
+        {
+            if (actionId == "__commandbar__")
+            {
+                _logger.LogInformation("Command Bar hotkey changes not yet supported — skipping persist");
+                StatusMessage = "Command Bar hotkey changes are not yet supported.";
+                return;
+            }
+
+            var action = await _textActionRepo.GetByIdAsync(actionId);
+            if (action is not null)
+            {
+                action.Hotkey = hotkey;
+                action.UpdatedAt = DateTimeOffset.UtcNow;
+                await _textActionRepo.UpdateAsync(action);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to persist hotkey change for {ActionId}", actionId);
+            StatusMessage = $"Failed to save hotkey change: {ex.Message}";
+        }
+
+        _changingHotkeyItem = null;
+    }
+
+    [RelayCommand]
+    private async Task ResetHotkeysToDefaultsAsync()
+    {
+        if (!_confirmationService.Confirm(
+            "Reset all hotkeys to their default values? This will overwrite any custom hotkey assignments.",
+            "Reset Hotkeys to Defaults"))
+            return;
+
+        try
+        {
+            var allActions = await _textActionRepo.GetAllAsync();
+            var defaultHotkeys = new Dictionary<string, string>
+            {
+                { "Rewrite", "Alt+Q" },
+                { "Summarize", "Alt+W" },
+                { "Explain", "Alt+E" },
+                { "Translate", "Alt+R" },
+                { "Continue Writing", "Alt+C" },
+            };
+
+            foreach (var action in allActions)
+            {
+                if (defaultHotkeys.TryGetValue(action.DisplayName, out var defaultHotkey))
+                {
+                    action.Hotkey = defaultHotkey;
+                }
+                else
+                {
+                    action.Hotkey = null;
+                }
+                action.UpdatedAt = DateTimeOffset.UtcNow;
+                await _textActionRepo.UpdateAsync(action);
+            }
+
+            await RefreshHotkeyAssignmentsAsync();
+            StatusMessage = "All hotkeys reset to defaults.";
+            _logger.LogInformation("Hotkeys reset to defaults");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reset hotkeys");
+            StatusMessage = "Failed to reset hotkeys.";
+        }
+    }
+
+    // ================================================================
     // Initialization
     // ================================================================
 
@@ -987,6 +1572,8 @@ public partial class SettingsViewModel : ObservableObject
         await LoadDiagnosticsSettingsAsync();
         await LoadNewSettingsAsync();
         await LoadStep3SettingsAsync();
+        await RefreshTextActionListAsync();
+        await RefreshHotkeyAssignmentsAsync();
     }
 
     /// <summary>
@@ -2312,6 +2899,87 @@ public partial class SettingsViewModel : ObservableObject
         {
             _logger.LogError(ex, "Failed to clear logs");
             StatusMessage = "Could not access logs folder.";
+        }
+    }
+
+    // ================================================================
+    // Text Actions — list loading
+    // ================================================================
+
+    private async Task RefreshTextActionListAsync()
+    {
+        try
+        {
+            var actions = await _textActionRepo.GetAllAsync();
+            var allConfigs = await _modelConfigRepo.GetAllAsync();
+            var configLookup = allConfigs.ToDictionary(c => c.Id, c => c.DisplayName);
+
+            var displayItems = actions.Select(a => new TextActionDisplayItem
+            {
+                Id = a.Id,
+                DisplayName = a.DisplayName,
+                SystemPrompt = a.SystemPrompt,
+                ModelConfigId = a.ModelConfigId,
+                ModelConfigName = a.ModelConfigId is not null
+                    && configLookup.TryGetValue(a.ModelConfigId, out var name)
+                    ? name
+                    : string.Empty,
+                Hotkey = a.Hotkey,
+                CaptureScope = a.CaptureScope,
+                ApplyMode = a.ApplyMode,
+                IsBuiltIn = a.IsBuiltIn,
+            }).ToList();
+
+            TextActions = new ObservableCollection<TextActionDisplayItem>(displayItems);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh text action list");
+            StatusMessage = "Failed to load text actions.";
+        }
+    }
+
+    // ================================================================
+    // Hotkeys — assignment list loading
+    // ================================================================
+
+    private async Task RefreshHotkeyAssignmentsAsync()
+    {
+        try
+        {
+            var actions = await _textActionRepo.GetAllAsync();
+
+            var displayItems = actions
+                .Where(a => !string.IsNullOrEmpty(a.Hotkey))
+                .Select(a => new HotkeyAssignmentDisplayItem
+                {
+                    ActionId = a.Id,
+                    ActionName = a.DisplayName,
+                    Source = "TextAction",
+                    CaptureScope = a.CaptureScope,
+                    ApplyMode = a.ApplyMode,
+                    Hotkey = a.Hotkey,
+                }).ToList();
+
+            // Add Command Bar default entries
+            displayItems.AddRange([
+                new HotkeyAssignmentDisplayItem
+                {
+                    ActionId = "__commandbar__",
+                    ActionName = "Command Bar",
+                    Source = "CommandBar",
+                    CaptureScope = "global",
+                    ApplyMode = "showOnly",
+                    Hotkey = "Alt+Space",
+                },
+            ]);
+
+            HotkeyAssignments = new ObservableCollection<HotkeyAssignmentDisplayItem>(displayItems);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh hotkey assignments");
+            StatusMessage = "Failed to load hotkey assignments.";
         }
     }
 }

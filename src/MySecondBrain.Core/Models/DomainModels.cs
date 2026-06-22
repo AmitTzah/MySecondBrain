@@ -126,3 +126,17 @@ public class ToolAutoApprovalSettings
     public bool AutoApproveWikiSearch { get; set; }
     public int MaxConsecutiveAutoApprovals { get; set; } = 10;
 }
+
+public class TextAction
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string DisplayName { get; set; } = string.Empty;
+    public string SystemPrompt { get; set; } = string.Empty;
+    public string? ModelConfigId { get; set; }
+    public string? Hotkey { get; set; }
+    public string CaptureScope { get; set; } = "selection";
+    public string ApplyMode { get; set; } = "replaceSelection";
+    public bool IsBuiltIn { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+}

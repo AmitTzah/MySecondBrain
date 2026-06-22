@@ -26,6 +26,7 @@ public class SettingsViewModelTests
 
     private readonly Mock<IWikiService> _wikiServiceMock;
     private readonly Mock<IBackupProvider> _backupProviderMock;
+    private readonly Mock<ITextActionRepository> _textActionRepoMock;
     private readonly Mock<AppDbContext> _dbContextMock;
 
     public SettingsViewModelTests()
@@ -43,6 +44,7 @@ public class SettingsViewModelTests
         _loggerMock = new Mock<ILogger<SettingsViewModel>>();
         _wikiServiceMock = new Mock<IWikiService>();
         _backupProviderMock = new Mock<IBackupProvider>();
+        _textActionRepoMock = new Mock<ITextActionRepository>();
         _dbContextMock = new Mock<AppDbContext>(new DbContextOptions<AppDbContext>());
 
         // Default: confirmations are accepted
@@ -68,6 +70,7 @@ public class SettingsViewModelTests
             _loggerMock.Object,
             _wikiServiceMock.Object,
             _backupProviderMock.Object,
+            _textActionRepoMock.Object,
             _dbContextMock.Object);
     }
 
@@ -2319,5 +2322,127 @@ public class SettingsViewModelTests
     public void IsBusy_DefaultFalse()
     {
         Assert.False(_sut.IsBusy);
+    }
+
+    // ================================================================
+    // Step 4 — Text Actions
+    // ================================================================
+
+    [Fact]
+    public void AddTextActionCommand_InitializesFormWithDefaults()
+    {
+        _sut.AddTextActionCommand.Execute(null);
+
+        Assert.True(_sut.IsEditingTextAction);
+        Assert.True(_sut.CaptureSelection);
+        Assert.False(_sut.CaptureFocusedElement);
+        Assert.False(_sut.CaptureSurroundingContext);
+        Assert.False(_sut.CaptureFullDocument);
+        Assert.False(_sut.CaptureScreenshot);
+        Assert.Equal("replaceSelection", _sut.SelectedApplyMode);
+        Assert.Null(_sut.TextActionAssignedHotkey);
+        Assert.Null(_sut.EditingTextAction);
+    }
+
+    [Fact]
+    public async Task SaveTextActionCommand_ValidatesNameIsRequired()
+    {
+        _sut.AddTextActionCommand.Execute(null);
+        _sut.TextActionDisplayNameValue = string.Empty;
+
+        await _sut.SaveTextActionCommand.ExecuteAsync(null);
+
+        Assert.Contains("display name is required", _sut.StatusMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task DuplicateTextActionCommand_AppendsCopySuffix()
+    {
+        var source = new TextAction
+        {
+            Id = "test-id",
+            DisplayName = "Test Action",
+            SystemPrompt = "Do something",
+            CaptureScope = "selection",
+            ApplyMode = "replaceSelection",
+        };
+
+        _textActionRepoMock
+            .Setup(r => r.GetByIdAsync("test-id"))
+            .ReturnsAsync(source);
+
+        _textActionRepoMock
+            .Setup(r => r.CreateAsync(It.IsAny<TextAction>()))
+            .ReturnsAsync((TextAction a) => a);
+
+        _textActionRepoMock
+            .Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<TextAction>());
+
+        var item = new TextActionDisplayItem { Id = "test-id", DisplayName = "Test Action" };
+
+        await _sut.DuplicateTextActionCommand.ExecuteAsync(item);
+
+        _textActionRepoMock.Verify(r => r.CreateAsync(It.Is<TextAction>(
+            ta => ta.DisplayName == "Test Action (Copy)" && ta.Hotkey == null)));
+    }
+
+    [Fact]
+    public void BuildCaptureScopeString_SelectionOnly_ReturnsSelection()
+    {
+        _sut.AddTextActionCommand.Execute(null);
+        _sut.CaptureSelection = true;
+        _sut.CaptureFocusedElement = false;
+        _sut.CaptureSurroundingContext = false;
+        _sut.CaptureFullDocument = false;
+        _sut.CaptureScreenshot = false;
+
+        var method = typeof(SettingsViewModel).GetMethod(
+            "BuildCaptureScopeString",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = method?.Invoke(_sut, null) as string;
+
+        Assert.Equal("selection", result);
+    }
+
+    [Fact]
+    public void BuildCaptureScopeString_MultiSelect_ReturnsCommaSeparated()
+    {
+        _sut.AddTextActionCommand.Execute(null);
+        _sut.CaptureSelection = true;
+        _sut.CaptureFocusedElement = true;
+        _sut.CaptureScreenshot = true;
+
+        var method = typeof(SettingsViewModel).GetMethod(
+            "BuildCaptureScopeString",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var result = method?.Invoke(_sut, null) as string;
+
+        Assert.Equal("selection,focusedElement,screenshot", result);
+    }
+
+    [Fact]
+    public void ApplyRecordedHotkey_SetsHotkeyAndStopsRecording()
+    {
+        _sut.ApplyRecordedHotkey("Ctrl+Shift+K");
+
+        Assert.Equal("Ctrl+Shift+K", _sut.TextActionAssignedHotkey);
+        Assert.False(_sut.IsRecordingHotkey);
+    }
+
+    // ================================================================
+    // Step 4 — Hotkeys
+    // ================================================================
+
+    [Fact]
+    public void ResetHotkeysToDefaultsCommand_ShowsConfirmation()
+    {
+        _confirmationServiceMock
+            .Setup(c => c.Confirm(It.IsAny<string>(), "Reset Hotkeys to Defaults"))
+            .Returns(false);
+
+        _sut.ResetHotkeysToDefaultsCommand.Execute(null);
+
+        _textActionRepoMock.Verify(r => r.GetAllAsync(), Times.Never);
     }
 }

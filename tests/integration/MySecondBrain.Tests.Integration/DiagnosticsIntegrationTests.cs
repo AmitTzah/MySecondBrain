@@ -42,6 +42,84 @@ public class DiagnosticsIntegrationTests : IDisposable
     }
 
     // ================================================================
+    // Text Action — Repository Integration
+    // ================================================================
+
+    [Fact]
+    public async Task TextAction_CreateAndPersist()
+    {
+        var repo = new TextActionRepository(_db);
+        var action = new TextAction
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            DisplayName = "Test Action",
+            SystemPrompt = "Test prompt",
+            CaptureScope = "selection",
+            ApplyMode = "replaceSelection",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+
+        var created = await repo.CreateAsync(action);
+
+        Assert.NotNull(created);
+        Assert.Equal(action.DisplayName, created.DisplayName);
+        Assert.Equal("selection", created.CaptureScope);
+
+        var all = await repo.GetAllAsync();
+        Assert.Contains(all, a => a.Id == created.Id);
+    }
+
+    [Fact]
+    public async Task TextAction_Delete_RemovesAction()
+    {
+        var repo = new TextActionRepository(_db);
+        var action = new TextAction
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            DisplayName = "To Delete",
+            SystemPrompt = "Will be deleted",
+            CaptureScope = "selection",
+            ApplyMode = "replaceSelection",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+
+        var created = await repo.CreateAsync(action);
+        Assert.NotNull(created);
+
+        await repo.DeleteAsync(created.Id);
+
+        var all = await repo.GetAllAsync();
+        Assert.DoesNotContain(all, a => a.Id == created.Id);
+    }
+
+    [Fact]
+    public async Task TextAction_GetByHotkey_ReturnsMatchingActions()
+    {
+        var repo = new TextActionRepository(_db);
+        var action = new TextAction
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            DisplayName = "Hotkey Action",
+            SystemPrompt = "Has hotkey",
+            Hotkey = "Alt+X",
+            CaptureScope = "selection",
+            ApplyMode = "replaceSelection",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+
+        await repo.CreateAsync(action);
+
+        var byHotkey = await repo.GetByHotkeyAsync("Alt+X");
+        Assert.Contains(byHotkey, a => a.Id == action.Id);
+
+        var noMatch = await repo.GetByHotkeyAsync("Alt+Z");
+        Assert.DoesNotContain(noMatch, a => a.Id == action.Id);
+    }
+
+    // ================================================================
     // Log file creation
     // ================================================================
 

@@ -281,6 +281,7 @@ public partial class App : Application
         services.AddSingleton<IWikiIndexRepository, WikiIndexRepository>();
         services.AddSingleton<IUsageRepository, UsageRepository>();
         services.AddSingleton<ISettingsRepository, SettingsRepository>();
+        services.AddSingleton<ITextActionRepository, TextActionRepository>();
 
         // === Application Services (Singleton) ===
         services.AddSingleton<ILLMProviderService, LLMProviderService>();
