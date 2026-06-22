@@ -223,6 +223,17 @@ public partial class App : Application
             mainWindow.Dispatcher.Invoke(() =>
             {
                 var wizardWindow = _serviceProvider.GetRequiredService<OnboardingWizardWindow>();
+                var wizardVm = (OnboardingWizardViewModel)wizardWindow.DataContext;
+
+                wizardVm.LaunchStudioRequested += () =>
+                {
+                    Current.Dispatcher.Invoke(() =>
+                    {
+                        startupLogger.LogInformation("LaunchStudio re-run: closing modal wizard");
+                        wizardWindow.Close();
+                    });
+                };
+
                 wizardWindow.Owner = mainWindow;
                 wizardWindow.ShowDialog(); // Modal — blocks until wizard closes
             });
