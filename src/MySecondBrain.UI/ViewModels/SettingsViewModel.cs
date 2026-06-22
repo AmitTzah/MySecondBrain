@@ -843,8 +843,25 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _gitVersionControlEnabled;
 
+    [ObservableProperty]
+    private string _gitStatusMessage = string.Empty;
+
     partial void OnGitVersionControlEnabledChanged(bool value)
-        => _ = _settingsRepo.SetAsync("GitVersionControlEnabled", value ? "true" : "false");
+    {
+        _ = _settingsRepo.SetAsync("GitVersionControlEnabled", value ? "true" : "false");
+
+        if (value && !string.IsNullOrEmpty(WikiDirectoryPath))
+        {
+            var gitDir = Path.Combine(WikiDirectoryPath, ".git");
+            GitStatusMessage = Directory.Exists(gitDir)
+                ? "✓ Git repository detected"
+                : "Git repository will be initialized on next re-index.";
+        }
+        else
+        {
+            GitStatusMessage = string.Empty;
+        }
+    }
 
     [RelayCommand]
     private async Task ChangeWikiDirectoryAsync()
@@ -898,7 +915,21 @@ public partial class SettingsViewModel : ObservableObject
             await _wikiService.IndexAllAsync(CancellationToken.None);
 
             var mdCount = Directory.GetFiles(WikiDirectoryPath, "*.md", SearchOption.AllDirectories).Length;
-            IndexingStatus = $"✓ {mdCount} .md files indexed";
+
+            var indexPath = Path.Combine(WikiDirectoryPath, "index.md");
+            var indexCreated = false;
+            if (!File.Exists(indexPath))
+            {
+                await File.WriteAllTextAsync(indexPath, @"# Wiki
+
+Welcome to your MySecondBrain wiki. Add `.md` files here and they will be indexed automatically.
+");
+                indexCreated = true;
+            }
+
+            IndexingStatus = indexCreated
+                ? $"✓ {mdCount} .md files indexed, index.md created"
+                : $"✓ {mdCount} .md files indexed";
             StatusMessage = $"Wiki re-indexed: {mdCount} files found.";
         }
         catch (Exception ex)
@@ -1771,6 +1802,15 @@ public partial class SettingsViewModel : ObservableObject
         var savedGit = await _settingsRepo.GetAsync("GitVersionControlEnabled");
         if (savedGit is not null)
             GitVersionControlEnabled = savedGit == "true" || savedGit == "True";
+
+        // Restore git status message based on current directory state
+        if (!string.IsNullOrEmpty(WikiDirectoryPath) && GitVersionControlEnabled)
+        {
+            var gitDir = Path.Combine(WikiDirectoryPath, ".git");
+            GitStatusMessage = Directory.Exists(gitDir)
+                ? "✓ Git repository detected"
+                : "Git repository will be initialized on next re-index.";
+        }
 
         // Backup
         try

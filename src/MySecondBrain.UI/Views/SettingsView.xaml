@@ -1755,6 +1755,10 @@
                                               FontSize="11"
                                               Foreground="{DynamicResource ContentForeground}"
                                               ToolTip="When enabled, a git repository will be initialized in the wiki directory for version tracking."/>
+                                    <TextBlock Text="{Binding GitStatusMessage}"
+                                               FontSize="10" Margin="24,4,0,0"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap"/>
                                 </StackPanel>
                             </Border>
                         </StackPanel>
