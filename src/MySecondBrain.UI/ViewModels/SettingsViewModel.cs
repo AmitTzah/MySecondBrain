@@ -948,7 +948,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             var personaNames = string.Join(", ", referencingPersonas.Select(p => $"'{p.DisplayName}'"));
             if (!_confirmationService.Confirm(
-                $"Model configuration '{item.DisplayName}' is used by persona(s): {personaNames}. Delete anyway?",
+                $"This Model Configuration is used by {referencingPersonas.Count} Persona(s): {personaNames}. Deleting it will clear their default model configuration. Continue?",
                 "Confirm Delete"))
                 return;
         }
@@ -966,11 +966,6 @@ public partial class SettingsViewModel : ObservableObject
             await RefreshModelConfigListAsync();
             StatusMessage = "Model configuration deleted.";
             _logger.LogInformation("Deleted model configuration {ConfigId}", item.Id);
-        }
-        catch (InvalidOperationException ex)
-        {
-            // Repository may also throw if referenced by personas
-            StatusMessage = ex.Message;
         }
         catch (Exception ex)
         {

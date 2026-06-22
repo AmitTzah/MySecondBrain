@@ -970,9 +970,9 @@ public class SettingsViewModelTests
 
         await _sut.DeleteModelConfigCommand.ExecuteAsync(item);
 
-        // Should have shown confirmation with persona names
+        // Should have shown confirmation with persona names and the new cascade-nullify wording
         _confirmationServiceMock.Verify(c => c.Confirm(
-            It.Is<string>(s => s.Contains("Test Persona")),
+            It.Is<string>(s => s.Contains("Test Persona") && s.Contains("clear their default model configuration")),
             It.IsAny<string>()), Times.Once);
 
         _modelConfigRepoMock.Verify(r => r.DeleteAsync("config-to-delete"), Times.Once);
@@ -1267,17 +1267,17 @@ public class SettingsViewModelTests
     // ================================================================
 
     [Fact]
-    public async Task DeleteModelConfigCommand_InvalidOperationException_ShowsMessage()
+    public async Task DeleteModelConfigCommand_Exception_ShowsErrorMessage()
     {
         _modelConfigRepoMock
             .Setup(r => r.DeleteAsync("config-ex"))
-            .ThrowsAsync(new InvalidOperationException("Referenced by personas"));
+            .ThrowsAsync(new InvalidOperationException("DB error"));
 
         var item = new ModelConfigurationDisplayItem { Id = "config-ex", DisplayName = "Test" };
 
         await _sut.DeleteModelConfigCommand.ExecuteAsync(item);
 
-        Assert.Contains("Referenced by personas", _sut.StatusMessage);
+        Assert.Equal("Failed to delete model configuration.", _sut.StatusMessage);
     }
 
     // ================================================================

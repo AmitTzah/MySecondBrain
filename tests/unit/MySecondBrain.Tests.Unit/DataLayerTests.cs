@@ -1539,7 +1539,7 @@ public class DataLayerTests
     }
 
     [Fact]
-    public async Task ModelConfigurationRepository_DeleteAsync_ReferencedByPersona_ThrowsInvalidOperationException()
+    public async Task ModelConfigurationRepository_DeleteAsync_ReferencedByPersona_NullifiesFk()
     {
         var (db, connection) = CreateTestDbContext();
         using (db)
@@ -1564,10 +1564,15 @@ public class DataLayerTests
             await db.SaveChangesAsync();
 
             var repo = new ModelConfigurationRepository(db);
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-                () => repo.DeleteAsync(configEntity.Id));
-            Assert.Contains("Referenced Config", ex.Message);
-            Assert.Contains("Persona", ex.Message);
+            await repo.DeleteAsync(configEntity.Id);
+
+            // Config should be deleted
+            Assert.Null(await db.ModelConfigurations.FindAsync(configEntity.Id));
+
+            // Persona FK should be nullified
+            var persona = await db.Personas.FindAsync(personaEntity.Id);
+            Assert.NotNull(persona);
+            Assert.Null(persona!.DefaultModelConfigId);
         }
     }
 

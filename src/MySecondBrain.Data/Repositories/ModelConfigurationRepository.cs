@@ -68,10 +68,9 @@ public class ModelConfigurationRepository : IModelConfigurationRepository
 
         if (entity is null) return;
 
-        if (entity.Personas.Count > 0)
-            throw new InvalidOperationException(
-                $"Cannot delete ModelConfiguration '{entity.DisplayName}' — " +
-                $"it is referenced by {entity.Personas.Count} Persona(s).");
+        // Cascade-nullify: clear DefaultModelConfigId on all referencing Personas
+        foreach (var persona in entity.Personas)
+            persona.DefaultModelConfigId = null;
 
         _db.ModelConfigurations.Remove(entity);
         await _db.SaveChangesAsync();
