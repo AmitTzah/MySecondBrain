@@ -571,22 +571,22 @@
                         <StackPanel>
                             <TextBlock FontSize="12" Margin="0,0,0,6">
                                 <Run Text="🔑" FontSize="14"/>
-                                <Run Text="{Binding ConfiguredKeyCount, StringFormat='{}{0} API key(s) added'}"
+                                <Run Text="{Binding ConfiguredKeyCount, Mode=OneWay, StringFormat='{}{0} API key(s) added'}"
                                      Foreground="{DynamicResource ContentForeground}"/>
                             </TextBlock>
                             <TextBlock FontSize="12" Margin="0,0,0,6">
                                 <Run Text="🤖" FontSize="14"/>
-                                <Run Text="{Binding ConfiguredPersonaName, StringFormat='Persona: {0}'}"
+                                <Run Text="{Binding ConfiguredPersonaName, Mode=OneWay, StringFormat='Persona: {0}'}"
                                      Foreground="{DynamicResource ContentForeground}"/>
                             </TextBlock>
                             <TextBlock FontSize="12" Margin="0,0,0,6"
                                        Foreground="{DynamicResource ContentForeground}">
                                 <Run Text="📝" FontSize="14"/>
-                                <Run Text="{Binding ConfiguredWikiPath, StringFormat='Wiki: {0}'}"/>
+                                <Run Text="{Binding ConfiguredWikiPath, Mode=OneWay, StringFormat='Wiki: {0}'}"/>
                             </TextBlock>
                             <TextBlock FontSize="12" Margin="0,0,0,6">
                                 <Run Text="⌨️" FontSize="14"/>
-                                <Run Text="{Binding ConfiguredHotkeyCount, StringFormat='{}{0} hotkeys configured'}"
+                                <Run Text="{Binding ConfiguredHotkeyCount, Mode=OneWay, StringFormat='{}{0} hotkeys configured'}"
                                      Foreground="{DynamicResource ContentForeground}"/>
                             </TextBlock>
                         </StackPanel>

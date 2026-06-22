@@ -249,10 +249,10 @@ public partial class OnboardingWizardViewModel : ObservableObject
     // Step 4 — Finish Summary
     // ================================================================
 
-    public int ConfiguredKeyCount => WizardApiKeys.Count;
-    public string ConfiguredPersonaName => PersonaDisplayName;
-    public string ConfiguredWikiPath => WikiDirectoryPath;
-    public int ConfiguredHotkeyCount => HotkeyAssignments.Count;
+    public int ConfiguredKeyCount { get; set; }
+    public string ConfiguredPersonaName { get; set; } = string.Empty;
+    public string ConfiguredWikiPath { get; set; } = string.Empty;
+    public int ConfiguredHotkeyCount { get; set; }
 
     // ================================================================
     // Navigation Commands
@@ -825,6 +825,10 @@ public partial class OnboardingWizardViewModel : ObservableObject
 
     private void RefreshSummary()
     {
+        ConfiguredKeyCount = WizardApiKeys.Count;
+        ConfiguredPersonaName = PersonaDisplayName;
+        ConfiguredWikiPath = WikiDirectoryPath;
+        ConfiguredHotkeyCount = HotkeyAssignments.Count;
         OnPropertyChanged(nameof(ConfiguredKeyCount));
         OnPropertyChanged(nameof(ConfiguredPersonaName));
         OnPropertyChanged(nameof(ConfiguredWikiPath));
