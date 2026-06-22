@@ -236,6 +236,11 @@ public partial class App : Application
 
                 wizardWindow.Owner = mainWindow;
                 wizardWindow.ShowDialog(); // Modal — blocks until wizard closes
+
+                // Notify Settings → Providers tab to refresh its API key list,
+                // since the onboarding wizard may have added new keys.
+                WeakReferenceMessenger.Default.Send(new RefreshApiKeysMessage());
+                startupLogger.LogInformation("Re-run onboarding completed — RefreshApiKeysMessage sent");
             });
         }
     });

@@ -1638,6 +1638,14 @@ Welcome to your MySecondBrain wiki. Add `.md` files here and they will be indexe
         await LoadStep3SettingsAsync();
         await RefreshTextActionListAsync();
         await RefreshHotkeyAssignmentsAsync();
+
+        // Listen for API key changes made by the re-run onboarding wizard
+        WeakReferenceMessenger.Default.Register<RefreshApiKeysMessage>(this, async (_, _) =>
+        {
+            _logger.LogDebug("RefreshApiKeysMessage received — reloading API key list");
+            await RefreshKeyListAsync();
+            await RefreshAvailableApiKeysAsync();
+        });
     }
 
     /// <summary>

@@ -15,3 +15,10 @@ public sealed class LaunchStudioMessage : RequestMessage<bool>
 public sealed class ReRunOnboardingMessage
 {
 }
+
+/// <summary>
+/// Sent when the API keys list in the Settings → Providers tab should be refreshed.
+/// </summary>
+public sealed class RefreshApiKeysMessage
+{
+}
