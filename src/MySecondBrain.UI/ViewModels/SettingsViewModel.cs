@@ -1538,6 +1538,10 @@ Welcome to your MySecondBrain wiki. Add `.md` files here and they will be indexe
         // Persist to repository
         await PersistHotkeyChangeAsync(item.ActionId, combo);
 
+        // Refresh both lists so the Text Actions tab and Hotkeys tab stay in sync
+        await RefreshTextActionListAsync();
+        await RefreshHotkeyAssignmentsAsync();
+
         IsRecordingHotkey = false;
     }
 
