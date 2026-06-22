@@ -176,7 +176,7 @@ public partial class App : Application
 
         wizardVm.LaunchStudioRequested += () =>
         {
-            wizardWindow.Dispatcher.Invoke(() =>
+            Current.Dispatcher.Invoke(() =>
             {
                 try
                 {
