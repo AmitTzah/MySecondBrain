@@ -3,10 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:MySecondBrain.UI.ViewModels"
              xmlns:models="clr-namespace:MySecondBrain.Core.Models;assembly=MySecondBrain.Core"
+             xmlns:converters="clr-namespace:MySecondBrain.UI.Converters"
              Background="{DynamicResource ContentBackground}"
              AutomationProperties.AutomationId="SettingsView">
     <UserControl.Resources>
         <ResourceDictionary>
+            <converters:EnumMatchConverter x:Key="EnumMatchConverter"/>
+            <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
             <!-- Reusable style for icon buttons (Copy, Edit, Delete, Duplicate) with very subtle hover/press feedback -->
             <Style x:Key="IconButtonStyle" TargetType="Button">
                 <Setter Property="Width" Value="28"/>
@@ -136,11 +139,11 @@
                             <TextBlock FontSize="10"
                                        Foreground="{DynamicResource SubtleBrush}">
                                 <Run Text="Temp:"/>
-                                <Run Text="{Binding Temperature, StringFormat={}{0:F1}}"/>
+                                <Run Text="{Binding Temperature, Mode=OneWay, StringFormat={}{0:F1}}"/>
                                 <Run Text="• Context:"/>
-                                <Run Text="{Binding MaxContextWindow}"/>
+                                <Run Text="{Binding MaxContextWindow, Mode=OneWay}"/>
                                 <Run Text="• Overflow:"/>
-                                <Run Text="{Binding ContextOverflowStrategy}"/>
+                                <Run Text="{Binding ContextOverflowStrategy, Mode=OneWay}"/>
                             </TextBlock>
                         </StackPanel>
 
@@ -328,7 +331,8 @@
 
                 <TextBlock Grid.Row="2" Margin="12,8,12,12">
                     <Hyperlink Foreground="{DynamicResource AccentBrush}" FontSize="11"
-                               TextDecorations="Underline">
+                               TextDecorations="Underline"
+                               Command="{Binding ReRunOnboardingCommand}">
                         🔄 Re-run Onboarding Wizard
                     </Hyperlink>
                 </TextBlock>
@@ -1099,6 +1103,1626 @@
                     </ScrollViewer>
                 </Grid>
 
+                <!-- Diagnostics Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Diagnostics">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <TextBlock Grid.Row="0" Text="🔬 Diagnostics" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Configure diagnostic logging, view log files, and manage log retention. Changes take effect immediately."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <!-- Main content -->
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <StackPanel>
+                            <!-- Log Level Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Log Level" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Controls the minimum severity level recorded to log files. 'Verbose' captures the most detail."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <ComboBox ItemsSource="{Binding LogLevelOptions}"
+                                              SelectedItem="{Binding LogLevel}"
+                                              FontSize="11" Width="200"
+                                              HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Category Toggles Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Log Categories" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Enable or disable logging for specific subsystems. Disabled categories produce no log output regardless of the global log level."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <CheckBox IsChecked="{Binding LogCategory_LLMApiCalls}"
+                                              Content="LLM API Calls"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log all LLM provider API requests and responses. Includes provider name, model, token counts, and latency."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_Tier1HotkeyPipeline}"
+                                              Content="Tier 1 Hotkey Pipeline"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log global hotkey captures, command routing, and tier 1 overlay lifecycle events."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_Tier2CommandBar}"
+                                              Content="Tier 2 Command Bar"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log command bar queries, search execution, and result rendering."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_Database}"
+                                              Content="Database"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log EF Core queries, migrations, connection management, and repository operations."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_WikiFileSystem}"
+                                              Content="Wiki / File System"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log wiki file indexing, file system watcher events, and wiki service operations."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_WebSocket}"
+                                              Content="WebSocket"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log Kestrel WebSocket server connections, messages, and disconnections."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_StartupShutdown}"
+                                              Content="Startup / Shutdown"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log application startup, shutdown, service initialization, and DI container events."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_SystemIntegration}"
+                                              Content="System Integration"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,0"
+                                              ToolTip="Log system tray, HWND/Dpi capture, clipboard, and low-level Windows integration."/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Log File Management Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Log File Management" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="View, manage, and clear log files stored on disk."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <Button Content="📂 Open Logs Folder"
+                                                Padding="12,5"
+                                                Command="{Binding OpenLogsFolderCommand}"
+                                                Style="{StaticResource AccentButtonStyle}"
+                                                Margin="0,0,8,0"
+                                                ToolTip="Open the logs directory in Windows Explorer"/>
+                                        <Button Content="🗑️ Clear Logs"
+                                                Padding="12,5"
+                                                Command="{Binding ClearLogsCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                ToolTip="Delete all .log and .json files in the logs folder"/>
+                                    </StackPanel>
+
+                                    <TextBlock Text="{Binding StatusMessage}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Appearance Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Appearance">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <TextBlock Grid.Row="0" Text="🎨 Appearance" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Customize the visual theme, chat layout, and font settings. Changes take effect immediately."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <StackPanel>
+                            <!-- Theme Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Theme" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Switch between Dark and Light mode."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton Content="🌙 Dark"
+                                                     GroupName="AppTheme"
+                                                     IsChecked="{Binding AppTheme, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Dark}"
+                                                     FontSize="11"
+                                                     Foreground="{DynamicResource ContentForeground}"
+                                                     Margin="0,0,20,0"/>
+                                        <RadioButton Content="☀️ Light"
+                                                     GroupName="AppTheme"
+                                                     IsChecked="{Binding AppTheme, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Light}"
+                                                     FontSize="11"
+                                                     Foreground="{DynamicResource ContentForeground}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Chat Theme Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Chat Theme" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Choose the layout style for chat messages."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <ComboBox ItemsSource="{Binding ChatThemeOptions}"
+                                              SelectedItem="{Binding ChatTheme}"
+                                              FontSize="11" Width="200"
+                                              HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Font Settings Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Font Settings" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Adjust the font family, size, and weight used throughout the application."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <!-- Font Family -->
+                                    <TextBlock Text="Font Family" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <ComboBox ItemsSource="{Binding FontFamilyOptions}"
+                                              SelectedItem="{Binding FontFamily}"
+                                              FontSize="11" Width="220"
+                                              HorizontalAlignment="Left" Margin="0,0,0,10"
+                                              IsEditable="True"/>
+
+                                    <!-- Font Size Slider -->
+                                    <TextBlock Text="Font Size" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                        <Slider Minimum="10" Maximum="24" SmallChange="1" LargeChange="2"
+                                                Value="{Binding FontSize}" Width="180"
+                                                TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                        <TextBlock Text="{Binding FontSize, StringFormat={}{0:F0}px}"
+                                                   Width="40" TextAlignment="Center" VerticalAlignment="Center"
+                                                   FontSize="11" Foreground="{DynamicResource ContentForeground}"/>
+                                    </StackPanel>
+
+                                    <!-- Font Weight -->
+                                    <TextBlock Text="Font Weight" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <ComboBox ItemsSource="{Binding FontWeightOptions}"
+                                              SelectedItem="{Binding FontWeight}"
+                                              FontSize="11" Width="120"
+                                              HorizontalAlignment="Left" Margin="0,0,0,10"/>
+
+                                    <!-- Live Preview -->
+                                    <Border BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1" CornerRadius="4"
+                                            Background="{DynamicResource ContentBackground}"
+                                            Padding="12,8">
+                                        <TextBlock Text="{Binding FontPreviewText}"
+                                                   FontFamily="{Binding FontFamily}"
+                                                   FontSize="{Binding FontSize}"
+                                                   FontWeight="{Binding FontWeight}"
+                                                   Foreground="{DynamicResource ContentForeground}"
+                                                   TextWrapping="Wrap"/>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Notifications Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Notifications">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🔔 Notifications" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Configure notification preferences for chat completions, streaming, and cross-tab alerts."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <CheckBox IsChecked="{Binding SoundOnCompletion}"
+                                          Content="Play Sound on Completion"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          Margin="0,0,0,8"
+                                          ToolTip="Play a notification sound when an AI response finishes generating."/>
+                                <CheckBox IsChecked="{Binding DisableStreaming}"
+                                          Content="Disable Streaming"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          Margin="0,0,0,8"
+                                          ToolTip="Wait for the entire response before displaying it, instead of showing tokens as they are generated."/>
+                                <CheckBox IsChecked="{Binding CrossTabCompletionAlert}"
+                                          Content="Cross-Tab Completion Alert"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          Margin="0,0,0,0"
+                                          ToolTip="Show an alert when a chat completes in another tab or window."/>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Startup Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Startup">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🚀 Startup" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Configure application startup behavior, session restore, and system tray preferences."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <CheckBox IsChecked="{Binding LaunchOnWindowsStartup}"
+                                          Content="Launch on Windows Startup"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          Margin="0,0,0,8"
+                                          ToolTip="Automatically start MySecondBrain when you log into Windows."/>
+                                <CheckBox IsChecked="{Binding RestoreLastSession}"
+                                          Content="Restore Last Session"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          Margin="0,0,0,8"
+                                          ToolTip="Reopen the last chat threads and tabs when the application starts."/>
+                                <CheckBox IsChecked="{Binding MinimizeToTray}"
+                                          Content="Minimize to System Tray"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          Margin="0,0,0,0"
+                                          ToolTip="Minimize the application to the system tray instead of the taskbar."/>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Updates Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Updates">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🔄 Updates" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Manage automatic update checking and view your current application version."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <StackPanel>
+                            <!-- Check Frequency Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Check Frequency" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="How often should the application check for updates?"
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <RadioButton Content="Every time the application starts"
+                                                 GroupName="UpdateFrequency"
+                                                 IsChecked="{Binding UpdateCheckFrequency, Converter={StaticResource EnumMatchConverter}, ConverterParameter=OnStartup}"
+                                                 FontSize="11"
+                                                 Foreground="{DynamicResource ContentForeground}"
+                                                 Margin="0,0,0,6"/>
+                                    <RadioButton Content="Daily"
+                                                 GroupName="UpdateFrequency"
+                                                 IsChecked="{Binding UpdateCheckFrequency, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Daily}"
+                                                 FontSize="11"
+                                                 Foreground="{DynamicResource ContentForeground}"
+                                                 Margin="0,0,0,6"/>
+                                    <RadioButton Content="Weekly"
+                                                 GroupName="UpdateFrequency"
+                                                 IsChecked="{Binding UpdateCheckFrequency, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Weekly}"
+                                                 FontSize="11"
+                                                 Foreground="{DynamicResource ContentForeground}"
+                                                 Margin="0,0,0,6"/>
+                                    <RadioButton Content="Manual only (never auto-check)"
+                                                 GroupName="UpdateFrequency"
+                                                 IsChecked="{Binding UpdateCheckFrequency, Converter={StaticResource EnumMatchConverter}, ConverterParameter=ManualOnly}"
+                                                 FontSize="11"
+                                                 Foreground="{DynamicResource ContentForeground}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Current Version Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Version and Check for Updates" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="View the installed version and manually check for new releases."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="Current Version:" FontSize="11"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,6,0"/>
+                                        <TextBlock Text="{Binding CurrentVersion}" FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ContentForeground}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+                                        <Button Content="🔍 Check Now"
+                                                Padding="12,5"
+                                                Command="{Binding CheckForUpdatesCommand}"
+                                                Style="{StaticResource AccentButtonStyle}"
+                                                Margin="0,0,8,0"
+                                                ToolTip="Check for updates now"/>
+                                        <TextBlock Text="{Binding UpdateStatusMessage}"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Language Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Language">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🌐 Language" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Configure language detection and RTL text handling."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <TextBlock Text="Right-to-Left (RTL) Detection" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock Text="Automatically detect RTL text (Hebrew Unicode range U+0590–U+05FF) in chat messages and wiki content."
+                                           FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                           TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                <CheckBox IsChecked="{Binding AutoDetectRtl}"
+                                          Content="Auto-detect RTL text"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          ToolTip="When enabled, text in the Hebrew Unicode range (U+0590–U+05FF) is automatically rendered right-to-left."/>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Wiki Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Wiki">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="📝 Wiki" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Manage your wiki directory, file indexing, and version control settings."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <StackPanel>
+                            <!-- Directory Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12"
+                                    MaxWidth="600" HorizontalAlignment="Left">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Wiki Directory" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Select the folder containing your .md wiki files."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="Path:" FontSize="11"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,6,0"/>
+                                        <TextBlock Text="{Binding WikiDirectoryPath}"
+                                                   FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ContentForeground}"
+                                                   VerticalAlignment="Center"
+                                                   TextWrapping="Wrap" MaxWidth="350"/>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <Button Content="📂 Change"
+                                                Padding="12,5"
+                                                Command="{Binding ChangeWikiDirectoryCommand}"
+                                                Style="{StaticResource AccentButtonStyle}"
+                                                Margin="0,0,8,0"
+                                                ToolTip="Select a new wiki directory"/>
+                                        <Button Content="🔄 Re-index Now"
+                                                Padding="12,5"
+                                                Command="{Binding ReindexWikiCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                ToolTip="Re-scan all .md files in the wiki directory"/>
+                                    </StackPanel>
+
+                                    <TextBlock Text="{Binding IndexingStatus}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Git Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    MaxWidth="600" HorizontalAlignment="Left">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Version Control (Git)" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Track changes to your wiki files using Git version control."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <CheckBox IsChecked="{Binding GitVersionControlEnabled}"
+                                              Content="Initialize git repository"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              ToolTip="When enabled, a git repository will be initialized in the wiki directory for version tracking."/>
+                                    <TextBlock Text="{Binding GitStatusMessage}"
+                                               FontSize="10" Margin="24,4,0,0"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Backup Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Backup">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="☁️ Backup" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Configure backup provider, schedule, and run manual backups."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <TextBlock Text="Backup Provider" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding BackupProviderStatus}"
+                                           FontSize="11" Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,10"/>
+
+                                <!-- Schedule -->
+                                <TextBlock Text="Backup Schedule" FontSize="11"
+                                           Foreground="{DynamicResource SubtleBrush}"
+                                           Margin="0,0,0,6"/>
+                                <RadioButton Content="Daily"
+                                             GroupName="BackupSchedule"
+                                             IsChecked="{Binding BackupSchedule, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Daily}"
+                                             FontSize="11"
+                                             Foreground="{DynamicResource ContentForeground}"
+                                             Margin="0,0,0,6"/>
+                                <RadioButton Content="Weekly"
+                                             GroupName="BackupSchedule"
+                                             IsChecked="{Binding BackupSchedule, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Weekly}"
+                                             FontSize="11"
+                                             Foreground="{DynamicResource ContentForeground}"
+                                             Margin="0,0,0,6"/>
+                                <RadioButton Content="Manual Only"
+                                             GroupName="BackupSchedule"
+                                             IsChecked="{Binding BackupSchedule, Converter={StaticResource EnumMatchConverter}, ConverterParameter=ManualOnly}"
+                                             FontSize="11"
+                                             Foreground="{DynamicResource ContentForeground}"
+                                             Margin="0,0,0,10"/>
+
+                                <!-- Last backup -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="Last Backup:" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,6,0"/>
+                                    <TextBlock Text="{Binding LastBackupTime}"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Actions -->
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="🔵 Backup Now"
+                                            Padding="12,5"
+                                            Command="{Binding BackupNowCommand}"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            Margin="0,0,8,0"
+                                            ToolTip="Start a manual backup now"/>
+                                    <Button Content="⚙️ Configure"
+                                            Padding="12,5"
+                                            Command="{Binding ConfigureBackupCommand}"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            ToolTip="Configure backup provider settings"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Tools Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Tools">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🔧 Tools" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Configure tool auto-approval defaults and speech-to-text settings."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <StackPanel>
+                            <!-- Tool Auto-Approval Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12"
+                                    MaxWidth="600" HorizontalAlignment="Left">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Tool Auto-Approval Defaults" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Control whether tools require confirmation before executing. Changes affect newly created chat threads."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <!-- Web Search -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="160"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Web Search" FontSize="11"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding ToolApprovalOptions}"
+                                                  SelectedItem="{Binding WebSearchAutoApproval}"
+                                                  FontSize="11" Width="150"
+                                                  HorizontalAlignment="Left"/>
+                                    </Grid>
+
+                                    <!-- Terminal -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="160"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Terminal / Command" FontSize="11"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding TerminalApprovalOptions}"
+                                                  SelectedItem="{Binding TerminalAutoApproval}"
+                                                  FontSize="11" Width="150"
+                                                  HorizontalAlignment="Left"/>
+                                    </Grid>
+
+                                    <!-- File Generate -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="160"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="File Generate" FontSize="11"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding ToolApprovalOptions}"
+                                                  SelectedItem="{Binding FileGenerateAutoApproval}"
+                                                  FontSize="11" Width="150"
+                                                  HorizontalAlignment="Left"/>
+                                    </Grid>
+
+                                    <!-- File Edit -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="160"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="File Edit" FontSize="11"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding ToolApprovalOptions}"
+                                                  SelectedItem="{Binding FileEditAutoApproval}"
+                                                  FontSize="11" Width="150"
+                                                  HorizontalAlignment="Left"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Speech-to-Text Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    MaxWidth="600" HorizontalAlignment="Left">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Speech-to-Text (STT)" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Configure the speech recognition provider used for voice input."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <TextBlock Text="Provider" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <ComboBox ItemsSource="{Binding SttProviderOptions}"
+                                              SelectedItem="{Binding SttProvider}"
+                                              FontSize="11" Width="200"
+                                              HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                                    <TextBlock Text="Model" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <TextBox Text="{Binding SttModel, UpdateSourceTrigger=PropertyChanged}"
+                                             FontSize="11" Width="200"
+                                             HorizontalAlignment="Left" Margin="0,0,0,10"/>
+
+                                    <Button Content="🎤 Test Microphone"
+                                            Padding="12,5"
+                                            Command="{Binding TestMicrophoneCommand}"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            ToolTip="Test your microphone and STT configuration"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Pricing Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Pricing">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="💰 Pricing" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Set monthly budget limits and configure cost alert thresholds."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <TextBlock Text="Budget Settings" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock Text="Set a monthly budget limit and warning threshold to track API usage costs."
+                                           FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                           TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                <!-- Monthly Budget Limit -->
+                                <TextBlock Text="Monthly Budget Limit ($)" FontSize="11"
+                                           Foreground="{DynamicResource SubtleBrush}"
+                                           Margin="0,0,0,3"/>
+                                <TextBox Text="{Binding MonthlyBudgetLimit, TargetNullValue='', UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="11" Width="150"
+                                         HorizontalAlignment="Left" Margin="0,0,0,10"
+                                         ToolTip="Leave empty for no limit"/>
+
+                                <!-- Warning Threshold -->
+                                <TextBlock Text="Warning Threshold (%)" FontSize="11"
+                                           Foreground="{DynamicResource SubtleBrush}"
+                                           Margin="0,0,0,3"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <Slider Minimum="50" Maximum="100" SmallChange="5" LargeChange="10"
+                                            Value="{Binding WarningThreshold}" Width="180"
+                                            TickFrequency="5" IsSnapToTickEnabled="True"/>
+                                    <TextBlock Text="{Binding WarningThreshold, StringFormat={}{0}%}"
+                                               Width="40" TextAlignment="Center" VerticalAlignment="Center"
+                                               FontSize="11" Foreground="{DynamicResource ContentForeground}"/>
+                                </StackPanel>
+
+                                <!-- Block API on limit -->
+                                <CheckBox IsChecked="{Binding BlockApiOnLimit}"
+                                          Content="Block API calls when limit reached"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          ToolTip="When enabled, API calls to paid providers will be blocked once the monthly budget limit is exceeded."/>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Security Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Security">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🔒 Security" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="View encryption status, manage locked chat passwords, and configure visibility settings."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <!-- Encryption Status -->
+                                <TextBlock Text="Encryption" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,4"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <TextBlock Text="✅" FontSize="14" Margin="0,0,6,0"/>
+                                    <TextBlock Text="{Binding EncryptionStatus}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Locked Chats -->
+                                <TextBlock Text="Locked Chats" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,4"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="{Binding LockedChatPasswordSet, StringFormat='{}🔐 Password set: {0}'}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <Button Content="🔑 Set Global Password"
+                                            Padding="12,5"
+                                            Command="{Binding SetGlobalPasswordCommand}"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            Margin="0,0,8,0"
+                                            ToolTip="Set or change the global password for locked chats"/>
+                                </StackPanel>
+
+                                <CheckBox IsChecked="{Binding HideLockedChats}"
+                                          Content="Hide locked chats from chat list"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          ToolTip="When enabled, locked chats are hidden from the main chat list and must be unlocked to appear."/>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Maintenance Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Maintenance">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🛠️ Maintenance" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Perform database maintenance tasks such as compaction to reclaim disk space."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <TextBlock Text="Database Maintenance" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock Text="Compact the SQLite database to reclaim space freed by deleted records. The application remains usable during compaction."
+                                           FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                           TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                <!-- Database File Size -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="Database Size:" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,6,0"/>
+                                    <TextBlock Text="{Binding DatabaseFileSize}"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Reclaimable Space -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="Reclaimable:" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,6,0"/>
+                                    <TextBlock Text="{Binding ReclaimableSpace}"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Last Compaction -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="Last Compaction:" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,6,0"/>
+                                    <TextBlock Text="{Binding LastCompaction}"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Compact Button with progress -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+                                    <Button Padding="12,5"
+                                            Command="{Binding CompactDatabaseCommand}"
+                                            Margin="0,0,8,0"
+                                            ToolTip="Run SQLite VACUUM to reclaim disk space">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+                                                <Setter Property="Content" Value="🔄 Compact Database"/>
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCompacting}" Value="True">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                        <Setter Property="Content" Value="⏳ Compacting..."/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                    <TextBlock Text="{Binding StatusMessage}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Text Actions Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="TextActions">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="⚡ Text Actions" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Manage text transformation actions that can be triggered via hotkey or command bar. Each action defines a capture scope, apply mode, and optional model configuration."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <Grid Grid.Row="2" Margin="16,0,16,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="420"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Left: Text Actions list -->
+                        <Border Grid.Column="0" BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- List header -->
+                                <Grid Grid.Row="0" Margin="12,10,12,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Actions" FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="+ New Text Action"
+                                            Padding="8,4"
+                                            Command="{Binding AddTextActionCommand}"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            AutomationProperties.AutomationId="AddTextActionButton"/>
+                                </Grid>
+
+                                <!-- Text Action items -->
+                                <ScrollViewer Grid.Row="1" Margin="10,0,10,8"
+                                              VerticalScrollBarVisibility="Auto">
+                                    <Grid>
+                                        <ItemsControl ItemsSource="{Binding TextActions}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="vm:TextActionDisplayItem">
+                                                    <Border Padding="10,8" Margin="0,0,0,2"
+                                                            Background="{DynamicResource CardBackground}"
+                                                            BorderBrush="{DynamicResource BorderBrush}"
+                                                            BorderThickness="1" CornerRadius="6">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <StackPanel Grid.Column="0">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="{Binding DisplayName}" FontSize="12"
+                                                                               FontWeight="SemiBold"
+                                                                               Foreground="{DynamicResource ContentForeground}"/>
+                                                                    <Border Padding="4,1" CornerRadius="3" Margin="6,0,0,0"
+                                                                            Background="{DynamicResource AccentBrush}" Opacity="0.7"
+                                                                            BorderThickness="0">
+                                                                        <Border.Style>
+                                                                            <Style TargetType="Border">
+                                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsBuiltIn}" Value="True">
+                                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </Border.Style>
+                                                                        <TextBlock Text="Built-in" FontSize="8" Foreground="White"/>
+                                                                    </Border>
+                                                                </StackPanel>
+                                                                <TextBlock Text="{Binding TruncatedSystemPrompt}" FontSize="10"
+                                                                           Foreground="{DynamicResource SubtleBrush}"
+                                                                           TextWrapping="Wrap" MaxHeight="32"/>
+                                                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                                    <TextBlock Text="{Binding CaptureScopeBadges}" FontSize="10"
+                                                                               Foreground="{DynamicResource SubtleBrush}"
+                                                                               Margin="0,0,8,0"/>
+                                                                    <TextBlock Text="{Binding ApplyModeLabel}" FontSize="10"
+                                                                               Foreground="{DynamicResource SubtleBrush}"
+                                                                               Margin="0,0,8,0"/>
+                                                                    <TextBlock Text="{Binding Hotkey}" FontSize="10"
+                                                                               Foreground="{DynamicResource AccentBrush}"
+                                                                               FontWeight="SemiBold"/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+
+                                                            <!-- Action buttons -->
+                                                            <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                                        VerticalAlignment="Center">
+                                                                <Button Content="📋" Style="{StaticResource IconButtonStyle}"
+                                                                        ToolTip="Duplicate"
+                                                                        Command="{Binding DataContext.DuplicateTextActionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                        CommandParameter="{Binding}"/>
+                                                                <Button Content="✏️" Style="{StaticResource IconButtonStyle}"
+                                                                        ToolTip="Edit"
+                                                                        Command="{Binding DataContext.EditTextActionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                        CommandParameter="{Binding}"/>
+                                                                <Button Content="🗑️" Style="{StaticResource IconButtonStyle}"
+                                                                        ToolTip="Delete"
+                                                                        Command="{Binding DataContext.DeleteTextActionCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                        CommandParameter="{Binding}"/>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                            <ItemsControl.Style>
+                                                <Style TargetType="ItemsControl">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding TextActions.Count}" Value="0">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </ItemsControl.Style>
+                                        </ItemsControl>
+
+                                        <TextBlock Text="No text actions yet. Click '+ New Text Action' to create one."
+                                                   FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                                                   TextWrapping="Wrap" HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" Margin="20">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding TextActions.Count}" Value="0">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </ScrollViewer>
+                            </Grid>
+                        </Border>
+
+                        <!-- Separator -->
+                        <GridSplitter Grid.Column="1" Width="4" Margin="0"
+                                      HorizontalAlignment="Center"
+                                      Background="Transparent"
+                                      IsEnabled="False"/>
+
+                        <!-- Right: Add/Edit form -->
+                        <Border Grid.Column="2" BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEditingTextAction}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="{Binding EditingTextAction.DisplayName, TargetNullValue='New Text Action'}"
+                                               FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,12"
+                                               AutomationProperties.AutomationId="TextActionFormTitle"/>
+
+                                    <!-- Display Name -->
+                                    <TextBlock Text="Display Name" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <TextBox Text="{Binding TextActionDisplayNameValue, UpdateSourceTrigger=PropertyChanged}"
+                                             FontSize="11" Margin="0,0,0,10"
+                                             AutomationProperties.AutomationId="TextActionDisplayNameInput"/>
+
+                                    <!-- System Prompt -->
+                                    <TextBlock Text="System Prompt" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <TextBox Text="{Binding TextActionSystemPromptValue, UpdateSourceTrigger=PropertyChanged}"
+                                             FontSize="11" Margin="0,0,0,10"
+                                             AcceptsReturn="True" TextWrapping="Wrap"
+                                             MinHeight="60" MaxHeight="120"
+                                             VerticalScrollBarVisibility="Auto"/>
+
+                                    <!-- Model Config -->
+                                    <TextBlock Text="Model Configuration (optional)" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <ComboBox ItemsSource="{Binding ModelConfigurations}"
+                                              SelectedValue="{Binding TextActionModelConfigId}"
+                                              SelectedValuePath="Id"
+                                              DisplayMemberPath="DisplayName"
+                                              FontSize="11" Margin="0,0,0,10"/>
+
+                                    <!-- Capture Scope (Multi-Select CheckBoxes) -->
+                                    <TextBlock Text="Capture Scope" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <CheckBox IsChecked="{Binding CaptureSelection}" Content="Selection" FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <CheckBox IsChecked="{Binding CaptureFocusedElement}" Content="Focused Element" FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <CheckBox IsChecked="{Binding CaptureSurroundingContext}" Content="Surrounding Context" FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <CheckBox IsChecked="{Binding CaptureFullDocument}" Content="Full Document" FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <CheckBox IsChecked="{Binding CaptureScreenshot}" Content="Screenshot" FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,10"/>
+
+                                    <!-- Apply Mode (RadioButtons) -->
+                                    <TextBlock Text="Apply Mode" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <RadioButton Content="Replace Selection" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=replaceSelection}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <RadioButton Content="Insert at Cursor" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=insertAtCursor}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <RadioButton Content="Replace Element" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=replaceFocusedElement}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <RadioButton Content="Append to Element" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=appendToFocusedElement}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <RadioButton Content="Prepend to Element" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=prependToFocusedElement}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <RadioButton Content="Clipboard Only" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=clipboardOnly}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,2"/>
+                                    <RadioButton Content="Show Only" GroupName="ApplyMode"
+                                                 IsChecked="{Binding SelectedApplyMode, Converter={StaticResource EnumMatchConverter}, ConverterParameter=showOnly}"
+                                                 FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,10"/>
+
+                                    <!-- Hotkey Assignment -->
+                                    <TextBlock Text="Hotkey" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding TextActionAssignedHotkey, TargetNullValue='(none)'}"
+                                                   FontSize="11" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource ContentForeground}"/>
+                                        <Button Grid.Column="1" Content="Assign Hotkey"
+                                                Padding="8,4" FontSize="10"
+                                                Command="{Binding AssignTextActionHotkeyCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}"/>
+                                    </Grid>
+
+                                    <!-- Action buttons -->
+                                    <Grid Margin="0,6,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0" Text="{Binding StatusMessage}"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"
+                                                   TextWrapping="Wrap"/>
+
+                                        <Button Grid.Column="1" Content="Cancel"
+                                                Margin="0,0,8,0"
+                                                Command="{Binding CancelTextActionEditCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}"/>
+
+                                        <Button Grid.Column="2" Content="Save"
+                                                Padding="12,5"
+                                                Command="{Binding SaveTextActionCommand}"
+                                                Style="{StaticResource AccentButtonStyle}"
+                                                AutomationProperties.AutomationId="SaveTextActionButton"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- Form placeholder when not editing -->
+                        <Border Grid.Column="2" BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEditingTextAction}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="Select a text action or click '+ New Text Action' to create one."
+                                       FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       TextWrapping="Wrap" Margin="20"/>
+                        </Border>
+                    </Grid>
+                </Grid>
+
+                <!-- Hotkeys Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Hotkeys">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="⌨️ Hotkeys" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="View and customize keyboard shortcuts for text actions and the command bar. Click 'Change' to assign a new hotkey combo."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <!-- Main content -->
+                    <Grid Grid.Row="2" Margin="16,0,16,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Reset to Defaults link -->
+                        <TextBlock Grid.Row="0" Margin="0,0,0,8" HorizontalAlignment="Right">
+                            <Hyperlink Command="{Binding ResetHotkeysToDefaultsCommand}"
+                                       Foreground="{DynamicResource AccentBrush}" FontSize="11"
+                                       TextDecorations="Underline">
+                                🔄 Reset to Defaults
+                            </Hyperlink>
+                        </TextBlock>
+
+                        <!-- Hotkey assignments table -->
+                        <Border Grid.Row="1" BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <Grid>
+                                <ItemsControl ItemsSource="{Binding HotkeyAssignments}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="vm:HotkeyAssignmentDisplayItem">
+                                            <Border Padding="10,8" Margin="0,0,0,2"
+                                                    Background="{DynamicResource CardBackground}"
+                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                    BorderThickness="0,0,0,1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="160"/>
+                                                        <ColumnDefinition Width="120"/>
+                                                        <ColumnDefinition Width="120"/>
+                                                        <ColumnDefinition Width="100"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock Text="{Binding ActionName}" FontSize="12"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource ContentForeground}"/>
+                                                        <TextBlock Text="{Binding Source}" FontSize="9"
+                                                                   Foreground="{DynamicResource SubtleBrush}"/>
+                                                    </StackPanel>
+
+                                                    <TextBlock Grid.Column="1" Text="{Binding CaptureScopeBadges}"
+                                                               FontSize="10" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource SubtleBrush}"/>
+
+                                                    <TextBlock Grid.Column="2" Text="{Binding ApplyModeLabel}"
+                                                               FontSize="10" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource SubtleBrush}"/>
+
+                                                    <TextBlock Grid.Column="3" Text="{Binding Hotkey, TargetNullValue='(none)'}"
+                                                               FontSize="11" VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource AccentBrush}"
+                                                               FontWeight="SemiBold"/>
+
+                                                    <Button Grid.Column="4" Content="Change"
+                                                            Padding="8,3" FontSize="10"
+                                                            Command="{Binding DataContext.ChangeHotkeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}"
+                                                            Style="{StaticResource SecondaryButtonStyle}"
+                                                            VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                    <ItemsControl.Style>
+                                        <Style TargetType="ItemsControl">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HotkeyAssignments.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ItemsControl.Style>
+                                </ItemsControl>
+
+                                <!-- Empty state -->
+                                <TextBlock Text="No hotkey assignments configured."
+                                           FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Margin="20">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HotkeyAssignments.Count}" Value="0">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+                            </ScrollViewer>
+                        </Border>
+                    </Grid>
+                </Grid>
+
                 <!-- Other categories placeholder -->
                 <TextBlock Text="Select a category"
                            Foreground="{DynamicResource SubtleBrush}"
@@ -1115,10 +2739,81 @@
                                 <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Profiles">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Diagnostics">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Appearance">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Notifications">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Startup">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Updates">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Language">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Wiki">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Backup">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Tools">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Pricing">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Security">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Maintenance">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="TextActions">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Hotkeys">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
+
+                <!-- Key recorder overlay — shown when IsRecordingHotkey is true (Hotkeys or Text Actions) -->
+                <Border Background="#80000000"
+                        Visibility="{Binding IsRecordingHotkey, Converter={StaticResource BoolToVisibility}}"
+                        Panel.ZIndex="100"
+                        KeyDown="OnRecordingKeyDown"
+                        MouseDown="OnRecordingOverlayMouseDown"
+                        Focusable="True"
+                        IsVisibleChanged="OnRecordingOverlayVisibilityChanged">
+                    <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Background="{DynamicResource CardBackground}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1" CornerRadius="8"
+                            Padding="36,24" MinWidth="340">
+                        <StackPanel>
+                            <TextBlock Text="Recording hotkey..." FontSize="15" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ContentForeground}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                            <TextBlock Text="{Binding RecordingHotkeyCombo}"
+                                       FontSize="22" FontFamily="Consolas"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,14"
+                                       Height="32" x:Name="HotkeyComboDisplay"/>
+                            <TextBlock Text="Press desired key combination. Escape to cancel."
+                                       FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                                       HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </Border>
             </Grid>
         </Border>
     </Grid>

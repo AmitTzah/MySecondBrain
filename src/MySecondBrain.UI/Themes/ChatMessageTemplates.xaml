@@ -12,6 +12,7 @@
                     BorderBrush="{DynamicResource BorderBrush}"
                     Background="{DynamicResource ContentBackground}">
                 <TextBlock Text="{Binding Content}" FontSize="{DynamicResource FontSize}"
+                           FontFamily="{DynamicResource FontFamily}"
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource ContentForeground}"/>
             </Border>
@@ -27,6 +28,7 @@
                 <Ellipse Width="8" Height="8" Margin="0,0,6,0"
                          Fill="{DynamicResource AccentBrush}"/>
                 <TextBlock Text="{Binding Content}" FontSize="{DynamicResource FontSize}"
+                           FontFamily="{DynamicResource FontFamily}"
                            TextWrapping="Wrap"
                            Foreground="{DynamicResource ContentForeground}"/>
             </StackPanel>
@@ -42,6 +44,7 @@
                     HorizontalAlignment="Left" Opacity="0.85">
                 <StackPanel>
                     <TextBlock Text="{Binding Content}" FontSize="{DynamicResource FontSize}"
+                               FontFamily="{DynamicResource FontFamily}"
                                TextWrapping="Wrap"
                                Foreground="{DynamicResource ContentForeground}"/>
                     <TextBlock Text="{Binding Timestamp}" FontSize="9"

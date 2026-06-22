@@ -904,3 +904,337 @@ All three strategies are stored as strings in the database, not as integer-backe
 ### 22.3 Default
 
 `"SlidingWindow"` is the default for all new `ModelConfiguration` entities. Built-in personas use SlidingWindow via their default model config.
+
+---
+
+## 23. TextAction Entity & ITextActionRepository Pattern
+
+The `TextAction` entity defines three-tier capture/transform/apply actions triggered by global hotkeys. Feature 8 introduces the `ITextActionRepository` interface and its implementation for CRUD operations on text actions.
+
+### 23.1 TextAction Entity Schema
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `Id` | `string` (GUID, PK) | Yes | `Guid.NewGuid().ToString("N")` | 32-char hex. Built-in actions use fixed GUIDs (`a000...`). |
+| `DisplayName` | `string` | Yes | — | User-visible name (e.g., "Rewrite", "Summarize") |
+| `SystemPrompt` | `string` | Yes | — | The AI system prompt. Supports `{{variables}}`. |
+| `CaptureScope` | `string` | Yes | `"selection"` | Comma-separated flags: `selection`, `focusedElement`, `surroundingContext`, `fullDocument`, `screenshot` |
+| `ApplyMode` | `string` | Yes | `"showOnly"` | One of: `replaceSelection`, `showOnly`, `insertAtCursor`, `replaceFocusedElement`, `appendToDocument`, `copyToClipboard`, `newChatTab` |
+| `ModelConfigId` | `string?` (FK) | No | `null` | FK to `ModelConfiguration`. SetNull on delete. |
+| `AssignedHotkey` | `string?` | No | `null` | e.g., `"Alt+Q"`. Assigned by user in Hotkeys settings. |
+| `IsBuiltIn` | `bool` | Yes | `false` | `true` for the 10 seeded text actions |
+| `CreatedAt` | `DateTimeOffset` | Yes | `DateTimeOffset.UtcNow` | Immutable creation timestamp |
+
+### 23.2 ITextActionRepository Interface
+
+```csharp
+// Defined in Core/Interfaces/ITextActionRepository.cs
+public interface ITextActionRepository
+{
+    Task<IReadOnlyList<TextAction>> GetAllAsync();
+    Task<TextAction?> GetByIdAsync(string id);
+    Task<TextAction> CreateAsync(TextAction action);
+    Task UpdateAsync(TextAction action);
+    Task DeleteAsync(string id);
+    Task<TextAction> DuplicateAsync(string id);
+}
+```
+
+### 23.3 Duplicate Pattern
+
+`DuplicateAsync` creates a copy with a new GUID and `" (Copy)"` appended to `DisplayName`. All other fields (SystemPrompt, CaptureScope, ApplyMode, ModelConfigId) are copied verbatim. The `AssignedHotkey` is set to `null` on the duplicate to avoid hotkey conflicts.
+
+### 23.4 CaptureScope and ApplyMode as String Arrays
+
+Both fields are stored as comma-separated strings in SQLite (e.g., `"selection,focusedElement"`). In the ViewModel, they are split into bool properties for checkbox binding. The conversion happens in `TextActionDisplayItem`:
+
+```csharp
+public List<string> CaptureScopes => CaptureScope?.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList() ?? [];
+public bool CaptureSelection => CaptureScopes.Contains("selection");
+public bool CaptureFocusedElement => CaptureScopes.Contains("focusedElement");
+// ... etc.
+```
+
+### 23.5 Built-In Text Actions (10)
+
+10 text actions are seeded via `HasData()` in `OnModelCreating` with fixed GUIDs (`a000000000000000000000000000001` through `a000000000000000000000000000010`). Five have default hotkey assignments (Alt+Q/W/E/R/C). Built-in actions cannot be deleted — the UI hides the delete button when `IsBuiltIn = true`.
+
+### 23.6 FK Relationship
+
+```
+TextAction.ModelConfigId → ModelConfiguration.Id (optional, SetNull)
+```
+
+Deleting a `ModelConfiguration` sets the FK to `null` on any referencing `TextAction`. The text action survives and uses no specific model until reassigned.
+
+---
+
+## 24. AppSetting Keys — Complete Feature 8 Registry
+
+Feature 8 adds ~30 new `AppSetting` keys for settings persistence. Combined with existing keys, the complete key-value settings store now spans 40+ keys.
+
+### 24.1 Feature 8 — New Settings Keys (34 keys)
+
+#### Diagnostics (9 keys)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `LogLevel` | `string` | `"Information"` | Minimum log level: Information, Debug, Verbose |
+| `LogCategory_LLMApiCalls` | `string` | `"true"` | LLM/Provider API call logging |
+| `LogCategory_Tier1HotkeyPipeline` | `string` | `"true"` | Tier 1 hotkey pipeline logging |
+| `LogCategory_Tier2CommandBar` | `string` | `"true"` | Tier 2 command bar logging |
+| `LogCategory_Database` | `string` | `"false"` | Database/SQL/EF Core logging |
+| `LogCategory_WikiFileSystem` | `string` | `"false"` | Wiki file system logging |
+| `LogCategory_WebSocket` | `string` | `"false"` | WebSocket/Kestrel logging |
+| `LogCategory_StartupShutdown` | `string` | `"false"` | App startup/shutdown logging |
+| `LogCategory_SystemIntegration` | `string` | `"false"` | System tray/update integration |
+
+#### Appearance (no new keys — uses existing §16 keys)
+Existing keys: `AppTheme`, `ChatTheme`, `FontFamily`, `FontSize`, `FontWeight`.
+
+#### Notifications (3 keys)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `SoundOnCompletion` | `string` | `"false"` | Play sound when AI response completes |
+| `DisableStreaming` | `string` | `"false"` | Disable token-by-token streaming |
+| `CrossTabCompletionAlert` | `string` | `"true"` | Show alert when a background tab completes |
+
+#### Startup (2 keys)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `LaunchOnWindowsStartup` | `string` | `"false"` | Add shortcut to Windows startup |
+| `RestoreLastSession` | `string` | `"false"` | Restore open chat tabs on launch |
+
+#### Updates (1 key)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `UpdateCheckFrequency` | `string` | `"OnStartup"` | One of: OnStartup, Daily, Weekly, ManualOnly |
+
+#### Language (1 key)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `AutoDetectRtl` | `string` | `"true"` | Auto-detect RTL text (Hebrew U+0590–U+05FF) |
+
+#### Maintenance (1 key)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `LastCompaction` | `string` | `null` | ISO 8601 timestamp of last VACUUM |
+
+#### Wiki (2 keys)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `WikiDirectoryPath` | `string` | `null` | Absolute path to wiki root directory |
+| `GitVersionControlEnabled` | `string` | `"false"` | Enable git version control for wiki |
+
+#### Backup (1 key)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `BackupSchedule` | `string` | `"Daily"` | One of: Daily, Weekly, ManualOnly |
+
+#### Tools (6 keys)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `WebSearchAutoApproval` | `string` | `"Ask"` | One of: Ask, AutoApprove, Disabled |
+| `TerminalAutoApproval` | `string` | `"Ask"` | Always "Ask" — cannot be AutoApproved |
+| `FileGenerateAutoApproval` | `string` | `"Ask"` | One of: Ask, AutoApprove, Disabled |
+| `FileEditAutoApproval` | `string` | `"Ask"` | One of: Ask, AutoApprove, Disabled |
+| `SttProvider` | `string` | `"OpenAI Whisper"` | Speech-to-text provider |
+| `SttModel` | `string` | `null` | STT model identifier |
+
+#### Pricing (3 keys)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `MonthlyBudgetLimit` | `string` | `null` | Monthly budget cap in USD (null = unlimited) |
+| `WarningThreshold` | `string` | `"80"` | Percentage threshold for budget warning (50–100) |
+| `BlockApiOnLimit` | `string` | `"false"` | Block API calls when budget exceeded |
+
+#### Security (1 key)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `HideLockedChats` | `string` | `"false"` | Hide password-locked chats from thread list |
+
+#### Onboarding (5 keys)
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `Onboarding_Step1_Completed` | `string` | `null` | API Keys step completed (null = not done) |
+| `Onboarding_Step2_Completed` | `string` | `null` | Persona step completed |
+| `Onboarding_Step3_Completed` | `string` | `null` | Wiki Directory step completed |
+| `Onboarding_Step4_Completed` | `string` | `null` | Hotkeys step completed |
+| `Onboarding_Completed` | `string` | `null` | All steps completed (set when wizard finishes) |
+
+### 24.2 Existing Keys (unchanged, 8 keys)
+
+| Key | Feature | Purpose |
+|-----|---------|---------|
+| `AppTheme` | W1.3 Shell | Theme: Light / Dark |
+| `ChatTheme` | W1.3 Shell | Chat theme: Classic / Compact / Bubble |
+| `FontFamily` | W1.3 Shell | Font family name |
+| `FontSize` | W1.3 Shell | Font size 10–24px |
+| `FontWeight` | W1.3 Shell | Font weight: Normal / Bold / SemiBold |
+| `WebSocketAuthToken` | W1.6 Platform | 64-char hex for Kestrel WS auth |
+| `MinimizeToTray` | W1.6 Platform | Minimize-to-tray toggle |
+| `RecentPersonaIds` | W3.7 Model Configs | Recently-used persona IDs (max 5, JSON array) |
+
+### 24.3 Boolean Convention: String "true"/"false"
+
+All boolean settings are stored as strings `"true"` or `"false"`, consistent with the existing `MinimizeToTray` key (§17.3). This avoids type ambiguity in the key-value store and matches `ISettingsRepository.GetAsync()` which returns `string?`.
+
+### 24.4 Setting Persistence Pattern — Write-Through, No Save Button
+
+Every setting is persisted immediately on change. There is no "Save" or "Apply" button in any settings category:
+
+```
+User toggles CheckBox
+  → ViewModel partial OnPropertyChanged handler fires
+    → ISettingsRepository.SetAsync("KeyName", value.ToString().ToLower())
+      → Setting takes effect immediately (theme swap, log filter update, etc.)
+```
+
+This applies to all 40+ settings keys. The pattern avoids stale state where the UI shows one value but the persisted value is different.
+
+---
+
+## 25. SQLite VACUUM — Database Maintenance Pattern
+
+SQLite's `VACUUM` command rebuilds the database file, reclaiming space from deleted rows and defragmenting the file. Feature 8 exposes this through the Maintenance settings category.
+
+### 25.1 VACUUM Characteristics
+
+| Property | Value |
+|----------|-------|
+| **Command** | `VACUUM;` (raw SQL via `ExecuteSqlRawAsync`) |
+| **Effect** | Rebuilds entire database file. Reclaims space from deleted rows. Defragments b-tree pages. |
+| **Disk requirement** | Temporary free disk space equal to current database size |
+| **Locking** | Exclusive lock on database during VACUUM. All other operations blocked. |
+| **Duration** | Proportional to database size. ~100ms for 10MB, ~5s for 500MB. |
+
+### 25.2 Implementation Pattern
+
+```csharp
+[RelayCommand]
+private async Task CompactDatabaseAsync()
+{
+    var dbPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "MySecondBrain", "msb.db");
+
+    var beforeSize = new FileInfo(dbPath).Length;
+    IsCompacting = true;
+    StatusMessage = "Compacting database...";
+
+    try
+    {
+        await _db.Database.ExecuteSqlRawAsync("VACUUM;");
+        var afterSize = new FileInfo(dbPath).Length;
+        var reclaimed = beforeSize - afterSize;
+
+        ReclaimableSpace = FormatFileSize(reclaimed);
+        LastCompaction = DateTimeOffset.UtcNow.ToString("g");
+        await _settingsRepo.SetAsync("LastCompaction", LastCompaction);
+
+        StatusMessage = $"Compaction complete. Reclaimed {FormatFileSize(reclaimed)}.";
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "VACUUM failed");
+        StatusMessage = "Compaction failed. Check available disk space.";
+    }
+    finally
+    {
+        IsCompacting = false;
+    }
+}
+
+private static string FormatFileSize(long bytes) => bytes switch
+{
+    < 1024 => $"{bytes} B",
+    < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+    < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024.0):F1} MB",
+    _ => $"{bytes / (1024.0 * 1024.0 * 1024.0):F2} GB"
+};
+```
+
+### 25.3 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **Raw SQL, not EF Core API** | EF Core has no `VACUUM` equivalent. `ExecuteSqlRawAsync` is the standard approach for database-specific maintenance commands. |
+| **Before/after size comparison** | Gives the user feedback on how much space was reclaimed. `FileInfo.Length` is a fast, non-locking call. |
+| **Progress indicator** | `IsCompacting = true` disables the "Compact" button and shows a status message. Prevents double-triggering. |
+| **Persist last compaction time** | `LastCompaction` key in `ISettingsRepository` lets the UI show "Last compacted: ..." on next visit. |
+| **Not scheduled** | VACUUM is user-initiated only. No automatic periodic compaction. |
+
+---
+
+## 26. Onboarding Step Completion Flags Pattern
+
+The onboarding wizard persists per-step completion using boolean flags in `ISettingsRepository`. These flags drive first-launch detection, wizard resume, and the "Re-run Onboarding Wizard" feature.
+
+### 26.1 Flag Keys
+
+```
+Onboarding_Step1_Completed  → API Keys step done
+Onboarding_Step2_Completed  → Persona step done
+Onboarding_Step3_Completed  → Wiki Directory step done
+Onboarding_Step4_Completed  → Hotkeys step done
+Onboarding_Completed         → All steps done (set on Finish screen)
+```
+
+### 26.2 First-Launch Detection
+
+```csharp
+// In App.xaml.cs OnStartup:
+var onboardingCompleted = await settings.GetAsync("Onboarding_Completed");
+if (onboardingCompleted != "true")
+{
+    // Show wizard — first launch or incomplete onboarding
+    var wizardWindow = _serviceProvider.GetRequiredService<OnboardingWizardWindow>();
+    wizardWindow.Show();
+}
+```
+
+### 26.3 Step Completion Flow
+
+```
+User completes Step 1 (API Keys) → Next/Finish clicked
+  → Onboarding_Step1_Completed = "true" (immediate persist)
+  → CurrentStep advances to 2
+
+User skips Step 2
+  → Onboarding_Step2_Completed = "true" (skip = completed)
+  → CurrentStep advances to 3
+
+User closes wizard mid-way (X button)
+  → Completed step flags ARE persisted (steps done so far are saved)
+  → Next launch: wizard resumes at first incomplete step
+
+User reaches Finish screen and clicks "Launch Studio"
+  → Onboarding_Completed = "true"
+  → All 4 step flags already "true" from individual steps
+  → Next launch: wizard does NOT appear
+```
+
+### 26.4 Resume Logic
+
+```csharp
+// In OnboardingWizardViewModel constructor:
+var step1Done = await _settings.GetAsync("Onboarding_Step1_Completed") == "true";
+var step2Done = await _settings.GetAsync("Onboarding_Step2_Completed") == "true";
+var step3Done = await _settings.GetAsync("Onboarding_Step3_Completed") == "true";
+var step4Done = await _settings.GetAsync("Onboarding_Step4_Completed") == "true";
+
+if (!step1Done) CurrentStep = 0;
+else if (!step2Done) CurrentStep = 1;
+else if (!step3Done) CurrentStep = 2;
+else if (!step4Done) CurrentStep = 3;
+else CurrentStep = -1; // Welcome (all steps done but Onboarding_Completed not set)
+```
+
+### 26.5 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **Per-step flags, not a single integer** | Steps can be skipped independently. A single "current step" integer would lose which steps were actually completed. |
+| **Resume, not restart** | Closing the wizard mid-way preserves progress. The user doesn't redo completed steps. |
+| **Skip = completed** | Skipping a step means the user is OK with defaults for that step. It should not re-prompt on next launch. |
+| **Separate `Onboarding_Completed` flag** | Allows re-running the wizard from Settings even though all step flags are `"true"`. The wizard checks individual step flags for resume, not the aggregate `Onboarding_Completed`. |
+| **Null = not done, "true" = done** | Consistent with other boolean settings. `null` is the initial state (key doesn't exist). `"false"` is never set — a step is either done or not done. |

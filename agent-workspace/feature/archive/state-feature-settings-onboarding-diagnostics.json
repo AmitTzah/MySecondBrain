@@ -1,0 +1,66 @@
+{
+  "feature_name": "Settings, Onboarding & Diagnostics",
+  "branch_name": "feature/settings-onboarding-diagnostics",
+  "git_automation_enabled": true,
+  "hands_off_mode": true,
+  "smoke_test_automation": {
+    "enabled": false,
+    "environments": {
+      "web": null,
+      "native": null,
+      "desktop": {
+        "executable_path": "src\\MySecondBrain.UI\\bin\\Debug\\net8.0-windows10.0.17763.0\\MySecondBrain.UI.exe",
+        "window_title": "MySecondBrain",
+        "launch_args": null,
+        "mcp_available": true,
+        "mcp_name": "windows-mcp",
+        "verified": true
+      }
+    },
+    "missing_prerequisites": []
+  },
+  "skipped_smoke_tests": [
+    {
+      "step": 1,
+      "name": "Diagnostics Infrastructure & Category UI",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "1. Build and launch: dotnet build src/MySecondBrain.UI/MySecondBrain.UI.csproj then launch src\\MySecondBrain.UI\\bin\\Debug\\net8.0-windows10.0.17763.0\\MySecondBrain.UI.exe\n2. Navigate to Settings → Diagnostics category\n3. Verify Log Level dropdown shows 'Information' (default)\n4. Verify 3 checkboxes checked (LLM API Calls, Tier 1 Hotkey, Tier 2 Command Bar), 5 unchecked\n5. Change Log Level to 'Debug' — verify the dropdown updates\n6. Toggle 'Database' checkbox ON — verify it checks\n7. Click 'Open Logs Folder' — verify Windows Explorer opens at %LOCALAPPDATA%\\MySecondBrain\\logs\\\n8. Close the app, relaunch, navigate back to Diagnostics — verify settings persisted (Debug level + Database checkbox ON)\n9. Click 'Clear Logs' — verify confirmation dialog appears, click Yes, verify 'All log files cleared' message"
+    },
+    {
+      "step": 2,
+      "name": "Appearance, Notifications, Startup, Updates Categories",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "1. Launch the app, navigate to Settings → Appearance\n2. Toggle Dark/Light mode — verify entire app theme changes instantly\n3. Change Chat Theme to 'Bubble' — verify the preview area updates (or note that chat view will use Bubble on next chat load)\n4. Drag font size slider to 18 — verify live preview text enlarges\n5. Navigate to Notifications, toggle 'Sound on Completion' ON, toggle 'Disable Streaming' ON\n6. Navigate to Startup, verify 'Minimize to Tray' is checked by default, toggle 'Launch on Windows Startup' ON\n7. Navigate to Updates, verify current version is displayed, change frequency to 'Weekly'\n8. Close and relaunch the app — verify all settings persisted (Dark mode, Bubble theme, font size 18, sound ON, streaming disabled, startup settings, weekly updates)"
+    },
+    {
+      "step": 3,
+      "name": "Language, Maintenance, Wiki, Backup, Tools, Pricing, Security Categories",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "1. Navigate to Language — verify 'Auto-detect RTL' is checked by default\n2. Navigate to Maintenance — verify database file size is displayed, click 'Compact Database', verify before/after sizes change and 'Space reclaimed' is shown (if any)\n3. Navigate to Wiki — if no wiki directory set, verify empty state message. Click 'Change', select a folder with .md files, verify indexing status updates\n4. Navigate to Backup — verify status shows 'Not configured', change schedule to 'Weekly'\n5. Navigate to Tools — change Web Search to 'AutoApprove', verify ISettingsRepository persists\n6. Navigate to Pricing — set budget to 50, threshold to 90, toggle Block ON. Verify persistence on relaunch\n7. Navigate to Security — verify DPAPI encryption status shows green checkmark\n8. Close and relaunch — spot-check Language, Tools, and Pricing settings persisted"
+    },
+    {
+      "step": 4,
+      "name": "Text Actions & Hotkeys Categories",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "1. Navigate to Settings → Text Actions\n2. Verify 10 built-in Text Actions are displayed in the table\n3. Click 'Edit' on 'Rewrite' — verify form opens with pre-filled name, system prompt, capture scope 'selection', apply mode 'replaceSelection', hotkey 'Alt+Q'\n4. Click Cancel, then click '+ New Text Action' — verify empty form\n5. Fill name 'Test Action', enter system prompt, select capture scopes, choose apply mode, click Save — verify new action appears in list\n6. Click 'Duplicate' on the new action — verify '(Copy)' suffix appears\n7. Navigate to Hotkeys — verify table shows 6 default hotkeys (Alt+Q/W/E/R/C, Alt+Space)\n8. Click 'Change' on Alt+Q — verify key recorder opens\n9. Press a new key combo — verify it appears in the hotkey column\n10. Click 'Reset to Defaults' — verify all hotkeys restored"
+    },
+    {
+      "step": 5,
+      "name": "Onboarding Wizard — Full Implementation",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "1. Delete Onboarding_Step* keys from AppSettings table (or delete msb.db for clean first launch)\n2. Launch the app — verify Onboarding Wizard appears with Welcome screen\n3. Click 'Get Started' — verify Step 1 (API Keys) with step dots showing ●○○○\n4. Add an API key — verify it appears with 'Not tested' status\n5. Click 'Test All Keys' — verify status updates\n6. Click Skip — verify Step 2 (Persona) with ●●○○ dots\n7. Select 'Code Helper' card — verify customization panel pre-filled\n8. Click Skip — verify Step 3 (Wiki) with ●●●○ dots\n9. Click 'Create New Wiki Folder' — verify folder created\n10. Click Skip — verify Step 4 (Hotkeys) with ●●●● dots\n11. Verify default hotkey table, click Skip — verify Finish screen\n12. Verify summary: 1 API key, Persona: Code Helper, Wiki path, 5 hotkeys\n13. Click 'Import from ChatGPT or Claude' — verify 'Coming soon' toast\n14. Click 'Launch Studio' — verify Studio opens\n15. Close app, relaunch — verify wizard does NOT reappear"
+    },
+    {
+      "step": 6,
+      "name": "First-Launch Detection, Startup Integration & Polish",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "1. Delete all Onboarding_* keys from AppSettings table (or delete msb.db)\n2. Launch the app — verify Onboarding Wizard opens as dedicated window (NOT inside MainWindow)\n3. Complete all 4 steps (can Skip through them quickly)\n4. Click 'Launch Studio' — verify wizard window closes and MainWindow opens\n5. In Studio, navigate to Settings — verify 'Re-run Onboarding Wizard' link is visible at bottom of sidebar\n6. Click the link — verify wizard re-opens\n7. Close the wizard mid-way (X button) — verify 'Continue Setup / Close Anyway' dialog\n8. Restart the app — verify wizard resumes at first incomplete step\n9. Complete all steps again, Launch Studio\n10. Restart the app — verify wizard does NOT appear (goes directly to Studio)"
+    }
+  ],
+  "current_phase": 5,
+  "plan_status": "archived",
+  "total_steps": 6,
+  "current_step": 6,
+  "pivot_in_progress": false,
+  "phase_5_substep": "state_finalized"
+}

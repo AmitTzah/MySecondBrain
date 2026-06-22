@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Windows;
+using CommunityToolkit.Mvvm.Messaging;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,8 +24,10 @@ using MySecondBrain.Services.Tools;
 using MySecondBrain.Services.Update;
 using MySecondBrain.Services.Wiki;
 using MySecondBrain.UI.Controls;
+using MySecondBrain.Services.Logging;
 using MySecondBrain.UI.Services;
 using MySecondBrain.UI.ViewModels;
+using MySecondBrain.UI.Views;
 
 using Serilog;
 using Serilog.Formatting.Json;
@@ -100,6 +104,31 @@ public partial class App : Application
             var savedChatTheme = await settings.GetAsync("ChatTheme");
             if (savedChatTheme is not null && Enum.TryParse<ChatTheme>(savedChatTheme, out var chatTheme))
                 themeProvider.SetChatTheme(chatTheme);
+
+            // Restore saved log level
+            var savedLogLevel = await settings.GetAsync("LogLevel");
+            if (savedLogLevel is not null)
+                startupLogger.LogInformation("Log level restored to {LogLevel}", savedLogLevel);
+
+            // Restore saved log category toggles (log which ones are active for diagnostics)
+            var logCategoryKeys = new[]
+            {
+                "LogCategory_LLMApiCalls",
+                "LogCategory_Tier1HotkeyPipeline",
+                "LogCategory_Tier2CommandBar",
+                "LogCategory_Database",
+                "LogCategory_WikiFileSystem",
+                "LogCategory_WebSocket",
+                "LogCategory_StartupShutdown",
+                "LogCategory_SystemIntegration",
+            };
+
+            foreach (var key in logCategoryKeys)
+            {
+                var value = await settings.GetAsync(key);
+                if (value is not null)
+                    startupLogger.LogDebug("Log category {Key} = {Value}", key, value);
+            }
         }
         catch (Exception ex)
         {
@@ -133,58 +162,160 @@ public partial class App : Application
 
     startupLogger.LogInformation("MySecondBrain started");
 
+    // ================================================================
+    // First-Launch Detection
+    // ================================================================
+    var settingsRepo = _serviceProvider.GetRequiredService<ISettingsRepository>();
+    var onboardingCompleted = await settingsRepo.GetAsync("Onboarding_Completed");
+
+    if (onboardingCompleted != "true")
+    {
+        // First launch or incomplete onboarding — show wizard as the only window
+        var wizardWindow = _serviceProvider.GetRequiredService<OnboardingWizardWindow>();
+        var wizardVm = (OnboardingWizardViewModel)wizardWindow.DataContext;
+
+        wizardVm.LaunchStudioRequested += () =>
+        {
+            Current.Dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    startupLogger.LogInformation("LaunchStudio step 1: closing wizard");
+                    wizardWindow.Close();
+                    startupLogger.LogInformation("LaunchStudio step 2: resolving MainWindow");
+                    var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                    startupLogger.LogInformation("LaunchStudio step 3: showing MainWindow");
+                    mainWindow.Show();
+                    startupLogger.LogInformation("LaunchStudio step 4: wiring tray");
+                    WireTrayService(mainWindow, startupLogger);
+                    startupLogger.LogInformation("LaunchStudio step 5: starting background services");
+                    StartBackgroundServices(startupLogger);
+                    startupLogger.LogInformation("LaunchStudio complete — MainWindow shown");
+                }
+                catch (Exception ex)
+                {
+                    startupLogger.LogError(ex, "LaunchStudioRequested handler crashed at step X");
+                    throw;
+                }
+            });
+        };
+
+        wizardWindow.Show();
+    }
+    else
+    {
+        // Onboarding complete — normal launch
         var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
+        WireTrayService(mainWindow, startupLogger);
+        StartBackgroundServices(startupLogger);
+    }
 
-        // Show the system tray icon and wire all 5 tray events to MainWindow actions
-        var trayService = _serviceProvider.GetRequiredService<ISystemTrayService>();
-        var mainWindowViewModel = mainWindow.DataContext as MainWindowViewModel;
-        if (mainWindowViewModel is null)
-            startupLogger.LogWarning("MainWindow.DataContext is not a MainWindowViewModel");
-        trayService.Show();
-
-        trayService.OpenStudioRequested += (s, args) =>
+    // ================================================================
+    // Wire Re-run Onboarding from Settings
+    // ================================================================
+    WeakReferenceMessenger.Default.Register<ReRunOnboardingMessage>(this, (_, _) =>
+    {
+        // Find the main window if it exists
+        var mainWindow = Current.Windows.OfType<MainWindow>().FirstOrDefault();
+        if (mainWindow is not null)
         {
             mainWindow.Dispatcher.Invoke(() =>
             {
-                mainWindow.Show();
-                mainWindow.WindowState = WindowState.Normal;
-                mainWindow.Activate();
+                var wizardWindow = _serviceProvider.GetRequiredService<OnboardingWizardWindow>();
+                var wizardVm = (OnboardingWizardViewModel)wizardWindow.DataContext;
+
+                wizardVm.LaunchStudioRequested += () =>
+                {
+                    Current.Dispatcher.Invoke(() =>
+                    {
+                        startupLogger.LogInformation("LaunchStudio re-run: closing modal wizard");
+                        wizardWindow.Close();
+                    });
+                };
+
+                wizardWindow.Owner = mainWindow;
+                wizardWindow.ShowDialog(); // Modal — blocks until wizard closes
+
+                // Notify Settings → Providers tab to refresh its API key list,
+                // since the onboarding wizard may have added new keys.
+                startupLogger.LogInformation(
+                    "[DIAG] About to send RefreshApiKeysMessage — open windows: {WindowCount}",
+                    Current.Windows.Count);
+                WeakReferenceMessenger.Default.Send(new RefreshApiKeysMessage());
+                startupLogger.LogInformation("Re-run onboarding completed — RefreshApiKeysMessage sent");
             });
-        };
+        }
+    });
+}
 
-        trayService.NewChatRequested += (s, args) =>
+/// <summary>
+/// Wires the system tray service events after a main window is available.
+/// </summary>
+private void WireTrayService(Window mainWindow, ILogger<App> startupLogger)
+{
+    var trayService = _serviceProvider.GetRequiredService<ISystemTrayService>();
+    var mainWindowViewModel = mainWindow.DataContext as MainWindowViewModel;
+    if (mainWindowViewModel is null)
+        startupLogger.LogWarning("MainWindow.DataContext is not a MainWindowViewModel");
+
+    trayService.Show();
+
+    trayService.OpenStudioRequested += (_, _) =>
+    {
+        mainWindow.Dispatcher.Invoke(() =>
         {
-            startupLogger.LogInformation("New chat requested — not yet implemented");
-        };
+            mainWindow.Show();
+            mainWindow.WindowState = WindowState.Normal;
+            mainWindow.Activate();
+        });
+    };
 
-        trayService.CommandBarRequested += (s, args) =>
+    trayService.NewChatRequested += (_, _) =>
+    {
+        startupLogger.LogInformation("New chat requested — not yet implemented");
+    };
+
+    trayService.CommandBarRequested += (_, _) =>
+    {
+        startupLogger.LogInformation("Command bar requested — not yet implemented");
+    };
+
+    trayService.SettingsRequested += (_, _) =>
+    {
+        mainWindow.Dispatcher.Invoke(() =>
         {
-            startupLogger.LogInformation("Command bar requested — not yet implemented");
-        };
+            mainWindow.Show();
+            mainWindow.WindowState = WindowState.Normal;
+            mainWindow.Activate();
+            if (mainWindowViewModel is not null)
+                mainWindowViewModel.SelectedScreen = ScreenType.Settings;
+        });
+    };
 
-        trayService.SettingsRequested += (s, args) =>
-        {
-            mainWindow.Dispatcher.Invoke(() =>
-            {
-                mainWindow.Show();
-                mainWindow.WindowState = WindowState.Normal;
-                mainWindow.Activate();
-                if (mainWindowViewModel is not null)
-                    mainWindowViewModel.SelectedScreen = ScreenType.Settings;
-            });
-        };
+    trayService.ExitRequested += (_, _) => App.Current.Shutdown();
+}
 
-        trayService.ExitRequested += (s, args) => App.Current.Shutdown();
-
+/// <summary>
+/// Starts background services (WebSocket server, global hotkeys) after the main window is shown.
+/// </summary>
+private void StartBackgroundServices(ILogger<App> startupLogger)
+{
+    try
+    {
         // Start the embedded Kestrel WebSocket server (non-blocking)
         _ = StartWebSocketServerAsync(startupLogger);
 
-        // Start global hotkey service — registers default hotkeys (Alt+Space, Ctrl+Shift+Q/W/E/R/C)
+        // Start global hotkey service
         var hotkeyService = _serviceProvider.GetRequiredService<IGlobalHotkeyService>();
         var hotkeyCount = hotkeyService.GetRegisteredHotkeys().Count;
         startupLogger.LogInformation("Global hotkey service started with {Count} default hotkeys", hotkeyCount);
     }
+    catch (Exception ex)
+    {
+        startupLogger.LogError(ex, "StartBackgroundServices failed");
+    }
+}
 
     protected override async void OnExit(ExitEventArgs e)
     {
@@ -255,6 +386,7 @@ public partial class App : Application
         services.AddSingleton<IWikiIndexRepository, WikiIndexRepository>();
         services.AddSingleton<IUsageRepository, UsageRepository>();
         services.AddSingleton<ISettingsRepository, SettingsRepository>();
+        services.AddSingleton<ITextActionRepository, TextActionRepository>();
 
         // === Application Services (Singleton) ===
         services.AddSingleton<ILLMProviderService, LLMProviderService>();
@@ -342,6 +474,9 @@ public partial class App : Application
         // === MainWindow (Singleton — one main window) ===
         services.AddSingleton<MainWindow>();
 
+        // === Onboarding Wizard Window (Transient — new window each time) ===
+        services.AddTransient<OnboardingWizardWindow>();
+
         // === Logging ===
         var appVersion = Assembly.GetEntryAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0";
         var logPath = Path.Combine(
@@ -354,6 +489,8 @@ public partial class App : Application
 #else
             .MinimumLevel.Information()
 #endif
+            .Destructure.With<ApiKeyDestructuringPolicy>()
+            .Enrich.With<ApiKeyRedactionEnricher>()
             .Enrich.WithThreadId()
             .Enrich.WithMachineName()
             .Enrich.WithProperty("AppVersion", appVersion)

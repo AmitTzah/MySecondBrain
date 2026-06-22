@@ -1416,3 +1416,520 @@ The `{{variable}}` pattern is used in multiple contexts:
 - TextAction system prompts (resolved at text action execution)
 - PromptTemplate content (resolved at template usage)
 - Future: Auto-generated message headers, wiki page templates
+
+---
+
+## 26. Static Field Pattern — Settings Tab Memory
+
+When a ViewModel is Transient (recreated on every navigation), navigating away from Settings and back resets the selected category to its default (`Providers`). This is poor UX — the user expects to return to the category they were last viewing.
+
+### 26.1 The Problem
+
+```
+User navigates to Settings → Diagnostics → navigates to Chats → navigates back to Settings
+  → New SettingsViewModel instance created (Transient)
+  → SelectedSettingsCategory = Providers (default)
+  → User is taken to Providers, not Diagnostics
+```
+
+### 26.2 Solution: Static Field for Cross-Instance State
+
+```csharp
+public partial class SettingsViewModel : ObservableObject
+{
+    // Static field survives ViewModel recreation
+    private static SettingsCategory s_lastSettingsCategory = SettingsCategory.Providers;
+
+    public SettingsViewModel(...)
+    {
+        // Restore last category from static field
+        _selectedSettingsCategory = s_lastSettingsCategory;
+    }
+
+    partial void OnSelectedSettingsCategoryChanged(SettingsCategory value)
+    {
+        // Persist to static field on every change
+        s_lastSettingsCategory = value;
+    }
+}
+```
+
+### 26.3 When to Use Static Fields
+
+| Scenario | Use Static Field? | Alternative |
+|----------|------------------|-------------|
+| **Settings tab selection** | Yes — UX expectation to return to last tab | `ISettingsRepository` (persists across app restarts, but overkill for in-session memory) |
+| **Scroll position in a list** | Yes — return to same scroll position | `ISettingsRepository` (overkill) |
+| **Expanded/collapsed tree nodes** | Yes — preserve tree state | Static dictionary keyed by some identifier |
+| **Chat thread content** | No — this is data, not UI state | `IChatThreadService` or repository |
+| **Form input values** | No — forms should reset or load fresh data | `InitializeAsync()` pattern |
+
+### 26.4 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **Static field, not ISettingsRepository** | Tab memory is in-session only. Persisting across app restarts would mean the user always lands on the same tab on launch, which may not be desired. |
+| **Static field, not Singleton ViewModel** | ViewModel is Transient by convention. Making one ViewModel Singleton breaks the pattern and risks stale data from other injected Transient dependencies. |
+| **Default is Providers** | First launch always lands on Providers (API key setup). After that, the static field tracks the user's last choice. |
+
+---
+
+## 27. Onboarding Wizard — 6-Screen State Machine Pattern
+
+The onboarding wizard uses an integer-based step index with `DataTrigger`-based content switching. This pattern applies to any multi-step wizard or guided flow.
+
+### 27.1 Step Definitions
+
+| Step | Index | Screen | Persistence Flag |
+|------|-------|--------|-----------------|
+| Welcome | `-1` | App icon, tagline, feature cards, "Get Started" button | None (not a config step) |
+| Step 1 | `0` | API Keys — provider dropdown, key input, test/add keys | `Onboarding_Step1_Completed` |
+| Step 2 | `1` | Persona — 3 starter cards, customization panel | `Onboarding_Step2_Completed` |
+| Step 3 | `2` | Wiki Directory — folder picker, git config | `Onboarding_Step3_Completed` |
+| Step 4 | `3` | Hotkeys — assignment table, key recorder, reset defaults | `Onboarding_Step4_Completed` |
+| Finish | `4` | Summary, "Launch Studio", "Import from ChatGPT" | `Onboarding_Completed` |
+
+### 27.2 Navigation Logic
+
+```csharp
+public int CurrentStep { get; set; } = -1;
+
+public bool CanGoBack => CurrentStep > -1;
+public bool CanGoNext => CurrentStep < 4;  // Includes Finish
+public bool CanSkip => CurrentStep is >= 0 and <= 3;  // Not Welcome, not Finish
+
+public void GoBack() => CurrentStep--;
+public void GoNext() { PersistCurrentStep(); CurrentStep++; }
+public void Skip() { PersistCurrentStep(); CurrentStep++; }
+```
+
+### 27.3 Content Switching with DataTrigger
+
+```xml
+<Grid>
+    <Grid.Style>
+        <Style TargetType="Grid">
+            <Style.Triggers>
+                <!-- Welcome screen (Step -1) -->
+                <DataTrigger Binding="{Binding CurrentStep}" Value="-1">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <!-- Step 0: API Keys -->
+                <DataTrigger Binding="{Binding CurrentStep}" Value="0">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <!-- ... one trigger per step ... -->
+            </Style.Triggers>
+        </Style>
+    </Grid.Style>
+    <!-- Step content panels stacked here, all Visibility=Collapsed by default -->
+</Grid>
+```
+
+### 27.4 Step Indicator Dots
+
+The step indicator shows 4 dots (○/●/✓) visible only on steps 0–3:
+
+```xml
+<ItemsControl Visibility="{Binding IsStepIndicatorVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+    <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal"/>
+        </ItemsPanelTemplate>
+    </ItemsControl.ItemsPanel>
+    <!-- 4 dot items, each bound to step completion via converter -->
+</ItemsControl>
+```
+
+Dot states:
+- ○ (empty circle) — not yet reached
+- ● (filled circle) — current step
+- ✓ (checkmark) — completed step
+
+### 27.5 Window Configuration
+
+`OnboardingWizardWindow` is a standalone WPF `Window` (not `UserControl`):
+
+| Property | Value |
+|----------|-------|
+| `Width` | `700` |
+| `Height` | `600` |
+| `WindowStartupLocation` | `CenterScreen` |
+| `ResizeMode` | `CanResize` |
+| `WindowStyle` | `SingleBorderWindow` |
+| `Owner` | `null` on first launch, `MainWindow` on re-run |
+
+### 27.6 Close Behavior
+
+When the user clicks the X button mid-wizard:
+1. Completed step flags ARE persisted (steps done so far are saved)
+2. A confirmation dialog appears: "You haven't finished setup. Your progress is saved."
+3. Options: "Continue Setup" (cancel close) or "Close Anyway" (close window)
+
+### 27.7 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **Integer step index, not enum** | Steps map to completion flags via index (Step 0 → `Onboarding_Step1_Completed`). An integer is simpler for navigation math (CanGoBack = CurrentStep > -1). |
+| **Welcome at -1, steps at 0–3, Finish at 4** | Separates the welcome screen from formal steps. Welcome has no "Back" or completion flag. Step dots only show for steps 0–3. |
+| **Dedicated Window, not UserControl** | The wizard replaces MainWindow on first launch. A UserControl requires a parent window; a top-level Window can exist independently. |
+| **Non-functional "Import" button** | The "Import from ChatGPT or Claude" button on Finish shows a "Coming soon" toast. The button exists for vision compliance; the import pipeline is Feature 18. |
+
+---
+
+## 28. Key Recorder Overlay Pattern
+
+A key recorder captures the next keyboard combination pressed by the user, used for assigning hotkeys to Text Actions. This pattern applies to any "press a key to assign" interaction.
+
+### 28.1 Overlay Implementation
+
+```xml
+<!-- A semi-transparent overlay that captures keyboard input -->
+<Border x:Name="KeyRecorderOverlay"
+        Background="#80000000"
+        Visibility="Collapsed"
+        KeyDown="KeyRecorderOverlay_KeyDown">
+    <Border Background="{DynamicResource ContentBackground}"
+            CornerRadius="8" Padding="40"
+            HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel>
+            <TextBlock Text="Press a key combination..."
+                       FontSize="16" FontWeight="SemiBold"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="{Binding RecordedKeyCombo}"
+                       FontSize="24" FontWeight="Bold"
+                       Foreground="{DynamicResource AccentBrush}"
+                       HorizontalAlignment="Center" Margin="0,10,0,0"/>
+            <TextBlock Text="Press Escape to cancel"
+                       FontSize="12" Foreground="{DynamicResource SubtleBrush}"
+                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+        </StackPanel>
+    </Border>
+</Border>
+```
+
+### 28.2 Key Capture Logic
+
+```csharp
+private void KeyRecorderOverlay_KeyDown(object sender, KeyEventArgs e)
+{
+    e.Handled = true;
+
+    if (e.Key == Key.Escape)
+    {
+        // Cancel — close overlay without assigning
+        CloseKeyRecorder();
+        return;
+    }
+
+    if (e.Key == Key.System)  // Alt key — must use SystemKey
+        e.Key = e.SystemKey;
+
+    // Ignore modifier-only presses
+    if (e.Key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt
+        or Key.RightAlt or Key.LeftShift or Key.RightShift
+        or Key.LWin or Key.RWin)
+        return;
+
+    var modifiers = Keyboard.Modifiers;
+    var combo = FormatKeyCombo(modifiers, e.Key);
+
+    if (IsValidHotkey(combo))
+    {
+        RecordedKeyCombo = combo;
+        CloseKeyRecorder();
+    }
+}
+```
+
+### 28.3 Conflict Detection
+
+Before assigning a hotkey, check against:
+- **Existing assignments:** Other Text Actions and Command Bar hotkeys
+- **System hotkeys:** 17 reserved combinations (Win+D, Win+L, Alt+Tab, Alt+F4, Ctrl+Alt+Del, Ctrl+Shift+Esc, etc.)
+- **Global hotkeys already registered:** Check `IGlobalHotkeyService.GetRegisteredHotkeys()`
+
+### 28.4 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **Overlay, not popup window** | A Popup requires window management and focus handling. An overlay `Border` inside the same window is simpler and doesn't have focus-stealing issues. |
+| **Capture on KeyDown, not KeyUp** | KeyDown fires immediately. KeyUp would add perceptible lag. |
+| **Modifier-only filter** | Pressing Ctrl alone should not assign "Ctrl" as a hotkey. The user must press a non-modifier key. |
+| **SystemKey for Alt combinations** | WPF maps `Alt+Key` to `Key.System` + `KeyEventArgs.SystemKey`. The handler must check for this. |
+
+---
+
+## 29. PasswordBox Bridge Pattern for Secure API Key Input
+
+WPF's `PasswordBox` does not support data binding for security reasons — `PasswordBox.Password` is not a dependency property. To bridge `PasswordBox` input into the MVVM ViewModel, a code-behind event handler is required.
+
+### 29.1 The Problem
+
+```xml
+<!-- ❌ This does NOT work — Password is not a DP, no binding supported -->
+<PasswordBox Password="{Binding ApiKeyInputValue}"/>
+```
+
+### 29.2 Solution: Code-Behind Event Bridge
+
+```xml
+<!-- XAML: attach PasswordChanged handler -->
+<PasswordBox x:Name="ApiKeyPasswordBox"
+             PasswordChanged="ApiKeyPasswordBox_PasswordChanged"/>
+```
+
+```csharp
+// Code-behind (SettingsView.xaml.cs):
+private void ApiKeyPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
+{
+    if (DataContext is SettingsViewModel vm)
+    {
+        vm.ApiKeyInputValue = ((PasswordBox)sender).Password;
+    }
+}
+```
+
+### 29.3 ViewModel Property
+
+```csharp
+// In SettingsViewModel:
+private string _apiKeyInputValue = string.Empty;
+public string ApiKeyInputValue
+{
+    get => _apiKeyInputValue;
+    set
+    {
+        _apiKeyInputValue = value;
+        OnPropertyChanged();
+    }
+}
+```
+
+Note: `ApiKeyInputValue` uses a manual property with `OnPropertyChanged()` rather than `[ObservableProperty]` because the source generator cannot be applied to code-behind-bridged properties that need custom getter/setter logic.
+
+### 29.4 Clear on Save
+
+After saving an API key, the `PasswordBox` must be cleared. Since `Password` is not bindable, this requires code-behind access:
+
+```csharp
+// In ViewModel — fires after successful save:
+private void ClearApiKeyInput()
+{
+    ClearPasswordBoxRequested?.Invoke();
+}
+
+// In code-behind — subscribe to ViewModel event:
+vm.ClearPasswordBoxRequested += () => ApiKeyPasswordBox.Clear();
+```
+
+### 29.5 Security Considerations
+
+| Rule | Rationale |
+|------|-----------|
+| **PasswordBox, not TextBox** | `PasswordBox` uses `SecureString` internally. TextBox stores input as plain .NET `string` in memory. |
+| **No two-way binding** | WPF intentionally prevents binding to `Password` to avoid plaintext string storage. |
+| **Clear after use** | The plaintext key exists in the `PasswordBox` only while the user is entering/editing it. After save, `PasswordBox.Clear()` removes it. |
+| **ViewModel stores briefly** | `ApiKeyInputValue` holds the plaintext only during form entry. It is set to `null` or `string.Empty` after save. |
+
+---
+
+## 30. Run.Text vs TextBlock.Text Binding Safety
+
+WPF `TextBlock` supports data binding via `TextBlock.Text`. However, when a `TextBlock` contains inline elements (`Run`, `Bold`, `Italic`), the `Text` property is ignored. This is a common source of silent binding failures.
+
+### 30.1 The Problem
+
+```xml
+<!-- ❌ Text binding is IGNORED when TextBlock has inline children -->
+<TextBlock Text="{Binding StatusMessage}">
+    <Run Text="Static prefix: "/>
+    <Run Text="{Binding StatusMessage}"/>  <!-- ERROR: must use Run.Text -->
+</TextBlock>
+```
+
+### 30.2 Correct Pattern: Bind Run.Text
+
+```xml
+<!-- ✅ Bind each Run's Text property individually -->
+<TextBlock>
+    <Run Text="Status: "/>
+    <Run Text="{Binding StatusMessage}" FontWeight="Bold"/>
+</TextBlock>
+```
+
+### 30.3 When TextBlock.Text Works
+
+```xml
+<!-- ✅ Text binding works fine when TextBlock has NO inline children -->
+<TextBlock Text="{Binding StatusMessage}"
+           FontWeight="Bold"/>
+```
+
+### 30.4 Rule of Thumb
+
+| TextBlock Content | Bind To | Works? |
+|------------------|---------|--------|
+| No inline children | `TextBlock.Text` | ✅ Yes |
+| Single `Run` with binding | `Run.Text` | ✅ Yes |
+| Multiple `Run` elements | `Run.Text` on each | ✅ Yes |
+| Multiple `Run` elements + `TextBlock.Text` | `TextBlock.Text` | ❌ Ignored |
+| Mixed `Run` + binding on `TextBlock.Text` | Neither reliably | ❌ Choose one pattern |
+
+---
+
+## 31. BooleanToVisibilityConverter for Conditional UI
+
+`BooleanToVisibilityConverter` is a general-purpose `IValueConverter` that maps `bool` to `Visibility`. Unlike the specialized [`BoolToGridLengthConverter`](#15-booltogridlengthconverter--dynamic-column-visibility) (§15), this converter controls element visibility across all UI patterns.
+
+### 31.1 Implementation
+
+```csharp
+public class BooleanToVisibilityConverter : IValueConverter
+{
+    public bool Invert { get; set; }  // True → Collapsed, False → Visible
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var boolValue = value is true;
+        if (Invert) boolValue = !boolValue;
+        return boolValue ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is Visibility v && v == Visibility.Visible;
+    }
+}
+```
+
+### 31.2 Usage Examples
+
+```xml
+<!-- Progress bar shows only when compacting database -->
+<ProgressBar Visibility="{Binding IsCompacting,
+    Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+<!-- "Coming Soon" notice shows only when feature is not yet available -->
+<TextBlock Text="Coming in a future update"
+           Visibility="{Binding IsFeatureAvailable,
+               Converter={StaticResource InvertBoolToVisibilityConverter}}"/>
+```
+
+### 31.3 Registration — Invert Variant
+
+```xml
+<converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+<converters:BooleanToVisibilityConverter x:Key="InvertBoolToVisibilityConverter" Invert="True"/>
+```
+
+### 31.4 Comparison with BoolToGridLengthConverter
+
+| Converter | Maps To | Use Case |
+|-----------|---------|----------|
+| `BooleanToVisibilityConverter` | `Visibility.Visible` / `Visibility.Collapsed` | Any UI element visibility |
+| `BoolToGridLengthConverter` | `GridLength` (pixel width) | Column/Row width in Grid definitions |
+| `InvertBoolToVisibilityConverter` | Inverted `Visibility` | "Not available" / "Hidden when" states |
+
+---
+
+## 32. Two-Way Hotkey Sync Between Settings Tabs
+
+Text Actions (one settings tab) and Hotkeys (another settings tab) share hotkey assignment data. Changes in one tab must be reflected in the other without requiring a manual refresh or tab switch.
+
+### 32.1 The Data Flow
+
+```mermaid
+graph TD
+    TA["Text Actions Tab\nEdit hotkey via key recorder"]
+    HK["Hotkeys Tab\nChange hotkey via key recorder"]
+    TARepo["ITextActionRepository\nSingle source of truth"]
+    TADisplay["TextActionDisplayItem\nObservableCollection"]
+    HKDisplay["HotkeyAssignmentDisplayItem\nObservableCollection"]
+
+    TA -->|"UpdateAsync"| TARepo
+    HK -->|"UpdateAsync"| TARepo
+    TARepo -->|"GetAllAsync + map"| TADisplay
+    TARepo -->|"GetAllAsync + map"| HKDisplay
+```
+
+### 32.2 Implementation: Reload on Tab Activation
+
+```csharp
+partial void OnSelectedSettingsCategoryChanged(SettingsCategory value)
+{
+    if (value == SettingsCategory.TextActions)
+        _ = ReloadTextActionsAsync();
+    else if (value == SettingsCategory.Hotkeys)
+        _ = ReloadHotkeysAsync();
+}
+```
+
+Each tab reloads from `ITextActionRepository` on activation. This ensures:
+- Changes made in Text Actions tab appear in Hotkeys tab
+- Changes made in Hotkeys tab appear in Text Actions tab
+- Deleted text actions are removed from both displays
+
+### 32.3 Conflict Detection on Both Tabs
+
+Both tabs use the same conflict detection logic via `IGlobalHotkeyService.DetectConflict()` + checking against all existing assignments. The key recorder overlay checks conflicts before assigning.
+
+### 32.4 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **Reload on tab activation, not event-based sync** | Simpler than maintaining cross-tab events. Tab activation is infrequent and `GetAllAsync` is fast (10 text actions). |
+| **Single source of truth** | `ITextActionRepository` is the only data source. Both tabs read from it and write to it. No cached copies. |
+| **Reset to Defaults affects both tabs** | The "Reset to Defaults" button in Hotkeys tab updates all 10 text actions. Text Actions tab picks up changes on next activation. |
+
+---
+
+## 33. Font Settings Persistence — CultureInfo.InvariantCulture
+
+WPF's `FontSize` is a `double` that must be serialized and deserialized with `CultureInfo.InvariantCulture` to avoid locale-specific formatting issues.
+
+### 33.1 The Problem
+
+```csharp
+// German locale: 14.5 → "14,5" (comma decimal separator)
+fontSize.ToString();  // "14,5" in de-DE, "14.5" in en-US
+
+// Deserialization with current culture:
+double.TryParse("14,5", out var result);  // true in de-DE, false in en-US
+double.TryParse("14.5", out var result);  // false in de-DE, true in en-US
+```
+
+### 33.2 Solution: InvariantCulture Persistence
+
+```csharp
+// SAVE — always use InvariantCulture
+await _settings.SetAsync("FontSize",
+    fontSize.ToString(CultureInfo.InvariantCulture));  // Always "14.5"
+
+// RESTORE — always parse with InvariantCulture
+var saved = await _settings.GetAsync("FontSize");
+if (saved is not null
+    && double.TryParse(saved, NumberStyles.Float, CultureInfo.InvariantCulture, out var size))
+{
+    fontSize = size;
+}
+```
+
+### 33.3 Where Culture Invariance Is Required
+
+| Value Type | Persisted As | Converter | InvariantCulture Required? |
+|------------|-------------|-----------|---------------------------|
+| `FontSize` (double) | `"14.5"` (string) | `double.TryParse` | **Yes** — decimal separator varies by locale |
+| `Temperature` (double) | `"1.0"` (string) | `double.TryParse` | **Yes** — same issue |
+| `PricingInputPer1K` (decimal) | `"0.0025"` (string) | `decimal.TryParse` | **Yes** — same issue |
+| `FontWeight` (struct) | `"Normal"` (string) | `FontWeightConverter.ConvertFromString` | **No** — text-based, no numeric parsing |
+| `FontFamily` (string) | `"Segoe UI"` (string) | Direct string | **No** — text-based |
+| `bool` values | `"true"` / `"false"` (string) | String comparison | **No** — text-based |
+
+### 33.4 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **InvariantCulture for all float/double/decimal** | Any numeric value persisted to string must use invariant culture. The app may be used on systems with any locale. |
+| **`NumberStyles.Float` for parsing** | Allows both integer ("14") and floating-point ("14.5") formats. |
+| **Fallback on parse failure** | If `double.TryParse` fails (corrupted data), fall back to a safe default (e.g., `14.0` for font size). Never crash on a bad setting value. |
