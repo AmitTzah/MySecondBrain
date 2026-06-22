@@ -1,3 +1,4 @@
+using System.IO;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.EntityFrameworkCore;
@@ -1550,22 +1551,143 @@ public class SettingsViewModelTests
     }
 
     [Fact]
-    public async Task ClearLogsCommand_ConfirmationAccepted_RunsWithoutError()
+    public async Task ClearLogsCommand_AllFilesDeleted_ShowsSuccessMessage()
     {
         _confirmationServiceMock
             .Setup(c => c.Confirm(It.IsAny<string>(), It.IsAny<string>()))
             .Returns(true);
 
-        // Ensure the logs directory exists for the test
         var logsPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "MySecondBrain", "logs");
         Directory.CreateDirectory(logsPath);
 
-        await _sut.ClearLogsCommand.ExecuteAsync(null);
+        // Create test log files to verify they get deleted
+        var testFile1 = Path.Combine(logsPath, "msb-test-old.log");
+        var testFile2 = Path.Combine(logsPath, "msb-test-old.json");
+        await File.WriteAllTextAsync(testFile1, "old data");
+        await File.WriteAllTextAsync(testFile2, "{}");
 
-        // Verify the command completed without error (message should be set)
-        Assert.False(string.IsNullOrEmpty(_sut.StatusMessage));
+        try
+        {
+            await _sut.ClearLogsCommand.ExecuteAsync(null);
+
+            Assert.Contains("log files cleared", _sut.StatusMessage);
+            Assert.False(File.Exists(testFile1), "Test .log file should be deleted");
+            Assert.False(File.Exists(testFile2), "Test .json file should be deleted");
+        }
+        finally
+        {
+            if (File.Exists(testFile1)) File.Delete(testFile1);
+            if (File.Exists(testFile2)) File.Delete(testFile2);
+        }
+    }
+
+    [Fact]
+    public async Task ClearLogsCommand_LockedFile_ShowsInUseMessage()
+    {
+        _confirmationServiceMock
+            .Setup(c => c.Confirm(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(true);
+
+        var logsPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "MySecondBrain", "logs");
+        Directory.CreateDirectory(logsPath);
+
+        // Create a test log file and lock it with an exclusive file stream
+        var testFilePath = Path.Combine(logsPath, "msb-20260622-test.log");
+        var fs = new FileStream(testFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        try
+        {
+            await _sut.ClearLogsCommand.ExecuteAsync(null);
+
+            Assert.Contains("in use", _sut.StatusMessage);
+            Assert.Contains("rotated automatically", _sut.StatusMessage);
+        }
+        finally
+        {
+            fs.Dispose();
+            if (File.Exists(testFilePath))
+                File.Delete(testFilePath);
+        }
+    }
+
+    [Fact]
+    public async Task ClearLogsCommand_MixedLockedAndDeletableFiles_ShowsCombinedMessage()
+    {
+        _confirmationServiceMock
+            .Setup(c => c.Confirm(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(true);
+
+        var logsPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "MySecondBrain", "logs");
+        Directory.CreateDirectory(logsPath);
+
+        // Create a deletable log file
+        var deletableFilePath = Path.Combine(logsPath, "msb-20260621-old.log");
+        await File.WriteAllTextAsync(deletableFilePath, "old log data");
+
+        // Create a locked log file
+        var lockedFilePath = Path.Combine(logsPath, "msb-20260622-current.log");
+        var fs = new FileStream(lockedFilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        try
+        {
+            await _sut.ClearLogsCommand.ExecuteAsync(null);
+
+            Assert.Contains("in use", _sut.StatusMessage);
+            Assert.Contains("rotated automatically", _sut.StatusMessage);
+            Assert.False(File.Exists(deletableFilePath), "Deletable file should have been removed");
+        }
+        finally
+        {
+            fs.Dispose();
+            if (File.Exists(lockedFilePath))
+                File.Delete(lockedFilePath);
+            if (File.Exists(deletableFilePath))
+                File.Delete(deletableFilePath);
+        }
+    }
+
+    [Fact]
+    public async Task ClearLogsCommand_FiltersOnlyLogAndJsonFiles()
+    {
+        _confirmationServiceMock
+            .Setup(c => c.Confirm(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(true);
+
+        var logsPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "MySecondBrain", "logs");
+        Directory.CreateDirectory(logsPath);
+
+        // Create a .log file (should be targeted)
+        var logFilePath = Path.Combine(logsPath, "test.log");
+        await File.WriteAllTextAsync(logFilePath, "log data");
+
+        // Create a .json file (should be targeted)
+        var jsonFilePath = Path.Combine(logsPath, "test.json");
+        await File.WriteAllTextAsync(jsonFilePath, "{}");
+
+        // Create a .txt file (should be ignored)
+        var txtFilePath = Path.Combine(logsPath, "test.txt");
+        await File.WriteAllTextAsync(txtFilePath, "should remain");
+
+        try
+        {
+            await _sut.ClearLogsCommand.ExecuteAsync(null);
+
+            Assert.False(File.Exists(logFilePath), ".log file should be deleted");
+            Assert.False(File.Exists(jsonFilePath), ".json file should be deleted");
+            Assert.True(File.Exists(txtFilePath), ".txt file should be ignored");
+        }
+        finally
+        {
+            if (File.Exists(logFilePath)) File.Delete(logFilePath);
+            if (File.Exists(jsonFilePath)) File.Delete(jsonFilePath);
+            if (File.Exists(txtFilePath)) File.Delete(txtFilePath);
+        }
     }
 
     // ================================================================

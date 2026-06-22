@@ -2882,7 +2882,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             if (!Directory.Exists(LogsFolderPath))
             {
-                StatusMessage = "All log files cleared.";
+                StatusMessage = "No log files to clear.";
                 return;
             }
 
@@ -2891,20 +2891,56 @@ public partial class SettingsViewModel : ObservableObject
                          || f.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            var failedCount = 0;
+            var totalFiles = logFiles.Count;
+            var inUseCount = 0;
+            var otherErrorCount = 0;
+
             foreach (var file in logFiles)
             {
                 try { File.Delete(file); }
+                catch (FileNotFoundException)
+                {
+                    // File was deleted between enumeration and deletion — treat as cleared
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    // Rare: directory deleted between GetFiles and Delete — treat as cleared
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    otherErrorCount++;
+                    _logger.LogWarning(ex, "Access denied deleting log file {File}", file);
+                }
+                catch (IOException ex)
+                {
+                    inUseCount++;
+                    _logger.LogWarning(ex, "Log file {File} is in use and will be rotated automatically", file);
+                }
                 catch (Exception ex)
                 {
+                    otherErrorCount++;
                     _logger.LogWarning(ex, "Failed to delete log file {File}", file);
-                    failedCount++;
                 }
             }
 
-            StatusMessage = failedCount == 0
-                ? "All log files cleared."
-                : $"Could not clear all log files. {failedCount} files could not be deleted.";
+            var clearedCount = totalFiles - inUseCount - otherErrorCount;
+
+            if (otherErrorCount > 0)
+            {
+                StatusMessage = $"{clearedCount} log files cleared, {otherErrorCount} could not be deleted.";
+                if (inUseCount > 0)
+                {
+                    StatusMessage += $" {inUseCount} file(s) are in use by the app and will be rotated automatically.";
+                }
+            }
+            else if (inUseCount > 0)
+            {
+                StatusMessage = $"{clearedCount} log files cleared, {inUseCount} in use by the app (will be rotated automatically).";
+            }
+            else
+            {
+                StatusMessage = $"All {clearedCount} log files cleared.";
+            }
         }
         catch (Exception ex)
         {
