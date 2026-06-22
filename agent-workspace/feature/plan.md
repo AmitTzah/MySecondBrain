@@ -309,7 +309,7 @@ Below is the expected state after all implementation steps. `[MODIFIED]` marks e
 
 ---
 
-### [ ] Step 4: Text Actions & Hotkeys Categories
+### [x] Step 4: Text Actions & Hotkeys Categories
 
 - **Goal:** Build the Text Actions management table (view all, create, edit, duplicate, delete) with capture scope multi-select checkboxes, apply mode radio buttons, and model config/hotkey assignment. Build the Hotkeys assignment table showing all Text Actions + Command Bar with their assigned hotkeys, "Change" button that opens a key recorder overlay, and "Reset to Defaults" link.
 

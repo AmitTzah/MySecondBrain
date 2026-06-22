@@ -37,12 +37,18 @@
       "name": "Language, Maintenance, Wiki, Backup, Tools, Pricing, Security Categories",
       "classification": "HUMAN/SHT REQUIRED",
       "description": "1. Navigate to Language — verify 'Auto-detect RTL' is checked by default\n2. Navigate to Maintenance — verify database file size is displayed, click 'Compact Database', verify before/after sizes change and 'Space reclaimed' is shown (if any)\n3. Navigate to Wiki — if no wiki directory set, verify empty state message. Click 'Change', select a folder with .md files, verify indexing status updates\n4. Navigate to Backup — verify status shows 'Not configured', change schedule to 'Weekly'\n5. Navigate to Tools — change Web Search to 'AutoApprove', verify ISettingsRepository persists\n6. Navigate to Pricing — set budget to 50, threshold to 90, toggle Block ON. Verify persistence on relaunch\n7. Navigate to Security — verify DPAPI encryption status shows green checkmark\n8. Close and relaunch — spot-check Language, Tools, and Pricing settings persisted"
+    },
+    {
+      "step": 4,
+      "name": "Text Actions & Hotkeys Categories",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "1. Navigate to Settings → Text Actions\n2. Verify 10 built-in Text Actions are displayed in the table\n3. Click 'Edit' on 'Rewrite' — verify form opens with pre-filled name, system prompt, capture scope 'selection', apply mode 'replaceSelection', hotkey 'Alt+Q'\n4. Click Cancel, then click '+ New Text Action' — verify empty form\n5. Fill name 'Test Action', enter system prompt, select capture scopes, choose apply mode, click Save — verify new action appears in list\n6. Click 'Duplicate' on the new action — verify '(Copy)' suffix appears\n7. Navigate to Hotkeys — verify table shows 6 default hotkeys (Alt+Q/W/E/R/C, Alt+Space)\n8. Click 'Change' on Alt+Q — verify key recorder opens\n9. Press a new key combo — verify it appears in the hotkey column\n10. Click 'Reset to Defaults' — verify all hotkeys restored"
     }
   ],
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 6,
-  "current_step": 3,
+  "current_step": 4,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }
