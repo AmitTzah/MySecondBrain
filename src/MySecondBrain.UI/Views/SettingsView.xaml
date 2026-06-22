@@ -1099,6 +1099,156 @@
                     </ScrollViewer>
                 </Grid>
 
+                <!-- Diagnostics Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Diagnostics">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <TextBlock Grid.Row="0" Text="🩺 Diagnostics" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Configure diagnostic logging, view log files, and manage log retention. Changes take effect immediately."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <!-- Main content -->
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <StackPanel>
+                            <!-- Log Level Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Log Level" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Controls the minimum severity level recorded to log files. 'Verbose' captures the most detail."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <ComboBox ItemsSource="{Binding LogLevelOptions}"
+                                              SelectedItem="{Binding LogLevel}"
+                                              FontSize="11" Width="200"
+                                              HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Category Toggles Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Log Categories" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Enable or disable logging for specific subsystems. Disabled categories produce no log output regardless of the global log level."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <CheckBox IsChecked="{Binding LogCategory_LLMApiCalls}"
+                                              Content="LLM API Calls"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log all LLM provider API requests and responses. Includes provider name, model, token counts, and latency."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_Tier1HotkeyPipeline}"
+                                              Content="Tier 1 Hotkey Pipeline"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log global hotkey captures, command routing, and tier 1 overlay lifecycle events."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_Tier2CommandBar}"
+                                              Content="Tier 2 Command Bar"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log command bar queries, search execution, and result rendering."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_Database}"
+                                              Content="Database"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log EF Core queries, migrations, connection management, and repository operations."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_WikiFileSystem}"
+                                              Content="Wiki / File System"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log wiki file indexing, file system watcher events, and wiki service operations."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_WebSocket}"
+                                              Content="WebSocket"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log Kestrel WebSocket server connections, messages, and disconnections."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_StartupShutdown}"
+                                              Content="Startup / Shutdown"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,4"
+                                              ToolTip="Log application startup, shutdown, service initialization, and DI container events."/>
+                                    <CheckBox IsChecked="{Binding LogCategory_SystemIntegration}"
+                                              Content="System Integration"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              Margin="0,0,0,0"
+                                              ToolTip="Log system tray, HWND/Dpi capture, clipboard, and low-level Windows integration."/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Log File Management Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Log File Management" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="View, manage, and clear log files stored on disk."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <Button Content="📂 Open Logs Folder"
+                                                Padding="12,5"
+                                                Command="{Binding OpenLogsFolderCommand}"
+                                                Style="{StaticResource AccentButtonStyle}"
+                                                Margin="0,0,8,0"
+                                                ToolTip="Open the logs directory in Windows Explorer"/>
+                                        <Button Content="🗑️ Clear Logs"
+                                                Padding="12,5"
+                                                Command="{Binding ClearLogsCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                ToolTip="Delete all .log and .json files in the logs folder"/>
+                                    </StackPanel>
+
+                                    <TextBlock Text="{Binding StatusMessage}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
                 <!-- Other categories placeholder -->
                 <TextBlock Text="Select a category"
                            Foreground="{DynamicResource SubtleBrush}"
@@ -1113,6 +1263,9 @@
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Profiles">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Diagnostics">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
                             </Style.Triggers>

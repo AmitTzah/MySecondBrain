@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -115,6 +117,14 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IModelConfigurationRepository _modelConfigRepo;
     private readonly IPersonaRepository _personaRepo;
     private readonly ILogger<SettingsViewModel> _logger;
+
+    /// <summary>
+    /// Path to the application's logs directory under %LOCALAPPDATA%\MySecondBrain\logs\.
+    /// </summary>
+    private static string LogsFolderPath =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "MySecondBrain", "logs");
 
     /// <summary>
     /// Cancellation token source for model auto-fetch, cancelled on each new request to avoid stale results.
@@ -256,6 +266,101 @@ public partial class SettingsViewModel : ObservableObject
     ];
 
     // ================================================================
+    // Diagnostics — Log Level
+    // ================================================================
+
+    [ObservableProperty]
+    private string _logLevel = "Information";
+
+    public IReadOnlyList<string> LogLevelOptions { get; } =
+    [
+        "Information",
+        "Debug",
+        "Verbose",
+    ];
+
+    partial void OnLogLevelChanged(string value)
+    {
+        _ = _settingsRepo.SetAsync("LogLevel", value);
+    }
+
+    // ================================================================
+    // Diagnostics — Log Category Toggles
+    // ================================================================
+
+    /// <summary>
+    /// LLM API calls to providers (default: ON).
+    /// </summary>
+    [ObservableProperty]
+    private bool _logCategory_LLMApiCalls = true;
+
+    /// <summary>
+    /// Tier 1 hotkey pipeline for global hotkey processing (default: ON).
+    /// </summary>
+    [ObservableProperty]
+    private bool _logCategory_Tier1HotkeyPipeline = true;
+
+    /// <summary>
+    /// Tier 2 command bar queries (default: ON).
+    /// </summary>
+    [ObservableProperty]
+    private bool _logCategory_Tier2CommandBar = true;
+
+    /// <summary>
+    /// Database operations via EF Core (default: OFF).
+    /// </summary>
+    [ObservableProperty]
+    private bool _logCategory_Database;
+
+    /// <summary>
+    /// Wiki filesystem watcher and indexing (default: OFF).
+    /// </summary>
+    [ObservableProperty]
+    private bool _logCategory_WikiFileSystem;
+
+    /// <summary>
+    /// WebSocket server connections (default: OFF).
+    /// </summary>
+    [ObservableProperty]
+    private bool _logCategory_WebSocket;
+
+    /// <summary>
+    /// Startup/shutdown lifecycle events (default: OFF).
+    /// </summary>
+    [ObservableProperty]
+    private bool _logCategory_StartupShutdown;
+
+    /// <summary>
+    /// System integration: tray, HWND, DPI, clipboard (default: OFF).
+    /// </summary>
+    [ObservableProperty]
+    private bool _logCategory_SystemIntegration;
+
+    partial void OnLogCategory_LLMApiCallsChanged(bool value)
+        => _ = _settingsRepo.SetAsync("LogCategory_LLMApiCalls", value ? "true" : "false");
+
+    partial void OnLogCategory_Tier1HotkeyPipelineChanged(bool value)
+        => _ = _settingsRepo.SetAsync("LogCategory_Tier1HotkeyPipeline", value ? "true" : "false");
+
+    partial void OnLogCategory_Tier2CommandBarChanged(bool value)
+        => _ = _settingsRepo.SetAsync("LogCategory_Tier2CommandBar", value ? "true" : "false");
+
+    partial void OnLogCategory_DatabaseChanged(bool value)
+        => _ = _settingsRepo.SetAsync("LogCategory_Database", value ? "true" : "false");
+
+    partial void OnLogCategory_WikiFileSystemChanged(bool value)
+        => _ = _settingsRepo.SetAsync("LogCategory_WikiFileSystem", value ? "true" : "false");
+
+    partial void OnLogCategory_WebSocketChanged(bool value)
+        => _ = _settingsRepo.SetAsync("LogCategory_WebSocket", value ? "true" : "false");
+
+    partial void OnLogCategory_StartupShutdownChanged(bool value)
+        => _ = _settingsRepo.SetAsync("LogCategory_StartupShutdown", value ? "true" : "false");
+
+    partial void OnLogCategory_SystemIntegrationChanged(bool value)
+        => _ = _settingsRepo.SetAsync("LogCategory_SystemIntegration", value ? "true" : "false");
+
+    // ================================================================
     // Initialization
     // ================================================================
 
@@ -266,6 +371,51 @@ public partial class SettingsViewModel : ObservableObject
         await RefreshAvailableApiKeysAsync();
         await RefreshModelConfigListAsync();
         await RefreshPersonaListAsync();
+        await LoadDiagnosticsSettingsAsync();
+    }
+
+    /// <summary>
+    /// Loads diagnostic settings (log level and category toggles) from the repository.
+    /// </summary>
+    private async Task LoadDiagnosticsSettingsAsync()
+    {
+        // Restore log level
+        var savedLogLevel = await _settingsRepo.GetAsync("LogLevel");
+        if (savedLogLevel is not null && LogLevelOptions.Contains(savedLogLevel))
+            LogLevel = savedLogLevel;
+
+        // Restore category toggles (defaults are set in field initializers above)
+        var savedLlm = await _settingsRepo.GetAsync("LogCategory_LLMApiCalls");
+        if (savedLlm is not null)
+            LogCategory_LLMApiCalls = savedLlm == "true" || savedLlm == "True";
+
+        var savedTier1 = await _settingsRepo.GetAsync("LogCategory_Tier1HotkeyPipeline");
+        if (savedTier1 is not null)
+            LogCategory_Tier1HotkeyPipeline = savedTier1 == "true" || savedTier1 == "True";
+
+        var savedTier2 = await _settingsRepo.GetAsync("LogCategory_Tier2CommandBar");
+        if (savedTier2 is not null)
+            LogCategory_Tier2CommandBar = savedTier2 == "true" || savedTier2 == "True";
+
+        var savedDb = await _settingsRepo.GetAsync("LogCategory_Database");
+        if (savedDb is not null)
+            LogCategory_Database = savedDb == "true" || savedDb == "True";
+
+        var savedWiki = await _settingsRepo.GetAsync("LogCategory_WikiFileSystem");
+        if (savedWiki is not null)
+            LogCategory_WikiFileSystem = savedWiki == "true" || savedWiki == "True";
+
+        var savedWs = await _settingsRepo.GetAsync("LogCategory_WebSocket");
+        if (savedWs is not null)
+            LogCategory_WebSocket = savedWs == "true" || savedWs == "True";
+
+        var savedStartup = await _settingsRepo.GetAsync("LogCategory_StartupShutdown");
+        if (savedStartup is not null)
+            LogCategory_StartupShutdown = savedStartup == "true" || savedStartup == "True";
+
+        var savedSys = await _settingsRepo.GetAsync("LogCategory_SystemIntegration");
+        if (savedSys is not null)
+            LogCategory_SystemIntegration = savedSys == "true" || savedSys == "True";
     }
 
     private async Task RefreshKeyListAsync()
@@ -1294,5 +1444,76 @@ public partial class SettingsViewModel : ObservableObject
     private void ClearStatus()
     {
         StatusMessage = string.Empty;
+    }
+
+    // ================================================================
+    // Diagnostics Commands
+    // ================================================================
+
+    [RelayCommand]
+    private void OpenLogsFolder()
+    {
+        try
+        {
+            Directory.CreateDirectory(LogsFolderPath);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"\"{LogsFolderPath}\"",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open logs folder");
+            StatusMessage = "Could not open logs folder.";
+        }
+    }
+
+#pragma warning disable CS1998 // Async method lacks 'await' operators (RelayCommand pattern requires async Task)
+    [RelayCommand]
+    private async Task ClearLogsAsync()
+#pragma warning restore CS1998
+    {
+        var confirmed = _confirmationService.Confirm(
+            "Delete all log files in the logs folder? This action cannot be undone.",
+            "Clear Logs");
+
+        if (!confirmed)
+            return;
+
+        try
+        {
+            if (!Directory.Exists(LogsFolderPath))
+            {
+                StatusMessage = "All log files cleared.";
+                return;
+            }
+
+            var logFiles = Directory.GetFiles(LogsFolderPath, "*.*")
+                .Where(f => f.EndsWith(".log", StringComparison.OrdinalIgnoreCase)
+                         || f.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var failedCount = 0;
+            foreach (var file in logFiles)
+            {
+                try { File.Delete(file); }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete log file {File}", file);
+                    failedCount++;
+                }
+            }
+
+            StatusMessage = failedCount == 0
+                ? "All log files cleared."
+                : $"Could not clear all log files. {failedCount} files could not be deleted.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to clear logs");
+            StatusMessage = "Could not access logs folder.";
+        }
     }
 }

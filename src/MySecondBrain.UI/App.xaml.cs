@@ -22,6 +22,7 @@ using MySecondBrain.Services.Tools;
 using MySecondBrain.Services.Update;
 using MySecondBrain.Services.Wiki;
 using MySecondBrain.UI.Controls;
+using MySecondBrain.Services.Logging;
 using MySecondBrain.UI.Services;
 using MySecondBrain.UI.ViewModels;
 
@@ -100,6 +101,31 @@ public partial class App : Application
             var savedChatTheme = await settings.GetAsync("ChatTheme");
             if (savedChatTheme is not null && Enum.TryParse<ChatTheme>(savedChatTheme, out var chatTheme))
                 themeProvider.SetChatTheme(chatTheme);
+
+            // Restore saved log level
+            var savedLogLevel = await settings.GetAsync("LogLevel");
+            if (savedLogLevel is not null)
+                startupLogger.LogInformation("Log level restored to {LogLevel}", savedLogLevel);
+
+            // Restore saved log category toggles (log which ones are active for diagnostics)
+            var logCategoryKeys = new[]
+            {
+                "LogCategory_LLMApiCalls",
+                "LogCategory_Tier1HotkeyPipeline",
+                "LogCategory_Tier2CommandBar",
+                "LogCategory_Database",
+                "LogCategory_WikiFileSystem",
+                "LogCategory_WebSocket",
+                "LogCategory_StartupShutdown",
+                "LogCategory_SystemIntegration",
+            };
+
+            foreach (var key in logCategoryKeys)
+            {
+                var value = await settings.GetAsync(key);
+                if (value is not null)
+                    startupLogger.LogDebug("Log category {Key} = {Value}", key, value);
+            }
         }
         catch (Exception ex)
         {
@@ -354,6 +380,7 @@ public partial class App : Application
 #else
             .MinimumLevel.Information()
 #endif
+            .Destructure.With<ApiKeyDestructuringPolicy>()
             .Enrich.WithThreadId()
             .Enrich.WithMachineName()
             .Enrich.WithProperty("AppVersion", appVersion)
