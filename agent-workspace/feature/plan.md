@@ -365,7 +365,7 @@ Below is the expected state after all implementation steps. `[MODIFIED]` marks e
 
 ---
 
-### [ ] Step 5: Onboarding Wizard — Full Implementation
+### [x] Step 5: Onboarding Wizard — Full Implementation
 
 - **Goal:** Build the complete 6-screen Onboarding Wizard with step indicator dots, Back/Next/Skip navigation, per-step content (API keys, persona selection, wiki directory, hotkeys review, finish summary), data persistence per step, and close-with-progress-saved behavior. The wizard occupies a dedicated full window with no Studio chrome.
 

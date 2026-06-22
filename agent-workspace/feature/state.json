@@ -43,12 +43,18 @@
       "name": "Text Actions & Hotkeys Categories",
       "classification": "HUMAN/SHT REQUIRED",
       "description": "1. Navigate to Settings → Text Actions\n2. Verify 10 built-in Text Actions are displayed in the table\n3. Click 'Edit' on 'Rewrite' — verify form opens with pre-filled name, system prompt, capture scope 'selection', apply mode 'replaceSelection', hotkey 'Alt+Q'\n4. Click Cancel, then click '+ New Text Action' — verify empty form\n5. Fill name 'Test Action', enter system prompt, select capture scopes, choose apply mode, click Save — verify new action appears in list\n6. Click 'Duplicate' on the new action — verify '(Copy)' suffix appears\n7. Navigate to Hotkeys — verify table shows 6 default hotkeys (Alt+Q/W/E/R/C, Alt+Space)\n8. Click 'Change' on Alt+Q — verify key recorder opens\n9. Press a new key combo — verify it appears in the hotkey column\n10. Click 'Reset to Defaults' — verify all hotkeys restored"
+    },
+    {
+      "step": 5,
+      "name": "Onboarding Wizard — Full Implementation",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "1. Delete Onboarding_Step* keys from AppSettings table (or delete msb.db for clean first launch)\n2. Launch the app — verify Onboarding Wizard appears with Welcome screen\n3. Click 'Get Started' — verify Step 1 (API Keys) with step dots showing ●○○○\n4. Add an API key — verify it appears with 'Not tested' status\n5. Click 'Test All Keys' — verify status updates\n6. Click Skip — verify Step 2 (Persona) with ●●○○ dots\n7. Select 'Code Helper' card — verify customization panel pre-filled\n8. Click Skip — verify Step 3 (Wiki) with ●●●○ dots\n9. Click 'Create New Wiki Folder' — verify folder created\n10. Click Skip — verify Step 4 (Hotkeys) with ●●●● dots\n11. Verify default hotkey table, click Skip — verify Finish screen\n12. Verify summary: 1 API key, Persona: Code Helper, Wiki path, 5 hotkeys\n13. Click 'Import from ChatGPT or Claude' — verify 'Coming soon' toast\n14. Click 'Launch Studio' — verify Studio opens\n15. Close app, relaunch — verify wizard does NOT reappear"
     }
   ],
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 6,
-  "current_step": 4,
+  "current_step": 5,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }
