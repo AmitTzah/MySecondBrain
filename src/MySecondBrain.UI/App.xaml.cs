@@ -25,6 +25,7 @@ using MySecondBrain.UI.Controls;
 using MySecondBrain.Services.Logging;
 using MySecondBrain.UI.Services;
 using MySecondBrain.UI.ViewModels;
+using MySecondBrain.UI.Views;
 
 using Serilog;
 using Serilog.Formatting.Json;
@@ -368,6 +369,9 @@ public partial class App : Application
 
         // === MainWindow (Singleton — one main window) ===
         services.AddSingleton<MainWindow>();
+
+        // === Onboarding Wizard Window (Transient — new window each time) ===
+        services.AddTransient<OnboardingWizardWindow>();
 
         // === Logging ===
         var appVersion = Assembly.GetEntryAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0";
