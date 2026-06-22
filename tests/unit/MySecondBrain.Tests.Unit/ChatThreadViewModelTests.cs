@@ -95,9 +95,11 @@ public class ChatThreadViewModelTests
         // Act
         await vm.InitializeAsync();
 
-        // Assert
+        // Assert — ActivePersona must reference an object that exists in PersonaList
+        // so the ComboBox SelectedItem matches an ItemsSource entry
         Assert.NotNull(vm.ActivePersona);
         Assert.Equal("General Assistant", vm.ActivePersona!.DisplayName);
+        Assert.Contains(vm.ActivePersona, vm.PersonaList);
     }
 
     // ================================================================

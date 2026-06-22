@@ -169,6 +169,18 @@ public partial class ChatThreadViewModel : ObservableObject
         {
             ActivePersona = persona;
 
+            // Re-map ActivePersona to the matching instance in PersonaList by ID.
+            // PersonaList may contain different object references (e.g., populated
+            // via RefreshPersonaListAsync before this method). Without this remap,
+            // the ComboBox SelectedItem reference won't match any item in ItemsSource,
+            // causing it to display empty/grey.
+            if (PersonaList.Count > 0)
+            {
+                var match = PersonaList.FirstOrDefault(p => p.Id == persona.Id);
+                if (match is not null)
+                    ActivePersona = match;
+            }
+
             // Update ActiveModelConfig from persona's default model config
             if (!string.IsNullOrEmpty(persona.DefaultModelConfigId))
             {
