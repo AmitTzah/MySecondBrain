@@ -964,6 +964,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             await _modelConfigRepo.DeleteAsync(item.Id);
             await RefreshModelConfigListAsync();
+            await RefreshPersonaListAsync();
             StatusMessage = "Model configuration deleted.";
             _logger.LogInformation("Deleted model configuration {ConfigId}", item.Id);
         }
