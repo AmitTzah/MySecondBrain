@@ -399,8 +399,9 @@ public partial class OnboardingWizardViewModel : ObservableObject
 
         try
         {
+            var endpointUrl = GetProviderEndpoint(item.ProviderType);
             var isValid = await _llmProviderService.ValidateApiKeyAsync(
-                item.ProviderType, item.PlaintextKey, null, CancellationToken.None);
+                item.ProviderType, item.PlaintextKey, endpointUrl, CancellationToken.None);
 
             item.IsValid = isValid;
             item.IsTested = true;
@@ -822,6 +823,23 @@ public partial class OnboardingWizardViewModel : ObservableObject
         };
         HotkeyAssignments = new ObservableCollection<WizardHotkeyItem>(hotkeys);
     }
+
+    /// <summary>
+    /// Returns a well-known endpoint URL for providers that require one
+    /// (DeepSeek, Mistral, Moonshot, MiMo), or null for providers with
+    /// built-in endpoints (OpenAI, Anthropic, Google).
+    /// OpenAICompatible returns null in the onboarding wizard since there
+    /// is no custom endpoint input field — it will use the default.
+    /// </summary>
+    private static string? GetProviderEndpoint(ProviderType type) => type switch
+    {
+        ProviderType.OpenAICompatible => null,
+        ProviderType.DeepSeek => "https://api.deepseek.com",
+        ProviderType.Mistral => "https://api.mistral.ai",
+        ProviderType.Moonshot => "https://api.moonshot.ai/v1",
+        ProviderType.MiMo => "https://api.xiaomimimo.com/v1",
+        _ => null
+    };
 
     private void RefreshSummary()
     {
