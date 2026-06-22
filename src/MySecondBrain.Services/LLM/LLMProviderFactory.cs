@@ -17,9 +17,21 @@ public class LLMProviderFactory : ILLMProviderFactory
         _logger = logger;
     }
 
-    public ILLMProvider GetProvider(ProviderType type, string? endpointUrl = null) =>
-        _providers.FirstOrDefault(p => p.Type == type)!;
+    public ILLMProvider GetProvider(ProviderType type, string? endpointUrl = null)
+    {
+        // DeepSeek, MiMo, Moonshot, and Mistral all use OpenAI-compatible APIs.
+        // Remap them to the OpenAICompatible provider for resolution.
+        var lookupType = type switch
+        {
+            ProviderType.DeepSeek or ProviderType.MiMo or ProviderType.Moonshot or ProviderType.Mistral
+                => ProviderType.OpenAICompatible,
+            _ => type
+        };
+        return _providers.FirstOrDefault(p => p.Type == lookupType)!;
+    }
 
     public IReadOnlyList<ProviderType> SupportedProviders =>
-        _providers.Select(p => p.Type).ToList().AsReadOnly();
+        new[] { ProviderType.OpenAI, ProviderType.Anthropic, ProviderType.Google,
+                ProviderType.DeepSeek, ProviderType.MiMo, ProviderType.Moonshot,
+                ProviderType.Mistral, ProviderType.OpenAICompatible };
 }

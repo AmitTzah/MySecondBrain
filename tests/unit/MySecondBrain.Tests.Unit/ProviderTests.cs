@@ -81,6 +81,50 @@ public class ProviderTests
     }
 
     [Fact]
+    public void ProviderFactory_ResolvesOpenAICompatibleProvider()
+    {
+        var providers = new ILLMProvider[]
+        {
+            CreateOpenAIProvider(),
+            CreateAnthropicProvider(),
+            CreateGoogleProvider(),
+            CreateOpenAICompatibleProvider(),
+        };
+        var factory = new LLMProviderFactory(providers, Mock.Of<ILogger<LLMProviderFactory>>());
+
+        var resolved = factory.GetProvider(ProviderType.OpenAICompatible);
+
+        Assert.NotNull(resolved);
+        Assert.Equal(ProviderType.OpenAICompatible, resolved.Type);
+    }
+
+    // ================================================================
+    // Remapping: DeepSeek, MiMo, Moonshot, Mistral → OpenAICompatible
+    // ================================================================
+
+    [Theory]
+    [InlineData(ProviderType.DeepSeek)]
+    [InlineData(ProviderType.MiMo)]
+    [InlineData(ProviderType.Moonshot)]
+    [InlineData(ProviderType.Mistral)]
+    public void ProviderFactory_RemapsOpenAICompatibleFamily_ToOpenAICompatible(ProviderType inputType)
+    {
+        var providers = new ILLMProvider[]
+        {
+            CreateOpenAIProvider(),
+            CreateAnthropicProvider(),
+            CreateGoogleProvider(),
+            CreateOpenAICompatibleProvider(),
+        };
+        var factory = new LLMProviderFactory(providers, Mock.Of<ILogger<LLMProviderFactory>>());
+
+        var resolved = factory.GetProvider(inputType);
+
+        Assert.NotNull(resolved);
+        Assert.Equal(ProviderType.OpenAICompatible, resolved.Type);
+    }
+
+    [Fact]
     public void ProviderFactory_SupportedProviders_ReturnsAll()
     {
         var providers = new ILLMProvider[]
@@ -97,7 +141,12 @@ public class ProviderTests
         Assert.Contains(ProviderType.OpenAI, supported);
         Assert.Contains(ProviderType.Anthropic, supported);
         Assert.Contains(ProviderType.Google, supported);
+        Assert.Contains(ProviderType.DeepSeek, supported);
+        Assert.Contains(ProviderType.MiMo, supported);
+        Assert.Contains(ProviderType.Moonshot, supported);
+        Assert.Contains(ProviderType.Mistral, supported);
         Assert.Contains(ProviderType.OpenAICompatible, supported);
+        Assert.Equal(8, supported.Count);
     }
 
     // ================================================================
