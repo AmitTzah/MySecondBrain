@@ -225,6 +225,12 @@ public partial class SettingsViewModel : ObservableObject
     private readonly Data.AppDbContext _db;
 
     /// <summary>
+    /// Suppresses PersistFontSettings during async font loading to prevent partial
+    /// font values (still at defaults) from overwriting persisted settings.
+    /// </summary>
+    private bool _suppressFontPersistence;
+
+    /// <summary>
     /// Persists the last selected settings category across ViewModel recreations
     /// (since SettingsViewModel is Transient — recreated on every navigation to Settings).
     /// </summary>
@@ -557,6 +563,7 @@ public partial class SettingsViewModel : ObservableObject
 
     partial void OnFontFamilyChanged(string value)
     {
+        if (_suppressFontPersistence) return;
         PersistFontSettings();
     }
 
@@ -568,16 +575,19 @@ public partial class SettingsViewModel : ObservableObject
             FontSize = Math.Clamp(value, 10.0, 24.0);
             return;
         }
+        if (_suppressFontPersistence) return;
         PersistFontSettings();
     }
 
     partial void OnFontWeightChanged(string value)
     {
+        if (_suppressFontPersistence) return;
         PersistFontSettings();
     }
 
     private void PersistFontSettings()
     {
+        if (_suppressFontPersistence) return;
         var wpfWeight = FontWeightStringToWpf(FontWeight);
         _themeProvider.SetFontSettings(FontFamily, FontSize, wpfWeight);
         _ = _settingsRepo.SetAsync("FontFamily", FontFamily);
@@ -1608,17 +1618,30 @@ public partial class SettingsViewModel : ObservableObject
             ChatTheme = _themeProvider.CurrentChatTheme;
 
         // Appearance — Font settings
-        var savedFontFamily = await _settingsRepo.GetAsync("FontFamily");
-        if (savedFontFamily is not null)
-            FontFamily = savedFontFamily;
+        // Suppress persistence during individual property assignment so that partial
+        // font state (still at defaults) does not overwrite the persisted values.
+        _suppressFontPersistence = true;
+        try
+        {
+            var savedFontFamily = await _settingsRepo.GetAsync("FontFamily");
+            if (savedFontFamily is not null)
+                FontFamily = savedFontFamily;
 
-        var savedFontSize = await _settingsRepo.GetAsync("FontSize");
-        if (savedFontSize is not null && double.TryParse(savedFontSize, out var parsedSize))
-            FontSize = parsedSize;
+            var savedFontSize = await _settingsRepo.GetAsync("FontSize");
+            if (savedFontSize is not null && double.TryParse(savedFontSize, out var parsedSize))
+                FontSize = parsedSize;
 
-        var savedFontWeight = await _settingsRepo.GetAsync("FontWeight");
-        if (savedFontWeight is not null)
-            FontWeight = savedFontWeight;
+            var savedFontWeight = await _settingsRepo.GetAsync("FontWeight");
+            if (savedFontWeight is not null)
+                FontWeight = savedFontWeight;
+        }
+        finally
+        {
+            _suppressFontPersistence = false;
+        }
+
+        // Persist with all three values now loaded correctly.
+        PersistFontSettings();
 
         // Notifications
         var savedSound = await _settingsRepo.GetAsync("SoundOnCompletion");
