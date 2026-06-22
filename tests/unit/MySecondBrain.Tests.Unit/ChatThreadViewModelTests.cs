@@ -103,6 +103,73 @@ public class ChatThreadViewModelTests
     }
 
     // ================================================================
+    // Last-selected persona persistence across sessions
+    // ================================================================
+
+    [Fact]
+    public async Task SelectPersonaAsync_PersistsLastSelectedPersonaId()
+    {
+        // Arrange
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper, _customPersona });
+        _modelConfigRepoMock.Setup(r => r.GetByIdAsync("config-002")).ReturnsAsync(_modelConfigB);
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+
+        var vm = CreateViewModel();
+        await vm.InitializeAsync();
+
+        // Clear invocations from initialization
+        _settingsRepoMock.Invocations.Clear();
+
+        // Act
+        await vm.SelectPersonaCommand.ExecuteAsync(_customPersona);
+
+        // Assert — LastSelectedPersonaId should have been persisted exactly once
+        _settingsRepoMock.Verify(r => r.SetAsync("LastSelectedPersonaId", "custom-001"), Times.Once);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_RestoresLastSelectedPersona()
+    {
+        // Arrange — return a saved persona ID that overrides the default
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper, _customPersona });
+        _modelConfigRepoMock.Setup(r => r.GetByIdAsync("config-002")).ReturnsAsync(_modelConfigB);
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+        _settingsRepoMock.Setup(r => r.GetAsync("LastSelectedPersonaId")).ReturnsAsync("custom-001");
+
+        var vm = CreateViewModel();
+
+        // Act
+        await vm.InitializeAsync();
+
+        // Assert — should restore Custom Writer, not the default General Assistant
+        Assert.NotNull(vm.ActivePersona);
+        Assert.Equal("Custom Writer", vm.ActivePersona!.DisplayName);
+        Assert.Contains(vm.ActivePersona, vm.PersonaList);
+    }
+
+    [Fact]
+    public async Task InitializeAsync_FallsBackToDefaultWhenSavedPersonaNotFound()
+    {
+        // Arrange — saved persona ID doesn't match any persona in the list
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper });
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+        _settingsRepoMock.Setup(r => r.GetAsync("LastSelectedPersonaId")).ReturnsAsync("non-existent-id");
+
+        var vm = CreateViewModel();
+
+        // Act
+        await vm.InitializeAsync();
+
+        // Assert — should fall back to the default persona
+        Assert.NotNull(vm.ActivePersona);
+        Assert.Equal("General Assistant", vm.ActivePersona!.DisplayName);
+        Assert.Contains(vm.ActivePersona, vm.PersonaList);
+    }
+
+    // ================================================================
     // SelectPersonaCommand updates ActivePersona and ActiveModelConfig
     // ================================================================
 
@@ -189,6 +256,9 @@ public class ChatThreadViewModelTests
         // Assert — recently-used tracking should have been triggered
         _settingsRepoMock.Verify(r => r.SetAsync("RecentPersonaIds",
             It.Is<List<string>>(ids => ids[0] == "custom-001")), Times.AtLeastOnce);
+
+        // Assert — last-selected persona should also persist via this path
+        _settingsRepoMock.Verify(r => r.SetAsync("LastSelectedPersonaId", "custom-001"), Times.Once);
     }
 
     // ================================================================

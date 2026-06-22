@@ -16,6 +16,7 @@ public partial class ChatThreadViewModel : ObservableObject
     private readonly ILogger<ChatThreadViewModel> _logger;
 
     private const string RecentPersonaIdsKey = "RecentPersonaIds";
+    private const string LastSelectedPersonaIdKey = "LastSelectedPersonaId";
     private const int MaxRecentPersonas = 5;
 
     /// <summary>
@@ -80,7 +81,8 @@ public partial class ChatThreadViewModel : ObservableObject
     // ================================================================
 
     /// <summary>
-    /// Called after construction to load the default persona and populate the persona list.
+    /// Called after construction to populate the persona list and restore the
+    /// last-selected persona (or fall back to the default persona).
     /// </summary>
     public async Task InitializeAsync()
     {
@@ -90,10 +92,21 @@ public partial class ChatThreadViewModel : ObservableObject
             // SetActivePersonaAsync no longer refreshes the list internally.
             await RefreshPersonaListAsync();
 
-            var defaultPersona = await _personaRepo.GetDefaultAsync();
-            if (defaultPersona is not null)
+            // Attempt to restore the last-selected persona across sessions
+            var savedPersonaId = await _settingsRepo.GetAsync(LastSelectedPersonaIdKey);
+            Persona? personaToActivate = null;
+
+            if (savedPersonaId is not null)
             {
-                await SetActivePersonaAsync(defaultPersona);
+                personaToActivate = PersonaList.FirstOrDefault(p => p.Id == savedPersonaId);
+            }
+
+            // Fall back to the default persona if the saved one is missing or not found
+            personaToActivate ??= await _personaRepo.GetDefaultAsync();
+
+            if (personaToActivate is not null)
+            {
+                await SetActivePersonaAsync(personaToActivate);
             }
         }
         catch (Exception ex)
@@ -197,6 +210,9 @@ public partial class ChatThreadViewModel : ObservableObject
 
             // Track recently-used (used by persona picker dialog, not ComboBox ordering)
             await TrackRecentPersonaAsync(persona.Id);
+
+            // Persist the last-selected persona ID across sessions
+            await _settingsRepo.SetAsync(LastSelectedPersonaIdKey, persona.Id);
 
             _logger.LogDebug("Active persona set to '{Persona}' (config: {Config})",
                 persona.DisplayName,
