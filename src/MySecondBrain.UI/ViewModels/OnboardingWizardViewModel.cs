@@ -667,13 +667,13 @@ public partial class OnboardingWizardViewModel : ObservableObject
     // ================================================================
 
     [RelayCommand]
-    private void LaunchStudio()
+    private async Task LaunchStudio()
     {
         // Save all keys to the repository
-        _ = SaveKeysToRepositoryAsync();
+        await SaveKeysToRepositoryAsync();
 
         // Mark onboarding as fully completed so it won't show on next launch
-        _ = _settingsRepo.SetAsync("Onboarding_Completed", "true");
+        await _settingsRepo.SetAsync("Onboarding_Completed", "true");
 
         // Fire event so App.xaml.cs can close wizard and open Studio
         LaunchStudioRequested?.Invoke();

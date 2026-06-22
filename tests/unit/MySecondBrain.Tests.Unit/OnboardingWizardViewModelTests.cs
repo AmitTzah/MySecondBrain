@@ -1,3 +1,4 @@
+using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Moq;
 using MySecondBrain.Core.Interfaces;
@@ -317,17 +318,28 @@ public class OnboardingWizardViewModelTests
     }
 
     // ================================================================
-    // Launch Studio — sends message
+    // Launch Studio — saves keys then sends message
     // ================================================================
 
     [Fact]
-    public void LaunchStudio_SendsMessage_DoesNotThrow()
+    public async Task LaunchStudio_SavesKeysThenSendsMessage()
     {
         var vm = CreateViewModel();
+
+        // Set up SetAsync so the async flow completes without Moq returning null
+        _settingsRepo.Setup(s => s.SetAsync("Onboarding_Completed", "true"))
+            .Returns(Task.CompletedTask);
 
         // This should not throw (the messenger fires but nothing may be registered)
         var exception = Record.Exception(() => vm.LaunchStudioCommand.Execute(null));
         Assert.Null(exception);
+
+        // Wait for async operations to complete
+        if (vm.LaunchStudioCommand is IAsyncRelayCommand asyncCmd && asyncCmd.ExecutionTask is not null)
+            await asyncCmd.ExecutionTask;
+
+        // Verify onboarding was marked complete after keys were saved
+        _settingsRepo.Verify(s => s.SetAsync("Onboarding_Completed", "true"), Times.Once);
     }
 
     // ================================================================

@@ -178,11 +178,20 @@ public partial class App : Application
         {
             wizardWindow.Dispatcher.Invoke(() =>
             {
-                wizardWindow.Close();
-                var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-                mainWindow.Show();
-                WireTrayService(mainWindow, startupLogger);
-                StartBackgroundServices(startupLogger);
+                try
+                {
+                    startupLogger.LogInformation("LaunchStudioRequested: closing wizard and showing MainWindow");
+                    wizardWindow.Close();
+                    var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                    mainWindow.Show();
+                    WireTrayService(mainWindow, startupLogger);
+                    StartBackgroundServices(startupLogger);
+                }
+                catch (Exception ex)
+                {
+                    startupLogger.LogError(ex, "LaunchStudioRequested handler crashed");
+                    throw;
+                }
             });
         };
 
