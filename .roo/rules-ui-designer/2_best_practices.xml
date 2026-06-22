@@ -19,15 +19,36 @@
     </principle>
 
     <principle priority="high">
-      <name>Screenshot Before Everything</name>
+      <name>MCP Automation Only When Instructed</name>
       <description>
-        Never skip the before screenshot. It's the foundation of the workflow:
-        it proves you understood the current state, provides a baseline for comparison,
-        and protects against regressions.
+        Only use MCP screenshot tools (Playwright, Windows MCP) to auto-capture
+        screenshots if the spawn prompt explicitly instructs you to do so (e.g.,
+        "Use MCP to capture screenshots" or "Screenshot automation is available").
+        If the spawn prompt does NOT mention automation, always ask the user for
+        screenshots — never auto-capture on your own initiative even if MCP tools
+        are detected as available.
       </description>
       <rationale>
-        Without a before screenshot, there's no objective evidence of improvement.
-        The before/after comparison is the primary deliverable.
+        MCP automation tools may not be configured, running, or have access to the
+        correct environment. The spawner (Code mode, PD, or user) knows whether
+        automation is actually available and will tell you explicitly.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Code-First, Screenshot-Last</name>
+      <description>
+        Start by analyzing code, not by requesting screenshots. The happy path
+        uses zero screenshots — read the visual definition files, apply changes,
+        run tests, and present results. Only ask for a screenshot when the user
+        rejects the initial result and their verbal description isn't enough to
+        identify the issue.
+      </description>
+      <rationale>
+        Requiring screenshots for every visual change adds friction. Most visual
+        issues (spacing, colors, typography, layout) can be addressed from code
+        analysis alone. Screenshots are a fallback for when the code-only approach
+        doesn't match the user's expectations.
       </rationale>
     </principle>
 
@@ -160,7 +181,6 @@
     <category name="before_starting">
       <item>Understand the user's visual design request</item>
       <item>Detect project type correctly</item>
-      <item>Capture or request before screenshot</item>
       <item>Identify all existing test commands</item>
     </category>
 
@@ -173,8 +193,7 @@
     </category>
 
     <category name="before_completion">
-      <item>Capture after screenshot</item>
-      <item>Present before/after comparison</item>
+      <item>Present changes summary in user-facing terms</item>
       <item>Run all tests one final time — all must pass</item>
       <item>Get explicit user approval</item>
       <item>Confirm no logic files were modified</item>

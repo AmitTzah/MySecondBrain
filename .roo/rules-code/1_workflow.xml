@@ -476,6 +476,7 @@
                       - The specific visual issues from the SHT VISUAL section
                       - Relevant file paths for the affected UI
                       - Note: "Functionality is confirmed working via synthetic-human-tester (STATUS: all_passed). Visual-only fix needed."
+                      - Note: "Screenshot automation is available — use MCP Playwright/Windows MCP to auto-capture screenshots if needed." (SHT already confirmed automation is working)
 
                       After the UI Designer completes:
                       1. Review its changes for correctness
@@ -495,7 +496,7 @@
                     <action priority="critical">
                       At least one tested GUI environment passed functionally but has obvious visual breakage. Do NOT ask the user to confirm before fixing the visual issues.
 
-                      Auto-launch a UI Designer subtask (ui-designer mode) to fix the visual issues identified in the SHT VISUAL section. This is automatic — the SHT already identified objective visual breakage.
+                      Auto-launch a UI Designer subtask (ui-designer mode) to fix the visual issues identified in the SHT VISUAL section. This is automatic — the SHT already identified objective visual breakage. Spawn with: the specific visual issues, relevant file paths, the note "Functionality confirmed working by SHT", and the note "Screenshot automation is available — use MCP Playwright/Windows MCP to auto-capture screenshots if needed" (SHT already confirmed automation is working).
 
                       After the UI Designer completes:
                       1. Review its changes for correctness
@@ -727,8 +728,18 @@ options:                                 # optional
             The user already said functionality works but design needs polish — launch the UI Designer subtask
             (ui-designer mode) immediately. Do NOT ask for confirmation. Spawn with: the specific UI element
             to polish, the design concerns raised, relevant file paths, and any design system constraints.
-            The UI Designer will capture before screenshots, apply visual-only changes, and show before/after.
-            Wait for it to complete.
+            The UI Designer will analyze visual definitions from code, apply visual-only changes,
+            run tests, and present results. Screenshots are only used as a fallback if the initial
+            result is rejected.
+
+            If smoke_test_automation is enabled (check the smoke_test config you received in your
+            own spawn prompt), OR if the user explicitly mentioned using MCP automation tools
+            (e.g., "use Playwright", "use browser automation", "capture with Windows MCP"):
+            include in the spawn prompt: "Screenshot automation is available — use MCP
+            Playwright/Windows MCP to auto-capture screenshots if needed."
+            Otherwise (no pipeline config AND user didn't mention automation):
+            do NOT mention screenshot automation.
+            Wait for the UI Designer subtask to complete.
           </detail>
         </step>
       </workflow>

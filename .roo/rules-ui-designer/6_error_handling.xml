@@ -65,20 +65,29 @@
     </user_message_template>
   </error_scenario>
 
-  <error_scenario name="screenshot_capture_unavailable" priority="high">
+  <error_scenario name="user_declines_screenshot_after_rejection" priority="medium">
     <description>
-      No MCP screenshot tools are available and the user hasn't provided screenshots.
-      The screenshot-first workflow cannot proceed without a before image.
+      The user rejected the initial code-first result but declined to provide a screenshot,
+      choosing "No, don't use vision." The mode must iterate using verbal descriptions only.
     </description>
     <detection>
-      No MCP tools matching browser_*, playwright_*, screenshot, or windows_mcp patterns.
-      User has not provided screenshots.
+      User selected "Needs adjustments" and then chose "No, don't use vision — I'll describe
+      it differently" when offered screenshot assistance.
     </detection>
     <response>
       <action>
-        Ask the user: "Send me screenshots of the screens you want changed.
-        I need to see the current state before I can improve it."
-        Wait for the user to provide screenshots. Do not proceed without them.
+        Ask the user for more specific verbal guidance: "Could you describe what specifically
+        looks wrong? For example: the spacing between X and Y is too tight, the color of Z
+        is too dark, the text in W is hard to read."
+      </action>
+      <action>
+        Apply refined changes based on the user's description. Run tests. Present result.
+      </action>
+      <action>
+        You may loop through verbal refinement up to 3 times. If the user is still unsatisfied
+        after 3 verbal iterations without being able to articulate the issue, suggest:
+        "I'm having trouble pinpointing the issue from descriptions alone. A screenshot would
+        help me see exactly what's wrong — would you reconsider?"
       </action>
     </response>
   </error_scenario>
@@ -146,7 +155,7 @@
 
   <error_scenario name="user_rejects_visual_changes" priority="low">
     <description>
-      After presenting before/after comparison, the user selects "Revert all changes."
+      After presenting visual changes, the user selects "Revert all changes."
     </description>
     <response>
       <action>

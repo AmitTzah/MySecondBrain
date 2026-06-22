@@ -154,7 +154,7 @@
       <step number="1">
         <title>Routine Loop: Phase 3 → 4 → 5</title>
         <approach>
-          For each feature, the PD spawns FD (Phase 3), runs unit tests + QA-generated E2E tests + architectural audit + vision re-evaluation (Phase 4), then presents the PR gate (Phase 5). Features 1–14 proceed cleanly through this loop with no drift.
+          For each feature, the PD spawns FD (Phase 3), runs unit tests + QA-generated E2E tests + architectural audit + vision re-evaluation (Phase 4), then presents the PR/merge gate (Phase 5). Features 1–14 proceed cleanly through this loop with no drift.
         </approach>
       </step>
 
@@ -344,7 +344,7 @@
       <step number="1">
         <title>Phase 4: Drift Detected in Audit</title>
         <approach>
-          PD reads knowledge files. architecture.md describes repository pattern. Feature 24's code uses direct queries in components. PD flags: "Architectural Drift — Moderate. Feature 24 bypasses Wave 1 repository abstraction." Health: Fair. At PR gate, presents finding. User injects refactoring feature. PD inserts "Feature 25: Refactoring — Extract Data Access to Repository Layer" in Wave 4.
+          PD reads knowledge files. architecture.md describes repository pattern. Feature 24's code uses direct queries in components. PD flags: "Architectural Drift — Moderate. Feature 24 bypasses Wave 1 repository abstraction." Health: Fair. At PR/merge gate, presents finding. User injects refactoring feature. PD inserts "Feature 25: Refactoring — Extract Data Access to Repository Layer" in Wave 4.
         </approach>
       </step>
     </workflow>

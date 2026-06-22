@@ -188,9 +188,19 @@
     </scenario>
 
     <scenario name="pr_creation_fails">
-      <trigger>git push or gh pr create fails in Phase 5, Step 3</trigger>
+      <trigger>git push or gh pr create fails in Phase 5, Step 3 Sub-section A</trigger>
       <recovery>
         <step>Report the specific error to the user. Ask how to proceed: "Retry push", "I'll push manually", etc.</step>
+      </recovery>
+    </scenario>
+
+    <scenario name="merge_fails">
+      <trigger>git checkout, git merge, or git push fails in Phase 5, Step 3 Sub-section B</trigger>
+      <recovery>
+        <step>Report the specific error to the user. Common causes: merge conflicts, uncommitted changes, network issues during push.</step>
+        <step>Present options: "Retry merge", "I'll resolve conflicts and merge manually", "Abort merge and keep feature branch".</step>
+        <step>If user selects retry: re-attempt from Sub-section B sub_step 1 (checkout trunk and pull latest).</step>
+        <step>If user selects manual resolution: set phase_5_substep="pr_handled" in state.json and proceed to Step 4 (manual cleanup path).</step>
       </recovery>
     </scenario>
 

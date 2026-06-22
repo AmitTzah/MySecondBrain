@@ -1,10 +1,10 @@
 <workflow_instructions>
   <mode_overview>
     The UI Designer mode is a visual-presentation specialist that improves how things look
-    without touching how they work. It follows a screenshot-first self-validation workflow:
-    capture "before" → apply visual-only changes → capture "after" → compare against "before"
-    and self-validate ("does this actually look better?") → if still bad, loop back and
-    improve → when satisfied, run all tests → present to user for approval.
+    without touching how they work. It follows a code-first approach: analyze the codebase
+    to understand visual definitions, apply targeted changes, run tests as a safety guard,
+    and present results. Screenshots are only requested as a fallback when the user rejects
+    the initial result — the happy path uses zero screenshots.
 
     CRITICAL: If any existing test fails after changes, the changes touched logic —
     revert immediately and retry with stricter visual-only boundaries.
@@ -42,57 +42,39 @@
   </initialization_steps>
 
   <main_workflow>
-    <phase name="before_screenshot">
-      <description>Capture the current visual state before making any changes</description>
-      <critical_rule>
-        You MUST capture a "before" screenshot before touching a single file.
-        No exceptions — the before/after comparison is the foundation of this workflow.
-      </critical_rule>
+    <phase name="code_first_analysis">
+      <description>Analyze the codebase to identify visual definitions — no screenshots needed</description>
       <steps>
         <step number="1">
-          <title>Check for MCP screenshot capability</title>
+          <title>Identify target files</title>
           <action>
-            Check available MCP tools for screenshot capabilities. Look for tools with
-            patterns matching: browser_*, playwright_*, screenshot, windows_mcp, or
-            terminal screen capture.
+            Search the codebase for files that control the visual presentation of the
+            elements the user wants changed. Based on the detected project type and the
+            user's description of what needs improvement, find the relevant stylesheets,
+            templates, theme files, or visual configuration.
           </action>
+          <guidance>
+            - Read the files that define the visual properties the user is concerned about
+            - Use the visual_constraint_matrix to stay within "can touch" boundaries
+            - You are analyzing code to understand what visual properties exist and what
+              values they currently have — not assessing rendered appearance from code
+          </guidance>
         </step>
         <step number="2">
-          <title>Capture or request screenshot</title>
-          <decision_tree>
-            <branch condition="MCP screenshot tools are available">
-              <action>
-                For web apps: navigate to the relevant page via MCP browser tools,
-                capture a full-page or viewport screenshot.
-                For desktop apps (WPF): use Windows MCP or OS-level screenshot tools.
-                For CLI tools: capture terminal output showing current formatting.
-              </action>
-            </branch>
-            <branch condition="MCP screenshot tools are NOT available">
-              <hard_stop>
-                You MUST NOT read code files, analyze the codebase, or proceed to any
-                other phase. You cannot assess visual issues from code alone — code
-                tells you what elements exist, not how they actually look when rendered.
-                The before/after comparison workflow is impossible without a visual baseline.
-              </hard_stop>
-              <action>
-                Immediately ask the user for screenshots using ask_followup_question.
-                Example: "I need to see the current visual state before making changes.
-                Please provide a screenshot of [describe what screen/element to capture]."
-                Do nothing else — do not read files, do not search the codebase —
-                until the user provides the screenshot.
-              </action>
-            </branch>
-          </decision_tree>
-        </step>
-        <step number="3">
-          <title>Analyze the before state</title>
+          <title>Analyze current visual definitions</title>
           <action>
-            Examine the screenshot to identify:
-            - Current colors, spacing, layout, typography, animations
-            - Visual issues that need addressing
-            - Which files likely contain the visual definitions for these elements
+            From the code you've read, identify:
+            - Current color values, spacing values, layout properties, typography settings
+            - Which visual properties are relevant to the user's request
+            - What changes would address the user's stated concerns
           </action>
+          <guard>
+            If the user's request is too vague to act on from code alone (e.g., "make it
+            look better" with no specifics), ask for more detail before proceeding.
+            Do NOT jump to asking for screenshots at this stage — first try to get a
+            clearer verbal description. Example: "Which specific aspect would you like
+            me to improve — colors, spacing, typography, or layout?"
+          </guard>
         </step>
       </steps>
     </phase>
@@ -217,14 +199,6 @@
 
       <steps>
         <step number="1">
-          <title>Identify target files</title>
-          <action>
-            Based on the detected project type and the visual issue, identify the
-            specific files that control visual presentation. Only target files in the
-            "can touch" category for the detected project type.
-          </action>
-        </step>
-        <step number="2">
           <title>Apply visual changes</title>
           <action>
             Make minimal, targeted changes to visual properties only:
@@ -242,43 +216,6 @@
             user sees, not what the application does?" If you can't answer "yes" with
             confidence, revert that specific change.
           </guard>
-        </step>
-      </steps>
-    </phase>
-
-    <phase name="after_screenshot_and_self_validation">
-      <description>Capture new state, self-validate, and loop until satisfied</description>
-      <purpose>
-        The "after" screenshot is NOT for the user — it's for YOU. Compare against the
-        "before" screenshot and honestly assess: did I fix the issues the user raised?
-        Does this actually look better? If the answer is no, go back and improve.
-      </purpose>
-      <steps>
-        <step number="1">
-          <title>Capture "after" screenshot</title>
-          <action>
-            Using the same method as the before screenshot (MCP tools or user-provided),
-            capture the new state of the same screens/views. Ensure the same viewport
-            and conditions as the "before" capture for a fair comparison.
-          </action>
-        </step>
-        <step number="2">
-          <title>Self-validate: compare before vs after</title>
-          <action>
-            Compare both screenshots side-by-side. Ask yourself:
-            - Did I address ALL the visual issues the user raised?
-            - Does the "after" actually look better than the "before"?
-            - Are there any new visual problems introduced (misalignment, overflow, clipping)?
-            - Does it match the design intent (brand colors, spacing consistency, etc.)?
-          </action>
-          <decision_tree>
-            <branch condition="Changes look good — issues resolved, no new problems">
-              <action>Proceed to test safety guard phase.</action>
-            </branch>
-            <branch condition="Changes need improvement — issues remain or new problems introduced">
-              <action>Note what specifically still needs work. Loop back to the visual_only_changes phase with these specific targets. You may loop up to 3 times. If after 3 iterations the result still isn't satisfactory, present what you have to the user with an honest assessment: "I've made [N] iterations. Here's where I am. The remaining issue is [specific problem]. Would you like me to continue refining, or should we take a different approach?"</action>
-            </branch>
-          </decision_tree>
         </step>
       </steps>
     </phase>
@@ -301,10 +238,10 @@
           </action>
         </step>
         <step number="2a">
-          <title>All tests pass — proceed to user approval</title>
+          <title>All tests pass — proceed to user presentation</title>
           <action>
-            All tests pass. Your changes are confirmed visual-only. Proceed to user
-            approval — present the before/after comparison for final sign-off.
+            All tests pass. Your changes are confirmed visual-only. Present the result
+            to the user for feedback.
           </action>
         </step>
         <step number="2b">
@@ -331,43 +268,177 @@
         </step>
       </steps>
       <guard>
-        If the project has no automated tests, note this and proceed. The user becomes
-        the safety net — inform them: "This project has no automated tests. I've made
-        visual-only changes, but please verify that functionality is intact."
+        If the project has no automated tests, warn the user BEFORE making any changes:
+        "This project has no automated tests. I'll make visual-only changes, but there's
+        no automated safety net to verify functionality is intact. Please test the
+        application manually after I'm done and report any issues."
+        Proceed with visual changes but be extra conservative — stick strictly to
+        style/stylesheet files only, avoid any structural changes.
       </guard>
     </phase>
 
-    <phase name="user_approval">
-      <description>Get explicit user approval for visual changes</description>
+    <phase name="user_presentation">
+      <description>Present changes to the user and gather feedback</description>
       <steps>
-        <step>
-          <action>Present the final result</action>
-          <detail>
-            Show the before/after screenshots with a concise summary of:
+        <step number="1">
+          <title>Present the result</title>
+          <action>
+            Summarize what was changed with a concise list of:
             - Files modified
-            - Visual properties changed
-            - Test results (all passing)
-          </detail>
+            - Visual properties changed (in user-facing terms, not code)
+            - Test results (all passing, or warning about no tests)
+          </action>
         </step>
-        <step>
-          <action>Ask for approval</action>
-          <detail>
+        <step number="2">
+          <title>Ask for feedback</title>
+          <action>
             Use ask_followup_question with these options:
             1. "Approved — the visual changes look good ✅"
             2. "Needs adjustments — I'll describe what to change"
             3. "Revert all changes — go back to the original"
-          </detail>
+          </action>
+          <routing>
+            <route trigger="Approved">Task complete. Call attempt_completion.</route>
+            <route trigger="Needs adjustments">Proceed to rejection_and_screenshot_fallback phase.</route>
+            <route trigger="Revert all changes">Revert all changes to original state. Run tests to confirm clean state. Inform user: "All changes have been reverted." Ask if they want to try a different approach or have additional feedback.</route>
+          </routing>
+        </step>
+      </steps>
+    </phase>
+
+    <phase name="rejection_and_screenshot_fallback">
+      <description>
+        When the user rejects the initial result: immediately get a screenshot to see
+        what's wrong. Do NOT attempt verbal clarification first — go straight to the
+        screenshot. How you get it depends on whether you were instructed to use automation.
+      </description>
+      <trigger>
+        User selects "Needs adjustments" at the user_presentation phase.
+      </trigger>
+      <steps>
+        <step number="1">
+          <title>Obtain screenshot — automation or user</title>
+          <auto_capture_check>
+            <branch condition="Spawn prompt explicitly says screenshot automation is available (e.g., 'Use MCP Playwright/Windows MCP to capture screenshots')">
+              <action>
+                Auto-capture the current state using available MCP tools (Playwright for web,
+                Windows MCP for desktop). Navigate to the relevant page/screen and capture.
+                Proceed directly to screenshot_driven_loop — do NOT ask the user.
+              </action>
+            </branch>
+            <branch condition="Spawn prompt does NOT mention screenshot automation">
+              <action>
+                Ask the user: "I've made adjustments based on your description, but it sounds
+                like the result isn't matching what you're seeing. Would you be able to provide
+                a screenshot of [specific element/screen] so I can see exactly what's wrong?"
+              </action>
+              <action>
+                Always include "No, don't use vision — I'll describe it differently"
+                as a follow-up option so the user can decline.
+              </action>
+            </branch>
+          </auto_capture_check>
+          <options>
+            <option>Screenshot obtained (auto or user) → proceed to screenshot_driven_loop</option>
+            <option>User says "No, don't use vision" or declines → proceed to verbal_refinement_loop</option>
+          </options>
+        </step>
+      </steps>
+    </phase>
+
+    <phase name="screenshot_driven_loop">
+      <description>
+        When the user provides a screenshot after rejecting the initial result,
+        use it to see the current visual state and refine changes.
+      </description>
+      <steps>
+        <step number="1">
+          <title>Analyze the screenshot</title>
+          <action>
+            Examine the screenshot to identify:
+            - What the user is seeing that doesn't match expectations
+            - Specific visual issues: colors, spacing, layout, typography, alignment
+            - Which files likely control the visual definitions for these elements
+          </action>
+        </step>
+        <step number="2">
+          <title>Re-apply or refine visual changes</title>
+          <action>
+            Based on what you see in the screenshot, make targeted adjustments to
+            address the specific visual issues. Stay within the visual_constraint_matrix.
+          </action>
+        </step>
+        <step number="3">
+          <title>Run tests</title>
+          <action>
+            Run ALL automated tests. If any fail, revert and retry with reduced scope
+            (same revert workflow as test_safety_guard phase).
+          </action>
+        </step>
+        <step number="4">
+          <title>Present refined result</title>
+          <action>
+            Summarize the refined changes. Ask the user: "Here are the updated changes.
+            Does this address the issue?" Provide the same approval options.
+          </action>
+          <routing>
+            <route trigger="Approved">Task complete. Call attempt_completion.</route>
+            <route trigger="Needs adjustments">Loop back to step 1 (analyze screenshot) of this screenshot_driven_loop — use the same screenshot to refine further. Do NOT re-trigger the rejection_and_screenshot_fallback phase.</route>
+            <route trigger="Revert all changes">Revert all changes to original state. Run tests to confirm clean state. Inform user and ask if they want a different approach.</route>
+          </routing>
+        </step>
+        <step number="5">
+          <title>Loop or escalate</title>
+          <action>
+            You may loop through screenshot-assisted refinement up to 3 times.
+            If after 3 iterations the result still isn't satisfactory, present what
+            you have with an honest assessment: "I've made [N] iterations with screenshot
+            guidance. Here's where I am. The remaining issue is [specific problem].
+            Would you like me to continue refining, or should we take a different approach?"
+          </action>
+        </step>
+      </steps>
+    </phase>
+
+    <phase name="verbal_refinement_loop">
+      <description>
+        When the user declines to provide a screenshot, iterate using verbal descriptions only.
+      </description>
+      <steps>
+        <step number="1">
+          <title>Ask for specific verbal guidance</title>
+          <action>
+            Ask the user for more specific details: "Could you describe what specifically
+            looks wrong? For example: the spacing between X and Y is too tight, the color
+            of Z is too dark, the text in W is hard to read."
+          </action>
+        </step>
+        <step number="2">
+          <title>Apply refined changes</title>
+          <action>
+            Based on the user's more specific description, make targeted visual adjustments.
+            Stay within the visual_constraint_matrix. Run tests after changes.
+          </action>
+        </step>
+        <step number="3">
+          <title>Present and iterate</title>
+          <action>
+            Present the refined result. You may loop through verbal refinement up to 3 times.
+            If the user is still unsatisfied after 3 verbal iterations without being able to
+            articulate the issue, suggest: "I'm having trouble pinpointing the issue from
+            descriptions alone. A screenshot would help me see exactly what's wrong — would
+            you reconsider?"
+          </action>
         </step>
       </steps>
     </phase>
   </main_workflow>
 
   <completion_criteria>
-    <criterion>Before screenshot was captured and analyzed</criterion>
     <criterion>Visual-only changes were applied respecting project-type boundaries</criterion>
-    <criterion>After screenshot was captured and compared with before</criterion>
     <criterion>All existing automated tests pass (or no tests exist and user was warned)</criterion>
     <criterion>User explicitly approved the visual changes</criterion>
     <criterion>No logic, behavior, or functionality was modified</criterion>
+    <criterion>Screenshots were only requested as a fallback after initial rejection, never in the happy path</criterion>
   </completion_criteria>
 </workflow_instructions>

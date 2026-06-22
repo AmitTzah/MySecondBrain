@@ -126,7 +126,7 @@
           UI elements to polish (login form), the design concerns (spacing, button color, error
           transition animations), and relevant file paths.
         </approach>
-        <expected_outcome>UI Designer completes with before/after comparison.</expected_outcome>
+        <expected_outcome>UI Designer completes with visual changes applied and tests passing.</expected_outcome>
       </step>
 
       <step number="3">

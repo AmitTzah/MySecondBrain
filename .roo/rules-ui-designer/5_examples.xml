@@ -1,8 +1,9 @@
 <complete_examples>
   <overview>
-    Complete workflow examples for the UI Designer mode, demonstrating the screenshot-first
-    self-validation workflow: before capture → changes → after capture → self-validate
-    (loop if needed) → test safety guard → user approval.
+    Complete workflow examples for the UI Designer mode, demonstrating the code-first
+    approach: analyze code → apply visual changes → run tests → present result.
+    Screenshots are only requested as a fallback when the user rejects the initial result
+    and their verbal description is insufficient.
   </overview>
 
   <example name="web_app_spacing_fix">
@@ -18,28 +19,19 @@
 
     <workflow>
       <step number="1">
-        <description>Capture before screenshot</description>
+        <description>Detect project type and identify target files</description>
         <approach>
           Detect project type: package.json shows React + Tailwind → web app.
-          Check MCP tools: Playwright browser tools available.
-          Navigate to the dashboard page and capture a full-page screenshot.
+          Search for dashboard component files. Find Dashboard.tsx with card grid layout
+          using Tailwind utility classes with inconsistent gap utilities.
         </approach>
-        <expected_outcome>Before screenshot showing dashboard card layout with uneven spacing.</expected_outcome>
+        <expected_outcome>
+          Identified target: Dashboard.tsx with inconsistent gap-* and p-* utilities.
+          This is purely visual — spacing classes (gap-*, p-*, m-*) are safe to modify.
+        </expected_outcome>
       </step>
 
       <step number="2">
-        <description>Identify target files</description>
-        <approach>
-          Search for dashboard component files. Find Dashboard.tsx with card grid layout.
-          The cards use a Tailwind grid with inconsistent gap utilities.
-        </approach>
-        <analysis>
-          The issue is in the Tailwind utility classes on the grid container and card elements.
-          This is purely visual — spacing classes (gap-*, p-*, m-*) are safe to modify.
-        </analysis>
-      </step>
-
-      <step number="3">
         <description>Apply visual changes</description>
         <approach>
           Normalize the grid gap to a consistent value: gap-6 on the grid container.
@@ -48,103 +40,162 @@
         </approach>
       </step>
 
-      <step number="4">
-        <description>Capture after screenshot and self-validate</description>
+      <step number="3">
+        <description>Run tests and present result</description>
         <approach>
-          Capture after screenshot via Playwright. Compare against before: are the gaps consistent?
-          Is the padding uniform? No new misalignments? Self-assessment: YES — spacing is now
-          consistent and visually clean. Proceed to tests.
+          Run `npm test` — all 24 tests pass. Summarize changes:
+          - Standardized grid gap to 1.5rem across all dashboard cards
+          - Normalized card padding to 1.5rem
+          - Removed ad-hoc margin overrides on individual cards
+          Ask user: "Approved ✅ / Needs adjustments / Revert".
         </approach>
       </step>
 
-      <step number="5">
-        <description>Run tests and present for approval</description>
+      <step number="4">
+        <description>User approves — done</description>
         <approach>
-          Run `npm test` — all 24 tests pass. Show before/after side by side. Cards have consistent
-          1.5rem gaps and uniform padding. Ask user: "Approved ✅ / Needs adjustments / Revert".
+          User selects "Approved." Task complete with no screenshots needed.
         </approach>
       </step>
     </workflow>
 
     <completion>
       Dashboard card spacing standardized using consistent Tailwind gap and padding utilities.
-      All 24 tests pass. No JavaScript or component logic was modified.
+      All 24 tests pass. No JavaScript or component logic was modified. Zero screenshots needed.
     </completion>
 
     <key_takeaways>
+      <takeaway>The happy path uses zero screenshots — code analysis is sufficient for spacing, color, and layout fixes</takeaway>
       <takeaway>Tailwind utility class changes are safely visual when limited to spacing, color, and typography utilities</takeaway>
-      <takeaway>Always run the full test suite — even seemingly safe changes can have unexpected effects</takeaway>
     </key_takeaways>
   </example>
 
-  <example name="web_app_color_brand_update">
+  <example name="user_rejects_and_provides_screenshot">
     <scenario>
-      A user wants to update all primary color references to match new brand guidelines.
-      The application uses CSS custom properties on :root.
+      A user asks to fix the signup form's appearance. After the first code-only attempt,
+      the user says "it still doesn't look right" without being specific. The UI Designer
+      offers screenshot assistance and the user provides one.
     </scenario>
 
     <user_request>
-      "Our brand colors changed. The primary blue should be #2563EB instead of #3B82F6,
-      and the secondary should be #7C3AED instead of #8B5CF6. All the functionality is fine."
+      "The signup form looks ugly. Can you fix it?"
     </user_request>
 
     <workflow>
       <step number="1">
-        <description>Capture before screenshot</description>
+        <description>First attempt: code-only analysis and changes</description>
         <approach>
-          Auto-capture via Playwright MCP. Take screenshots of key pages: homepage, dashboard,
-          settings. These show the current color scheme.
+          Detect project type: React with styled-components → web app.
+          Read SignupForm.tsx. The form has inconsistent padding and the submit button
+          uses a harsh red color. Adjust FormContainer padding to 2rem, change button
+          background from #FF0000 to the project's --primary-color token.
+          Run tests — all pass. Present to user.
         </approach>
-        <expected_outcome>Before screenshots showing current brand colors across the application.</expected_outcome>
+        <expected_outcome>User selects "Needs adjustments — it still doesn't look right."</expected_outcome>
       </step>
 
       <step number="2">
-        <description>Identify color definitions</description>
+        <description>Offer screenshot assistance</description>
         <approach>
-          Search for --primary and --secondary CSS custom properties. Found in
-          src/styles/theme.css on :root. Also check Tailwind config if applicable.
+          User's feedback is vague ("still doesn't look right"). Since the code-only
+          approach didn't match expectations, offer screenshot:
+          "I've made adjustments based on your description, but it sounds like the
+          result isn't matching what you're seeing. Would you be able to provide a
+          screenshot of the signup form so I can see exactly what's wrong?"
+          Options: "Yes, here's a screenshot" / "No, don't use vision — I'll describe it differently"
         </approach>
-        <analysis>
-          The colors are defined as CSS custom properties. Changing their values is purely visual.
-          No JavaScript references these by value — they're only used in CSS.
-        </analysis>
+        <expected_outcome>User provides a screenshot of the signup form.</expected_outcome>
       </step>
 
       <step number="3">
-        <description>Update color values</description>
+        <description>Analyze screenshot and refine</description>
         <approach>
-          Change --primary: #3B82F6 → #2563EB and --secondary: #8B5CF6 → #7C3AED in theme.css.
-          Also update any hardcoded Tailwind extend colors if they exist.
+          The screenshot reveals the actual issue: the input labels are left-aligned
+          while the inputs are centered, creating a jagged visual flow. This wasn't
+          apparent from code alone. Adjust both labels and inputs to be consistently
+          left-aligned within the form container. Run tests — all pass.
         </approach>
       </step>
 
       <step number="4">
-        <description>Capture after screenshots and self-validate</description>
+        <description>Present refined result</description>
         <approach>
-          Capture after screenshots of the same pages. Compare against before: did the brand
-          colors update correctly? Any elements missed? Are contrast ratios still acceptable?
-          Self-assessment: YES — all primary/secondary instances updated, no regressions.
-          Proceed to tests.
-        </approach>
-      </step>
-
-      <step number="5">
-        <description>Run tests and present comparison</description>
-        <approach>
-          Show before/after for each key page. The new brand colors are applied consistently.
-          User approves.
+          Summarize: "I've aligned the form labels and inputs consistently. The form
+          now has a clean left-aligned flow." User approves.
         </approach>
       </step>
     </workflow>
 
     <completion>
-      Brand colors updated from old palette to new palette across the application via CSS
-      custom property changes. All tests pass. No logic modified.
+      Signup form alignment fixed after screenshot-assisted refinement. The code-only
+      approach addressed padding and colors, but the alignment issue was only visible
+      in the rendered output. Screenshot was requested only after initial rejection.
     </completion>
 
     <key_takeaways>
-      <takeaway>CSS custom properties are the ideal abstraction for color changes — change once, apply everywhere</takeaway>
-      <takeaway>Capture screenshots of multiple key pages when changing global styles</takeaway>
+      <takeaway>Screenshots are a fallback — only request them after the code-first approach falls short</takeaway>
+      <takeaway>Always give the user the option to decline screenshots and use verbal descriptions instead</takeaway>
+      <takeaway>Some visual issues (alignment, flow) are hard to diagnose from code alone — that's when screenshots help</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="user_declines_screenshot">
+    <scenario>
+      A user wants to fix the navigation bar colors. After the first attempt, they say it's
+      "still wrong" but decline to provide a screenshot. The UI Designer iterates verbally.
+    </scenario>
+
+    <user_request>
+      "The navbar colors need to match our new brand. Make it more modern."
+    </user_request>
+
+    <workflow>
+      <step number="1">
+        <description>First attempt: update navbar colors</description>
+        <approach>
+          Read Navbar.tsx and theme.ts. Update navbar background to a dark neutral
+          (#1A1A2E) and link color to the brand accent (#7C3AED). Run tests — all pass.
+          Present to user.
+        </approach>
+        <expected_outcome>User selects "Needs adjustments — the colors are still wrong."</expected_outcome>
+      </step>
+
+      <step number="2">
+        <description>Offer screenshot, user declines</description>
+        <approach>
+          Offer screenshot assistance. User selects "No, don't use vision — I'll
+          describe it differently."
+        </approach>
+      </step>
+
+      <step number="3">
+        <description>Verbal refinement</description>
+        <approach>
+          Ask: "Could you describe what specifically looks wrong with the colors?
+          For example: the background is too dark/light, the links don't stand out
+          enough, the accent color clashes with something else?"
+          User responds: "The background is too dark — it should be a lighter gray,
+          and the links should be white, not purple."
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Apply refined changes</description>
+        <approach>
+          Update navbar background to #2D2D44 (lighter gray) and link color to #FFFFFF.
+          Run tests — all pass. Present to user. User approves.
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      Navbar colors updated through verbal iteration. User declined screenshot but
+      provided specific enough feedback to refine the changes successfully.
+    </completion>
+
+    <key_takeaways>
+      <takeaway>When users decline screenshots, ask specific, guided questions to get actionable feedback</takeaway>
+      <takeaway>Verbal iteration works when the user can articulate specific visual properties (colors, spacing, etc.)</takeaway>
     </key_takeaways>
   </example>
 
@@ -160,9 +211,9 @@
 
     <workflow>
       <step number="1">
-        <description>Before screenshot and initial changes</description>
+        <description>Apply initial changes</description>
         <approach>
-          Capture before screenshot. Identify SignupForm.tsx — it uses styled-components.
+          Identify SignupForm.tsx — it uses styled-components.
           Adjust the FormContainer styled component: reduce max-width from 600px to 400px,
           add margin: 0 auto for centering.
         </approach>
@@ -195,7 +246,7 @@
       <step number="4">
         <description>Inform user of partial adjustment</description>
         <approach>
-          Present before/after: form is centered but width unchanged.
+          Present result: form is centered but width unchanged.
           Tell user: "I centered the form, but reducing the width caused a test failure
           (form content reflow pushed the submit button out of view in tests).
           You may want to use Code mode if you want to adjust both width and the test."
@@ -211,82 +262,6 @@
     <key_takeaways>
       <takeaway>Respect test failures absolutely — even layout changes can affect test assumptions</takeaway>
       <takeaway>When a visual change can't be made without breaking tests, offer a partial improvement and suggest Code mode</takeaway>
-    </key_takeaways>
-  </example>
-
-  <example name="no_mcp_screenshot_fallback">
-    <scenario>
-      The user wants to improve the visual design of a WPF desktop application.
-      No MCP screenshot tools are available for desktop capture.
-    </scenario>
-
-    <user_request>
-      "The settings window looks dated. Can you modernize the colors and spacing?"
-    </user_request>
-
-    <workflow>
-      <step number="1">
-        <description>Request screenshots from user</description>
-        <approach>
-          No Windows MCP tools detected. Ask user: "Send me screenshots of the screens you
-          want changed. I need to see the current state before I can improve it."
-          User provides screenshots of the settings window.
-        </approach>
-      </step>
-
-      <step number="2">
-        <description>Detect project type and identify files</description>
-        <approach>
-          Project contains .xaml and .xaml.cs files → WPF desktop.
-          Find SettingsWindow.xaml with Grid layout, TextBlock elements, and Button styles.
-          Colors are defined inline rather than in resource dictionaries.
-        </approach>
-      </step>
-
-      <step number="3">
-        <description>Apply visual changes</description>
-        <approach>
-          Update XAML visual properties only:
-          - Window Background to a modern light gray
-          - TextBlock FontFamily to Segoe UI, increase FontSize
-          - Button Style Setter for Background, Foreground, BorderBrush
-          - Adjust Margin and Padding for better spacing
-          No .xaml.cs files touched. No data bindings modified.
-        </approach>
-      </step>
-
-      <step number="4">
-        <description>Request after screenshot and self-validate</description>
-        <approach>
-          Ask user for after screenshot. Compare against before: is the button properly sized
-          now? Does the text fit? Self-assessment: YES — button resized, text fits. Proceed.
-        </approach>
-      </step>
-
-      <step number="5">
-        <description>Run tests and present comparison</description>
-          Ask user: "I've updated the settings window styling. Can you send me a screenshot
-          of the updated window?" Run project tests — all pass.
-        </approach>
-      </step>
-
-      <step number="5">
-        <description>Present comparison</description>
-        <approach>
-          Show user's before screenshot alongside user's after screenshot.
-          Summarize changes. User approves.
-        </approach>
-      </step>
-    </workflow>
-
-    <completion>
-      Settings window modernized with updated colors, typography, and spacing.
-      All tests pass. Only XAML files modified — no code-behind touched.
-    </completion>
-
-    <key_takeaways>
-      <takeaway>When MCP screenshot tools are unavailable, the user provides both before and after screenshots</takeaway>
-      <takeaway>WPF visual changes should stay in XAML files — .xaml.cs is strictly off-limits</takeaway>
     </key_takeaways>
   </example>
 </complete_examples>

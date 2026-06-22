@@ -64,34 +64,56 @@
     </decision_tree>
   </test_failure_response>
 
-  <screenshot_capture_decisions>
-    <description>How to handle screenshot capture in different scenarios</description>
+  <screenshot_fallback_decisions>
+    <description>
+      Screenshots are a fallback mechanism — never the first step. When the user
+      rejects the initial code-first result, immediately obtain a screenshot.
+      How you get it depends on the spawn prompt:
+      - If instructed to use automation → auto-capture via MCP (Playwright/Windows MCP)
+      - Otherwise → ask the user, always with "No, don't use vision" decline option
+    </description>
     <decision_tree>
-      <branch condition="Browser automation MCP tools are available (web app)">
-        <action>Auto-capture via Playwright or equivalent MCP browser tools. Navigate to the relevant page and capture.</action>
-      </branch>
-      <branch condition="Windows MCP tools are available (WPF/desktop)">
-        <action>Auto-capture via Windows MCP screenshot or window capture tools.</action>
-      </branch>
-      <branch condition="No MCP screenshot tools available">
-        <hard_stop>
-          HARD STOP — do NOT read code, analyze files, or proceed further.
-          Code inspection cannot substitute for visual inspection: you cannot
-          determine actual rendered spacing, alignment, color harmony, or
-          layout issues from source code alone.
-        </hard_stop>
+      <branch condition="Spawn prompt explicitly says screenshot automation is available">
         <action>
-          Immediately ask the user for screenshots using ask_followup_question.
-          Example: "I need to see the current visual state before making changes.
-          Please provide a screenshot of [specific screen/element]."
-          Do nothing else until the user provides the screenshot.
+          Auto-capture via MCP tools (Playwright for web, Windows MCP for desktop).
+          Navigate to the relevant page/screen and capture. Do NOT ask the user.
+          Proceed directly to screenshot-driven refinement.
         </action>
       </branch>
-      <branch condition="CLI tool">
-        <action>For CLI tools, capture terminal output showing current formatting. Use command execution to run the CLI and capture its output, or ask the user to paste the current output.</action>
+      <branch condition="Spawn prompt does NOT mention screenshot automation">
+        <action>
+          Immediately ask the user: "I've made adjustments based on your description,
+          but it sounds like the result isn't matching what you're seeing. Would you
+          be able to provide a screenshot of [specific element/screen] so I can see
+          exactly what's wrong?"
+        </action>
+        <action>
+          Always include "No, don't use vision — I'll describe it differently"
+          as a follow-up option so the user can decline.
+        </action>
+      </branch>
+      <branch condition="User provides a screenshot">
+        <action>
+          Analyze the screenshot to identify specific visual issues.
+          Apply targeted refinements. Run tests. Present result.
+        </action>
+      </branch>
+      <branch condition="User declines screenshot ('No, don't use vision')">
+        <action>
+          Ask for more specific verbal description. Iterate using verbal-only
+          refinement (up to 3 attempts). If still unsatisfied, suggest the
+          user reconsider providing a screenshot for more precise assistance.
+        </action>
+      </branch>
+      <branch condition="CLI tool — user reports formatting issues">
+        <action>
+          For CLI tools, ask the user to paste the current terminal output
+          so you can see the formatting. This is the CLI equivalent of a
+          screenshot.
+        </action>
       </branch>
     </decision_tree>
-  </screenshot_capture_decisions>
+  </screenshot_fallback_decisions>
 
   <project_type_detection>
     <description>How to determine the project type when it's not immediately clear</description>
@@ -139,8 +161,7 @@
   </boundaries>
 
   <validation>
-    <rule>After changes: verify all tests pass, before/after screenshots are captured, and changes are within the visual-only boundary for the detected project type</rule>
+    <rule>After changes: verify all tests pass and changes are within the visual-only boundary for the detected project type</rule>
     <rule>Scan modified files: any file with logic extensions (.js, .ts, .cs, .py, .go, .rs) should only contain style object modifications — if there's any other change, revert it</rule>
-    <rule>Verify the before screenshot exists and the after screenshot shows a meaningful visual difference</rule>
   </validation>
 </decision_guidance>

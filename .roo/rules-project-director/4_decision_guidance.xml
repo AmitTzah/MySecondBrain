@@ -296,7 +296,7 @@
     <decision id="when_to_inject_refactoring">
       <question>When should the PD inject a refactoring feature into the roadmap?</question>
       <answer>
-        <case>User explicitly selects "Inject a refactoring feature" at the PR gate.</case>
+        <case>User explicitly selects "Inject a refactoring feature" at the PR/merge gate.</case>
         <case>Architectural Health is "Poor" — recommend refactoring in your audit report; let the user decide.</case>
         <case>Architectural Health is "Fair" with recurring issues — suggest refactoring as an option; do not force it.</case>
       </answer>
@@ -429,7 +429,7 @@
     <rule>The PD runs commands (tests, git) but delegates all code changes — including E2E test creation (delegated to code-mode E2E generation subtask).</rule>
     <rule>Vision discovery belongs to the Vision Hasher. Execution planning belongs to the Architect. Feature execution belongs to the feature-developer. E2E test generation belongs to the E2E generation subtask (code mode). The PD orchestrates the pipeline between them.</rule>
     <rule>The PD owns the E2E regression suite: it spawns E2E generation subtasks to write tests, runs the suite, and enforces the "locked in" quality gate.</rule>
-    <rule>The PD owns vision document maintenance: after each feature, re-evaluate vision docs. Minor drift → edit directly. Major drift → flag for user, potentially re-plan.</rule>
+    <rule>The PD owns vision and planning document maintenance: after each feature, re-evaluate vision and planning/ docs. Minor drift → PD edits vision/ and planning/ .md files directly to reconcile with reality. Major drift → flag for user, potentially re-plan (delegated to Architect, who refreshes all planning/ files from knowledge/).</rule>
     <rule>Tests/unit/ and tests/integration/ are the feature-developer's domain (unit and integration tests per feature). Tests/e2e/ is the PD's domain (cross-feature regression tests). These directories must not overlap.</rule>
     <rule>The PD may write vision template files and planning template files within agent-workspace/project-director/.</rule>
   </boundaries>

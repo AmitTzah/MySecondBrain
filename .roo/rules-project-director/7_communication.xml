@@ -35,7 +35,7 @@
       <scenario>Vision has been documented and is ready for human approval (Phase 1, Step 3)</scenario>
       <scenario>Execution plan (planning/ directory and wave map) is ready for human approval (Phase 2, Step 8)</scenario>
       <scenario>Critic review of planning/ directory and roadmap is complete — processing approve/revert result (Phase 2, Step 6)</scenario>
-      <scenario>Feature is complete, tests passed, audit done — PR strategy decision needed (Phase 5, Step 2)</scenario>
+      <scenario>Feature is complete, tests passed, audit done — PR/merge strategy decision needed (Phase 5, Step 2)</scenario>
       <scenario>Tests failed and the code fix subtask also failed — manual intervention needed</scenario>
       <scenario>Architectural drift is detected that requires a strategic decision</scenario>
       <scenario>state.json is missing or corrupt and reconstruction from roadmap.md is ambiguous</scenario>
@@ -46,7 +46,7 @@
     <question_format>
       <guideline priority="primary">Whenever you present options at a strategic gate, use the ask_followup_question tool with clickable Suggested Responses. ONLY provide buttons for complete actions that require no further context from the user. For anything requiring explanation (like errors or architectural feedback), prompt the user to type in the chat.</guideline>
       <guideline>Be specific about what decision is needed and why.</guideline>
-      <guideline>Provide exactly the number of options specified in the workflow (4 for Vision Approval Gate, 4 for Execution Plan Approval Gate, 4 for PR Gate, 2 for post-PR, 2-4 for other decisions).</guideline>
+      <guideline>Provide exactly the number of options specified in the workflow (4 for Vision Approval Gate, 4 for Execution Plan Approval Gate, 5 for PR/Merge Gate (3 if git automation disabled), 2 for post-PR/merge, 2-4 for other decisions).</guideline>
       <guideline>Explain the implication of each option briefly in the question text.</guideline>
       <guideline>Default to the safest/conservative option when presenting choices.</guideline>
     </question_format>
@@ -72,7 +72,7 @@
       <example>Generalization audit passed. All integration points abstracted. Ready for your approval. Phase 3: Spawning feature-developer for Feature [X] of [N].</example>
       <example>Feature-developer returned. Feature [X] complete on branch [branch-name]. Phase 4: unit tests passed, E2E generation subtask created E2E tests ([framework]), running regression suite ([N] tests).</example>
       <example>Phase 4: All [N] E2E tests passed. Feature '[Name]' locked in.</example>
-      <example>Phase 4: Architectural audit complete. Health: [Rating]. Vision re-evaluated — [no changes / minor updates / major re-plan]. Dashboard updated. Phase 5: presenting PR gate.</example>
+      <example>Phase 4: Architectural audit complete. Health: [Rating]. Vision re-evaluated — [no changes / minor updates / major re-plan]. Dashboard updated. Phase 5: presenting PR/merge gate.</example>
       <example>Phase 5: Merged, cleanup complete. Proceeding to Feature [Y] of [N].</example>
       <example>All [N] features complete. [M] features locked into E2E regression suite. Project status: complete. Final dashboard updated.</example>
     </format>
@@ -80,7 +80,7 @@
 
   <completion_messages>
     <phase name="feature_completion_report">
-      <description>Presented at Phase 5, Step 1 before the PR offer (Phase 5, Step 2).</description>
+      <description>Presented at Phase 5, Step 1 before the PR/merge offer (Phase 5, Step 2).</description>
       <structure>
         <element>Feature name and number (e.g., "Feature 3 of 8")</element>
         <element>Branch name</element>

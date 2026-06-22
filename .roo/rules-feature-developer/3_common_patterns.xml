@@ -325,7 +325,23 @@ If any MCP git tool fails, returns an error, or is unavailable at runtime: fall 
         If your prompt includes overall project context and feature specifications, use them as the authoritative source for the plan. This context may include: the project vision, user personas, success metrics, the specific feature description and acceptance criteria, the feature's position in the roadmap (e.g., "Feature 3 of 8"), and context about previously built features. Use this for sections 1 (Overall Project Context) and 2 (Feature-Specific Context) of the plan template. Do NOT re-discover or re-ask for information already provided in your prompt — fill the plan sections from the provided context directly.
       </item>
 
+      <item number="0b">
+        <title>Read Pre-Resolved Vision Files (If Paths Provided)</title>
+        Your prompt may include specific vision file paths pre-resolved by the Project Director — these are the vision artifacts directly relevant to this feature. If provided, read these files: the feature spec (features/[feature-name].md), the screen specs (screens/*.md), the data entity specs (data/*.md), vision-summary.md, and feature-inventory.md. These represent the authoritative WHAT of the feature — what screens it touches, what data it operates on, what behavior the user expects. Use these for plan sections 1 (project context) and 2 (feature-specific context) alongside the inline context from item 0. If no vision paths were provided (standalone FD, no PD), skip this step — the inline context from item 0 is your primary source.
+      </item>
+
       <item number="1">
+        <title>Read Planning Directory — Cross-Reference Design Intent Against As-Built Reality (If Available)</title>
+        Check if the `agent-workspace/project-director/planning/` directory exists. If it does, read ALL planning/ files: architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md. These represent the ORIGINAL DESIGN INTENT for the system.
+
+        Then read the partitioned knowledge base (item 1b below) — those knowledge/ files represent what WAS ACTUALLY BUILT.
+
+        Cross-reference: for any divergence between planning/ (design intent) and knowledge/ (as-built reality), knowledge/ takes precedence for implementation decisions. The planning/ files provide context about WHY things were designed a certain way, but knowledge/ tells you what actually exists. Use this combined understanding to fill plan sections 1 and 2.
+
+        If the `planning/` directory does not exist or is empty, skip this step — this is normal for brand-new projects. The orchestrator-provided context is your primary source in that case.
+      </item>
+
+      <item number="1b">
         <title>Read Partitioned Knowledge Base (If Available)</title>
         Check if the `agent-workspace/knowledge/` directory exists. If it does, ONLY read the specific partitioned `.md` files that are strictly relevant to the feature you are planning, to prevent context bloat. The four available files are:
         - `architecture.md` — system-level design decisions and patterns

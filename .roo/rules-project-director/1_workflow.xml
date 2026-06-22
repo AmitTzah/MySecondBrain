@@ -20,7 +20,7 @@
     <areas>
       | Area | Path | Owner | Purpose |
       |------|------|-------|---------|
-      | Boss | agent-workspace/project-director/ | PD | state.json, planning/, roadmap, backlog, current-state.md |
+      | Boss | agent-workspace/project-director/ | PD | state.json, planning/, roadmap, backlog (human-only), current-state.md |
       | Vision | agent-workspace/project-director/vision/ | VH/PD | Final-state vision docs, templates, wireframes |
       | Brain | agent-workspace/knowledge/ | FD (updates), PD (audits) | Partitioned global knowledge |
       | External Docs | agent-workspace/external-docs/ | Architect | Cached external API documentation |
@@ -72,8 +72,8 @@
       <field name="status">One of: "planning", "in_progress", "complete".</field>
       <field name="fd_status">Tracks FD subtask lifecycle: "idle" (no FD active), "spawned" (FD executing), "completed" (FD returned, awaiting QA/audit). Set to "idle" in Phase 5 Step 4 (before branch cleanup).</field>
       <field name="phase_4_substep">Tracks progress within Phase 4 for safe resume: null (not started), "pending_verification" (Phase 3 Step 4 independent verification in progress — transient), "unit_tests_passed" (Step 1 done), "e2e_regression_passed" (Step 2 done — existing E2E suite passed), "scope_evaluated" (Step 3 done — drift evaluated), "e2e_generated" (Step 4 done — new E2E test generated), "e2e_validated" (Step 5 done — new E2E test validated), "audited" (Step 6 done), "vision_reevaluated" (Step 7 done), "replan_in_progress" (re-plan in progress — Architect spawned), "dashboarded" (all Phase 4 done — Step 8 complete). Set to null in Phase 5 Step 4 (before branch cleanup).</field>
-      <field name="phase_5_substep">Tracks progress within Phase 5 for safe resume: null (Phase 5 not started), "phase_set" (Step 0 done — current_phase=5 set), "report_presented" (Step 1 done), "pr_offered" (Step 2 done — PR offer presented to user), "pr_handled" (Step 3 done — PR created, OR user confirmed manual push/merge routing to Step 4), "state_updated" (Step 4 substep 0 done — current_feature_index incremented, fd_status="idle", phase_4_substep=null — NON-DESTRUCTIVE, done BEFORE branch deletion), "cleaned_up" (Step 4 complete — branch deleted, trunk checked out). Set to null at Phase 5 Step 5 when current_phase is set back to 3.</field>
-      <field name="git_automation_enabled">Whether the PD should run git commands (push, PR, cleanup). Defaults to true.</field>
+      <field name="phase_5_substep">Tracks progress within Phase 5 for safe resume: null (Phase 5 not started), "phase_set" (Step 0 done — current_phase=5 set), "report_presented" (Step 1 done), "pr_offered" (Step 2 done — PR/merge offer presented to user), "pr_handled" (Step 3 done — PR created, local merge performed, OR user confirmed manual push/merge routing to Step 4), "state_updated" (Step 4 substep 0 done — current_feature_index incremented, fd_status="idle", phase_4_substep=null — NON-DESTRUCTIVE, done BEFORE branch deletion), "cleaned_up" (Step 4 complete — branch deleted, trunk checked out). Set to null at Phase 5 Step 5 when current_phase is set back to 3.</field>
+      <field name="git_automation_enabled">Whether the PD should run git commands (push, PR, merge, cleanup). Defaults to true.</field>
       <field name="hands_off_mode">When true: all user interaction gates during feature development are skipped. Model smoke tests (CLI/build/curl) are self-verified by Code. HUMAN/SHT smoke tests are skipped and collected for batch presentation at feature end. Set during project setup (Phase 2 approval gate). Passed to FD in spawn prompt, flows through FD to Code. Defaults to false.</field>
       <field name="smoke_test_automation">Configuration for automated GUI smoke testing via synthetic-human-tester. Smoke testing is only for GUI environments (web, desktop, native) — CLI is self-verified by Code mode. Set during project setup (Phase 1 or Phase 2). Contains: enabled (boolean), environments (per-environment config with base_url/app_id/executable_path/window_title + mcp_available/mcp_name/verified populated by MCP verification step), and missing_prerequisites (list of unavailable MCPs). Passed through FD to Code mode to synthetic-human-tester. Defaults to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] } if never configured. The mcp_available/mcp_name/verified fields are populated once during setup and passed downstream — synthetic-human-tester uses them for better error messages and skip decisions.</field>
       <field name="total_replans">Running count of how many times the roadmap has been re-planned (via major vision drift or user request). Incremented on each re-plan. Two independent triggers fire the re-plan loop detector: (A) 3+ consecutive re-plans without any feature completing Phase 4 (tracked per-session), and (B) total_replans >= 5 (persisted across sessions). Either trigger fires the detector. Reset to 0 when status is set to "complete". Initialized to 0.</field>
@@ -89,7 +89,7 @@
   <!--          Smart Resume Routing to correct phase.               -->
   <!--  Transient phase — not tracked in state.json.                 -->
   <!--  Routes to Phase 1 (Vision), Phase 2 (Planning), Phase 3      -->
-  <!--  (Execution), Phase 4 (QA), or Phase 5 (PR Gate).             -->
+  <!--  (Execution), Phase 4 (QA), or Phase 5 (PR/Merge Gate).       -->
   <!-- ============================================================ -->
   <phase name="phase_0_workspace_initialization">
     <number>0</number>
@@ -363,13 +363,13 @@
             </subroute>
           </route>
 
-          <!-- PHASE 5: PR Gate interrupted — state.json persisted with current_phase=5 after crash -->
+          <!-- PHASE 5: PR/Merge Gate interrupted — state.json persisted with current_phase=5 after crash -->
           <route condition="current_phase=5">
-            <action>Phase 5 (PR Gate) was in progress. Check phase_5_substep for precise resume point.</action>
+            <action>Phase 5 (PR/Merge Gate) was in progress. Check phase_5_substep for precise resume point.</action>
             <goto condition="phase_5_substep is null OR phase_5_substep='phase_set'">Phase 5 Step 0 — set current_phase=5 and phase_5_substep, then proceed to Step 1</goto>
-            <goto condition="phase_5_substep='report_presented'">Phase 5 Step 2 — re-present the PR offer (Step 1 was already done)</goto>
-            <goto condition="phase_5_substep='pr_offered'">Phase 5 Step 2 — re-present the PR offer (user may not have responded before crash)</goto>
-            <goto condition="phase_5_substep='pr_handled'">Phase 5 Step 4 — PR was handled (created or user confirmed), proceed to cleanup</goto>
+            <goto condition="phase_5_substep='report_presented'">Phase 5 Step 2 — re-present the PR/merge offer (Step 1 was already done)</goto>
+            <goto condition="phase_5_substep='pr_offered'">Phase 5 Step 2 — re-present the PR/merge offer (user may not have responded before crash)</goto>
+            <goto condition="phase_5_substep='pr_handled'">Phase 5 Step 4 — PR/merge was handled (PR created, local merge done, or user confirmed manual branch merge), proceed to cleanup</goto>
             <goto condition="phase_5_substep='state_updated'">Phase 5 Step 4 substep 0 or 1 — state was updated (index incremented) but cleanup may not be complete. Check if feature branch still exists: if yes, proceed with Step 4 cleanup substeps. If branch already deleted: set phase_5_substep="cleaned_up" and proceed to Step 5.</goto>
             <goto condition="phase_5_substep='cleaned_up'">Phase 5 Step 5 — cleanup was done, proceed to course correction (which sets current_phase=3 and routes to next feature)</goto>
             <action condition="none of the above OR phase_5_substep is missing from state.json">Present to user via ask_followup_question: "state.json indicates Phase 5 was in progress but phase_5_substep is unrecognized: [value]. How proceed?" Options: "Resume from Phase 5 Step 1 (present report)", "Proceed to Phase 5 Step 4 (cleanup)", "I will manually specify."</action>
@@ -1260,7 +1260,7 @@
           </branch>
 
           <branch condition="MINOR DRIFT — small discrepancies that don't affect other features">
-            <action>PD edits the relevant vision .md file(s) directly to reflect reality. Note in current-state.md under "Vision Updates": what changed and why.</action>
+            <action>PD edits the relevant vision .md file(s) and planning/ .md file(s) (abstractions.md, data-model.md, tech-stack.md, integration-points.md, platform-notes.md, planning-summary.md) directly to reflect reality. If any new screens, data entities, or feature-artifact mappings were added, update vision-summary.md's Feature Index table. If the drift involved a technology change, also update the relevant component entry in tech-sourcing.md. Note in current-state.md under "Vision Updates": what changed and why.</action>
             <action>If the drift changes what should be tested end-to-end, update the feature's roadmap E2E spec directly in roadmap.md.</action>
             <action>Set phase_4_substep="scope_evaluated" in state.json. Proceed to Step 4.</action>
           </branch>
@@ -1275,12 +1275,13 @@
             <decision_tree>
               <branch condition="Re-plan">
                 <action>Set phase_4_substep="replan_in_progress" in state.json.</action>
+                <action>PD edits the relevant vision .md file(s) and planning/ .md file(s) (abstractions.md, data-model.md, tech-stack.md, integration-points.md, platform-notes.md, planning-summary.md) directly to reflect the detected drift. The vision docs must be current BEFORE spawning the Architect re-plan.</action>
                 <action>Spawn Architect with: updated vision docs, list of completed features (1 through current_feature_index), and instruction to revise roadmap for remaining features only — including their E2E specs.</action>
                 <action>After Architect returns: validate total_features >= current_feature_index. Present revised roadmap for user approval (same gate as Phase 2 Step 4). Update total_features and increment total_replans after approval.</action>
                 <action>After re-plan approved: set phase_4_substep="scope_evaluated". Proceed to Step 4.</action>
               </branch>
               <branch condition="Accept divergence">
-                <action>PD edits vision docs to match reality. Update roadmap E2E spec if needed. Set phase_4_substep="scope_evaluated". Proceed to Step 4.</action>
+                <action>PD edits vision docs and planning/ .md files to match reality. If any new screens, data entities, or feature-artifact mappings were added, update vision-summary.md's Feature Index table. If the divergence involved a technology change, also update the relevant component entry in tech-sourcing.md. Update roadmap E2E spec if needed. Set phase_4_substep="scope_evaluated". Proceed to Step 4.</action>
               </branch>
               <branch condition="Manual edits">
                 <action>Wait for user. When ready, re-read vision docs and roadmap. Set phase_4_substep="scope_evaluated". Proceed to Step 4.</action>
@@ -1341,7 +1342,7 @@
                 2. "Skip E2E for this feature (not recommended)"
                 3. "I'll write the E2E test manually"
               </action>
-              <action>If user selects Retry: re-spawn with more context. If still no file: escalate again — do NOT loop more than twice.</action>
+              <action>If user selects Retry: re-spawn with more context. Note: the E2E generation prompt instructs the Code subtask to auto-launch a Debug subtask on its own 3rd failure. Allow up to 3 PD-level attempts total (initial spawn + 2 retries). If the 3rd attempt still fails: escalate to user with the Debug subtask's findings (if any) and offer "Skip E2E for this feature" or "I'll write the E2E test manually." Do NOT loop more than 3 times.</action>
               <action>If user selects Skip: document in current-state.md as "⚠️ Feature not locked into E2E regression suite — test generation failed." Set phase_4_substep="e2e_generated" (acknowledging skip). Proceed to Step 6 (skip Step 5).</action>
               <action>If user selects Manual: wait for user. When they confirm the test file exists, set phase_4_substep="e2e_generated". Proceed to Step 5.</action>
             </branch>
@@ -1397,6 +1398,7 @@
           - Pipeline: architecture.md, database.md, data-contracts.md, pipeline-topology.md
           If vision/vision-config.json does not exist: default to GUI (4 files) — backward compatible.</action>
         <action>Check if the project-type-relevant knowledge files exist in agent-workspace/knowledge/. If any project-type-relevant files are missing, see knowledge_files_do_not_exist in error_handling. If present, read all project-type-relevant files.</action>
+        <action>Read ALL planning/ files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md) — these represent the ORIGINAL DESIGN INTENT. You will cross-reference them against knowledge/ (as-built reality) to detect architectural drift.</action>
         <audit_checklist>
           <item>Spaghetti Code: circular dependencies or tightly coupled components?</item>
           <item>Duplicated Logic: same patterns described in multiple places without shared abstraction?</item>
@@ -1418,6 +1420,7 @@
         </description>
 
         <action>Read all vision docs in agent-workspace/project-director/vision/.</action>
+        <action>Read ALL planning/ files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md) — these represent the design intent. Compare them against the audit findings (Step 6) to detect whether as-built reality diverged from the planned architecture.</action>
         <action>Compare the audit findings (Step 6), the drift evaluation (Step 3), and the FD's completion summary against the vision docs. Is the vision still an accurate description of the intended final app?</action>
 
         <re_evaluation_decision_tree>
@@ -1426,7 +1429,7 @@
           </branch>
 
           <branch condition="MINOR DRIFT — small discrepancies that don't affect other features">
-            <action>PD edits the relevant vision .md file(s) directly to reflect reality. Note in current-state.md under "Vision Updates": what changed and why.</action>
+            <action>PD edits the relevant vision .md file(s) and planning/ .md file(s) (abstractions.md, data-model.md, tech-stack.md, integration-points.md, platform-notes.md, planning-summary.md) directly to reflect reality. If any new screens, data entities, or feature-artifact mappings were added, update vision-summary.md's Feature Index table. If the drift involved a technology change, also update the relevant component entry in tech-sourcing.md. Note in current-state.md under "Vision Updates": what changed and why.</action>
           </branch>
 
           <branch condition="MAJOR DRIFT — changes that affect remaining roadmap features (not already handled in Step 3)">
@@ -1481,53 +1484,85 @@
       </step>
 
       <step number="2">
-        <title>The PR Offer</title>
+        <title>The PR/Merge Offer</title>
         <action>Set phase_5_substep="pr_offered" in state.json.</action>
         <action>Read git_automation_enabled from state.json.</action>
         <action>Use ask_followup_question: "Feature [Name] complete on branch [branch]. Unit tests passed. E2E: [locked ✅ / not locked ⚠️]. Architectural health: [Rating]. Vision: [no changes / minor updates / major re-plan]. How proceed?"
           <responses>
-            <response condition="git_automation_enabled=true">Provide exactly 4 responses:
+            <response condition="git_automation_enabled=true">Provide exactly 5 responses:
               1. "Push branch and create PR for me (uses GitHub CLI)"
-              2. "I HAVE manually pushed and merged. Proceed to next feature."
-              3. "I HAVE manually pushed and merged. Inject a refactoring feature."
-              4. "Hold on, I need to make manual changes."
+              2. "Merge into trunk, push, and clean up — no PR"
+              3. "I HAVE manually pushed and merged. Proceed to next feature."
+              4. "I HAVE manually pushed and merged. Inject a refactoring feature."
+              5. "Hold on, I need to make manual changes."
             </response>
             <response condition="git_automation_enabled=false">Provide exactly 3 responses:
               1. "I HAVE manually pushed and merged. Proceed to next feature."
               2. "I HAVE manually pushed and merged. Inject a refactoring feature."
               3. "Hold on, I need to make manual changes."
-              Note: Option 1 (auto-PR) is hidden because git automation is disabled.
+              Note: Options 1 (auto-PR) and 2 (auto-merge) are hidden because git automation is disabled.
             </response>
           </responses>
         </action>
-        <warning>Options 2 and 3 will delete the local feature branch. Ensure the PR has been merged before proceeding.</warning>
+        <warning>Options 3 and 4 will delete the local feature branch. Ensure your changes have been merged before proceeding.</warning>
         <decision_tree>
-          <branch condition="Option 1">Proceed to Step 3 (Handle PR Creation).</branch>
-          <branch condition="Option 2">Set phase_5_substep="pr_handled" in state.json. Proceed to Step 4 (Post-Merge Cleanup).</branch>
-          <branch condition="Option 3">Set phase_5_substep="pr_handled" in state.json. Proceed to Step 4 (Post-Merge Cleanup). Refactoring injection happens in Step 5.</branch>
-          <branch condition="Option 4">Wait for user. When ready, re-present the PR Offer.</branch>
+          <branch condition="Option 1">Proceed to Step 3, Sub-section A (Handle PR Creation).</branch>
+          <branch condition="Option 2">Proceed to Step 3, Sub-section B (Handle Local Merge).</branch>
+          <branch condition="Option 3">Set phase_5_substep="pr_handled" in state.json. Proceed to Step 4 (Post-Merge Cleanup).</branch>
+          <branch condition="Option 4">Set phase_5_substep="pr_handled" in state.json. Proceed to Step 4 (Post-Merge Cleanup). Refactoring injection happens in Step 5.</branch>
+          <branch condition="Option 5">Wait for user. When ready, re-present the PR/Merge Offer.</branch>
         </decision_tree>
       </step>
 
       <step number="3">
-        <title>Handle PR Creation (if selected)</title>
-        <trigger>User selects "Push branch and create PR for me"</trigger>
-        <action>Read git_automation_enabled from state.json. If false: skip. Announce "Git automation disabled. Please push and create PR manually." and present post-PR options.</action>
+        <title>Handle Automated Git Strategy</title>
         <action>Set phase_5_substep="pr_handled" in state.json.</action>
-        <sub_steps>
-          <sub_step number="1">
-            <action>Push the feature branch to the remote tracking branch. If the push fails, report error to user per error_handling pr_creation_fails scenario.</action>
-          </sub_step>
-          <sub_step number="2">
-            <action>Create a pull request for the feature branch with title "Feature: [Name]" and a body summarizing test results, architectural audit rating, and vision status. If PR creation tooling is not available, report error per error_handling.</action>
-          </sub_step>
-          <sub_step number="3">
-            <action>Present PR URL. Use ask_followup_question with 2 responses:
-              1. "Merged — proceed to next feature"
-              2. "Merged — inject refactoring feature next"
-            </action>
-          </sub_step>
-        </sub_steps>
+
+        <!-- ============================================================ -->
+        <!-- SUB-SECTION A: PR CREATION (Option 1)                        -->
+        <!-- ============================================================ -->
+        <sub_section name="a_pr_creation">
+          <trigger>User selects "Push branch and create PR for me"</trigger>
+          <action>Read git_automation_enabled from state.json. If false: skip. Announce "Git automation disabled. Please push and create PR manually." and present post-PR options.</action>
+          <sub_steps>
+            <sub_step number="1">
+              <action>Push the feature branch to the remote tracking branch. If the push fails, report error to user per error_handling pr_creation_fails scenario.</action>
+            </sub_step>
+            <sub_step number="2">
+              <action>Create a pull request for the feature branch with title "Feature: [Name]" and a body summarizing test results, architectural audit rating, and vision status. If PR creation tooling is not available, report error per error_handling.</action>
+            </sub_step>
+            <sub_step number="3">
+              <action>Present PR URL. Use ask_followup_question with 2 responses:
+                1. "Merged — proceed to next feature"
+                2. "Merged — inject refactoring feature next"
+              </action>
+            </sub_step>
+          </sub_steps>
+        </sub_section>
+
+        <!-- ============================================================ -->
+        <!-- SUB-SECTION B: LOCAL MERGE (Option 2)                        -->
+        <!-- ============================================================ -->
+        <sub_section name="b_local_merge">
+          <trigger>User selects "Merge into trunk, push, and clean up — no PR"</trigger>
+          <action>Read git_automation_enabled from state.json. If false: skip. Announce "Git automation disabled. Please merge and push manually."</action>
+          <sub_steps>
+            <sub_step number="1">
+              <action>Identify the trunk branch (main, master, develop, or trunk — whichever exists). Checkout the trunk and pull the latest changes.</action>
+            </sub_step>
+            <sub_step number="2">
+              <action>Merge the feature branch into the trunk. If the merge fails due to conflicts, report error to user per error_handling merge_fails scenario.</action>
+            </sub_step>
+            <sub_step number="3">
+              <action>Push the trunk branch to remote. If the push fails, report error to user per error_handling merge_fails scenario.</action>
+            </sub_step>
+            <sub_step number="4">
+              <action>Announce: "Feature '[Name]' merged into [trunk] and pushed. Proceeding to cleanup."</action>
+            </sub_step>
+          </sub_steps>
+        </sub_section>
+
+        <action>Proceed to Step 4 (Post-Merge Cleanup).</action>
       </step>
 
       <step number="4">

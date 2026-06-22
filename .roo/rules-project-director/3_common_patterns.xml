@@ -610,8 +610,15 @@
     <description>
       Canonical prompt to use when the user wants to revise the roadmap, or when vision re-evaluation triggers a re-plan of remaining features.
     </description>
-    <template>
-      [IF RE-PLANNING AFTER VISION DRIFT: The vision documents have been updated after building Features 1 through [N]. Revise the roadmap for the REMAINING features only (Features [N+1] onward). Preserve the wave structure. Re-evaluate generalization: new integration points may need abstraction. Update agent-workspace/project-director/roadmap.md.]
+      [IF RE-PLANNING AFTER VISION DRIFT: The vision documents have been updated after building Features 1 through [N]. Revise the roadmap for the REMAINING features only (Features [N+1] onward). Preserve the wave structure. Re-evaluate generalization: new integration points may need abstraction.
+
+      CRITICAL — Refresh ALL planning/ files AND tech-sourcing.md to reconcile with as-built reality:
+      1. Read ALL knowledge/ files (architecture.md, database.md, api-routes.md, frontend-ui.md) — these represent what WAS ACTUALLY BUILT.
+      2. Read ALL planning/ files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md) — these represent the ORIGINAL DESIGN INTENT.
+      3. Read agent-workspace/project-director/tech-sourcing.md — the original technology sourcing decisions.
+      4. For each planning/ file, reconcile: where knowledge/ (as-built) diverges from planning/ (design intent), knowledge/ takes precedence. Update the planning/ file to reflect what was actually built, while preserving any forward-looking design intent for remaining features.
+      5. Check tech-sourcing.md: do the technology sourcing decisions still hold for the remaining features? If new integration points from the re-plan require technologies not covered in tech-sourcing.md, add sourcing recommendations for them. If a previously chosen technology was replaced in practice (visible in knowledge/), update the sourcing decision to match reality.
+      6. Update agent-workspace/project-director/roadmap.md.]
 
       [IF USER FEEDBACK REVISION: The user has provided feedback on the roadmap. Revise agent-workspace/project-director/roadmap.md based on this feedback: [USER FEEDBACK]. Preserve wave structure and feature numbering where possible.]
 
@@ -737,6 +744,21 @@ CRITICAL: If you found ZERO flaws and made ZERO changes, use attempt_completion 
           - Acceptance Criteria Covered: [list each criterion and how the test verifies it]
           - Setup Notes: [any prerequisites, e.g., "requires app running on localhost:3000" or "requires WinAppDriver service running"]
           - Warnings: [any limitations or known issues]
+        </item>
+        <item number="7">
+          <title>Launch QA Reviewer Before Completion</title>
+          Before calling attempt_completion, spawn a QA Reviewer subtask (qa mode) to review your E2E test code. The QA Reviewer provides an independent read-only review of the test file for bugs, weak assertions, missing edge cases, and framework misuse. Evaluate each finding: fix valid issues, justify any dismissals. The QA review is automatic — do not ask for consent.
+        </item>
+        <item number="8">
+          <title>Debug Subtask on Three Failures</title>
+          If you go through 3 full cycles of generating the E2E test and it still fails (file not created correctly, tests don't pass, or the framework setup is broken after 3 genuine fix attempts), launch a Debug subtask (debug mode) with: the original E2E spec from the roadmap, the current state of the test file (if any), all error output from the 3 attempts, and the framework setup details. The Debug subtask investigates systematically with a fresh perspective and reports root cause analysis. Do NOT loop more than 3 times without the Debug subtask.
+        </item>
+        <item number="9">
+          <title>Database Safety — Do Not Delete User Data</title>
+          If the E2E test interacts with a database (seeds data, creates records, modifies schema):
+          - NEVER delete, drop, or truncate the user's existing database. The E2E test must use a separate test database, or transactions that roll back, or seed data in isolated tables/collections that do not conflict with real user data.
+          - If the test creates new fields, records, tables, or collections: clean them up in teardown so no traces remain after the test run. The database must be returned to its pre-test state.
+          - If the E2E framework or project setup does not support test isolation: flag this in your completion summary under Warnings with a clear explanation of what database changes were made and why they couldn't be cleaned up.
         </item>
       </section>
     </template>
