@@ -281,3 +281,140 @@ If a future feature adds HTTP API endpoints (e.g., a local REST API for scriptin
 - Use the same embedded Kestrel instance
 - Follow the Provider/Adapter pattern for API versioning
 - Be documented as extensions to this file
+
+---
+
+## 6. LLM Provider API Endpoint Catalog
+
+MySecondBrain interacts with 4 external LLM provider APIs for key validation and model listing. These are outbound HTTP calls, not inbound API routes. Each provider has a distinct auth pattern and response schema.
+
+### 6.1 OpenAI API
+
+| Property | Value |
+|----------|-------|
+| **Base URL** | `https://api.openai.com/v1` |
+| **Auth method** | `Authorization: Bearer {apiKey}` (header) |
+| **Validate key** | `GET /v1/models` — returns 200 on valid key, 401/403 on invalid |
+| **List models** | `GET /v1/models` — returns `{"object":"list","data":[{"id":"gpt-4o","object":"model",...}]}` |
+| **Parse model IDs** | `data[].id` |
+| **Timeout** | 10 seconds per request |
+
+### 6.2 Anthropic API
+
+| Property | Value |
+|----------|-------|
+| **Base URL** | `https://api.anthropic.com/v1` |
+| **Auth method** | `x-api-key: {apiKey}` (header) |
+| **Required header** | `anthropic-version: 2023-06-01` (API version pinning) |
+| **Validate key** | `GET /v1/models` — returns 200 on valid key, 401 on invalid |
+| **List models** | `GET /v1/models` — returns `{"data":[{"id":"claude-sonnet-4-20250514","display_name":"Claude Sonnet 4","type":"model",...}],...}` |
+| **Parse model IDs** | `data[].id` |
+| **Timeout** | 10 seconds per request |
+
+### 6.3 Google Gemini API
+
+| Property | Value |
+|----------|-------|
+| **Base URL** | `https://generativelanguage.googleapis.com/v1beta` |
+| **Auth method** | `?key={apiKey}` (query parameter, NOT header) |
+| **Validate key** | `GET /v1beta/models?key={apiKey}` — returns 200 on valid key, 400 on invalid |
+| **List models** | `GET /v1beta/models?key={apiKey}` — returns `{"models":[{"name":"models/gemini-2.5-flash","displayName":"Gemini 2.5 Flash",...}],...}` |
+| **Parse model IDs** | `models[].name`, extract portion after `"models/"` as the model identifier |
+| **Timeout** | 10 seconds per request |
+
+### 6.4 OpenAI-Compatible API (Custom Provider)
+
+| Property | Value |
+|----------|-------|
+| **Base URL** | User-configured via `ApiKey.CustomEndpointUrl` (e.g., `http://localhost:11434/v1` for Ollama) |
+| **Auth method** | `Authorization: Bearer {apiKey}` (optional — local servers may skip auth) |
+| **Validate key** | `GET {endpointUrl}/models` — returns 200 on valid key or unauthenticated success |
+| **List models** | NOT supported — returns empty. B6 spec: "No auto-fetch; user always enters model identifiers manually." |
+| **Timeout** | 10 seconds per request |
+
+### 6.5 Provider Auth Pattern Summary
+
+| Provider | Auth Location | Header/Param Name | Optional? |
+|----------|--------------|-------------------|-----------|
+| OpenAI | HTTP Header | `Authorization: Bearer {key}` | No |
+| Anthropic | HTTP Header | `x-api-key: {key}` | No |
+| Google | Query String | `key={key}` | No |
+| OpenAI-Compatible | HTTP Header | `Authorization: Bearer {key}` | Yes (local servers) |
+
+---
+
+## 7. Provider API Error Handling Convention
+
+All provider HTTP calls follow the same error handling pattern:
+
+```csharp
+try
+{
+    using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+    using var request = new HttpRequestMessage(HttpMethod.Get, endpointUrl);
+    // ... set auth ...
+    using var response = await http.SendAsync(request, ct);
+    _logger.LogDebug("API call to {Provider}: HTTP {Status}", providerName, (int)response.StatusCode);
+    return response.IsSuccessStatusCode;
+}
+catch (HttpRequestException ex)
+{
+    _logger.LogWarning(ex, "Network error during API call to {Provider}", providerName);
+    return false; // or empty list
+}
+catch (TaskCanceledException) // includes timeout
+{
+    _logger.LogWarning("Timeout during API call to {Provider}", providerName);
+    return false; // or empty list
+}
+```
+
+### 7.1 Response Status Code Interpretation
+
+| Status | Meaning | Action |
+|--------|---------|--------|
+| 200 | Success | Parse response body for model list; key is valid |
+| 400 | Bad request (Google: invalid key) | Key is invalid |
+| 401 | Unauthorized | Key is invalid or expired |
+| 403 | Forbidden | Key lacks permissions |
+| 429 | Rate limited | Log warning; key is valid but rate-limited |
+| Other 4xx/5xx | Server/client error | Log warning; treat as validation failure |
+
+### 7.2 Retry Policy
+
+No automatic retries. Each `ValidateKeyAsync` or `ListModelsAsync` call makes exactly one HTTP request. The UI provides a manual "Test Key" or "Refresh" button for retry. This avoids cascading timeouts and keeps the UI responsive.
+
+---
+
+## 8. Integration Test Environment Variable Convention
+
+Provider integration tests use environment variables to supply real API keys for end-to-end validation:
+
+| Variable | Provider | Required For |
+|----------|----------|-------------|
+| `MSB_TEST_OPENAI_KEY` | OpenAI | `ProviderIntegrationTests.OpenAI_ValidateKey_ReturnsTrue` |
+| `MSB_TEST_ANTHROPIC_KEY` | Anthropic | `ProviderIntegrationTests.Anthropic_ValidateKey_ReturnsTrue` |
+| `MSB_TEST_GOOGLE_KEY` | Google | `ProviderIntegrationTests.Google_ValidateKey_ReturnsTrue` |
+
+### 8.1 Skip Logic
+
+```csharp
+[Fact]
+public async Task OpenAI_ValidateKey_ReturnsTrue()
+{
+    var apiKey = Environment.GetEnvironmentVariable("MSB_TEST_OPENAI_KEY");
+    if (string.IsNullOrEmpty(apiKey))
+        return; // Skip — no key provided
+
+    var provider = new OpenAIProvider(Mock.Of<ILogger<OpenAIProvider>>());
+    var result = await provider.ValidateKeyAsync(apiKey, CancellationToken.None);
+    Assert.True(result);
+}
+```
+
+### 8.2 Security
+
+- No API keys are hardcoded in test source files
+- No API keys are committed to the repository (`.gitignore` excludes `.env` files)
+- Test runners set variables via CI/CD secrets or local `.env` files (not committed)
+- Integration test project (`MySecondBrain.Tests.Integration`) is excluded from PR validation that lacks secrets

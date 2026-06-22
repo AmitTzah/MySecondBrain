@@ -684,3 +684,223 @@ Additional platform infrastructure keys expected in future features:
 | `"HotkeyAssignments"` | Feature 13 (Text Actions) | JSON-serialized hotkey → action mapping, overrides default seed-data hotkeys |
 | `"UpdateFeedUrl"` | Feature 8 (Settings) | User-configurable auto-update feed URL, overriding the hardcoded default |
 | `"WebSocketPort"` | Feature 13 (Word Add-in) | User-specified preferred port for the Kestrel WebSocket server |
+
+---
+
+## 18. Entity Field Completion Reference — ApiKey, ModelConfiguration, Persona
+
+Feature 7 (Model Configurations, API Keys & Personas) completed these three entities with their full field set. The fields below are the complete canonical schema for each entity.
+
+### 18.1 ApiKey — Complete Field Schema
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `Id` | `string` (GUID, PK) | Yes | `Guid.NewGuid().ToString("N")` | 32-char hex, no dashes |
+| `DisplayName` | `string` (≤100) | Yes | — | User-friendly label |
+| `Provider` | `string` (enum as string) | Yes | — | One of: OpenAI, Anthropic, Google, DeepSeek, MiMo, Moonshot, Mistral, OpenAICompatible |
+| `KeyValue` | `string` | Yes | — | DPAPI-encrypted ciphertext (Base64). Must be `[REDACTED]` in all log output. |
+| `CustomProviderName` | `string?` | No | `null` | Display name for OpenAI-Compatible custom provider |
+| `CustomEndpointUrl` | `string?` | No | `null` | Base URL for OpenAI-Compatible provider (e.g., `http://localhost:11434/v1`) |
+| `IsValid` | `bool` | Yes | `false` | Set by Test Key validation. `true` = last validation succeeded. |
+| `LastTestedAt` | `DateTimeOffset?` | No | `null` | Timestamp of last successful validation |
+| `CreatedAt` | `DateTimeOffset` | Yes | `DateTimeOffset.UtcNow` | Immutable creation timestamp |
+
+**FK relationships:** `ApiKey` is referenced by `ModelConfiguration.ApiKeyId` (SetNull on delete).
+
+### 18.2 ModelConfiguration — Complete Field Schema
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `Id` | `string` (GUID, PK) | Yes | `Guid.NewGuid().ToString("N")` | 32-char hex, no dashes |
+| `DisplayName` | `string` (≤100) | Yes | — | Unique. User-friendly label (e.g., "GPT-4o Fast"). |
+| `Provider` | `string` (enum as string) | Yes | — | Same enum as ApiKey.Provider |
+| `ModelIdentifier` | `string` (≤200) | Yes | — | Provider-specific model ID (e.g., `gpt-4o`, `claude-sonnet-4-20250514`) |
+| `ApiKeyId` | `string?` (FK) | No | `null` | FK to `ApiKey`. SetNull on ApiKey delete. |
+| `Temperature` | `double` | Yes | `1.0` | Range 0.0–2.0. Controls response randomness. |
+| `MaxOutputTokens` | `int` | Yes | `4096` | Maximum tokens in the generated response |
+| `MaxContextWindow` | `int` | Yes | `128000` | Maximum context window size (total input tokens). Provider-level limit. |
+| `ThinkingEnabled` | `bool` | Yes | `false` | Whether extended thinking/reasoning is enabled |
+| `PricingInputPer1K` | `decimal?` | No | `null` | Cost per 1,000 input tokens (USD) |
+| `PricingOutputPer1K` | `decimal?` | No | `null` | Cost per 1,000 output tokens (USD) |
+| `ContextOverflowStrategy` | `string` | Yes | `"SlidingWindow"` | One of: SlidingWindow, HardStop, AutoSummarize |
+| `CreatedAt` | `DateTimeOffset` | Yes | `DateTimeOffset.UtcNow` | Immutable creation timestamp |
+| `UpdatedAt` | `DateTimeOffset` | Yes | `DateTimeOffset.UtcNow` | Updated on every save |
+
+**FK relationships:**
+- `ApiKeyId` → `ApiKey.Id` (optional, SetNull)
+- Referenced by `Persona.DefaultModelConfigId` (Restrict — delete blocked if any Persona references)
+- Referenced by `ChatThread.ModelConfigId` (optional, SetNull)
+- Referenced by `Message.ModelConfigId` (optional, SetNull)
+- Referenced by `TextAction.ModelConfigId` (optional, SetNull)
+- Referenced by `UsageRecord.ModelConfigId` (optional, SetNull)
+
+### 18.3 Persona — Complete Field Schema
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `Id` | `string` (GUID, PK) | Yes | `Guid.NewGuid().ToString("N")` | 32-char hex. Built-in personas use fixed GUIDs. |
+| `DisplayName` | `string` (≤100) | Yes | — | Unique. User-friendly label. |
+| `SystemPrompt` | `string` | Yes | — | Full system prompt. Supports `{{date}}`, `{{time}}`, `{{user_name}}` variables. |
+| `DefaultModelConfigId` | `string?` (FK) | No | `null` | FK to `ModelConfiguration`. The persona's default engine. |
+| `DefaultChatMode` | `string` | Yes | `"Standard"` | One of: Standard, TextCompletion |
+| `IsBuiltIn` | `bool` | Yes | `false` | `true` for the 2 seeded personas (General Assistant, Code Helper) |
+| `CreatedAt` | `DateTimeOffset` | Yes | `DateTimeOffset.UtcNow` | Immutable creation timestamp |
+| `UpdatedAt` | `DateTimeOffset` | Yes | `DateTimeOffset.UtcNow` | Updated on every save |
+
+**FK relationships:**
+- `DefaultModelConfigId` → `ModelConfiguration.Id` (optional, Restrict — cannot delete ModelConfig if any Persona references it)
+- Referenced by `ChatThread.PersonaId` (optional, SetNull)
+- Referenced by `Message.PersonaId` (optional, SetNull)
+- Referenced by `UsageRecord.PersonaId` (optional, SetNull)
+
+---
+
+## 19. Two-Layer FK Chain — Delete Behavior Reference
+
+The ApiKey → ModelConfiguration → Persona chain has cascading delete implications that span three entities:
+
+```
+ApiKey (SetNull) → ModelConfiguration (Restrict) → Persona
+```
+
+| Delete Target | Effect on ModelConfiguration | Effect on Persona | Application Behavior |
+|---------------|------------------------------|-------------------|---------------------|
+| **ApiKey** | `ApiKeyId` set to `null` (EF Core SetNull) | No direct effect | Model configs survive without a key. UI warns: "Any Model Configurations using this key will need a new key." |
+| **ModelConfiguration** | — | Blocked if any Persona references it (EF Core Restrict) | Repository throws `InvalidOperationException` with count of referencing Personas. UI shows confirmation with count before attempting delete. |
+| **Persona** | No effect | — | Simple delete. ChatThreads/ Messages referencing this persona get their `PersonaId` set to `null` (SetNull). |
+
+### 19.1 Repository Delete Guard Pattern
+
+When `Restrict` is configured, the repository must check and throw before calling `SaveChanges()`:
+
+```csharp
+// In ModelConfigurationRepository.DeleteAsync
+public async Task DeleteAsync(string id)
+{
+    var config = await _db.ModelConfigurations
+        .Include(c => c.Personas)
+        .FirstOrDefaultAsync(c => c.Id == id);
+
+    if (config is null) return;
+
+    if (config.Personas.Count > 0)
+        throw new InvalidOperationException(
+            $"Cannot delete ModelConfiguration '{config.DisplayName}' — " +
+            $"it is referenced by {config.Personas.Count} Persona(s).");
+
+    _db.ModelConfigurations.Remove(config);
+    await _db.SaveChangesAsync();
+}
+```
+
+The UI layer catches this exception in the ViewModel and shows a warning dialog via `IConfirmationService` before attempting the delete.
+
+---
+
+## 20. Pricing Fields Convention
+
+Model configurations store per-1K token pricing as `decimal?` (nullable) in USD. These are user-provided values for cost tracking, not fetched from provider APIs.
+
+### 20.1 Field Schema
+
+| Field | Type | Unit | Example |
+|-------|------|------|---------|
+| `PricingInputPer1K` | `decimal?` | USD per 1,000 input tokens | `0.0025` (GPT-4o input) |
+| `PricingOutputPer1K` | `decimal?` | USD per 1,000 output tokens | `0.0100` (GPT-4o output) |
+
+### 20.2 Cost Calculation Pattern
+
+```csharp
+// UsageRecord stores token counts; cost is calculated at query time
+public decimal? CalculateCost(int inputTokens, int outputTokens, ModelConfiguration config)
+{
+    if (config.PricingInputPer1K is null || config.PricingOutputPer1K is null)
+        return null;
+
+    var inputCost = (inputTokens / 1000.0m) * config.PricingInputPer1K.Value;
+    var outputCost = (outputTokens / 1000.0m) * config.PricingOutputPer1K.Value;
+    return inputCost + outputCost;
+}
+```
+
+### 20.3 Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **Per-1K, not per-token** | Provider pricing pages display per-1K-token prices. Storing per-1K avoids floating-point precision issues with per-token values like `0.0000025`. |
+| **Nullable** | Pricing is optional. Users may not know or care about pricing. `null` means "cost not tracked" rather than "cost is zero." |
+| **Not auto-fetched** | No provider API returns pricing information. Pricing is user-provided and manually maintained. |
+
+---
+
+## 21. New SettingsRepository Keys (Feature 7)
+
+Feature 7 introduces one new persistent settings key:
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `"RecentPersonaIds"` | `List<string>` (JSON) | `[]` | Ordered list of recently-used persona IDs. Max 5 entries. New selection pushes to front, oldest removed if >5. |
+
+### 21.1 RecentPersonaIds — Read/Write Pattern
+
+```csharp
+// Read: deserialize from JSON
+var recentIds = await _settings.GetAsync<List<string>>("RecentPersonaIds") ?? [];
+
+// Write after persona selection:
+recentIds.Remove(id);           // Remove if already present (avoids duplicates)
+recentIds.Insert(0, id);        // Push to front
+if (recentIds.Count > 5)
+    recentIds = recentIds.Take(5).ToList();
+await _settings.SetAsync("RecentPersonaIds", recentIds);
+```
+
+### 21.2 Usage in PersonaList Sorting
+
+```csharp
+// In ChatThreadViewModel: sort personas by recently-used
+var allPersonas = await _personaRepo.GetAllAsync();
+var recentIds = await _settingsRepo.GetAsync<List<string>>("RecentPersonaIds") ?? [];
+
+var sorted = allPersonas
+    .OrderByDescending(p => recentIds.IndexOf(p.Id)) // -1 sorts last
+    .ThenBy(p => p.DisplayName)
+    .ToList();
+```
+
+### 21.3 Settings Key Registry Update
+
+The complete `AppSetting` key catalog (extending §16 and §17) now includes:
+
+| Key | Type | Feature | Purpose |
+|-----|------|---------|---------|
+| `"AppTheme"` | `string` | W1.3 (Shell) | Theme: Light / Dark |
+| `"ChatTheme"` | `string` | W1.3 (Shell) | Chat visual theme: Classic / Compact / Bubble |
+| `"FontFamily"` | `string` | W1.3 (Shell) | Font family name |
+| `"FontSize"` | `string` | W1.3 (Shell) | Font size 10–24px |
+| `"FontWeight"` | `string` | W1.3 (Shell) | Font weight: Normal / Bold / SemiBold |
+| `"WebSocketAuthToken"` | `string` | W1.6 (Platform) | 64-char hex for Kestrel WS auth |
+| `"MinimizeToTray"` | `string` | W1.6 (Platform) | Minimize-to-tray toggle |
+| `"RecentPersonaIds"` | `List<string>` (JSON) | W3.7 (Model Configs) | Recently-used persona IDs (max 5) |
+
+---
+
+## 22. Context Overflow Strategy Convention
+
+When the conversation exceeds the model's `MaxContextWindow`, the `ContextOverflowStrategy` determines how the application handles overflowed tokens.
+
+### 22.1 Strategy Options
+
+| Strategy | Stored Value | Behavior |
+|----------|-------------|----------|
+| **Sliding Window** | `"SlidingWindow"` | Drop oldest messages until the context fits within the window. Preserves system prompt. Default. |
+| **Hard Stop** | `"HardStop"` | Return an error when context is exceeded. User must manually prune conversation or switch to a larger model. |
+| **Auto-Summarize** | `"AutoSummarize"` | Summarize older messages via an additional API call, then continue. Incurs extra token cost. |
+
+### 22.2 Storage Convention
+
+All three strategies are stored as strings in the database, not as integer-backed enums. This allows adding new strategies without migrations. The .NET `ContextOverflowStrategy` enum (in Core/Models/Enums.cs) provides compile-time safety; conversion to/from string happens at the repository boundary (same pattern as §3.3 String-Based Enums).
+
+### 22.3 Default
+
+`"SlidingWindow"` is the default for all new `ModelConfiguration` entities. Built-in personas use SlidingWindow via their default model config.

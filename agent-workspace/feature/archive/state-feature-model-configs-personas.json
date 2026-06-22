@@ -32,10 +32,10 @@
       "description": "Launch the app. Navigate to Studio Chat. Verify the chat header shows the active persona name. Click the persona dropdown in the toolbar — verify all personas appear, with recently-used ones at top. Press Ctrl+N — verify the persona picker opens, showing all personas. Select a different persona — verify the chat header updates. Verify the persona dropdown reflects the change. Select a persona, close the app, reopen — verify the persona persists."
     }
   ],
-  "current_phase": 3,
-  "plan_status": "validated",
+  "current_phase": 5,
+  "plan_status": "archived",
   "total_steps": 5,
   "current_step": 5,
   "pivot_in_progress": false,
-  "phase_5_substep": null
+  "phase_5_substep": "state_finalized"
 }

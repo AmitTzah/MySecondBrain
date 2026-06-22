@@ -903,3 +903,368 @@ Feature 6 filled four platform service stubs behind existing interfaces. All ser
 | **Download** | Stream to temp file, progress reporting via `IProgress<int>`, 30-min deferred cleanup |
 | **Install** | Shell-execute MSIX installer via `Process.Start` |
 
+---
+
+## 23. Two-Layer Configuration Architecture — Model Configs + Personas
+
+The AI interaction configuration is split into two independent layers that can be mixed and matched. This is a **core architectural pattern** that governs every AI-powered feature in the application — chat, text actions, model comparison, artifacts, and tool use.
+
+```mermaid
+graph TD
+    ApiKey["ApiKey\nProvider credentials\nencrypted at rest"]
+    ModelConfig["ModelConfiguration\nThe Engine\nprovider, model ID, temperature,\ntokens, pricing, context overflow"]
+    Persona["Persona\nThe Behavior\nsystem prompt, default model,\nchat mode"]
+    ChatThread["ChatThread"]
+    Message["Message"]
+    TextAction["TextAction"]
+    UsageRecord["UsageRecord"]
+
+    ApiKey -->|"SetNull"| ModelConfig
+    ModelConfig -->|"Restrict"| Persona
+    Persona -->|"SetNull"| ChatThread
+    ModelConfig -->|"SetNull"| ChatThread
+    Persona -->|"SetNull"| Message
+    ModelConfig -->|"SetNull"| Message
+    ModelConfig -->|"SetNull"| TextAction
+    Persona -->|"SetNull"| UsageRecord
+    ModelConfig -->|"SetNull"| UsageRecord
+```
+
+### 23.1 Layer Responsibilities
+
+| Layer | Entity | What It Defines | Consumer Features |
+|-------|--------|----------------|-------------------|
+| **Credentials** | `ApiKey` | Provider type, encrypted key value, custom endpoint (for OpenAI-Compatible) | All LLM calls |
+| **Engine** | `ModelConfiguration` | Provider, model ID, temperature (0.0–2.0), max output tokens, max context window, thinking toggle, input/output pricing per 1K tokens, context overflow strategy | Chat, Text Actions, Model Comparison, Artifacts |
+| **Behavior** | `Persona` | System prompt with `{{variables}}`, default model config, default chat mode (Standard/TextCompletion) | Chat, Text Actions |
+
+### 23.2 Design Rationale
+
+| Decision | Rationale |
+|----------|-----------|
+| **Two layers, not one** | A persona is a behavior template; a model config is an engine selection. Users swap engines under the same persona (e.g., "Code Helper" with GPT-4o vs. Claude Sonnet) and reuse engines across personas. |
+| **Persona references ModelConfig, not the reverse** | The persona "chooses" its engine. A model config can be used by many personas. |
+| **ApiKey is separate from ModelConfig** | One API key can power multiple model configs (e.g., GPT-4o, GPT-4o-mini, o3-mini all use the same OpenAI key). |
+| **Delete behavior chain** | Deleting an ApiKey sets ModelConfig.ApiKeyId to null (SetNull) — configs survive without a key. Deleting a ModelConfig referenced by Personas is blocked (Restrict) — application layer throws `InvalidOperationException`. |
+
+### 23.3 Navigation Properties (Entity Layer)
+
+```
+ApiKey       ← ModelConfiguration (ApiKeyId, SetNull)
+ModelConfiguration ← Persona (DefaultModelConfigId, Restrict)
+ModelConfiguration ← ChatThread (ModelConfigId, SetNull)
+ModelConfiguration ← Message (ModelConfigId, SetNull)
+ModelConfiguration ← TextAction (ModelConfigId, SetNull)
+ModelConfiguration ← UsageRecord (ModelConfigId, SetNull)
+Persona       ← ChatThread (PersonaId, SetNull)
+Persona       ← Message (PersonaId, SetNull)
+Persona       ← UsageRecord (PersonaId, SetNull)
+```
+
+### 23.4 Extensibility
+
+Adding a new provider requires:
+1. Add enum value to `ProviderType` (Core/Models/Enums.cs)
+2. Create adapter class in `Services/LLM/` implementing `ILLMProvider`
+3. Register via `services.AddSingleton<ILLMProvider, NewProvider>()`
+
+The `LLMProviderFactory` auto-discovers it via `IEnumerable<ILLMProvider>`. All existing Model Configurations and Personas continue to work — no data migration needed. Provider-specific fields (e.g., `CustomEndpointUrl` for OpenAI-Compatible) live on `ApiKey`, not on `ModelConfiguration`, keeping the engine layer provider-agnostic.
+
+---
+
+## 24. DPAPI Encryption Service Pattern
+
+API keys and other secrets are encrypted at rest using Windows Data Protection API (DPAPI) with `DataProtectionScope.CurrentUser`. The encryption service follows the standard Provider/Adapter pattern: interface in Core, implementation in Services.
+
+### 24.1 Interface Contract
+
+```csharp
+// Defined in Core/Interfaces/IEncryptionService.cs
+public interface IEncryptionService
+{
+    byte[] Protect(byte[] plaintext);
+    byte[] Unprotect(byte[] ciphertext);
+    string ProtectString(string plaintext);
+    string UnprotectString(string ciphertext);
+}
+```
+
+### 24.2 Implementation — System.Security.Cryptography.ProtectedData
+
+```csharp
+// Protect (encrypt) — returns Base64-encoded ciphertext
+public string ProtectString(string plaintext)
+{
+    if (string.IsNullOrEmpty(plaintext))
+        return string.Empty;
+
+    var plainBytes = Encoding.UTF8.GetBytes(plaintext);
+    var cipherBytes = ProtectedData.Protect(plainBytes, optionalEntropy: null,
+        DataProtectionScope.CurrentUser);
+    return Convert.ToBase64String(cipherBytes);
+}
+
+// Unprotect (decrypt) — returns original plaintext
+public string UnprotectString(string ciphertext)
+{
+    if (string.IsNullOrEmpty(ciphertext))
+        return string.Empty;
+
+    var cipherBytes = Convert.FromBase64String(ciphertext);
+    var plainBytes = ProtectedData.Unprotect(cipherBytes, optionalEntropy: null,
+        DataProtectionScope.CurrentUser);
+    return Encoding.UTF8.GetString(plainBytes);
+}
+```
+
+### 24.3 Key Behaviors
+
+| Behavior | Detail |
+|----------|--------|
+| **Non-deterministic encryption** | `ProtectedData.Protect` produces different ciphertext for the same plaintext on each call (DPAPI uses random salt internally). Equality checks must compare decrypted values, never ciphertext. |
+| **Tamper detection** | `ProtectedData.Unprotect` throws `CryptographicException` if the ciphertext is modified. |
+| **User-scoped** | `DataProtectionScope.CurrentUser` ties encryption to the current Windows user. Decryption fails if the database file is moved to a different machine or user account. |
+| **NullOrEmpty passthrough** | Empty/null strings are returned as-is without encryption. |
+| **String encoding** | `ProtectString`/`UnprotectString` are Base64 wrappers around the byte[] methods. |
+
+### 24.4 Usage in Repositories
+
+API key repositories encrypt on save and decrypt on retrieval:
+
+```
+Save flow: plaintext → IEncryptionService.ProtectString(plaintext) → store ciphertext in entity
+Read flow: entity.KeyValue (ciphertext) → IEncryptionService.UnprotectString(ciphertext) → plaintext for API calls
+```
+
+The entity stores the ciphertext. The domain model exposes `KeyValue` as the ciphertext. Services that need the plaintext (e.g., `LLMProviderService`) call `IEncryptionService.UnprotectString()` at the point of use — the plaintext is never held in memory longer than needed.
+
+### 24.5 Future Encryption Extensions
+
+The `IEncryptionService` interface is designed for future extension:
+- **Chat encryption (locked chats):** Could add `ProtectWithPassword(string, string password)` for password-based encryption
+- **GitHub token storage:** Same DPAPI pattern for encrypting Git credentials
+- **Backup encryption:** Encrypt backup archives before uploading to cloud storage
+
+All future encryption needs go through the same `IEncryptionService` interface — no service needs to know about DPAPI or `ProtectedData`.
+
+---
+
+## 25. LLM Provider Key Validation & Model Fetching Pattern
+
+All LLM providers implement two standard operations beyond the base `ILLMProvider` contract: **key validation** (test if an API key works) and **model fetching** (list available models from the provider's API). These follow a consistent pattern across all 4 providers.
+
+### 25.1 Extended ILLMProvider Contract
+
+```csharp
+// Defined in Core/Interfaces/ILLMProvider.cs
+public interface ILLMProvider
+{
+    ProviderType Type { get; }
+    string ProviderName { get; }
+    bool ValidateKeyAsync(string apiKey, CancellationToken ct);
+    Task<List<ModelInfo>> ListModelsAsync(CancellationToken ct);
+}
+```
+
+### 25.2 Validation Pattern (All Providers)
+
+Every provider validates by sending a minimal, low-cost HTTP request to the provider's models endpoint:
+
+| Provider | Endpoint | Auth Method | Success | Failure |
+|----------|----------|------------|---------|---------|
+| OpenAI | `GET https://api.openai.com/v1/models` | `Authorization: Bearer {key}` | HTTP 200 | HTTP 401 / 403 |
+| Anthropic | `GET https://api.anthropic.com/v1/models` | `x-api-key: {key}` + `anthropic-version: 2023-06-01` | HTTP 200 | HTTP 401 |
+| Google | `GET https://generativelanguage.googleapis.com/v1beta/models?key={key}` | Query param `key={key}` | HTTP 200 | HTTP 400 |
+| OpenAI-Compatible | `GET {endpointUrl}/models` | `Authorization: Bearer {key}` (optional) | HTTP 200 | HTTP 401 / 403 |
+
+### 25.3 HttpClient Pattern (Shared Across All Providers)
+
+```csharp
+public async Task<bool> ValidateKeyAsync(string apiKey, CancellationToken ct)
+{
+    try
+    {
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+        using var request = new HttpRequestMessage(HttpMethod.Get, endpointUrl);
+        // ... set auth header per provider convention ...
+        using var response = await http.SendAsync(request, ct);
+        _logger.LogDebug("Key validation for {Provider}: HTTP {Status}", ProviderName, (int)response.StatusCode);
+        return response.IsSuccessStatusCode;
+    }
+    catch (HttpRequestException ex)
+    {
+        _logger.LogWarning(ex, "Network error during key validation for {Provider}", ProviderName);
+        return false;
+    }
+    catch (TaskCanceledException) // timeout
+    {
+        _logger.LogWarning("Timeout during key validation for {Provider}", ProviderName);
+        return false;
+    }
+}
+```
+
+### 25.4 LLMProviderService Bridge
+
+`ILLMProviderService` serves as the application-layer bridge between the UI (SettingsViewModel) and the provider layer:
+
+```csharp
+public async Task<bool> ValidateApiKeyAsync(ProviderType provider, string apiKey,
+    string? endpointUrl, CancellationToken ct)
+{
+    var llmProvider = _providerFactory.GetProvider(provider, endpointUrl);
+    return await llmProvider.ValidateKeyAsync(apiKey, ct);
+}
+
+public async Task<List<ModelInfo>> ListModelsAsync(ProviderType provider, CancellationToken ct)
+{
+    var llmProvider = _providerFactory.GetProvider(provider, endpointUrl: null);
+    return await llmProvider.ListModelsAsync(ct);
+}
+```
+
+### 25.5 OpenAI-Compatible Provider Special Case
+
+The OpenAI-Compatible provider type differs from standard providers in two ways:
+
+| Aspect | Standard Providers | OpenAI-Compatible |
+|--------|-------------------|-------------------|
+| **Endpoint URL** | Fixed per provider | Configurable via `ApiKey.CustomEndpointUrl` |
+| **Model fetching** | `ListModelsAsync` hits `/models` endpoint | `ListModelsAsync` returns empty — B6 spec: "No auto-fetch; user manually enters model identifiers" |
+| **Auth** | Required (Bearer or x-api-key) | Optional (local servers may skip auth) |
+
+When `Provider = OpenAICompatible`, the `CustomEndpointUrl` field on the `ApiKey` entity is required. The provider constructs the full URL as `{endpointUrl}/models`.
+
+### 25.6 Integration Test Environment Variables
+
+Integration tests for provider validation use environment variables to supply real API keys:
+
+| Variable | Provider |
+|----------|----------|
+| `MSB_TEST_OPENAI_KEY` | OpenAI |
+| `MSB_TEST_ANTHROPIC_KEY` | Anthropic |
+
+If the variable is not set, integration tests are skipped. No keys are hardcoded or committed to the repository.
+
+---
+
+## 26. [REDACTED] Logging Policy for Sensitive Values
+
+API key values, encrypted ciphertext, and any other secret material must be redacted in all diagnostic log output. The `[REDACTED]` policy is enforced at the logging level:
+
+### 26.1 Policy Rules
+
+| Rule | Detail |
+|------|--------|
+| **Never log raw key values** | `ILogger.LogInformation("Using key {Key}", apiKey)` is forbidden. API keys appear in logs only as masked representations. |
+| **Never log ciphertext** | Encrypted values (Base64 strings from DPAPI) must not appear in logs. If logged, they are replaced with `"[REDACTED]"`. |
+| **Masked format** | Display-safe format: first 3 chars + `"..."` + last 6 chars (e.g., `"sk-...abc123"`). The `ApiKeyHelper.MaskKey()` shared utility provides this. |
+| **Serilog destructuring** | Sensitive properties on structured log objects must be excluded via Serilog destructuring policy (`Destructure.ByTransforming<T>()` or `[JsonIgnore]` on the property). |
+| **Entity column comment** | The `keyValue` column on `ApiKey` entity carries a column comment: `"Must be redacted ([REDACTED]) in all diagnostic log output via Serilog destructuring policy (V1)"`. |
+
+### 26.2 MaskKey Utility
+
+```csharp
+// Shared utility in Core (no logging dependency)
+public static class ApiKeyHelper
+{
+    public static string MaskKey(string key)
+    {
+        if (string.IsNullOrEmpty(key) || key.Length <= 10)
+            return "****";
+        return $"{key[..3]}...{key[^6..]}";
+    }
+}
+```
+
+### 26.3 Scope
+
+The `[REDACTED]` policy applies to:
+- `ILogger<T>` calls in all services (Chat, LLM, Backup, Tools, Wiki)
+- `ILogger<T>` calls in all providers (OpenAI, Anthropic, Google, OpenAICompatible)
+- `ILogger<T>` calls in all repositories (ApiKeyRepository, etc.)
+- Serilog file sink output (`%LOCALAPPDATA%\MySecondBrain\logs\msb-*.log`)
+- Debug console output (Serilog console sink in DEBUG builds)
+- Exception messages that might include key material in stack traces
+
+---
+
+## 27. IConfirmationService — Mockable Confirmation Dialog Pattern
+
+WPF `MessageBox.Show()` is not mockable — it blocks the UI thread and cannot be substituted in unit tests. The `IConfirmationService` abstraction provides a testable confirmation dialog pattern.
+
+### 27.1 Interface Contract
+
+```csharp
+// Defined in Core/Interfaces/IConfirmationService.cs
+public interface IConfirmationService
+{
+    Task<bool> ConfirmAsync(string title, string message);
+    Task ShowInfoAsync(string title, string message);
+}
+```
+
+### 27.2 WpfConfirmationService Implementation
+
+```csharp
+// In MySecondBrain.UI/Services/WpfConfirmationService.cs
+public class WpfConfirmationService : IConfirmationService
+{
+    public Task<bool> ConfirmAsync(string title, string message)
+    {
+        var result = MessageBox.Show(message, title,
+            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        return Task.FromResult(result == MessageBoxResult.Yes);
+    }
+
+    public Task ShowInfoAsync(string title, string message)
+    {
+        MessageBox.Show(message, title,
+            MessageBoxButton.OK, MessageBoxImage.Information);
+        return Task.CompletedTask;
+    }
+}
+```
+
+### 27.3 DI Registration
+
+```csharp
+// In App.xaml.cs ConfigureServices
+services.AddSingleton<IConfirmationService, WpfConfirmationService>();
+```
+
+Singleton lifetime — no state, one instance shared across all ViewModels.
+
+### 27.4 Unit Test Mocking
+
+```csharp
+// In unit tests, mock IConfirmationService to avoid blocking on MessageBox:
+var mockConfirm = new Mock<IConfirmationService>();
+mockConfirm.Setup(c => c.ConfirmAsync(It.IsAny<string>(), It.IsAny<string>()))
+           .ReturnsAsync(true);  // Simulate user clicking "Yes"
+```
+
+### 27.5 Usage Pattern
+
+ViewModels that need confirmation dialogs (delete operations, destructive actions) inject `IConfirmationService`:
+
+```csharp
+public SettingsViewModel(
+    IConfirmationService confirmationService, ...)
+{
+    _confirmationService = confirmationService;
+}
+
+[RelayCommand]
+private async Task DeleteApiKeyAsync(ApiKeyDisplayItem key)
+{
+    var confirmed = await _confirmationService.ConfirmAsync(
+        "Delete API Key",
+        $"Delete this API key? Any Model Configurations using it will need a new key.");
+
+    if (!confirmed) return;
+    // ... proceed with delete ...
+}
+```
+
+This pattern applies to any ViewModel that needs user confirmation — delete operations, overwrite warnings, unsaved-changes dialogs. All confirmation dialogs in the application should go through `IConfirmationService` for testability.

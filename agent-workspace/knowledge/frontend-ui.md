@@ -936,3 +936,483 @@ This pattern applies to any WPF scenario where `RadioButton` controls must refle
 - Theme selector (`AppTheme.Light` / `AppTheme.Dark`)
 - Chat visual theme selector (`ChatTheme.Classic` / `ChatTheme.Compact` / `ChatTheme.Bubble`)
 - Any settings panel with mutually exclusive enum options displayed as `RadioButton` groups
+
+---
+
+## 18. Settings Category Sub-Navigation Pattern
+
+The Settings screen uses a two-column layout with a category sidebar (left) and a content area (right). This is a sub-navigation pattern within a single screen — no screen-level navigation occurs. The pattern is reusable for any multi-section settings or configuration screen.
+
+### 18.1 SettingsCategory Enum
+
+```csharp
+// Defined in Core/Models/Enums.cs or SettingsViewModel
+public enum SettingsCategory
+{
+    Providers,      // API key management
+    Profiles,       // Model configurations + Personas
+    Appearance,     // Theme, font, chat theme
+    Wiki,           // Wiki directory, git settings
+    Backup,         // Backup provider, schedule
+    TextActions,    // Three-tier text action management
+    Hotkeys,        // Global hotkey assignments
+    Tools,          // Tool executor configuration
+    Notifications,  // Notification preferences
+    Startup,        // Startup behavior, minimize-to-tray
+    Updates,        // Auto-update settings
+    Pricing,        // Pricing display preferences
+    Security,       // Encryption, locked chats
+    Maintenance,    // Database VACUUM, log management
+    Diagnostics     // Log level, category toggles
+}
+```
+
+### 18.2 ViewModel Navigation
+
+```csharp
+[ObservableProperty]
+private SettingsCategory _selectedSettingsCategory = SettingsCategory.Providers;
+```
+
+The `SelectedSettingsCategory` property drives a `ListBox` selection in the sidebar and a `ContentControl` with `DataTrigger` in the content area. Category switching is instant — no screen navigation, no ViewModel replacement.
+
+### 18.3 Sidebar ListBox Binding
+
+```xml
+<ListBox ItemsSource="{Binding SettingsCategories}"
+         SelectedItem="{Binding SelectedSettingsCategory}"
+         DisplayMemberPath="Label"/>
+```
+
+### 18.4 Content Switching with DataTrigger (Not DataTemplateSelector)
+
+Unlike screen navigation (§13), settings sub-navigation uses `DataTrigger` on a single `ContentControl` rather than `DataTemplateSelector`. This is because all settings categories share the same ViewModel (`SettingsViewModel`), so `DataTemplateSelector` (which keys off the bound value type) would not differentiate them:
+
+```xml
+<ContentControl Content="{Binding}">
+    <ContentControl.Style>
+        <Style TargetType="ContentControl">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Providers">
+                    <Setter Property="ContentTemplate" Value="{StaticResource ProvidersTemplate}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Profiles">
+                    <Setter Property="ContentTemplate" Value="{StaticResource ProfilesTemplate}"/>
+                </DataTrigger>
+                <!-- ... one DataTrigger per category ... -->
+            </Style.Triggers>
+        </Style>
+    </ContentControl.Style>
+</ContentControl>
+```
+
+### 18.5 SettingsCategoryItem Record
+
+```csharp
+// Lightweight record for sidebar binding
+public record SettingsCategoryItem(string Icon, string Label, SettingsCategory Category);
+```
+
+The `SettingsCategories` collection is populated once at ViewModel construction with all 15 items.
+
+---
+
+## 19. DisplayItem Wrapper Pattern
+
+ViewModels expose entity data to the UI through lightweight `DisplayItem` wrappers rather than binding directly to domain models. This separates display concerns (masked values, computed summaries) from data concerns.
+
+### 19.1 ApiKeyDisplayItem
+
+```csharp
+public partial class ApiKeyDisplayItem : ObservableObject
+{
+    public string Id { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public ProviderType ProviderType { get; set; }
+    public string EncryptedValue { get; set; } = string.Empty;
+    public bool IsValid { get; set; }
+    public DateTimeOffset? LastTestedAt { get; set; }
+    public string? CustomProviderName { get; set; }
+    public string? CustomEndpointUrl { get; set; }
+
+    // Computed for display — shows masked key representation
+    public string MaskedValue => MaskPlaintext(/* decrypted value */);
+
+    public static string MaskPlaintext(string plaintext)
+    {
+        if (string.IsNullOrEmpty(plaintext) || plaintext.Length <= 10)
+            return "••••••••";
+        return $"{plaintext[..3]}...{plaintext[^4..]}";
+    }
+}
+```
+
+### 19.2 ModelConfigurationDisplayItem
+
+```csharp
+public partial class ModelConfigurationDisplayItem : ObservableObject
+{
+    public string Id { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public ProviderType ProviderType { get; set; }
+    public string ModelIdentifier { get; set; } = string.Empty;
+    public double Temperature { get; set; }
+    public int MaxOutputTokens { get; set; }
+    public int MaxContextWindow { get; set; }
+    public string ContextOverflowStrategy { get; set; } = "SlidingWindow";
+
+    public string Summary => $"{ModelIdentifier} · T={Temperature:F1} · {MaxOutputTokens} tok";
+}
+```
+
+### 19.3 PersonaDisplayItem
+
+```csharp
+public partial class PersonaDisplayItem : ObservableObject
+{
+    public string Id { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string DefaultChatMode { get; set; } = "Standard";
+    public bool IsBuiltIn { get; set; }
+
+    public string Summary => IsBuiltIn
+        ? $"{DefaultChatMode} · Built-in"
+        : DefaultChatMode;
+}
+```
+
+### 19.4 Pattern Rules
+
+| Rule | Rationale |
+|------|-----------|
+| **Wrapper, not domain model** | Domain models carry data-transfer semantics. DisplayItems carry UI semantics (computed properties, formatting, visibility flags). |
+| **`ObservableObject` base** | Enables `[ObservableProperty]` and two-way binding for editable fields. |
+| **Static formatting utilities** | `MaskPlaintext()`, `Summary` are computed from data — no need to persist them. |
+| **Decrypt at display boundary** | `MaskedValue` decrypts via `IEncryptionService.UnprotectString()` when computed. The encrypted value is never exposed to the UI. |
+
+---
+
+## 20. Temperature Slider Pattern
+
+Model configuration temperature uses a WPF `Slider` with live value display. This pattern applies to any numeric setting that benefits from a visual range control.
+
+### 20.1 XAML Pattern
+
+```xml
+<StackPanel Orientation="Horizontal">
+    <Slider Minimum="0" Maximum="2"
+            SmallChange="0.1" LargeChange="0.2"
+            TickFrequency="0.1" IsSnapToTickEnabled="True"
+            Value="{Binding EditingModelConfig.Temperature}"
+            Width="200"/>
+    <TextBlock Text="{Binding EditingModelConfig.Temperature, StringFormat={}{0:F1}}"
+               Width="30" TextAlignment="Center"
+               VerticalAlignment="Center"/>
+</StackPanel>
+```
+
+### 20.2 Clamping in ViewModel
+
+```csharp
+partial void OnEditingModelConfigChanged(ModelConfiguration? value)
+{
+    if (value is not null)
+    {
+        value.Temperature = Math.Clamp(value.Temperature, 0.0, 2.0);
+    }
+}
+```
+
+### 20.3 Key Properties
+
+| Property | Value |
+|----------|-------|
+| **Range** | 0.0 – 2.0 |
+| **Step** | 0.1 (SmallChange) |
+| **Display format** | One decimal place (`F1`) |
+| **Snap to tick** | Enabled — value snaps to nearest 0.1 |
+| **Live label** | `TextBlock` beside slider shows current value |
+
+---
+
+## 21. Test-Validate-Save Flow Pattern
+
+API key management follows a three-step flow: enter → test → save. This pattern applies to any credential or connection configuration UI.
+
+### 21.1 Flow States
+
+```
+[Enter Key] → [Test Key] → {Success: green ✓} or {Failure: red ✗} → [Save]
+```
+
+### 21.2 ViewModel Properties
+
+```csharp
+[ObservableProperty] private bool _isTesting;
+[ObservableProperty] private bool _isTestSuccess;
+[ObservableProperty] private string _testResultMessage = string.Empty;
+[ObservableProperty] private string _apiKeyInputValue = string.Empty;
+```
+
+### 21.3 Test Key Command
+
+```csharp
+[RelayCommand]
+private async Task TestApiKeyAsync()
+{
+    if (string.IsNullOrWhiteSpace(ApiKeyInputValue)) return;
+
+    IsTesting = true;
+    IsTestSuccess = false;
+    TestResultMessage = string.Empty;
+
+    try
+    {
+        var isValid = await _llmProviderService.ValidateApiKeyAsync(
+            SelectedProviderType, ApiKeyInputValue, endpointUrl, CancellationToken.None);
+
+        IsTestSuccess = isValid;
+        TestResultMessage = isValid
+            ? "API key validated successfully."
+            : "API key validation failed. Check the key and try again.";
+    }
+    catch (Exception ex)
+    {
+        IsTestSuccess = false;
+        TestResultMessage = $"Validation error: {ex.Message}";
+    }
+    finally
+    {
+        IsTesting = false;
+    }
+}
+```
+
+### 21.4 Save Flow
+
+```
+1. Read plaintext from PasswordBox (never stored in clear in ViewModel for longer than needed)
+2. Encrypt via IEncryptionService.ProtectString(plaintext)
+3. Create/update ApiKey domain model with encrypted value
+4. Call IApiKeyRepository.CreateAsync() or UpdateAsync()
+5. Refresh key list from repository
+6. Clear form, show brief status message
+```
+
+### 21.5 Copy-to-Clipboard Flow
+
+```
+1. Decrypt stored EncryptedValue via IEncryptionService.UnprotectString(ciphertext)
+2. Call Clipboard.SetText(decryptedValue)
+3. Optionally show brief "Copied!" tooltip
+```
+
+The plaintext exists in memory only for the duration of the clipboard operation — it is not stored in any ViewModel property.
+
+---
+
+## 22. Persona Selector ComboBox Pattern
+
+The Studio Chat toolbar replaces a hardcoded persona indicator with a live data-bound `ComboBox`. This pattern applies to any entity selector that lives in a toolbar or header.
+
+### 22.1 XAML Replacement
+
+Before (hardcoded):
+```xml
+<Button Content="🤖 Default Persona ▾"/>
+<TextBlock Text="Default Persona"/>
+```
+
+After (data-bound):
+```xml
+<ComboBox ItemsSource="{Binding PersonaList}"
+          SelectedItem="{Binding ActivePersona}"
+          DisplayMemberPath="DisplayName"
+          FontSize="10" Width="180"
+          AutomationProperties.AutomationId="PersonaSelector"/>
+
+<TextBlock Text="{Binding ActivePersona.DisplayName, FallbackValue='Select Persona'}"
+           FontSize="12" FontWeight="SemiBold"/>
+```
+
+### 22.2 Recently-Used Ordering
+
+The persona list is sorted with recently-used personas at the top:
+
+```csharp
+private void RefreshPersonaList()
+{
+    var allPersonas = await _personaRepo.GetAllAsync();
+    var recentIds = await _settingsRepo.GetAsync<List<string>>("RecentPersonaIds") ?? [];
+
+    var sorted = allPersonas
+        .OrderByDescending(p => recentIds.IndexOf(p.Id)) // -1 (not found) sorts last
+        .ThenBy(p => p.DisplayName)
+        .ToList();
+
+    PersonaList = new ObservableCollection<Persona>(sorted);
+}
+```
+
+### 22.3 Persona Picker Dialog (Ctrl+N)
+
+A lightweight `Window` or `Popup` triggered by `Ctrl+N`:
+
+| Element | Behavior |
+|---------|----------|
+| `TextBox` (search) | Filter persona list as user types (case-insensitive contains on DisplayName) |
+| `ListBox` (results) | Shows filtered personas. Select via click or Enter. |
+| Close | Escape key dismisses without selection |
+
+### 22.4 ViewModel Integration
+
+```csharp
+[RelayCommand]
+private async Task OpenPersonaPickerAsync()
+{
+    var dialog = new PersonaPickerDialog
+    {
+        Owner = Application.Current.MainWindow,
+        DataContext = this
+    };
+    dialog.ShowDialog();
+}
+```
+
+---
+
+## 23. Conditional Form Fields with DataTrigger
+
+When a provider dropdown changes (e.g., selecting "OpenAI-Compatible"), additional form fields appear. This uses WPF `DataTrigger` rather than code-behind visibility toggling.
+
+### 23.1 XAML Pattern
+
+```xml
+<!-- Always visible: provider dropdown -->
+<ComboBox ItemsSource="{Binding ProviderTypes}"
+          SelectedItem="{Binding SelectedProviderType}"/>
+
+<!-- Conditionally visible: OpenAI-Compatible fields -->
+<StackPanel>
+    <StackPanel.Style>
+        <Style TargetType="StackPanel">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsOpenAiCompatibleSelected}" Value="True">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </StackPanel.Style>
+    <TextBox Text="{Binding CustomProviderNameValue}" Placeholder="Provider name (e.g., Ollama)"/>
+    <TextBox Text="{Binding CustomEndpointUrlValue}" Placeholder="Endpoint URL (e.g., http://localhost:11434/v1)"/>
+</StackPanel>
+```
+
+### 23.2 ViewModel Property
+
+```csharp
+public bool IsOpenAiCompatibleSelected =>
+    SelectedProviderType == ProviderType.OpenAICompatible;
+```
+
+### 23.3 Applicability
+
+This pattern applies to any form where field visibility depends on a selection:
+- Backup provider (local folder vs. GCS — show bucket name field)
+- Search provider (Google vs. Bing — show API key field)
+- STT provider (Whisper vs. Windows Speech — show model path)
+
+---
+
+## 24. Duplicate Entity Pattern
+
+Model configurations can be duplicated with a "(Copy)" suffix. This is a reusable pattern for any entity that supports clone-and-edit.
+
+### 24.1 Command Implementation
+
+```csharp
+[RelayCommand]
+private void DuplicateModelConfig(ModelConfigurationDisplayItem source)
+{
+    var copy = new ModelConfiguration
+    {
+        Id = Guid.NewGuid().ToString("N"),           // NEW ID — not a copy of source
+        DisplayName = source.DisplayName + " (Copy)", // Append suffix
+        ProviderType = source.ProviderType,
+        ApiKeyId = source.ApiKeyId,
+        ModelIdentifier = source.ModelIdentifier,
+        Temperature = source.Temperature,
+        MaxOutputTokens = source.MaxOutputTokens,
+        MaxContextWindow = source.MaxContextWindow,
+        ThinkingEnabled = source.ThinkingEnabled,
+        PricingInputPer1K = source.PricingInputPer1K,
+        PricingOutputPer1K = source.PricingOutputPer1K,
+        ContextOverflowStrategy = source.ContextOverflowStrategy,
+    };
+
+    EditingModelConfig = copy;
+    // Form is now populated with the copy; user edits then saves
+}
+```
+
+### 24.2 Pattern Rules
+
+| Rule | Rationale |
+|------|-----------|
+| **New GUID** | The copy is a new entity, not a reference to the original |
+| **"(Copy)" suffix** | User-visible differentiator. Multiple copies become "(Copy)", "(Copy) (Copy)", etc. |
+| **Copy all settings** | Preserve all configuration fields; user edits only what needs changing |
+| **Not auto-saved** | The copy populates the form but is not saved until the user clicks "Save" |
+| **Applicable to** | ModelConfiguration, Persona, PromptTemplate, TextAction — any entity where "start from existing" is faster than "start from scratch" |
+
+---
+
+## 25. System Prompt Variable Resolution Pattern
+
+Persona system prompts support `{{variable}}` placeholders that are resolved at message-send time. This is a lightweight template engine pattern.
+
+### 25.1 Supported Variables
+
+| Variable | Resolved To | Example |
+|----------|-------------|---------|
+| `{{date}}` | Current date | `2026-06-22` |
+| `{{time}}` | Current time | `11:15:30` |
+| `{{user_name}}` | Windows user name | `Amit` |
+
+### 25.2 Resolution Implementation
+
+```csharp
+private string ResolveSystemPrompt(string template)
+{
+    return template
+        .Replace("{{date}}", DateTime.Now.ToString("yyyy-MM-dd"))
+        .Replace("{{time}}", DateTime.Now.ToString("HH:mm:ss"))
+        .Replace("{{user_name}}", Environment.UserName);
+}
+```
+
+### 25.3 UI Hint
+
+A static text hint below the system prompt editor shows available variables:
+
+```
+Available variables: {{date}}, {{time}}, {{user_name}} — resolved at message send time
+```
+
+### 25.4 Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **String.Replace, not regex** | Three variables with simple syntax — no need for a template engine. `string.Replace` is zero-allocation for small templates. |
+| **Resolved at send time** | `{{date}}` and `{{time}}` are dynamic; resolving at save time would embed stale values. |
+| **Not recursive** | Variables do not resolve within other variable values. `{{date}}` is atomic. |
+| **Extensible** | Future features may add variables (`{{model_name}}`, `{{thread_title}}`, `{{wiki_context}}`). The pattern remains the same — add a `.Replace()` call. |
+
+### 25.5 Applicability Beyond Personas
+
+The `{{variable}}` pattern is used in multiple contexts:
+- Persona system prompts (resolved at message send)
+- TextAction system prompts (resolved at text action execution)
+- PromptTemplate content (resolved at template usage)
+- Future: Auto-generated message headers, wiki page templates
