@@ -234,7 +234,7 @@ Below is the expected state after all implementation steps. `[MODIFIED]` marks e
 
 ---
 
-### [ ] Step 3: Language, Maintenance, Wiki, Backup, Tools, Pricing, Security Categories
+### [x] Step 3: Language, Maintenance, Wiki, Backup, Tools, Pricing, Security Categories
 
 - **Goal:** Build seven settings categories. The user can configure RTL language detection, perform database maintenance (VACUUM), set up wiki directory and git, configure backup, manage tool auto-approval defaults and STT provider, set pricing budget alerts, and view security status.
 

@@ -31,12 +31,18 @@
       "name": "Appearance, Notifications, Startup, Updates Categories",
       "classification": "HUMAN/SHT REQUIRED",
       "description": "1. Launch the app, navigate to Settings → Appearance\n2. Toggle Dark/Light mode — verify entire app theme changes instantly\n3. Change Chat Theme to 'Bubble' — verify the preview area updates (or note that chat view will use Bubble on next chat load)\n4. Drag font size slider to 18 — verify live preview text enlarges\n5. Navigate to Notifications, toggle 'Sound on Completion' ON, toggle 'Disable Streaming' ON\n6. Navigate to Startup, verify 'Minimize to Tray' is checked by default, toggle 'Launch on Windows Startup' ON\n7. Navigate to Updates, verify current version is displayed, change frequency to 'Weekly'\n8. Close and relaunch the app — verify all settings persisted (Dark mode, Bubble theme, font size 18, sound ON, streaming disabled, startup settings, weekly updates)"
+    },
+    {
+      "step": 3,
+      "name": "Language, Maintenance, Wiki, Backup, Tools, Pricing, Security Categories",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "1. Navigate to Language — verify 'Auto-detect RTL' is checked by default\n2. Navigate to Maintenance — verify database file size is displayed, click 'Compact Database', verify before/after sizes change and 'Space reclaimed' is shown (if any)\n3. Navigate to Wiki — if no wiki directory set, verify empty state message. Click 'Change', select a folder with .md files, verify indexing status updates\n4. Navigate to Backup — verify status shows 'Not configured', change schedule to 'Weekly'\n5. Navigate to Tools — change Web Search to 'AutoApprove', verify ISettingsRepository persists\n6. Navigate to Pricing — set budget to 50, threshold to 90, toggle Block ON. Verify persistence on relaunch\n7. Navigate to Security — verify DPAPI encryption status shows green checkmark\n8. Close and relaunch — spot-check Language, Tools, and Pricing settings persisted"
     }
   ],
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 6,
-  "current_step": 2,
+  "current_step": 3,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }
