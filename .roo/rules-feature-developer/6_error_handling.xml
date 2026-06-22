@@ -9,13 +9,13 @@
       <trigger>git checkout -b fails (e.g., branch already exists, not in a git repo)</trigger>
       <recovery>
         <step>Read the error message from the command output.</step>
-        <step>If the error indicates the branch already exists: ask the user whether to use the existing branch or choose a different name.</step>
+        <step>If the error indicates the branch already exists: ask the user whether to use the existing branch or choose a different name. If user chooses to use the existing branch: run `git checkout [branch-name]` to switch to it, then verify with `git branch --show-current` that you are on the correct branch before proceeding. If user chooses a different name: loop back to branch name selection with the new name.</step>
         <step>If the error indicates "not a git repository": Use the `ask_followup_question` tool. Question: "This directory is not a Git repository. Shall I initialize Git, generate a `.gitignore` based on your intended tech stack, and make an initial commit so we can create your branch?" Provide exactly 2 Suggested Responses: "Yes, initialize Git" and "No, skip Git Automation".</step>
         <step>If user clicks "Yes, initialize Git":
           1. Infer the tech stack from the user's initial request.
           2. Use `write_to_file` to create a standard `.gitignore`.
           3. Initialize a new git repository, stage all existing files, and create an initial commit with a descriptive message (e.g., "chore: initial project commit").
-          4. Create the feature branch and proceed with Phase 1.
+          4. Create and switch to the feature branch using `git checkout -b [branch-name]`. Verify with `git branch --show-current` that the active branch matches [branch-name]. Proceed with Phase 1.
         </step>
         <step>If user clicks "No, skip Git Automation": Note that Git Automation is Disabled. Return to Phase 1, Step 1 to create `agent-workspace/feature/state.json` (with `"branch_name": null` and `"git_automation_enabled": false`), then proceed to Phase 1, Step 2.</step>
       </recovery>

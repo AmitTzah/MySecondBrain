@@ -153,7 +153,7 @@
   <validation>
     <rule>Follow the quality loop as defined in 1_workflow.xml: implement → test → refactor → QA → fix → verify. Never skip a checkpoint.</rule>
     <rule>QA review is automatic and mandatory. The user sees finished work, not the QA process.</rule>
-    <rule>After user confirms manual verification: run automated tests one final time, then attempt_completion — no further changes.</rule>
+    <rule>After user confirms manual verification: call attempt_completion immediately — no further changes. The quality loop already ran all automated tests.</rule>
     <rule>Scan for contradictions between new changes and existing codebase conventions.</rule>
   </validation>
 </decision_guidance>

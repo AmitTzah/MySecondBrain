@@ -15,6 +15,12 @@
     <description>
       The Feature Developer workspace is split into five conceptual areas:
     </description>
+    <area name="spawn_context">
+      <purpose>Context provided in your spawn prompt — not files you own, but information you reference throughout the feature lifecycle.</purpose>
+      <item name="feature_roadmap_summary">
+        <description>If provided in your spawn prompt: a concise list of ALL features from the project roadmap, grouped by wave, with the current feature marked "← YOU ARE HERE". Completed features marked [x], pending marked [ ]. This is your big-picture map — you use it to understand where your feature fits in the overall project. If absent, skip roadmap-aware checks.</description>
+      </item>
+    </area>
     <area name="workbench">
       <purpose>Feature-specific transient files that are archived upon completion.</purpose>
       <path>agent-workspace/feature/state.json</path>
@@ -535,8 +541,9 @@
             Provide 3 responses: [branch-1], [branch-2], "Skip (Manual Git)".</action>
           <decision_tree>
             <branch condition="User selects a branch name">
-              <action>Run git checkout -b [branch-name]. Wait for output — if it fails, resolve with the
+              <action priority="critical">Run git checkout -b [branch-name]. This command creates the branch AND switches to it in one atomic operation. Wait for output — if it fails, resolve with the
                 git_branch_creation_fails error recovery scenario before proceeding.</action>
+              <action priority="high">Verify you are on the correct branch: run `git branch --show-current` or `git rev-parse --abbrev-ref HEAD`. The output must match [branch-name] exactly. If it does NOT match (branch was created but switch failed, or an incorrect command was used): run `git checkout [branch-name]` to switch explicitly. If that also fails, escalate to the git_branch_creation_fails error recovery scenario. Do NOT proceed with a mismatched branch.</action>
               <action>Set git_automation_enabled = true. Store branch name.</action>
             </branch>
             <branch condition="User selects 'Skip (Manual Git)'">
@@ -788,6 +795,144 @@
         </pruning_rule>
       </step>
 
+      <step number="2b" priority="high">
+        <title>Structural Health Check — Detect Oversized Files and Multi-Concern Files</title>
+        <description>
+          After every step, scan all files touched by the completed Code subtask. If any file has grown
+          beyond healthy limits or contains too many distinct concerns, design a split plan via Architect,
+          then execute the split via Code — before proceeding to the next step. This prevents cumulative
+          file bloat across steps.
+        </description>
+
+        <trigger>After Step 2 (Extract Context), before Step 3 (Re-evaluate the Plan). Runs on EVERY completed step.</trigger>
+
+        <detection>
+          <step number="1">
+            <title>Identify Touched Files</title>
+            <action>From the git diff (Step 1 verification) or the Code subtask's completion summary, compile the list of files modified in the just-completed step.</action>
+            <action priority="medium">Also scan the Code subtask's completion summary for the structured marker "<!--FILE_SIZE_WARNING-->". If present, Code has already flagged files it considers oversized — use this as a cross-reference for your own independent file scan. Code's flags are hints, not authoritative — your own file reading and line counting is the final word.</action>
+          </step>
+
+          <step number="2">
+            <title>Check Each File</title>
+            <action>For each touched file, read it and assess:</action>
+            <skip_generated_files priority="high">
+              <rule>Skip files that are clearly generated: in `generated/` or `__generated__/` directories, files with `@generated` or `auto-generated` markers in their header, protobuf/gRPC stubs (`*.pb.go`, `*.grpc.*`), OpenAPI clients, or other auto-generated code. These are exempt from structural health checks — they cannot be meaningfully split.</rule>
+            </skip_generated_files>
+            <checks>
+              <check name="line_count">
+                <rule>Does the file exceed 300 lines (excluding blank lines and comments)?</rule>
+                <rationale>300 lines is the healthy ceiling established by Code mode's self-refactor. Files beyond this are harder to navigate and review.</rationale>
+              </check>
+              <check name="concern_count">
+                <rule>Does the file contain 3+ distinct concerns? Look for: multiple unrelated class/interface definitions, mixed layers (data access + business logic + UI), or sections that could stand alone as separate modules.</rule>
+                <signals>
+                  <signal>Multiple export/class/interface declarations that don't share a common purpose</signal>
+                  <signal>Imports from distant, unrelated subsystems (e.g., a "utils" file importing database, HTTP, and UI libraries)</signal>
+                  <signal>Clearly separable sections separated by large comment blocks like "// --- DATABASE LAYER ---"</signal>
+                </signals>
+              </check>
+              <check name="growth_rate">
+                <rule>Did this file grow by 100+ lines in this single step? If the step added substantial new logic to an already-moderate file, the next step may push it over the edge.</rule>
+              </check>
+            </checks>
+          </step>
+
+          <step number="3">
+            <title>Classify</title>
+            <decision_tree>
+              <branch condition="ALL touched files are under 300 lines, have coherent concerns, and grew by less than 100 lines">
+                <action>No structural issues. Skip to Step 3 (Re-evaluate the Plan).</action>
+              </branch>
+              <branch condition="One or more files triggered the line_count or concern_count checks">
+                <action>Flag these files for structural refactoring. Proceed to Step 4 (Design Split).</action>
+              </branch>
+              <branch condition="Files only triggered the growth_rate check (under 300 lines but grew fast)">
+                <action>Note as a warning. Proceed to Step 3 (Re-evaluate the Plan) but mention in the completion summary that these files are approaching the threshold. No immediate action required.</action>
+              </branch>
+            </decision_tree>
+          </step>
+        </detection>
+
+        <split_design>
+          <step number="4">
+            <title>Spawn Architect to Replan — Insert Refactoring Step</title>
+            <trigger>One or more files need splitting.</trigger>
+            <description>
+              Do NOT split files yourself. Spawn an Architect subtask to replan the feature:
+              the Architect inserts a new "refactoring" step as the immediate next step in plan.md,
+              then adjusts all subsequent pending steps to account for the new file structure.
+              The refactoring step then executes naturally through the Phase 3 loop like any other step.
+            </description>
+            <action>Spawn Architect via new_task using the standard_architect_prompt from common patterns, but with this replan instruction injected: "This is a structural refactoring replan. Step [current_step] just completed. The following files have grown beyond healthy limits and need splitting: [list files with paths, line counts, and concern descriptions].
+
+            Your job:
+            1. Read plan.md and reference.md — understand the current feature state.
+            2. Insert a NEW step immediately after the just-completed step [current_step] — name it 'Step [current_step+1]: Structural Refactoring — Split [filenames]'. This step must:
+               - Goal: Split oversized files into focused modules without changing behavior.
+               - Actions: For each file, specify which logical sections to extract and where (new file paths).
+               - Unit Tests to Write: None — pure structural change, existing tests cover behavior.
+               - Integration Tests to Write: None — no infrastructure changes.
+               - Automated Test Commands: Run the full unfiltered test suite after splitting.
+               - Live Smoke Test: 'Run full test suite — verify zero failures. Check that all imports resolve correctly (build succeeds).'
+               - Smoke Test Classification: Model (self-verifiable via terminal).
+               - Suggested Commit Message: 'refactor: split [filenames] into focused modules'
+            3. Renumber ALL subsequent pending [ ] steps — shift them forward by 1 (e.g., old Step 5 → new Step 6).
+            4. Update Section 4 (Final Expected Project Structure) to reflect the new file layout.
+            5. Update reference.md: insert the new step's H3 heading and renumber all subsequent H3 headings to match.
+            6. Preserve ALL completed [x] steps exactly as-is. Only modify pending [ ] steps.
+            7. Do NOT change any step's Goal, Actions, or tests beyond renumbering — only the refactoring step is new.
+
+            Preserve completed [x] steps 1–[current_step]. Only rewrite pending [ ] steps starting from step [current_step+1]. Do NOT tell me templates are empty — they are not."</action>
+            <action>Wait for Architect to complete.</action>
+          </step>
+
+          <step number="5">
+            <title>Process Replan and Resume Execution</title>
+            <trigger>Architect completed the replan.</trigger>
+            <action>Read plan.md. Verify: (a) the new refactoring step exists at position current_step+1, (b) all subsequent pending steps are renumbered correctly, (c) completed [x] steps are untouched, (d) Section 4 reflects the new file structure.</action>
+            <action>Read reference.md. Verify the new step has an H3 heading and subsequent headings are renumbered.</action>
+            <action>Re-count total steps in plan.md Section 5 (every "### [ ] Step" OR "### [x] Step"). Update state.json: total_steps=[new count].</action>
+            <decision_tree>
+              <branch condition="Architect's replan looks correct">
+                <action>Proceed to Step 3 (Re-evaluate the Plan) — but skip the Re-evaluate logic. The Architect already replanned. Go directly to Step 4 (Finalize Step Completion) for the just-completed step [current_step], then loop back to Phase 3. The next step in the Phase 3 loop will be the new refactoring step, which executes through the normal Code→QA→verification pipeline.</action>
+              </branch>
+              <branch condition="Architect's replan has issues (missing step, numbering errors, wrong file paths)">
+                <action priority="critical">Do NOT ask the user. Auto-spawn another Architect to fix the replan. This is a mechanical correction — the Architect made errors in step insertion or numbering, not a design disagreement.</action>
+                <action>Spawn Architect via new_task using the standard_architect_prompt, injecting: "Your previous replan had issues: [list specific problems found during FD verification]. Fix these issues: ensure the refactoring step is inserted correctly at position [current_step+1], all subsequent steps are renumbered, Section 4 reflects the new file structure, and reference.md headings match. Preserve completed [x] steps. Only modify pending [ ] steps."</action>
+                <action>Wait for Architect to complete. Re-verify plan.md and reference.md.</action>
+                <retry_limit priority="critical">
+                  <rule>If the Architect's replan still has issues after 2 retries (3 total attempts including the original): stop. Do NOT spawn Architect again. Skip the refactoring — proceed to Step 3 (Re-evaluate the Plan) normally. Document in the completion summary: "⚠️ Structural refactoring deferred — Architect replan failed after 3 attempts: [details]." The oversized files will be caught again by PD Phase 4.</rule>
+                </retry_limit>
+              </branch>
+            </decision_tree>
+          </step>
+        </split_design>
+
+        <hands_off_mode_behavior priority="high">
+          <description>
+            When hands_off_mode is true: the entire structural health check runs automatically.
+            Steps 4-5 (Architect replan + FD verification) execute without asking the user.
+            The Architect replan issues branch auto-spawns a fix Architect (up to 2 retries) —
+            the user is never prompted. The refactoring step is inserted silently and executes
+            through the normal Phase 3 loop.
+          </description>
+        </hands_off_mode_behavior>
+
+        <loop_guard priority="critical">
+          <description>
+            A refactoring step that doesn't resolve oversized files could trigger another
+            refactoring step, creating an infinite loop. Prevent this.
+          </description>
+          <detection>
+            <rule>Before running the structural health check, read the just-completed step's name from plan.md Section 5. If the step name contains "Structural Refactoring": skip the entire Step 2b for this iteration. The refactoring step's results stand as-is — if files are still oversized, PD Phase 4 will catch them.</rule>
+          </detection>
+          <replan_counter>
+            <rule>Track how many times THIS feature has triggered a structural refactoring replan (count the number of "Structural Refactoring" steps in plan.md Section 5). If the count reaches 2: stop. Do NOT trigger another replan. Note in the completion summary: "⚠️ Structural refactoring limit reached (2 replans). Further splits deferred to PD Phase 4."</rule>
+          </replan_counter>
+        </loop_guard>
+      </step>
+
       <step number="3">
         <title>Re-evaluate the Plan</title>
         <action>Analyze the subtask's completion summary for roadblocks or scope drift. There are now TWO drift signals:
@@ -821,6 +966,21 @@
               Do NOT execute Steps 4-6 of this phase — jump directly to Phase 2.</action>
           </branch>
         </decision_tree>
+
+        <roadmap_cross_reference priority="high">
+          <trigger>Drift was detected (minor or major) AND a feature roadmap summary was provided in your spawn prompt.</trigger>
+          <description>
+            When drift is detected, cross-reference the drifted files/abstractions against the feature roadmap summary to identify future-feature impact:
+          </description>
+          <steps>
+            <step>1. Scan the drifted files for directories, abstractions, or data entities that future features (pending [ ] features in the roadmap) will also touch. Focus on shared infrastructure: interfaces, providers, core types, base classes, data schemas.</step>
+            <step>2. If the drift modifies files that a future feature explicitly depends on (check roadmap feature descriptions and dependency lists): this drift may help OR hurt that future feature. Note it in your drift assessment.</step>
+            <step>3. If the drift introduces new abstractions or changes existing ones in Wave 1-2 territory: future features may need to adapt. Flag this as "Roadmap Impact: [details]" in your next steps.</step>
+            <step>4. When presenting drift to the user (major drift ask_followup_question), if roadmap impact was detected, add: "Roadmap note: this drift touches [files/abstractions] that future features [Feature X, Feature Y] also depend on." This helps the user make informed decisions about whether to re-plan or proceed.</step>
+            <step>5. If the user asks for something mid-feature that matches a future feature's description: recognize it. Respond: "That aligns with Feature [X] ('[description]') scheduled as the next/upcoming feature. I can note it but recommend deferring the full implementation to that feature. I'll implement the minimal version needed for the current feature."</step>
+          </steps>
+          <skip_condition>If no roadmap summary was provided in your spawn prompt: skip this cross-reference entirely.</skip_condition>
+        </roadmap_cross_reference>
       </step>
 
       <step number="4">

@@ -1108,6 +1108,19 @@
           <element number="5">Instruction: "Read the vision docs for this feature. Derive acceptance criteria from the vision. Create an implementation plan using the architecture and abstractions from planning/." The FD Architect owns acceptance criteria — the wave map provides only the feature name, 1-line description, and dependencies. The specific vision files for this feature are listed above — read those exact files to derive acceptance criteria.</element>
           <element number="6">Completion instruction from common patterns feature_developer_prompt_construction.</element>
           <element number="7">Context about previously built features from current-state.md "What the App Can Currently Do". If more than 3 prior features, summarize concisely (≤2 sentences).</element>
+          <element number="7b">Feature Roadmap Summary: Read roadmap.md and compile a concise list of ALL features — one line per feature (name + wave). Format:
+            - Wave 1 (Foundation):
+              - [x] Feature 1: [Name] — [1-line description]
+              - [x] Feature 2: [Name] — [1-line description]
+            - Wave 2 (Skeleton):
+              - [x] Feature 3: [Name] — [1-line description]
+            - Wave 3 (Vertical Slices):
+              - [ ] Feature 4: [Name] — [1-line description]
+              - → Feature 5: [Name] — [1-line description] ← YOU ARE HERE
+              - [ ] Feature 6: [Name] — [1-line description]
+            - Wave 4 (Cross-Cutting):
+              - [ ] Feature 7: [Name] — [1-line description]
+            Mark completed features with [x], pending with [ ], and the current feature with → ← YOU ARE HERE. Use wave grouping. This gives FD the big picture: what was built before, what's being built now, and what's coming next. FD uses this when reporting scope drift (can identify if drift touches areas future features will cover) or when the user asks for something that aligns with a future feature. If there are more than 15 total features, collapse completed waves to a one-line summary (e.g., "Wave 1 (Foundation): Features 1-4 complete ✓") and only expand the current wave.</element>
           <element number="8">Hands-off mode: read hands_off_mode from state.json. Pass as literal boolean in the FD spawn prompt: "hands_off_mode: true" or "hands_off_mode: false". FD uses this to skip user interaction gates and defer GUI smoke tests to feature end.</element>
           <element number="9">Smoke test automation configuration: read the full smoke_test_automation block from state.json. Pass the entire block (enabled, environments with all fields including mcp_available/mcp_name/verified, missing_prerequisites) to FD as literal config in the spawn prompt. FD stores this in its state.json and passes it to Code mode subtasks. If smoke_test_automation.enabled is false or not yet configured, pass enabled: false.</element>
         </required_elements>
@@ -1407,9 +1420,88 @@
           <item>Tech Debt Signals: TODO markers, "temporary" solutions, bypass patterns?</item>
           <item>Knowledge Completeness: all project-type-relevant knowledge files populated with meaningful content? Do NOT flag legitimately empty files that are not relevant to this project type (e.g., frontend-ui.md being empty for a CLI project is expected, not a gap).</item>
           <item>Test Coverage Visibility: documentation reference tests/unit/, tests/integration/, and tests/e2e/ coverage?</item>
+          <item priority="high">Oversized Files: Scan the project for files exceeding 500 lines (excluding blank lines and comments). List each with path and line count. For each oversized file, assess: (a) does it contain multiple distinct concerns that should be separate files? (b) could it be a directory instead of a single file? (c) did it grow significantly during this feature (cross-reference with git diff)?</item>
+          <item priority="high">File Growth: Cross-reference the git diff against the previous feature boundary. Flag any file that grew by 200+ lines during this single feature — these are approaching the danger zone even if still under 500 lines.</item>
+          <item priority="medium">Long Functions: Search for functions exceeding 50 lines (Code mode's self-refactor limit). List any found — these slipped past the quality loop and indicate Code mode's self-refactor may not be catching them.</item>
+          <item priority="medium">Files That Should Be Directories: Identify files whose name suggests a category (e.g., "services", "utils", "helpers", "components") and that contain 3+ unrelated exports. These are directories disguised as files — flag for splitting.</item>
         </audit_checklist>
         <action>Assign Architectural Health rating (Excellent/Good/Fair/Poor) with specific evidence.</action>
         <action>Set phase_4_substep="audited" in state.json.</action>
+      </step>
+
+      <!-- STEP 6b: Automatic Lightweight Structural Refactoring -->
+      <step number="6b" priority="high">
+        <title>Automatic Lightweight Structural Refactoring</title>
+        <description>
+          If the architectural audit found oversized files (>500 lines), spawn a quick Code subtask
+          to split them. This is NOT a full "refactoring feature" — it's a structural cleanup that
+          extracts logical sections into separate files without changing behavior. Runs automatically.
+        </description>
+
+        <trigger>Step 6 audit found one or more files exceeding 500 lines.</trigger>
+
+        <skip_conditions>
+          <condition>Zero files exceed 500 lines — nothing to refactor. Skip to Step 7.</condition>
+          <condition priority="high">The same files were already refactored in a previous feature's Phase 4 and have regrown. Detection: read current-state.md "Vision Updates" section and search for "Structural refactoring: split [filename]" entries matching the flagged files. If a match is found: flag for the user instead — "Files [list] have grown back past 500 lines after previous refactoring. This may indicate a structural design issue. Consider a dedicated refactoring feature." Skip to Step 7.</condition>
+        </skip_conditions>
+
+        <execution>
+          <step number="1">
+            <title>Spawn Architect to Design the Split</title>
+            <action>Spawn an Architect subtask via new_task with: the list of oversized files from the audit (paths + line counts + concern analysis), and instruction: "Design a split plan for these oversized files. For each file, identify logical sections that can become separate files. Specify new file names and directory placement. Follow existing codebase conventions. If a file is a single coherent concern that genuinely cannot be meaningfully split (e.g., a large but unified switch statement, a single-class file with no extractable sections), state this explicitly and explain why — the PD will note it and skip that file. Output a concise plan: old-file → [new-file-1, new-file-2, ...] OR 'Not split — [reason]'. Do NOT implement — only design."</action>
+            <action>Wait for Architect to complete. Read the Architect's split plan.</action>
+            <filter_not_split>
+              <rule>If the Architect marked any files as "Not split — [reason]" (single coherent concern, cannot be meaningfully split): exclude those files from the Code subtask. Note in current-state.md under "Architectural Health": "Files [list] not split — [reason from Architect]." Only proceed with files that have actual split plans.</rule>
+              <rule>If ALL files were marked "Not split": skip to Step 7 (Vision Re-evaluation). Nothing to execute.</rule>
+            </filter_not_split>
+          </step>
+
+          <step number="2">
+            <title>Spawn Code to Execute the Split</title>
+            <action>Spawn a Code mode subtask via new_task with: the Architect's split plan, and instruction: "Execute this structural refactoring: split the specified oversized files exactly as designed. This is a PURE refactoring — NO behavior changes, NO new features, NO logic modifications. After splitting: run the FULL unfiltered automated test suite. If ANY test fails: revert ALL changes and report the failure. If all tests pass: the work is done. Report: files created, files modified, test results."</action>
+            <action>Wait for Code to complete.</action>
+          </step>
+
+          <step number="3">
+            <title>Verify and Reconcile</title>
+            <decision_tree>
+              <branch condition="Code reports test failures or the split could not be completed">
+                <action>Do NOT block the feature. Document in current-state.md under "Architectural Health": "⚠️ Oversized files [list] could not be auto-split — [reason from Code subtask]. Manual refactoring needed."</action>
+                <action>Proceed to Step 7 (Vision Re-evaluation). The feature continues — oversized files are a health warning, not a blocker.</action>
+              </branch>
+              <branch condition="Code reports all tests passed and split was successful">
+                <action priority="high">Run the FULL existing E2E suite (same process as Step 2). The Code subtask ran unit/integration tests, but a structural file split can break E2E tests through import path changes, module resolution shifts, or test file references. If no E2E tests exist (tests/e2e/ empty or missing): skip E2E re-run — nothing to regress. Proceed to reconciliation below.</action>
+                <e2e_result>
+                  <sub_branch condition="E2E suite PASSES">
+                    <action>Update vision/ and planning/ files if the split changed file paths referenced in architecture documentation. This is a minor drift — PD edits directly.</action>
+                    <action>Note in current-state.md under "Vision Updates": "Structural refactoring: split [files] into [new-files]. E2E regression: ✅ passed."</action>
+                    <action>Proceed to Step 7 (Vision Re-evaluation).</action>
+                  </sub_branch>
+                  <sub_branch condition="E2E suite FAILS">
+                    <action priority="high">The refactoring introduced an E2E regression. Spawn a Code subtask to fix the E2E failure — the split is correct, but something in the E2E test or its dependencies broke. Include: the failing E2E output, the split plan, and instruction: "The structural refactoring split [files] into [new-files]. Unit and integration tests pass, but E2E tests now fail. Fix the E2E tests or their dependencies (import paths, selectors, test setup) — do NOT revert the split. Do NOT modify application logic. Run the full E2E suite after fixing."</action>
+                    <action>Wait for Code to complete.</action>
+                    <decision_tree>
+                      <branch condition="Code fixed the E2E failure and suite passes">
+                        <action>Note in current-state.md under "Vision Updates": "Structural refactoring: split [files] into [new-files]. E2E regression: fixed (Code subtask)."</action>
+                        <action>Proceed to Step 7 (Vision Re-evaluation).</action>
+                      </branch>
+                      <branch condition="Code could not fix the E2E failure">
+                        <action>Do NOT block the feature. Document in current-state.md under "Architectural Health": "⚠️ Structural refactoring of [files] succeeded but E2E suite now fails — [details from Code subtask]. The split is committed; E2E tests need manual attention."</action>
+                        <action>Proceed to Step 7 (Vision Re-evaluation).</action>
+                      </branch>
+                    </decision_tree>
+                  </sub_branch>
+                </e2e_result>
+              </branch>
+            </decision_tree>
+          </step>
+        </execution>
+
+        <principle>
+          Lightweight refactoring is preventive maintenance — it keeps files healthy without the overhead
+          of a full refactoring feature. It runs silently (no user prompts) and never blocks the feature pipeline.
+          Failed splits are documented but never halt progress.
+        </principle>
       </step>
 
       <!-- STEP 7: Vision Re-evaluation -->

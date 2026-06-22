@@ -308,6 +308,65 @@
         When injecting: edit roadmap.md to insert the refactoring feature as the immediate next feature, increment total_features in state.json by 1. Place in the same wave unless it spans the entire codebase.
       </process>
     </decision>
+
+    <decision id="structural_vs_full_refactoring">
+      <question>When should the PD trigger lightweight structural refactoring vs. a full refactoring feature?</question>
+      <description>
+        Two tiers of refactoring exist: lightweight structural splits (automatic, Phase 4 Step 6b)
+        and full refactoring features (user-approved, inserted into roadmap). Use the right tier
+        for the right problem.
+      </description>
+
+      <tier name="lightweight_structural_split" trigger="automatic">
+        <use_when>
+          <case>A file exceeds 500 lines and contains multiple separable concerns.</case>
+          <case>A file grew by 200+ lines in a single feature (rapid growth, approaching danger zone).</case>
+          <case>A file's name suggests a category ("utils", "helpers", "services") and it has 3+ unrelated exports.</case>
+        </use_when>
+        <characteristics>
+          <characteristic>Pure structural change — no behavior modifications.</characteristic>
+          <characteristic>Architect designs the split; Code executes it.</characteristic>
+          <characteristic>Runs automatically in Phase 4 Step 6b — no user prompts.</characteristic>
+          <characteristic>If tests fail: revert, document, move on. Never blocks the feature.</characteristic>
+          <characteristic>Does NOT consume a roadmap slot.</characteristic>
+        </characteristics>
+      </tier>
+
+      <tier name="full_refactoring_feature" trigger="user_approved">
+        <use_when>
+          <case>Multiple files across different subsystems need coordinated restructuring.</case>
+          <case>Architectural Health is "Poor" or "Fair" with systemic issues (circular dependencies, duplicated abstractions, wrong wave assignment).</case>
+          <case>A Wave 1-2 abstraction was built incorrectly and multiple Wave 3 features need it fixed.</case>
+          <case>User explicitly requests a refactoring at the PR/merge gate.</case>
+          <case>Lightweight splits have been applied 3+ times to the same file and it keeps regrowing — the structural design is wrong.</case>
+        </use_when>
+        <characteristics>
+          <characteristic>May involve behavior changes, interface redesigns, or architectural restructuring.</characteristic>
+          <characteristic>Goes through the full FD pipeline: Architect plan → Critic → Code execution → QA → E2E.</characteristic>
+          <characteristic>Requires user approval at the PR/merge gate.</characteristic>
+          <characteristic>Consumes a roadmap slot — inserted as next feature.</characteristic>
+        </characteristics>
+      </tier>
+
+      <thresholds>
+        <threshold name="file_line_count">
+          <rule>0–300 lines: Healthy. No action.</rule>
+          <rule>300–500 lines: Watch zone. Flag in Code completion summary. FD Phase 4 Step 2b may trigger Architect-designed split if multiple concerns detected.</rule>
+          <rule>500–800 lines: Action zone. PD Phase 4 Step 6b auto-triggers lightweight split. Architect design + Code execution.</rule>
+          <rule>800+ lines: Critical. PD Phase 4 Step 6b still auto-triggers split, but also flag in audit as a systemic concern. If 3+ files in this range, recommend a full refactoring feature to the user.</rule>
+        </threshold>
+        <threshold name="concern_density">
+          <rule>1 concern per file: Healthy.</rule>
+          <rule>2–3 related concerns: Acceptable if tightly coupled (e.g., interface + default implementation).</rule>
+          <rule>3+ unrelated concerns: Split candidate — triggers FD Phase 4 Step 2b regardless of line count.</rule>
+        </threshold>
+        <threshold name="growth_rate">
+          <rule>0–100 lines per feature: Normal growth.</rule>
+          <rule>100–200 lines per feature: Watch zone. Flag in FD Phase 4 Step 2b.</rule>
+          <rule>200+ lines per feature: Action zone. Treat as oversized even if under 500 lines — the next feature will push it over.</rule>
+        </threshold>
+      </thresholds>
+    </decision>
   </refactoring_decisions>
 
   <scope_creep_decisions>

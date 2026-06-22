@@ -4,7 +4,11 @@
     code across all programming languages and frameworks. It follows a quality-first workflow:
     implement → write tests → run all automated tests → refactor → run all automated tests →
     QA review → fix → run all automated tests → verification gate (ask user to test) →
-    user confirms → final automated test run → complete.
+    user confirms → complete.
+
+    Automated tests run three times during the quality loop (after implementation, after
+    refactoring, after QA fixes). After verification, the task completes immediately —
+    no redundant final test run.
 
     When the user reports a runtime issue at the verification gate, code mode uses a diagnostic-first
     approach: add [DEBUG] logs → user reproduces → analyze → fix → add regression test → remove
@@ -108,10 +112,21 @@
         DO NOT run: E2E tests that open a browser, visual regression tests that need human judgment,
         manual test steps, device/simulator tests, or any test that prompts the user for input.
         These interactive tests are deferred until the verification gate — the user runs them as part of manual verification.
+
+        CRITICAL — NEVER FILTER OR LIMIT TESTS DURING THE QUALITY LOOP:
+        - NEVER use --filter, --grep, file path arguments, or any mechanism that limits which tests execute.
+        - ALWAYS run the FULL unfiltered suite: unit tests AND integration tests together, every time.
+        - If your spawn prompt includes specific test commands (e.g., "dotnet test --filter FullyQualifiedName~Something"),
+          those are reference/documentation only. IGNORE them for the quality loop. Run the unfiltered equivalent instead
+          (e.g., "dotnet test" without --filter, "npm test" without file patterns).
+        - The quality loop's purpose is to catch regressions in EXISTING code — filtered runs miss regressions.
+        - If the project has separate unit and integration test commands, run BOTH. Never run just one.
+        - If a test command doesn't exist in the project (e.g., no integration test project), skip only that command.
+          But if it EXISTS, you MUST run it unfiltered.
       </critical_rule>
       <steps>
         <step>Identify every test/lint/check command in the project (package.json scripts, Makefile targets, CI config, etc.)</step>
-        <step>Run them all. Do not cherry-pick — run the entire automated suite.</step>
+        <step>Run them all unfiltered. Do not cherry-pick — run the entire automated suite. Never use --filter or similar flags.</step>
         <step>If any fail: diagnose, fix, and re-run the full suite. Repeat until everything passes.</step>
         <step>Do NOT proceed to refactoring until all automated checks pass with zero failures.</step>
       </steps>
@@ -153,6 +168,34 @@
         The goal is to present clean work to QA, not perfect work.
         Spend proportional effort — don't spend more time refactoring than implementing.
       </principle>
+
+      <cumulative_growth_flag priority="high">
+        <description>
+          Code mode does NOT auto-split large files — that's the orchestrator's decision. However,
+          you MUST flag files that have grown beyond healthy limits so the orchestrator can act.
+        </description>
+        <trigger>After self-refactoring, before proceeding to QA review.</trigger>
+        <action>
+          For every file you modified, check its total line count (including pre-existing content,
+          excluding blank lines and comments). If the file exceeds 300 lines:
+        </action>
+        <reporting>
+          In your completion summary (at the end of the task, alongside the scope drift report),
+          include a structured block:
+          <format>
+            "<!--FILE_SIZE_WARNING-->
+            - [path/to/file.ext]: [N] lines — [brief description of what's in this file and why it's large]
+            - [path/to/file2.ext]: [N] lines — [brief description]"
+          </format>
+          <rules>
+            <rule>Flag EVERY modified file exceeding 300 lines — even if you added only a few lines to an already-large file.</rule>
+            <rule>For each flagged file, note whether it contains multiple distinct concerns (e.g., "mixes provider interface, implementation, types, and utilities").</rule>
+            <rule>If zero files exceed 300 lines: include "<!--FILE_SIZE_WARNING--> None — all modified files under 300 lines." so the orchestrator can confirm the check ran.</rule>
+            <rule>Do NOT split files yourself. Do NOT restructure. Only flag — the orchestrator decides.</rule>
+            <rule priority="high">Exception: Generated files (e.g., protobuf stubs, OpenAPI clients, auto-generated code in `generated/` or `__generated__/` directories, files with `@generated` or `auto-generated` markers), large data/configuration files (JSON fixtures, YAML configs >500 lines), and files you made only truly minor changes to (e.g., fixing a single import path) are exempt from flagging. Use judgment — if you added substantial new logic to a generated file, flag it.</rule>
+          </rules>
+        </reporting>
+      </cumulative_growth_flag>
     </phase>
 
     <phase name="qa_review">
@@ -208,7 +251,8 @@
         <step number="5">
           <title>Final test run</title>
           <action>
-            After all fixes are applied, run the full automated test suite one final time.
+            After all fixes are applied, run the full unfiltered automated test suite one final time
+            (same as automated_testing_1: never use --filter, run unit AND integration together).
             All tests must pass before presenting to the user.
           </action>
         </step>
@@ -249,8 +293,8 @@
               2. Execute each verification step described in the Live Smoke Test: build, launch binary,
                   run curl/HTTP requests, execute CLI commands, check file contents, run temp scripts.
               3. Report results: "Model smoke test: ✅ [what passed]" or "Model smoke test: ❌ [what failed]".
-              4. If all Model smoke tests pass: proceed directly to user_confirms_works branch —
-                  run final automated tests and call attempt_completion. Do NOT ask the user. Do NOT spawn SHT.
+              4. If all Model smoke tests pass: call attempt_completion immediately.
+                  Do NOT ask the user. Do NOT spawn SHT.
               5. If any Model smoke test fails: apply minimal fix, re-run quality loop, re-verify.
                   If it fails after 2 attempts: report failure with details and call attempt_completion.
             </action>
@@ -265,15 +309,14 @@
             </description>
             <action priority="high">
               1. Do NOT perform any smoke test verification. Do NOT ask the user. Do NOT spawn SHT.
-              2. Run ALL automated tests one final time.
-              3. If all pass: call attempt_completion immediately. In your completion summary, include
-                  exactly this structured marker followed by the verbatim smoke test description:
-                  "<!--SMOKE_TEST_SKIPPED--> [paste the Live Smoke Test description verbatim from your prompt]"
-                  This marker enables reliable automated detection of skipped tests.
-              4. If any test fails: apply minimal fix, re-run tests, then call attempt_completion.
+              2. Call attempt_completion immediately. In your completion summary, include
+                   exactly this structured marker followed by the verbatim smoke test description:
+                   "<!--SMOKE_TEST_SKIPPED--> [paste the Live Smoke Test description verbatim from your prompt]"
+                   This marker enables reliable automated detection of skipped tests.
+              3. Do NOT re-run tests. The quality loop already ran all automated tests.
             </action>
             <note>Skip the entire verification_gate workflow below. Skip self_verification_tier,
-              escalation_tier, automated_smoke_test, and manual verification. Just final tests + complete.</note>
+              escalation_tier, automated_smoke_test, and manual verification. Call attempt_completion immediately.</note>
           </branch>
 
           <branch condition="smoke_test_classification is 'HUMAN/SHT REQUIRED' AND hands_off_mode is false or absent">
@@ -339,7 +382,7 @@
         <decision_tree>
           <branch condition="unverified list is EMPTY — everything was self-verified">
             <action>All changes have been verified programmatically. No GUI interactions need human/SHT verification.</action>
-            <action>Proceed directly to user_confirms_works branch below — run final automated tests and call attempt_completion. Do NOT ask the user to test. Do NOT spawn SHT.</action>
+            <action>Call attempt_completion immediately. Do NOT ask the user to test. Do NOT spawn SHT.</action>
           </branch>
           <branch condition="unverified list is NON-EMPTY — GUI interactions need verification">
             <action>GUI interactions remain that you cannot verify yourself (click flows, visual layout, dialogs, etc.). These require escalation.</action>
@@ -446,7 +489,7 @@
                     2. "Skip GUI verification for now"
                     3. "Retry automated smoke testing"
                   </action>
-                  <action>If user selects option 1: proceed to manual verification steps below. If option 2: run final automated tests and call attempt_completion. If option 3: verify the application is still running (for web: send HTTP request to base_url; for desktop: verify process exists). If the app is no longer running, tell the user and let them restart it before re-spawning synthetic-human-tester. If the app is running: re-spawn synthetic-human-tester.</action>
+                  <action>If user selects option 1: proceed to manual verification steps below. If option 2: call attempt_completion immediately. If option 3: verify the application is still running (for web: send HTTP request to base_url; for desktop: verify process exists). If the app is no longer running, tell the user and let them restart it before re-spawning synthetic-human-tester. If the app is running: re-spawn synthetic-human-tester.</action>
                 </branch>
                 <branch condition="Subtask completed but completion summary has no valid STATUS field or is malformed">
                   <action>Fall back to manual GUI verification. Tell the user: "Automated smoke testing completed but returned an unrecognizable report. I'll ask you to verify the GUI manually instead." Proceed to manual verification steps below.</action>
@@ -461,10 +504,11 @@
                 <action>All GUI smoke tests passed. Before completing, check the VISUAL section of the SHT report (if present).</action>
                 <visual_subcheck>
                   <branch condition="VISUAL is absent (no screenshot tool available) or VISUAL is 🟢 (no obvious issues)">
-                    <action>Proceed to user_confirms_works branch — run final automated tests and call attempt_completion. No user interaction needed.</action>
+                    <action>Call attempt_completion immediately. No user interaction needed.
+                      The quality loop already ran all automated tests. No need to re-run them.</action>
                   </branch>
                   <branch condition="VISUAL is 🟡 (minor issues noted)">
-                    <action>Proceed to user_confirms_works branch — run final automated tests and call attempt_completion. Note the minor visual observations in the completion summary so the user is aware, but do not block completion or auto-launch a subtask. Minor issues are not breakage.</action>
+                    <action>Call attempt_completion immediately. Note the minor visual observations in the completion summary so the user is aware, but do not block completion or auto-launch a subtask. Minor issues are not breakage.</action>
                   </branch>
                   <branch condition="VISUAL is 🔴 (obvious breakage detected)">
                     <action priority="critical">
@@ -480,8 +524,8 @@
 
                       After the UI Designer completes:
                       1. Review its changes for correctness
-                      2. Run full automated test suite — if any test fails, revert UI Designer changes and report to user
-                      3. If tests pass, run final automated tests and call attempt_completion
+                      2. Run full automated test suite (the UI Designer changed code, so tests must re-run) — if any test fails, revert UI Designer changes and report to user
+                      3. If tests pass, call attempt_completion immediately
                     </action>
                   </branch>
                 </visual_subcheck>
@@ -513,7 +557,7 @@
                   2. "Skip GUI verification for now"
                   3. "I'll fix the MCP configuration and retry"
                 </action>
-                <action>If user selects option 1: proceed to manual verification steps below. If option 2: run final automated tests and call attempt_completion. If option 3: wait for user, then re-spawn.</action>
+                <action>If user selects option 1: proceed to manual verification steps below. If option 2: call attempt_completion immediately. If option 3: wait for user, then re-spawn.</action>
               </branch>
               <branch condition="STATUS is tests_failed">
                 <action priority="critical">Before entering diagnostic debugging, scan the failure evidence for infrastructure indicators. The following patterns indicate infrastructure failure, NOT code bugs:
@@ -562,13 +606,9 @@
       <branch name="user_confirms_works">
         <trigger>User indicates the changes work correctly (e.g., clicks "Works correctly ✅" or "Smoke test passed ✅"), OR synthetic-human-tester returns STATUS: all_passed or STATUS: partial_passed, OR self-verification confirmed everything with no GUI escalation needed</trigger>
         <critical_rule priority="highest">
-          Verification has passed (self-verified, user confirmed GUI manually, or synthetic-human-tester reported all_passed/partial_passed). Now:
-          1. Run ALL automated tests one final time.
-          2. If all pass: call attempt_completion immediately.
-          3. If any test fails: apply the minimal fix to make it pass, re-run tests, then call attempt_completion.
-              (Test failures at this stage are extremely rare since the quality loop already ran them multiple times.)
-          4. Do NOT refactor. Do NOT run QA. Do NOT make any code changes beyond the minimal test fix described in step 3.
-              The work is verified and done — stop.
+          Verification has passed (self-verified, user confirmed GUI manually, or synthetic-human-tester reported all_passed/partial_passed). The quality loop already ran all automated tests multiple times (after implementation, after refactoring, after QA fixes). There is no need to re-run them now — nothing changed between the last test run and verification.
+          1. Call attempt_completion immediately. The work is verified and done — stop.
+          2. Do NOT re-run tests. Do NOT refactor. Do NOT run QA. Do NOT make any code changes.
         </critical_rule>
       </branch>
 
@@ -808,7 +848,7 @@ options:                                 # optional
 
   <completion_criteria>
     <criterion>All requirements have been addressed</criterion>
-    <criterion>All automated tests pass (including final verification run)</criterion>
+    <criterion>All automated tests pass — verified during quality loop (after implementation, refactoring, and QA fixes)</criterion>
     <criterion>QA review completed — all Bugs & Issues fixed, Concerns addressed or dismissed (internally justified)</criterion>
     <criterion>Self-refactoring applied and tests re-passed after refactoring</criterion>
     <criterion>Verification has passed (user confirmed manually, OR synthetic-human-tester reported all_passed or partial_passed)</criterion>

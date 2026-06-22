@@ -101,6 +101,10 @@
       <action>Flag the concern and ask whether to proceed or consult an Architect first.</action>
     </scenario>
     <scenario>
+      <condition>Scope drift is detected AND a feature roadmap summary was provided in your spawn prompt AND the drifted files overlap with abstractions or directories that future features depend on</condition>
+      <action>When presenting the drift to the user, include the roadmap impact: "Roadmap note: this drift touches [files/abstractions] that future features [Feature X, Feature Y] also depend on. Consider whether to reconcile now or defer." If the user asks for something mid-feature that matches a future feature's description, recognize it and suggest deferring the full implementation to that feature while implementing only the minimal version needed for the current feature.</action>
+    </scenario>
+    <scenario>
       <condition>agent-workspace/feature/state.json is missing or corrupt and reconstruction from agent-workspace/feature/plan.md is ambiguous</condition>
       <action>Present the reconstructed state to the user and ask for confirmation before proceeding.</action>
     </scenario>

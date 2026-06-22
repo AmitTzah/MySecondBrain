@@ -83,7 +83,7 @@
       <update>QA review in progress...</update>
       <update>Addressing QA findings: [brief description]...</update>
       <update>Asking user to verify changes...</update>
-      <update>User confirmed — running final automated test run...</update>
+      <update>User confirmed — completing task...</update>
     </format>
   </progress_updates>
 
@@ -102,10 +102,11 @@
       <element>Asking the user to review code line-by-line (QA already did this)</element>
     </avoid>
     <critical_rule>
-      attempt_completion is ONLY called after verification passes AND the final automated test
-      run passes. Verification may be: (a) self-verification confirmed all changes with no GUI escalation needed, (b) user confirms manual GUI testing, OR (c) synthetic-human-tester
+      attempt_completion is called immediately after verification passes. Verification may be:
+      (a) self-verification confirmed all changes with no GUI escalation needed,
+      (b) user confirms manual GUI testing, OR (c) synthetic-human-tester
       reports all_passed or partial_passed. Never call attempt_completion before the verification
-      gate resolves.
+      gate resolves. The quality loop already ran all automated tests — no need to re-run them.
     </critical_rule>
   </completion_messages>
 </communication_guidelines>

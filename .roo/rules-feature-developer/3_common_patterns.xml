@@ -51,6 +51,22 @@
         micro-steps. A step that genuinely has no smoke test beyond automated tests
         should NOT be a separate step.
       </rule>
+      <rule number="5" priority="high">
+        File-level organization: New logic should create NEW files, not bloat existing ones.
+        When a step adds a new concern (a new provider, a new service, a new component type),
+        create a dedicated file for it rather than appending to an existing file — even if
+        the existing file is the "closest match." Files that accumulate unrelated concerns
+        across steps become unmaintainable. Section 4 (Final Expected Project Structure) is
+        your tool for this: every new concern introduced by a step should appear as a [NEW]
+        file in Section 4. A step that only adds [MODIFIED] entries without any [NEW] files
+        should be scrutinized — is the new code truly an extension of existing concerns, or
+        is it a new concern being squeezed into an existing file?
+
+        When writing Section 4, estimate cumulative line counts: if a [MODIFIED] file would
+        exceed ~300 lines after all steps complete, the later steps should specify [NEW] files
+        for their new code instead. Think ahead — do not plan a file that grows from 100 to 600
+        lines across 5 steps when you could plan 3 focused files of ~200 lines each.
+      </rule>
     </critical_rules_for_architect>
 
     <template>
@@ -87,7 +103,6 @@
   - `tests/unit/{feature-name}.test.{ext}`: Test [specific behavior], test [edge case], test [error path]
 - **Integration Tests to Write:** [List each new integration test file. Integration tests verify that code works with real infrastructure — database, filesystem, network, external services. Only specify integration tests when this step's Actions touch real infrastructure. If this step is pure computation, UI-only styling, or has no external dependencies, write "None — [reason]" (e.g., "None — pure CSS changes," "None — no database or external service interaction"). Check `tests/integration/` first to avoid duplication:]
   - `tests/integration/{feature-name}.integration.test.{ext}`: Test [DB write + read], test [API handler with real request], test [file I/O]
-- **Automated Test Commands:** [Specify which CLI test commands to run to verify this step, e.g., `npm test`, `npm run test:unit`, `npm run test:integration`, `npm run lint`. These are the commands Code mode will execute during its quality loop. Include unit tests, integration tests, linters, and type-checkers — everything that runs without human interaction. Do NOT include E2E tests (browser-based, visual regression, device/simulator) — those run at the Project Director level in Phase 4 as a cross-feature regression suite, not per step.]
 - **Live Smoke Test (Mandatory):** [Explain EXACTLY what to verify. Must be a substantive smoke test — NOT just "run automated tests" since the quality loop already runs those. Choose ONE of the two formats below based on who can verify it:]
 - **Smoke Test Classification:** Model OR HUMAN/SHT REQUIRED 
   - **Model** — AI-verifiable via terminal. Examples:
@@ -109,6 +124,9 @@
 
 ## 6. Shared Technical Context
 *(Append-only log managed by the Feature Developer. Stores API endpoints, JSON payloads, state shapes, and abstractions created in earlier steps that later steps might need to read).*
+
+- **Project Test Commands:** [Document ONCE — not per step. List the project's unfiltered CLI test commands, e.g., `dotnet test`, `npm test`, `npm run test:unit && npm run test:integration`, `npm run lint`. These are project-wide constants. Code mode discovers and runs them all unfiltered during its quality loop — never step-scoped. Include unit tests, integration tests, linters, and type-checkers — everything that runs without human interaction. Do NOT include E2E tests.]
+
 - [Initial State]: No shared context yet.
       </content>
     </template>
@@ -175,7 +193,6 @@
         <item>Actions</item>
         <item>Unit Tests to Write (verbatim from the plan — specific test files and test cases the Architect expects Code to create in tests/unit/)</item>
         <item>Integration Tests to Write (verbatim from the plan — specific integration test files for tests/integration/. May say "None — [reason]" if this step has no infrastructure dependencies)</item>
-        <item>Automated Test Commands (CLI commands Code must run during its quality loop, including integration test commands like `npm run test:integration` if applicable)</item>
         <item>Live Smoke Test instructions</item>
         <item>Smoke Test Classification (Model or HUMAN/SHT REQUIRED) — see instruction_2_variant below</item>
         <item>Suggested Commit Message</item>
@@ -322,7 +339,7 @@ If any MCP git tool fails, returns an error, or is unavailable at runtime: fall 
 
       <item number="0">
         <title>Incorporate Provided Project Context (If Available)</title>
-        If your prompt includes overall project context and feature specifications, use them as the authoritative source for the plan. This context may include: the project vision, user personas, success metrics, the specific feature description and acceptance criteria, the feature's position in the roadmap (e.g., "Feature 3 of 8"), and context about previously built features. Use this for sections 1 (Overall Project Context) and 2 (Feature-Specific Context) of the plan template. Do NOT re-discover or re-ask for information already provided in your prompt — fill the plan sections from the provided context directly.
+        If your prompt includes overall project context and feature specifications, use them as the authoritative source for the plan. This context may include: the project vision, user personas, success metrics, the specific feature description and acceptance criteria, the feature's position in the roadmap (e.g., "Feature 3 of 8"), context about previously built features, and a Feature Roadmap Summary — a concise list of ALL features grouped by wave with the current feature marked "← YOU ARE HERE". The roadmap summary shows you what was built before, what's being built now, and what's coming next. Use it to ensure your implementation plan doesn't conflict with future features: if this feature introduces a pattern or abstraction, design it to be extensible for the features that follow. If the roadmap summary is absent (standalone FD, no PD), skip roadmap-aware design — focus on the feature in isolation. Use all provided context for sections 1 (Overall Project Context) and 2 (Feature-Specific Context) of the plan template. Do NOT re-discover or re-ask for information already provided in your prompt — fill the plan sections from the provided context directly.
       </item>
 
       <item number="0b">
@@ -364,6 +381,48 @@ If any MCP git tool fails, returns an error, or is unavailable at runtime: fall 
         <sub_item letter="b">Read the project's integration test directory (commonly `tests/integration/`) if it exists — inventory existing integration tests, their framework, and what's covered. If no integration directory exists yet, note that this may be the first feature requiring integration tests.</sub_item>
         <sub_item letter="c">Read source files, configuration, and dependencies related to the feature.</sub_item>
         <sub_item letter="d">Note the project's test framework (Jest, Vitest, Mocha, pytest, xUnit, etc.) and any custom test helpers or fixtures — use these conventions in your Unit Tests to Write and Integration Tests to Write specifications.</sub_item>
+      </item>
+
+      <item number="3b" priority="high">
+        <title>Study Full Project Directory Structure — Design Modular Post-Feature Layout</title>
+        <description>
+          Before writing Section 4 (Final Expected Project Structure), you must understand the
+          CURRENT directory tree and intentionally design the POST-FEATURE modular structure.
+          Section 4 is not a flat file inventory — it is your architectural decision about how
+          code should be organized into cohesive modules.
+        </description>
+        <steps>
+          <step number="1">
+            <title>Read the Full Directory Tree</title>
+            <action>List the project's source directories recursively (excluding node_modules, dist, build, .git, tests/). Build a mental map of: which directories exist, how files are grouped (by feature? by layer? by type?), naming conventions, and file size distribution.</action>
+          </step>
+          <step number="2">
+            <title>Identify Current Organizational Patterns and Problems</title>
+            <action>Analyze what you see:
+              <item>Are files organized by layer (services/, models/, controllers/) or by feature (auth/, dashboard/, settings/)?</item>
+              <item>Are there "junk drawer" directories (utils/, helpers/, common/, shared/) with many unrelated files?</item>
+              <item>Are there files with category-sounding names that contain 3+ distinct concerns?</item>
+              <item>Are there files exceeding 300 lines that should already be split?</item>
+              <item>Does the current structure follow the conventions described in knowledge/architecture.md?</item>
+            </action>
+          </step>
+          <step number="3">
+            <title>Design the Post-Feature Modular Structure</title>
+            <action>For Section 4, design what the project tree SHOULD look like after all steps complete. This is your opportunity to establish or reinforce modular boundaries:
+              <item>For each new concern this feature introduces: create a dedicated file in the appropriate directory — do NOT append to an existing file just because it's "close enough."</item>
+              <item>If the feature adds a new subsystem or domain (e.g., "notifications," "search"): consider whether it deserves its own directory.</item>
+              <item>If existing "junk drawer" files would be modified by this feature: consider whether the feature's new code should instead start a new focused file, beginning the process of breaking up the junk drawer.</item>
+              <item>Estimate cumulative line counts: if a [MODIFIED] file would exceed ~300 lines after all steps, split the new code into [NEW] files instead.</item>
+            </action>
+          </step>
+          <step number="4">
+            <title>Write Section 4 with Intent</title>
+            <action>Populate Section 4 as a tree showing the INTENDED post-feature structure. Use [NEW] for files this feature creates. Use [MODIFIED] only for files where new code genuinely extends existing concerns. Every [NEW] file is a deliberate modular boundary — be prepared to justify why each new file exists as a separate module rather than being appended to an existing one.</action>
+          </step>
+        </steps>
+        <connection_to_rule_5>
+          This item operationalizes Rule 5 (File-level organization). Rule 5 tells you WHAT to do — this item tells you HOW: study the tree, identify problems, design the fix, write Section 4 with intent.
+        </connection_to_rule_5>
       </item>
 
       <item number="4">
@@ -540,7 +599,7 @@ Second, perform a strict logic review:
 3. Are the Live Smoke Tests actually actionable and correctly classified?
 4. Does every step have a Unit Tests to Write field? If a step says "None" or "No new tests needed," is that genuinely justified (e.g., purely config/script change with no new logic)? Steps that introduce new logic MUST have corresponding unit tests specified.
 5. Does every step have an Integration Tests to Write field? If a step says "None — [reason]," is the reason valid? Steps that touch databases, filesystems, external APIs, or network services MUST have integration tests — "None" is only valid for pure computation, UI-only styling, or steps with zero infrastructure dependencies.
-6. Does every step have an Automated Test Commands field with actual CLI commands? Steps that specify unit or integration tests MUST include the corresponding run commands (e.g., `npm test`, `npm run test:unit`, `npm run test:integration`). If a step has "Unit Tests to Write: None" AND "Integration Tests to Write: None — [reason]," then "Automated Test Commands: `npm run lint`" or similar non-test checks are still required — every step must have at least one automated verification command.
+6. Does the Shared Technical Context section (Section 6) have a "Project Test Commands" entry with unfiltered full-suite CLI commands? This is a project-wide constant, not per-step. CRITICAL — flag any test commands that use filters (--filter, --grep, file paths) as an ANTI-PATTERN. Test commands must be unfiltered full-suite commands.
 7. Do the code snippets in the Reference file logically match the steps in the Plan?
 8. Are there any obvious architectural flaws, missing error handling, or missing dependencies?
 

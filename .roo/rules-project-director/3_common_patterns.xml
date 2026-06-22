@@ -566,6 +566,33 @@
           PRUNING RULE: If more than 3 prior features exist, do NOT copy all bullet points from current-state.md. Instead summarize concisely: "Features 1–N have built: [high-level summary of domains, e.g., auth, user management, inventory CRUD]." Keep this section under 5 bullet points or 2 sentences to avoid context bloat in the FD prompt and its Architect subtask.
         </description>
       </element>
+      <element name="feature_roadmap_summary">
+        <description>
+          Read roadmap.md and compile a concise list of ALL features — one line per feature grouped by wave.
+          Format example:
+          Wave 1 (Foundation):
+            [x] Feature 1: Data Model & Abstractions — Core interfaces and entities
+            [x] Feature 2: Project Scaffold & CI/CD — Build pipeline and test harness
+          Wave 2 (Skeleton):
+            [x] Feature 3: App Shell & Routing — Navigation frame and auth
+          Wave 3 (Vertical Slices):
+            [ ] Feature 4: User Registration — Signup flow with email verification
+            → Feature 5: Task Management — CRUD for tasks with drag-drop ← YOU ARE HERE
+            [ ] Feature 6: Task Assignment — Assign tasks to users
+          Wave 4 (Cross-Cutting):
+            [ ] Feature 7: Search & Filtering — Global search across entities
+            [ ] Feature 8: Permissions & Roles — Role-based access control
+
+          Mark completed features with [x], pending features with [ ], and the current feature with → ← YOU ARE HERE. Always include ALL features from roadmap.md — the FD needs visibility into what's coming after this feature, not just what's already built.
+
+          PRUNING RULE: If there are more than 15 total features, collapse completed waves to a one-line summary (e.g., "Wave 1 (Foundation): Features 1-4 complete ✓") and only expand the current wave and future waves in full.
+
+          This gives the FD the big picture — what was built before, what's being built now, and what's coming next. The FD uses this for:
+          - Scope drift detection: when drift touches files or abstractions that future features will modify, the FD can identify this and report it
+          - User requests: when the user asks for something mid-feature that aligns with a future feature, the FD can recognize it and suggest deferring to the appropriate feature
+          - Context for the Architect: the FD passes the relevant parts of the roadmap to the Architect so the implementation plan doesn't conflict with future features
+        </description>
+      </element>
       <element name="hands_off_mode">
         <description>
           Read hands_off_mode from state.json. Pass as literal boolean in the FD spawn prompt: "hands_off_mode: true" or "hands_off_mode: false". FD uses this to skip user interaction during feature development — Model smoke tests are self-verified by Code, HUMAN/SHT smoke tests are collected for batch presentation at feature end.

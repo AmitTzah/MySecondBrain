@@ -84,7 +84,7 @@
           Run `npm test` — all tests pass (now 4 new tests). Present to user at verification gate:
           "Added DELETE /api/users/:id endpoint with admin-only authorization and soft-delete.
           Please verify: send DELETE to /api/users/1 as admin → 204. As non-admin → 403."
-          User confirms it works. Run final automated tests — all pass. Call attempt_completion.
+          User confirms it works. Call attempt_completion immediately.
           QA findings are internal — the user sees the finished work, not the bug list.
         </approach>
       </step>
@@ -232,7 +232,7 @@
       <step number="4">
         <description>Verification gate and complete</description>
         <approach>
-          Run tests one final time — all pass. Ask user to verify: "Please check that the copy button appears next to each code block and copies text on click." User confirms it works. Run final automated tests — all pass. Call attempt_completion. QA review is internal — the user sees finished, reviewed work, not the QA process details.
+          Ask user to verify: "Please check that the copy button appears next to each code block and copies text on click." User confirms it works. Call attempt_completion immediately. QA review is internal — the user sees finished, reviewed work, not the QA process details.
         </approach>
       </step>
     </workflow>

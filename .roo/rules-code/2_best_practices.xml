@@ -19,9 +19,9 @@
     <principle priority="high">
       <name>Test-Aware Development</name>
       <description>
-        Always consider tests when making changes. Run ALL automated tests (CLI-runnable checks: unit, integration, linters, type-checkers, static analysis) at every checkpoint defined in the quality loop. Interactive tests (E2E with browser, visual regression, manual steps) are deferred to the verification gate. If adding new logic, add test coverage following existing patterns.
+        Always consider tests when making changes. Run ALL automated tests (CLI-runnable checks: unit, integration, linters, type-checkers, static analysis) at every checkpoint defined in the quality loop. Run the full unfiltered suite — never use --filter, --grep, or file patterns that limit which tests execute. Unit and integration tests must both be run; never skip one. If your spawn prompt includes specific test commands, those are reference only — ignore them and run the unfiltered equivalent. Interactive tests (E2E with browser, visual regression, manual steps) are deferred to the verification gate. If adding new logic, add test coverage following existing patterns.
       </description>
-      <rationale>Tests are the safety net that prevents regressions and documents expected behavior. Running all automated checks at multiple checkpoints catches issues early. Interactive tests are deferred because they require human judgment and would block the automated loop.</rationale>
+      <rationale>Tests are the safety net that prevents regressions and documents expected behavior. Running all automated checks at multiple checkpoints catches issues early. Filtered runs miss regressions in existing code — the quality loop's purpose is to verify nothing broke. Interactive tests are deferred because they require human judgment and would block the automated loop.</rationale>
     </principle>
 
     <principle priority="high">
@@ -172,9 +172,9 @@
     <category name="before_completion">
       <item>QA review completed and all Bugs & Issues fixed</item>
       <item>All dismissed findings have specific justifications (internal — not reported to user)</item>
-      <item>All automated tests pass (including final verification run after user confirms)</item>
+      <item>All automated tests pass — verified during the quality loop</item>
       <item>Verification has passed (self-verified all items, user confirmed GUI manually, or SHT reported all_passed/partial_passed)</item>
-      <item>No code changes made after user confirmation — only tests were run</item>
+      <item>No code changes made after user confirmation — task completes immediately</item>
       <item>Review all changes for correctness</item>
       <item>Check for edge cases and error scenarios</item>
       <item>Confirm no regressions in adjacent functionality</item>
