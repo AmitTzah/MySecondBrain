@@ -61,6 +61,11 @@ public partial class ChatThreadViewModel : ObservableObject
     /// Called by the generated setter whenever ActivePersona changes (e.g., ComboBox TwoWay binding).
     /// Ensures side effects (model config resolution, recently-used tracking, list refresh)
     /// happen regardless of whether the change originated from the command or the binding.
+    ///
+    /// The task is intentionally discarded (fire-and-forget) because this is a partial method
+    /// invoked synchronously by the generated property setter — it cannot be async. The
+    /// _isSettingActivePersona re-entrancy guard in SetActivePersonaAsync prevents concurrent
+    /// invocations, and exceptions are caught internally by SetActivePersonaAsync.
     /// </summary>
     partial void OnActivePersonaChanged(Persona? value)
     {
@@ -81,13 +86,15 @@ public partial class ChatThreadViewModel : ObservableObject
     {
         try
         {
+            // Populate the list first, then set the active persona.
+            // SetActivePersonaAsync no longer refreshes the list internally.
+            await RefreshPersonaListAsync();
+
             var defaultPersona = await _personaRepo.GetDefaultAsync();
             if (defaultPersona is not null)
             {
                 await SetActivePersonaAsync(defaultPersona);
             }
-
-            await RefreshPersonaListAsync();
         }
         catch (Exception ex)
         {
@@ -96,7 +103,7 @@ public partial class ChatThreadViewModel : ObservableObject
     }
 
     // ================================================================
-    // Persona list with recently-used ordering
+    // Persona list (alphabetically ordered, static)
     // ================================================================
 
     private async Task RefreshPersonaListAsync()
@@ -104,17 +111,8 @@ public partial class ChatThreadViewModel : ObservableObject
         try
         {
             var allPersonas = await _personaRepo.GetAllAsync();
-            var recentIds = await _settingsRepo.GetAsync<List<string>>(RecentPersonaIdsKey) ?? [];
-
-            // Recently used first (ascending index = most recent first), then alphabetically.
-            // Non-recent personas get int.MaxValue so they sort last.
             var sorted = allPersonas
-                .OrderBy(p =>
-                {
-                    var idx = recentIds.IndexOf(p.Id);
-                    return idx == -1 ? int.MaxValue : idx;
-                })
-                .ThenBy(p => p.DisplayName)
+                .OrderBy(p => p.DisplayName)
                 .ToList();
 
             PersonaList = new ObservableCollection<Persona>(sorted);
@@ -182,15 +180,16 @@ public partial class ChatThreadViewModel : ObservableObject
                 ActiveModelConfig = null;
             }
 
-            // Track recently-used
+            // Track recently-used (used by persona picker dialog, not ComboBox ordering)
             await TrackRecentPersonaAsync(persona.Id);
-
-            // Refresh list to update ordering
-            await RefreshPersonaListAsync();
 
             _logger.LogDebug("Active persona set to '{Persona}' (config: {Config})",
                 persona.DisplayName,
                 ActiveModelConfig?.DisplayName ?? "none");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to set active persona '{Persona}'", persona.DisplayName);
         }
         finally
         {

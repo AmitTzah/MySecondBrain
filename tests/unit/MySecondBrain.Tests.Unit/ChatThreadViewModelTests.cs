@@ -184,77 +184,83 @@ public class ChatThreadViewModelTests
     }
 
     // ================================================================
-    // Recently-used ordering places last-selected persona at top
+    // Regression: ActivePersona stays in sync after ComboBox binding
     // ================================================================
 
     [Fact]
-    public async Task RecentlyUsedOrdering_PlacesLastSelectedPersonaAtTop()
+    public async Task SettingActivePersonaDirectly_ActivePersonaInSyncAfterSelection()
     {
-        // Arrange — track stored recentIds locally to simulate persistence
-        List<string>? storedRecentIds = null;
-
+        // Arrange
         _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
         _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper, _customPersona });
         _modelConfigRepoMock.Setup(r => r.GetByIdAsync("config-002")).ReturnsAsync(_modelConfigB);
-        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds"))
-            .ReturnsAsync(() => storedRecentIds);
-        _settingsRepoMock.Setup(r => r.SetAsync("RecentPersonaIds", It.IsAny<List<string>>()))
-            .Callback<string, List<string>>((_, ids) => storedRecentIds = ids)
-            .Returns(Task.CompletedTask);
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
 
         var vm = CreateViewModel();
         await vm.InitializeAsync();
 
-        // Initial state: General Assistant was selected as default → tracked as recent
-        // PersonaList = [General Assistant (idx 0), Code Helper (int.MaxValue), Custom Writer (int.MaxValue)]
-        // Then alphabetically: Code Helper, Custom Writer
-        Assert.Equal("General Assistant", vm.PersonaList[0].DisplayName);
-        Assert.Equal("Code Helper", vm.PersonaList[1].DisplayName);
+        // After InitializeAsync, ActivePersona should point to an object in PersonaList
+        Assert.NotNull(vm.ActivePersona);
+        Assert.Contains(vm.ActivePersona, vm.PersonaList);
 
-        // Act — select a different persona
-        await vm.SelectPersonaCommand.ExecuteAsync(_customPersona);
+        // Act — simulate ComboBox TwoWay binding setting ActivePersona to a different persona.
+        // Use the object from the current PersonaList to mirror real ComboBox behavior.
+        var codeHelperFromList = vm.PersonaList.First(p => p.Id == _codeHelper.Id);
+        vm.ActivePersona = codeHelperFromList;
 
-        // Assert — PersonaList should now have Custom Writer first (most recent), then General Assistant
-        Assert.Equal("Custom Writer", vm.PersonaList[0].DisplayName);
-        Assert.Equal("General Assistant", vm.PersonaList[1].DisplayName);
+        // Wait for fire-and-forget OnActivePersonaChanged → SetActivePersonaAsync to complete
+        await Task.Delay(100);
 
-        // Assert — recently-used was persisted
-        Assert.NotNull(storedRecentIds);
-        Assert.Equal("custom-001", storedRecentIds[0]);
+        // Assert — ActivePersona must still point to an object in PersonaList (no orphaned reference)
+        Assert.NotNull(vm.ActivePersona);
+        Assert.Equal("Code Helper", vm.ActivePersona!.DisplayName);
+        Assert.Contains(vm.ActivePersona, vm.PersonaList);
     }
 
     // ================================================================
-    // Multiple recently-used IDs: most recent first
+    // PersonaList is always sorted alphabetically (static order)
     // ================================================================
 
     [Fact]
-    public async Task PersonaList_WithMultipleRecentIds_SortsMostRecentFirst()
+    public async Task PersonaList_IsSortedAlphabetically()
     {
-        // Arrange — simulate persistence for SetAsync calls
-        List<string>? storedRecentIds = ["custom-001", "custom-002"];
-
+        // Arrange
         _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
-        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper, _customPersona, _anotherPersona });
-        // custom-001 (Custom Writer) is most recent (index 0), then custom-002 (Another Persona)
-        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds"))
-            .ReturnsAsync(() => storedRecentIds);
-        _settingsRepoMock.Setup(r => r.SetAsync("RecentPersonaIds", It.IsAny<List<string>>()))
-            .Callback<string, List<string>>((_, ids) => storedRecentIds = ids)
-            .Returns(Task.CompletedTask);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper, _customPersona });
+        _modelConfigRepoMock.Setup(r => r.GetByIdAsync("config-002")).ReturnsAsync(_modelConfigB);
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
 
         var vm = CreateViewModel();
-
-        // Act
         await vm.InitializeAsync();
 
-        // Init selects General Assistant and tracks it as most recent.
-        // storedRecentIds becomes ["...0001", "custom-001", "custom-002"]
-        // PersonaList: General Assistant (idx 0), Custom Writer (idx 1), Another Persona (idx 2), Code Helper (int.MaxValue)
-        Assert.Equal(4, vm.PersonaList.Count);
-        Assert.Equal("General Assistant", vm.PersonaList[0].DisplayName);
+        // Assert — alphabetical order regardless of selection
+        Assert.Equal(3, vm.PersonaList.Count);
+        Assert.Equal("Code Helper", vm.PersonaList[0].DisplayName);
         Assert.Equal("Custom Writer", vm.PersonaList[1].DisplayName);
-        Assert.Equal("Another Persona", vm.PersonaList[2].DisplayName);
-        Assert.Equal("Code Helper", vm.PersonaList[3].DisplayName);
+        Assert.Equal("General Assistant", vm.PersonaList[2].DisplayName);
+    }
+
+    [Fact]
+    public async Task PersonaList_RemainsAlphabeticallyOrderedAfterSelection()
+    {
+        // Arrange
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper, _customPersona, _anotherPersona });
+        _modelConfigRepoMock.Setup(r => r.GetByIdAsync("config-002")).ReturnsAsync(_modelConfigB);
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+
+        var vm = CreateViewModel();
+        await vm.InitializeAsync();
+
+        // Act — select a different persona (should NOT reorder the list)
+        await vm.SelectPersonaCommand.ExecuteAsync(_customPersona);
+
+        // Assert — list stays alphabetically ordered
+        Assert.Equal(4, vm.PersonaList.Count);
+        Assert.Equal("Another Persona", vm.PersonaList[0].DisplayName);
+        Assert.Equal("Code Helper", vm.PersonaList[1].DisplayName);
+        Assert.Equal("Custom Writer", vm.PersonaList[2].DisplayName);
+        Assert.Equal("General Assistant", vm.PersonaList[3].DisplayName);
     }
 
     // ================================================================
@@ -354,34 +360,4 @@ public class ChatThreadViewModelTests
         Assert.Equal(string.Empty, ChatThreadViewModel.ResolveSystemPrompt(string.Empty));
     }
 
-    // ================================================================
-    // PersonaList is sorted with recently-used first
-    // ================================================================
-
-    [Fact]
-    public async Task PersonaList_WithRecentIds_SortsRecentlyUsedFirst()
-    {
-        // Arrange — use tracking variable to simulate persistence
-        List<string>? storedRecentIds = ["00000000000000000000000000000002"];
-
-        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
-        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper, _customPersona });
-        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds"))
-            .ReturnsAsync(() => storedRecentIds);
-        _settingsRepoMock.Setup(r => r.SetAsync("RecentPersonaIds", It.IsAny<List<string>>()))
-            .Callback<string, List<string>>((_, ids) => storedRecentIds = ids)
-            .Returns(Task.CompletedTask);
-
-        var vm = CreateViewModel();
-
-        // Act
-        await vm.InitializeAsync();
-
-        // Init selects General Assistant as default → tracks it as most recent.
-        // storedRecentIds = ["...0001", "...0002"]
-        // PersonaList: General Assistant (idx 0), Code Helper (idx 1), Custom Writer (int.MaxValue)
-        Assert.Equal(3, vm.PersonaList.Count);
-        Assert.Equal("General Assistant", vm.PersonaList[0].DisplayName);
-        Assert.Equal("Code Helper", vm.PersonaList[1].DisplayName);
-    }
 }
