@@ -167,9 +167,14 @@ public partial class HotkeyAssignmentDisplayItem : ObservableObject
     public string ActionId { get; set; } = string.Empty;
     public string ActionName { get; set; } = string.Empty;
     public string Source { get; set; } = "TextAction"; // TextAction or CommandBar
-    public string CaptureScope { get; set; } = "selection";
-    public string ApplyMode { get; set; } = "replaceSelection";
-    public string? Hotkey { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CaptureScopeBadges))]
+    private string _captureScope = "selection";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ApplyModeLabel))]
+    private string _applyMode = "replaceSelection";
+    [ObservableProperty]
+    private string? _hotkey;
 
     [ObservableProperty]
     private bool _isRecording;
