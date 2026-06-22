@@ -116,6 +116,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IConfirmationService _confirmationService;
     private readonly IModelConfigurationRepository _modelConfigRepo;
     private readonly IPersonaRepository _personaRepo;
+    private readonly IUpdateChecker _updateChecker;
     private readonly ILogger<SettingsViewModel> _logger;
 
     /// <summary>
@@ -146,6 +147,7 @@ public partial class SettingsViewModel : ObservableObject
         IConfirmationService confirmationService,
         IModelConfigurationRepository modelConfigRepo,
         IPersonaRepository personaRepo,
+        IUpdateChecker updateChecker,
         ILogger<SettingsViewModel> logger)
     {
         _settingsRepo = settingsRepo;
@@ -157,7 +159,11 @@ public partial class SettingsViewModel : ObservableObject
         _confirmationService = confirmationService;
         _modelConfigRepo = modelConfigRepo;
         _personaRepo = personaRepo;
+        _updateChecker = updateChecker;
         _logger = logger;
+
+        CurrentVersion = (_updateChecker.CurrentVersion ?? System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version)
+            ?.ToString() ?? "1.0.0.0";
     }
 
     // ================================================================
@@ -361,6 +367,257 @@ public partial class SettingsViewModel : ObservableObject
         => _ = _settingsRepo.SetAsync("LogCategory_SystemIntegration", value ? "true" : "false");
 
     // ================================================================
+    // Appearance — AppTheme
+    // ================================================================
+
+    [ObservableProperty]
+    private AppTheme _appTheme = AppTheme.Dark;
+
+    partial void OnAppThemeChanged(AppTheme value)
+    {
+        _themeProvider.SetAppTheme(value);
+        _ = _settingsRepo.SetAsync("AppTheme", value.ToString());
+    }
+
+    // ================================================================
+    // Appearance — ChatTheme
+    // ================================================================
+
+    [ObservableProperty]
+    private ChatTheme _chatTheme = ChatTheme.Classic;
+
+    public IReadOnlyList<ChatTheme> ChatThemeOptions { get; } =
+    [
+        ChatTheme.Classic,
+        ChatTheme.Compact,
+        ChatTheme.Bubble,
+    ];
+
+    partial void OnChatThemeChanged(ChatTheme value)
+    {
+        _themeProvider.SetChatTheme(value);
+        _ = _settingsRepo.SetAsync("ChatTheme", value.ToString());
+    }
+
+    // ================================================================
+    // Appearance — Font settings
+    // ================================================================
+
+    [ObservableProperty]
+    private string _fontFamily = "Segoe UI";
+
+    [ObservableProperty]
+    private double _fontSize = 13.0;
+
+    [ObservableProperty]
+    private string _fontWeight = "Normal";
+
+    /// <summary>
+    /// Common font families for the font picker ComboBox.
+    /// </summary>
+    public IReadOnlyList<string> FontFamilyOptions { get; } =
+    [
+        "Segoe UI",
+        "Consolas",
+        "Calibri",
+        "Arial",
+        "Courier New",
+        "Georgia",
+        "Times New Roman",
+        "Verdana",
+        "Trebuchet MS",
+        "Lucida Console",
+    ];
+
+    /// <summary>
+    /// Preview text that updates live with current font settings.
+    /// </summary>
+    public static string FontPreviewText => "The quick brown fox jumps over the lazy dog. 0123456789";
+
+    partial void OnFontFamilyChanged(string value)
+    {
+        PersistFontSettings();
+    }
+
+    partial void OnFontSizeChanged(double value)
+    {
+        if (value < 10.0 || value > 24.0)
+        {
+            // Clamp and re-set (triggers OnFontSizeChanged with clamped value)
+            FontSize = Math.Clamp(value, 10.0, 24.0);
+            return;
+        }
+        PersistFontSettings();
+    }
+
+    partial void OnFontWeightChanged(string value)
+    {
+        PersistFontSettings();
+    }
+
+    private void PersistFontSettings()
+    {
+        var wpfWeight = FontWeightStringToWpf(FontWeight);
+        _themeProvider.SetFontSettings(FontFamily, FontSize, wpfWeight);
+        _ = _settingsRepo.SetAsync("FontFamily", FontFamily);
+        _ = _settingsRepo.SetAsync("FontSize", FontSize.ToString("F1"));
+        _ = _settingsRepo.SetAsync("FontWeight", FontWeight);
+    }
+
+    /// <summary>
+    /// Converts a persisted font weight string to WPF FontWeight using the
+    /// standard FontWeightConverter pattern established in App.xaml.cs.
+    /// </summary>
+    private static System.Windows.FontWeight FontWeightStringToWpf(string weight)
+    {
+        return weight switch
+        {
+            "Bold" => System.Windows.FontWeights.Bold,
+            _ => System.Windows.FontWeights.Normal,
+        };
+    }
+
+    public IReadOnlyList<string> FontWeightOptions { get; } =
+    [
+        "Normal",
+        "Bold",
+    ];
+
+    // ================================================================
+    // Notifications
+    // ================================================================
+
+    [ObservableProperty]
+    private bool _soundOnCompletion;
+
+    partial void OnSoundOnCompletionChanged(bool value)
+        => _ = _settingsRepo.SetAsync("SoundOnCompletion", value ? "true" : "false");
+
+    [ObservableProperty]
+    private bool _disableStreaming;
+
+    partial void OnDisableStreamingChanged(bool value)
+        => _ = _settingsRepo.SetAsync("DisableStreaming", value ? "true" : "false");
+
+    [ObservableProperty]
+    private bool _crossTabCompletionAlert = true;
+
+    partial void OnCrossTabCompletionAlertChanged(bool value)
+        => _ = _settingsRepo.SetAsync("CrossTabCompletionAlert", value ? "true" : "false");
+
+    // ================================================================
+    // Startup
+    // ================================================================
+
+    [ObservableProperty]
+    private bool _launchOnWindowsStartup;
+
+    partial void OnLaunchOnWindowsStartupChanged(bool value)
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Run", true);
+            if (key is null)
+                return;
+
+            if (value)
+            {
+                var exePath = Environment.ProcessPath;
+                if (!string.IsNullOrEmpty(exePath))
+                    key.SetValue("MySecondBrain", $"\"{exePath}\"");
+            }
+            else
+            {
+                if (key.GetValue("MySecondBrain") is not null)
+                    key.DeleteValue("MySecondBrain");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update Windows startup registry key");
+        }
+    }
+
+    [ObservableProperty]
+    private bool _restoreLastSession;
+
+    partial void OnRestoreLastSessionChanged(bool value)
+        => _ = _settingsRepo.SetAsync("RestoreLastSession", value ? "true" : "false");
+
+    [ObservableProperty]
+    private bool _minimizeToTray = true;
+
+    partial void OnMinimizeToTrayChanged(bool value)
+        => _ = _settingsRepo.SetAsync("MinimizeToTray", value ? "true" : "false");
+
+    // ================================================================
+    // Updates
+    // ================================================================
+
+    [ObservableProperty]
+    private string _updateCheckFrequency = "OnStartup";
+
+    public IReadOnlyList<string> UpdateCheckFrequencyOptions { get; } =
+    [
+        "OnStartup",
+        "Daily",
+        "Weekly",
+        "ManualOnly",
+    ];
+
+    partial void OnUpdateCheckFrequencyChanged(string value)
+        => _ = _settingsRepo.SetAsync("UpdateCheckFrequency", value);
+
+    /// <summary>
+    /// Current application version read from the entry assembly.
+    /// </summary>
+    public string CurrentVersion { get; }
+
+    [ObservableProperty]
+    private string _updateStatusMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool _isCheckingForUpdates;
+
+    [RelayCommand]
+    private async Task CheckForUpdatesAsync()
+    {
+        IsCheckingForUpdates = true;
+        UpdateStatusMessage = "Checking for updates...";
+
+        try
+        {
+            var result = await _updateChecker.CheckForUpdatesAsync(CancellationToken.None);
+
+            if (result.ErrorMessage is not null)
+            {
+                UpdateStatusMessage = $"Update check failed: {result.ErrorMessage}";
+            }
+            else if (result.UpdateAvailable && result.Update is not null)
+            {
+                UpdateStatusMessage =
+                    $"Update {result.Update.Version} is available. " +
+                    $"Release date: {result.Update.ReleaseDate:yyyy-MM-dd}. " +
+                    $"{(result.Update.IsMandatory ? "This is a mandatory update." : "")}";
+            }
+            else
+            {
+                UpdateStatusMessage = "You're up to date!";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to check for updates");
+            UpdateStatusMessage = "Could not check for updates. Check your internet connection.";
+        }
+        finally
+        {
+            IsCheckingForUpdates = false;
+        }
+    }
+
+    // ================================================================
     // Initialization
     // ================================================================
 
@@ -372,6 +629,80 @@ public partial class SettingsViewModel : ObservableObject
         await RefreshModelConfigListAsync();
         await RefreshPersonaListAsync();
         await LoadDiagnosticsSettingsAsync();
+        await LoadNewSettingsAsync();
+    }
+
+    /// <summary>
+    /// Loads Appearance, Notifications, Startup, and Updates settings from the repository.
+    /// </summary>
+    private async Task LoadNewSettingsAsync()
+    {
+        // Appearance — AppTheme
+        var savedAppTheme = await _settingsRepo.GetAsync("AppTheme");
+        if (savedAppTheme is not null && Enum.TryParse<AppTheme>(savedAppTheme, out var parsedTheme))
+            AppTheme = parsedTheme;
+        else
+            AppTheme = _themeProvider.CurrentAppTheme;
+
+        // Appearance — ChatTheme
+        var savedChatTheme = await _settingsRepo.GetAsync("ChatTheme");
+        if (savedChatTheme is not null && Enum.TryParse<ChatTheme>(savedChatTheme, out var parsedChatTheme))
+            ChatTheme = parsedChatTheme;
+        else
+            ChatTheme = _themeProvider.CurrentChatTheme;
+
+        // Appearance — Font settings
+        var savedFontFamily = await _settingsRepo.GetAsync("FontFamily");
+        if (savedFontFamily is not null)
+            FontFamily = savedFontFamily;
+
+        var savedFontSize = await _settingsRepo.GetAsync("FontSize");
+        if (savedFontSize is not null && double.TryParse(savedFontSize, out var parsedSize))
+            FontSize = parsedSize;
+
+        var savedFontWeight = await _settingsRepo.GetAsync("FontWeight");
+        if (savedFontWeight is not null)
+            FontWeight = savedFontWeight;
+
+        // Notifications
+        var savedSound = await _settingsRepo.GetAsync("SoundOnCompletion");
+        if (savedSound is not null)
+            SoundOnCompletion = savedSound == "true" || savedSound == "True";
+
+        var savedStreaming = await _settingsRepo.GetAsync("DisableStreaming");
+        if (savedStreaming is not null)
+            DisableStreaming = savedStreaming == "true" || savedStreaming == "True";
+
+        var savedCrossTab = await _settingsRepo.GetAsync("CrossTabCompletionAlert");
+        if (savedCrossTab is not null)
+            CrossTabCompletionAlert = savedCrossTab == "true" || savedCrossTab == "True";
+
+        // Startup
+        var savedRestoreSession = await _settingsRepo.GetAsync("RestoreLastSession");
+        if (savedRestoreSession is not null)
+            RestoreLastSession = savedRestoreSession == "true" || savedRestoreSession == "True";
+
+        var savedMinimizeToTray = await _settingsRepo.GetAsync("MinimizeToTray");
+        if (savedMinimizeToTray is not null)
+            MinimizeToTray = savedMinimizeToTray == "true" || savedMinimizeToTray == "True";
+
+        // Startup — LaunchOnWindowsStartup reads from registry
+        try
+        {
+            using var startupKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Run");
+            LaunchOnWindowsStartup = startupKey?.GetValue("MySecondBrain") is not null;
+        }
+        catch
+        {
+            // Registry access may fail in sandboxed environments; default to false
+            LaunchOnWindowsStartup = false;
+        }
+
+        // Updates
+        var savedFrequency = await _settingsRepo.GetAsync("UpdateCheckFrequency");
+        if (savedFrequency is not null && UpdateCheckFrequencyOptions.Contains(savedFrequency))
+            UpdateCheckFrequency = savedFrequency;
     }
 
     /// <summary>

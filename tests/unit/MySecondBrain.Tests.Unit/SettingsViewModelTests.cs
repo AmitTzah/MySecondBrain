@@ -18,6 +18,7 @@ public class SettingsViewModelTests
     private readonly Mock<IConfirmationService> _confirmationServiceMock;
     private readonly Mock<IModelConfigurationRepository> _modelConfigRepoMock;
     private readonly Mock<IPersonaRepository> _personaRepoMock;
+    private readonly Mock<IUpdateChecker> _updateCheckerMock;
     private readonly Mock<ILogger<SettingsViewModel>> _loggerMock;
     private readonly SettingsViewModel _sut;
 
@@ -32,12 +33,17 @@ public class SettingsViewModelTests
         _confirmationServiceMock = new Mock<IConfirmationService>();
         _modelConfigRepoMock = new Mock<IModelConfigurationRepository>();
         _personaRepoMock = new Mock<IPersonaRepository>();
+        _updateCheckerMock = new Mock<IUpdateChecker>();
         _loggerMock = new Mock<ILogger<SettingsViewModel>>();
 
         // Default: confirmations are accepted
         _confirmationServiceMock
             .Setup(c => c.Confirm(It.IsAny<string>(), It.IsAny<string>()))
             .Returns(true);
+
+        _updateCheckerMock
+            .Setup(u => u.CurrentVersion)
+            .Returns(new Version(1, 0, 0, 0));
 
         _sut = new SettingsViewModel(
             _settingsRepoMock.Object,
@@ -49,6 +55,7 @@ public class SettingsViewModelTests
             _confirmationServiceMock.Object,
             _modelConfigRepoMock.Object,
             _personaRepoMock.Object,
+            _updateCheckerMock.Object,
             _loggerMock.Object);
     }
 
@@ -1558,5 +1565,441 @@ public class SettingsViewModelTests
 
         Assert.Contains("MySecondBrain", expectedPath);
         Assert.Contains("logs", expectedPath);
+    }
+
+    // ================================================================
+    // Appearance — AppTheme defaults
+    // ================================================================
+
+    [Fact]
+    public void Appearance_DefaultTheme_IsDark()
+    {
+        Assert.Equal(AppTheme.Dark, _sut.AppTheme);
+    }
+
+    // ================================================================
+    // Appearance — AppTheme change calls IThemeProvider and persists
+    // ================================================================
+
+    [Fact]
+    public void Appearance_AppThemeChange_CallsThemeProviderAndPersists()
+    {
+        _sut.AppTheme = AppTheme.Light;
+
+        _themeProviderMock.Verify(t => t.SetAppTheme(AppTheme.Light), Times.Once);
+        _settingsRepoMock.Verify(s => s.SetAsync("AppTheme", "Light"), Times.Once);
+    }
+
+    // ================================================================
+    // Appearance — ChatTheme defaults
+    // ================================================================
+
+    [Fact]
+    public void Appearance_DefaultChatTheme_IsClassic()
+    {
+        Assert.Equal(ChatTheme.Classic, _sut.ChatTheme);
+    }
+
+    [Fact]
+    public void Appearance_ChatThemeOptions_ContainsAllThemes()
+    {
+        Assert.Contains(ChatTheme.Classic, _sut.ChatThemeOptions);
+        Assert.Contains(ChatTheme.Compact, _sut.ChatThemeOptions);
+        Assert.Contains(ChatTheme.Bubble, _sut.ChatThemeOptions);
+        Assert.Equal(3, _sut.ChatThemeOptions.Count);
+    }
+
+    // ================================================================
+    // Appearance — ChatTheme change calls IThemeProvider and persists
+    // ================================================================
+
+    [Fact]
+    public void Appearance_ChatThemeChange_CallsThemeProviderAndPersists()
+    {
+        _sut.ChatTheme = ChatTheme.Bubble;
+
+        _themeProviderMock.Verify(t => t.SetChatTheme(ChatTheme.Bubble), Times.Once);
+        _settingsRepoMock.Verify(s => s.SetAsync("ChatTheme", "Bubble"), Times.Once);
+    }
+
+    // ================================================================
+    // Appearance — Font defaults
+    // ================================================================
+
+    [Fact]
+    public void Appearance_DefaultFontFamily_IsSegoeUI()
+    {
+        Assert.Equal("Segoe UI", _sut.FontFamily);
+    }
+
+    [Fact]
+    public void Appearance_DefaultFontSize_Is13()
+    {
+        Assert.Equal(13.0, _sut.FontSize);
+    }
+
+    [Fact]
+    public void Appearance_DefaultFontWeight_IsNormal()
+    {
+        Assert.Equal("Normal", _sut.FontWeight);
+    }
+
+    [Fact]
+    public void Appearance_FontFamilyOptions_ContainsCommonFonts()
+    {
+        Assert.Contains("Segoe UI", _sut.FontFamilyOptions);
+        Assert.Contains("Consolas", _sut.FontFamilyOptions);
+    }
+
+    [Fact]
+    public void Appearance_FontWeightOptions_ContainsNormalAndBold()
+    {
+        Assert.Contains("Normal", _sut.FontWeightOptions);
+        Assert.Contains("Bold", _sut.FontWeightOptions);
+        Assert.Equal(2, _sut.FontWeightOptions.Count);
+    }
+
+    // ================================================================
+    // Appearance — FontSize clamping at boundary values
+    // ================================================================
+
+    [Fact]
+    public void Appearance_FontSizeClampsBelow10()
+    {
+        _sut.FontSize = 5.0;
+        Assert.Equal(10.0, _sut.FontSize);
+        _settingsRepoMock.Verify(s => s.SetAsync("FontSize", "10.0"), Times.Once);
+        _themeProviderMock.Verify(t => t.SetFontSettings(It.IsAny<string>(), 10.0, It.IsAny<System.Windows.FontWeight>()), Times.Once);
+    }
+
+    [Fact]
+    public void Appearance_FontSizeClampsAbove24()
+    {
+        _sut.FontSize = 30.0;
+        Assert.Equal(24.0, _sut.FontSize);
+        _settingsRepoMock.Verify(s => s.SetAsync("FontSize", "24.0"), Times.Once);
+        _themeProviderMock.Verify(t => t.SetFontSettings(It.IsAny<string>(), 24.0, It.IsAny<System.Windows.FontWeight>()), Times.Once);
+    }
+
+    [Fact]
+    public void Appearance_FontSizeWithinRange_NotClamped()
+    {
+        _sut.FontSize = 16.0;
+        Assert.Equal(16.0, _sut.FontSize);
+    }
+
+    // ================================================================
+    // Appearance — FontFamily change persists
+    // ================================================================
+
+    [Fact]
+    public void Appearance_FontFamilyChange_PersistsToSettingsRepository()
+    {
+        _sut.FontFamily = "Consolas";
+
+        _settingsRepoMock.Verify(s => s.SetAsync("FontFamily", "Consolas"), Times.Once);
+        _themeProviderMock.Verify(t => t.SetFontSettings("Consolas", 13.0, It.IsAny<System.Windows.FontWeight>()), Times.Once);
+    }
+
+    // ================================================================
+    // Appearance — FontWeight change persists
+    // ================================================================
+
+    [Fact]
+    public void Appearance_FontWeightBold_PersistsAndCallsThemeProvider()
+    {
+        _sut.FontWeight = "Bold";
+
+        _settingsRepoMock.Verify(s => s.SetAsync("FontWeight", "Bold"), Times.Once);
+        _themeProviderMock.Verify(t => t.SetFontSettings(It.IsAny<string>(), It.IsAny<double>(), System.Windows.FontWeights.Bold), Times.Once);
+    }
+
+    // ================================================================
+    // Notifications — defaults
+    // ================================================================
+
+    [Fact]
+    public void Notifications_SoundOnCompletion_DefaultFalse()
+    {
+        Assert.False(_sut.SoundOnCompletion);
+    }
+
+    [Fact]
+    public void Notifications_DisableStreaming_DefaultFalse()
+    {
+        Assert.False(_sut.DisableStreaming);
+    }
+
+    [Fact]
+    public void Notifications_CrossTabCompletionAlert_DefaultTrue()
+    {
+        Assert.True(_sut.CrossTabCompletionAlert);
+    }
+
+    // ================================================================
+    // Notifications — persistence
+    // ================================================================
+
+    [Fact]
+    public void Notifications_SoundOnCompletionChange_Persists()
+    {
+        _sut.SoundOnCompletion = true;
+        _settingsRepoMock.Verify(s => s.SetAsync("SoundOnCompletion", "true"), Times.Once);
+    }
+
+    [Fact]
+    public void Notifications_DisableStreamingChange_Persists()
+    {
+        _sut.DisableStreaming = true;
+        _settingsRepoMock.Verify(s => s.SetAsync("DisableStreaming", "true"), Times.Once);
+    }
+
+    [Fact]
+    public void Notifications_CrossTabCompletionAlertChange_Persists()
+    {
+        _sut.CrossTabCompletionAlert = false;
+        _settingsRepoMock.Verify(s => s.SetAsync("CrossTabCompletionAlert", "false"), Times.Once);
+    }
+
+    // ================================================================
+    // Startup — LaunchOnWindowsStartup doesn't throw
+    // ================================================================
+
+    [Fact]
+    public void Startup_LaunchOnWindowsStartupToggle_DoesNotThrow()
+    {
+        // Verify the registry write/delete logic doesn't throw
+        var exception = Record.Exception(() => _sut.LaunchOnWindowsStartup = true);
+        Assert.Null(exception);
+
+        exception = Record.Exception(() => _sut.LaunchOnWindowsStartup = false);
+        Assert.Null(exception);
+    }
+
+    // ================================================================
+    // Startup — defaults
+    // ================================================================
+
+    [Fact]
+    public void Startup_LaunchOnWindowsStartup_DefaultFalse()
+    {
+        Assert.False(_sut.LaunchOnWindowsStartup);
+    }
+
+    [Fact]
+    public void Startup_RestoreLastSession_DefaultFalse()
+    {
+        Assert.False(_sut.RestoreLastSession);
+    }
+
+    [Fact]
+    public void Startup_MinimizeToTray_DefaultTrue()
+    {
+        Assert.True(_sut.MinimizeToTray);
+    }
+
+    // ================================================================
+    // Startup — persistence
+    // ================================================================
+
+    [Fact]
+    public void Startup_RestoreLastSessionChange_Persists()
+    {
+        _sut.RestoreLastSession = true;
+        _settingsRepoMock.Verify(s => s.SetAsync("RestoreLastSession", "true"), Times.Once);
+    }
+
+    [Fact]
+    public void Startup_MinimizeToTrayChange_Persists()
+    {
+        _sut.MinimizeToTray = false;
+        _settingsRepoMock.Verify(s => s.SetAsync("MinimizeToTray", "false"), Times.Once);
+    }
+
+    // ================================================================
+    // Updates — defaults
+    // ================================================================
+
+    [Fact]
+    public void Updates_UpdateCheckFrequency_DefaultOnStartup()
+    {
+        Assert.Equal("OnStartup", _sut.UpdateCheckFrequency);
+    }
+
+    [Fact]
+    public void Updates_FrequencyOptions_ContainsAllFour()
+    {
+        Assert.Contains("OnStartup", _sut.UpdateCheckFrequencyOptions);
+        Assert.Contains("Daily", _sut.UpdateCheckFrequencyOptions);
+        Assert.Contains("Weekly", _sut.UpdateCheckFrequencyOptions);
+        Assert.Contains("ManualOnly", _sut.UpdateCheckFrequencyOptions);
+        Assert.Equal(4, _sut.UpdateCheckFrequencyOptions.Count);
+    }
+
+    [Fact]
+    public void Updates_CurrentVersion_ReadFromUpdateChecker()
+    {
+        Assert.Equal("1.0.0.0", _sut.CurrentVersion);
+    }
+
+    // ================================================================
+    // Updates — persistence
+    // ================================================================
+
+    [Fact]
+    public void Updates_UpdateCheckFrequencyChange_Persists()
+    {
+        _sut.UpdateCheckFrequency = "Weekly";
+        _settingsRepoMock.Verify(s => s.SetAsync("UpdateCheckFrequency", "Weekly"), Times.Once);
+    }
+
+    // ================================================================
+    // Updates — CheckForUpdatesCommand
+    // ================================================================
+
+    [Fact]
+    public async Task Updates_CheckForUpdates_NoUpdateAvailable_ShowsUpToDate()
+    {
+        _updateCheckerMock
+            .Setup(u => u.CheckForUpdatesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UpdateCheckResult(false, null, null));
+
+        await _sut.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.Contains("up to date", _sut.UpdateStatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.False(_sut.IsCheckingForUpdates);
+    }
+
+    [Fact]
+    public async Task Updates_CheckForUpdates_UpdateAvailable_ShowsVersion()
+    {
+        var updateInfo = new UpdateInfo(
+            new Version(2, 0, 0, 0),
+            "Major update",
+            new DateTimeOffset(2026, 7, 1, 0, 0, 0, TimeSpan.Zero),
+            50_000_000,
+            "https://example.com/update",
+            false);
+
+        _updateCheckerMock
+            .Setup(u => u.CheckForUpdatesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UpdateCheckResult(true, updateInfo, null));
+
+        await _sut.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.Contains("2.0.0.0", _sut.UpdateStatusMessage);
+        Assert.False(_sut.IsCheckingForUpdates);
+    }
+
+    [Fact]
+    public async Task Updates_CheckForUpdates_ErrorMessage_ShowsError()
+    {
+        _updateCheckerMock
+            .Setup(u => u.CheckForUpdatesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UpdateCheckResult(false, null, "Network timeout"));
+
+        await _sut.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.Contains("Network timeout", _sut.UpdateStatusMessage);
+        Assert.False(_sut.IsCheckingForUpdates);
+    }
+
+    [Fact]
+    public async Task Updates_CheckForUpdates_Exception_Caught()
+    {
+        _updateCheckerMock
+            .Setup(u => u.CheckForUpdatesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("No internet"));
+
+        await _sut.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.Contains("internet", _sut.UpdateStatusMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.False(_sut.IsCheckingForUpdates);
+    }
+
+    // ================================================================
+    // InitializeAsync — loads new settings
+    // ================================================================
+
+    [Fact]
+    public async Task InitializeAsync_LoadsNewSettings()
+    {
+        _settingsRepoMock
+            .Setup(s => s.GetAsync("AppTheme"))
+            .ReturnsAsync("Light");
+
+        _settingsRepoMock
+            .Setup(s => s.GetAsync("ChatTheme"))
+            .ReturnsAsync("Bubble");
+
+        _settingsRepoMock
+            .Setup(s => s.GetAsync("FontFamily"))
+            .ReturnsAsync("Consolas");
+
+        _settingsRepoMock
+            .Setup(s => s.GetAsync("FontSize"))
+            .ReturnsAsync("18.0");
+
+        _settingsRepoMock
+            .Setup(s => s.GetAsync("FontWeight"))
+            .ReturnsAsync("Bold");
+
+        _settingsRepoMock
+            .Setup(s => s.GetAsync("SoundOnCompletion"))
+            .ReturnsAsync("true");
+
+        _settingsRepoMock
+            .Setup(s => s.GetAsync("DisableStreaming"))
+            .ReturnsAsync("true");
+
+        _settingsRepoMock
+            .Setup(s => s.GetAsync("CrossTabCompletionAlert"))
+            .ReturnsAsync("false");
+
+        _settingsRepoMock
+            .Setup(s => s.GetAsync("RestoreLastSession"))
+            .ReturnsAsync("true");
+
+        _settingsRepoMock
+            .Setup(s => s.GetAsync("MinimizeToTray"))
+            .ReturnsAsync("false");
+
+        _settingsRepoMock
+            .Setup(s => s.GetAsync("UpdateCheckFrequency"))
+            .ReturnsAsync("Weekly");
+
+        _settingsRepoMock
+            .Setup(s => s.GetAsync("LogLevel"))
+            .ReturnsAsync((string?)null);
+
+        _settingsRepoMock
+            .Setup(s => s.GetAsync(It.Is<string>(k => k.StartsWith("LogCategory_"))))
+            .ReturnsAsync((string?)null);
+
+        _apiKeyRepoMock
+            .Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<ApiKey>());
+
+        _modelConfigRepoMock
+            .Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<ModelConfiguration>());
+
+        _personaRepoMock
+            .Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<Persona>());
+
+        await _sut.InitializeCommand.ExecuteAsync(null);
+
+        Assert.Equal(AppTheme.Light, _sut.AppTheme);
+        Assert.Equal(ChatTheme.Bubble, _sut.ChatTheme);
+        Assert.Equal("Consolas", _sut.FontFamily);
+        Assert.Equal(18.0, _sut.FontSize);
+        Assert.Equal("Bold", _sut.FontWeight);
+        Assert.True(_sut.SoundOnCompletion);
+        Assert.True(_sut.DisableStreaming);
+        Assert.False(_sut.CrossTabCompletionAlert);
+        Assert.True(_sut.RestoreLastSession);
+        Assert.False(_sut.MinimizeToTray);
+        Assert.Equal("Weekly", _sut.UpdateCheckFrequency);
     }
 }

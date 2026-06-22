@@ -3,10 +3,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:MySecondBrain.UI.ViewModels"
              xmlns:models="clr-namespace:MySecondBrain.Core.Models;assembly=MySecondBrain.Core"
+             xmlns:converters="clr-namespace:MySecondBrain.UI.Converters"
              Background="{DynamicResource ContentBackground}"
              AutomationProperties.AutomationId="SettingsView">
     <UserControl.Resources>
         <ResourceDictionary>
+            <converters:EnumMatchConverter x:Key="EnumMatchConverter"/>
             <!-- Reusable style for icon buttons (Copy, Edit, Delete, Duplicate) with very subtle hover/press feedback -->
             <Style x:Key="IconButtonStyle" TargetType="Button">
                 <Setter Property="Width" Value="28"/>
@@ -1249,6 +1251,367 @@
                     </ScrollViewer>
                 </Grid>
 
+                <!-- Appearance Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Appearance">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <TextBlock Grid.Row="0" Text="🎨 Appearance" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Customize the visual theme, chat layout, and font settings. Changes take effect immediately."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <StackPanel>
+                            <!-- Theme Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Theme" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Switch between Dark and Light mode."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton Content="🌙 Dark"
+                                                     GroupName="AppTheme"
+                                                     IsChecked="{Binding AppTheme, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Dark}"
+                                                     FontSize="11"
+                                                     Foreground="{DynamicResource ContentForeground}"
+                                                     Margin="0,0,20,0"/>
+                                        <RadioButton Content="☀️ Light"
+                                                     GroupName="AppTheme"
+                                                     IsChecked="{Binding AppTheme, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Light}"
+                                                     FontSize="11"
+                                                     Foreground="{DynamicResource ContentForeground}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Chat Theme Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Chat Theme" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Choose the layout style for chat messages."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <ComboBox ItemsSource="{Binding ChatThemeOptions}"
+                                              SelectedItem="{Binding ChatTheme}"
+                                              FontSize="11" Width="200"
+                                              HorizontalAlignment="Left"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Font Settings Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Font Settings" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Adjust the font family, size, and weight used throughout the application."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <!-- Font Family -->
+                                    <TextBlock Text="Font Family" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <ComboBox ItemsSource="{Binding FontFamilyOptions}"
+                                              SelectedItem="{Binding FontFamily}"
+                                              FontSize="11" Width="220"
+                                              HorizontalAlignment="Left" Margin="0,0,0,10"
+                                              IsEditable="True"/>
+
+                                    <!-- Font Size Slider -->
+                                    <TextBlock Text="Font Size" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                        <Slider Minimum="10" Maximum="24" SmallChange="1" LargeChange="2"
+                                                Value="{Binding FontSize}" Width="180"
+                                                TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                        <TextBlock Text="{Binding FontSize, StringFormat={}{0:F0}px}"
+                                                   Width="40" TextAlignment="Center" VerticalAlignment="Center"
+                                                   FontSize="11" Foreground="{DynamicResource ContentForeground}"/>
+                                    </StackPanel>
+
+                                    <!-- Font Weight -->
+                                    <TextBlock Text="Font Weight" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <ComboBox ItemsSource="{Binding FontWeightOptions}"
+                                              SelectedItem="{Binding FontWeight}"
+                                              FontSize="11" Width="120"
+                                              HorizontalAlignment="Left" Margin="0,0,0,10"/>
+
+                                    <!-- Live Preview -->
+                                    <Border BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1" CornerRadius="4"
+                                            Background="{DynamicResource ContentBackground}"
+                                            Padding="12,8">
+                                        <TextBlock Text="{Binding FontPreviewText}"
+                                                   FontFamily="{Binding FontFamily}"
+                                                   FontSize="{Binding FontSize}"
+                                                   FontWeight="{Binding FontWeight}"
+                                                   Foreground="{DynamicResource ContentForeground}"
+                                                   TextWrapping="Wrap"/>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Notifications Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Notifications">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🔔 Notifications" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Configure notification preferences for chat completions, streaming, and cross-tab alerts."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <CheckBox IsChecked="{Binding SoundOnCompletion}"
+                                          Content="Play Sound on Completion"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          Margin="0,0,0,8"
+                                          ToolTip="Play a notification sound when an AI response finishes generating."/>
+                                <CheckBox IsChecked="{Binding DisableStreaming}"
+                                          Content="Disable Streaming"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          Margin="0,0,0,8"
+                                          ToolTip="Wait for the entire response before displaying it, instead of showing tokens as they are generated."/>
+                                <CheckBox IsChecked="{Binding CrossTabCompletionAlert}"
+                                          Content="Cross-Tab Completion Alert"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          Margin="0,0,0,0"
+                                          ToolTip="Show an alert when a chat completes in another tab or window."/>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Startup Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Startup">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🚀 Startup" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Configure application startup behavior, session restore, and system tray preferences."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <CheckBox IsChecked="{Binding LaunchOnWindowsStartup}"
+                                          Content="Launch on Windows Startup"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          Margin="0,0,0,8"
+                                          ToolTip="Automatically start MySecondBrain when you log into Windows."/>
+                                <CheckBox IsChecked="{Binding RestoreLastSession}"
+                                          Content="Restore Last Session"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          Margin="0,0,0,8"
+                                          ToolTip="Reopen the last chat threads and tabs when the application starts."/>
+                                <CheckBox IsChecked="{Binding MinimizeToTray}"
+                                          Content="Minimize to System Tray"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          Margin="0,0,0,0"
+                                          ToolTip="Minimize the application to the system tray instead of the taskbar."/>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Updates Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Updates">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🔄 Updates" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Manage automatic update checking and view your current application version."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <StackPanel>
+                            <!-- Check Frequency Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Check Frequency" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="How often should the application check for updates?"
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <RadioButton Content="Every time the application starts"
+                                                 GroupName="UpdateFrequency"
+                                                 IsChecked="{Binding UpdateCheckFrequency, Converter={StaticResource EnumMatchConverter}, ConverterParameter=OnStartup}"
+                                                 FontSize="11"
+                                                 Foreground="{DynamicResource ContentForeground}"
+                                                 Margin="0,0,0,6"/>
+                                    <RadioButton Content="Daily"
+                                                 GroupName="UpdateFrequency"
+                                                 IsChecked="{Binding UpdateCheckFrequency, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Daily}"
+                                                 FontSize="11"
+                                                 Foreground="{DynamicResource ContentForeground}"
+                                                 Margin="0,0,0,6"/>
+                                    <RadioButton Content="Weekly"
+                                                 GroupName="UpdateFrequency"
+                                                 IsChecked="{Binding UpdateCheckFrequency, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Weekly}"
+                                                 FontSize="11"
+                                                 Foreground="{DynamicResource ContentForeground}"
+                                                 Margin="0,0,0,6"/>
+                                    <RadioButton Content="Manual only (never auto-check)"
+                                                 GroupName="UpdateFrequency"
+                                                 IsChecked="{Binding UpdateCheckFrequency, Converter={StaticResource EnumMatchConverter}, ConverterParameter=ManualOnly}"
+                                                 FontSize="11"
+                                                 Foreground="{DynamicResource ContentForeground}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Current Version Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Version and Check for Updates" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="View the installed version and manually check for new releases."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="Current Version:" FontSize="11"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,6,0"/>
+                                        <TextBlock Text="{Binding CurrentVersion}" FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ContentForeground}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+                                        <Button Content="🔍 Check Now"
+                                                Padding="12,5"
+                                                Command="{Binding CheckForUpdatesCommand}"
+                                                Style="{StaticResource AccentButtonStyle}"
+                                                Margin="0,0,8,0"
+                                                ToolTip="Check for updates now"/>
+                                        <TextBlock Text="{Binding UpdateStatusMessage}"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
                 <!-- Other categories placeholder -->
                 <TextBlock Text="Select a category"
                            Foreground="{DynamicResource SubtleBrush}"
@@ -1266,6 +1629,18 @@
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Diagnostics">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Appearance">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Notifications">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Startup">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Updates">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
                             </Style.Triggers>
