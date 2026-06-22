@@ -1289,6 +1289,7 @@ Welcome to your MySecondBrain wiki. Add `.md` files here and they will be indexe
             }
 
             await RefreshTextActionListAsync();
+            await RefreshHotkeyAssignmentsAsync();
             ClearTextActionForm();
             StatusMessage = "Text action saved successfully.";
         }
