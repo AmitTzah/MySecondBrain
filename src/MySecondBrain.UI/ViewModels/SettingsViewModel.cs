@@ -1604,6 +1604,7 @@ Welcome to your MySecondBrain wiki. Add `.md` files here and they will be indexe
             }
 
             await RefreshHotkeyAssignmentsAsync();
+            await RefreshTextActionListAsync();
             StatusMessage = "All hotkeys reset to defaults.";
             _logger.LogInformation("Hotkeys reset to defaults");
         }
