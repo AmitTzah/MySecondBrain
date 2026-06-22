@@ -796,19 +796,19 @@
                                                                   FontSize="11"
                                                                   AutomationProperties.AutomationId="ModelIdentifierCombo"/>
                                                     </StackPanel>
-                                                    <Button Grid.Column="1" Content="⟳ Fetch" Width="50"
-                                                            FontSize="10" Margin="6,18,0,0"
-                                                            Command="{Binding FetchModelsCommand}"
-                                                            VerticalAlignment="Bottom"
-                                                            Height="22"
-                                                            AutomationProperties.AutomationId="FetchModelsButton">
+                                                    <Button Grid.Column="1" Content="↻ Fetch" Width="50"
+                                                             FontSize="10" Margin="6,18,0,0"
+                                                             Command="{Binding FetchModelsCommand}"
+                                                             VerticalAlignment="Bottom"
+                                                             Height="22"
+                                                             AutomationProperties.AutomationId="FetchModelsButton">
                                                         <Button.Style>
                                                             <Style TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
                                                                 <Setter Property="IsEnabled" Value="True"/>
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding IsFetchingModels}" Value="True">
                                                                         <Setter Property="IsEnabled" Value="False"/>
-                                                                        <Setter Property="Content" Value="⟳"/>
+                                                                        <Setter Property="Content" Value="↻"/>
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
