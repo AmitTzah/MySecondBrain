@@ -9,6 +9,7 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <converters:EnumMatchConverter x:Key="EnumMatchConverter"/>
+            <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
             <!-- Reusable style for icon buttons (Copy, Edit, Delete, Duplicate) with very subtle hover/press feedback -->
             <Style x:Key="IconButtonStyle" TargetType="Button">
                 <Setter Property="Width" Value="28"/>
@@ -2784,6 +2785,35 @@
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
+
+                <!-- Key recorder overlay — shown when IsRecordingHotkey is true (Hotkeys or Text Actions) -->
+                <Border Background="#80000000"
+                        Visibility="{Binding IsRecordingHotkey, Converter={StaticResource BoolToVisibility}}"
+                        Panel.ZIndex="100"
+                        KeyDown="OnRecordingKeyDown"
+                        MouseDown="OnRecordingOverlayMouseDown"
+                        Focusable="True"
+                        IsVisibleChanged="OnRecordingOverlayVisibilityChanged">
+                    <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Background="{DynamicResource CardBackground}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1" CornerRadius="8"
+                            Padding="36,24" MinWidth="340">
+                        <StackPanel>
+                            <TextBlock Text="Recording hotkey..." FontSize="15" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ContentForeground}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                            <TextBlock Text="{Binding RecordingHotkeyCombo}"
+                                       FontSize="22" FontFamily="Consolas"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,14"
+                                       Height="32" x:Name="HotkeyComboDisplay"/>
+                            <TextBlock Text="Press desired key combination. Escape to cancel."
+                                       FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                                       HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </Border>
             </Grid>
         </Border>
     </Grid>
