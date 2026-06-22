@@ -29,6 +29,7 @@ public partial class OnboardingWizardViewModel : ObservableObject
     private readonly ISettingsRepository _settingsRepo;
     private readonly IModelConfigurationRepository _modelConfigRepo;
     private readonly IPersonaRepository _personaRepo;
+    private readonly ITextActionRepository _textActionRepo;
     private readonly IEncryptionService _encryptionService;
     private readonly ILLMProviderService _llmProviderService;
     private readonly IConfirmationService _confirmationService;
@@ -56,6 +57,7 @@ public partial class OnboardingWizardViewModel : ObservableObject
         ISettingsRepository settingsRepo,
         IModelConfigurationRepository modelConfigRepo,
         IPersonaRepository personaRepo,
+        ITextActionRepository textActionRepo,
         IEncryptionService encryptionService,
         ILLMProviderService llmProviderService,
         IConfirmationService confirmationService,
@@ -66,6 +68,7 @@ public partial class OnboardingWizardViewModel : ObservableObject
         _settingsRepo = settingsRepo;
         _modelConfigRepo = modelConfigRepo;
         _personaRepo = personaRepo;
+        _textActionRepo = textActionRepo;
         _encryptionService = encryptionService;
         _llmProviderService = llmProviderService;
         _confirmationService = confirmationService;
@@ -669,6 +672,9 @@ public partial class OnboardingWizardViewModel : ObservableObject
     [RelayCommand]
     private async Task LaunchStudio()
     {
+        // Persist hotkey changes first so they show in Settings Hotkeys tab
+        await SaveHotkeysToRepositoryAsync();
+
         // Save all keys to the repository
         await SaveKeysToRepositoryAsync();
 
@@ -806,6 +812,56 @@ public partial class OnboardingWizardViewModel : ObservableObject
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to save API key during onboarding");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Persists hotkey changes made in the wizard step 3 to TextAction entities
+    /// so they appear in the Settings Hotkeys tab after Launch Studio.
+    /// Skips the "__commandbar__" action since it is not a TextAction.
+    /// </summary>
+    private async Task SaveHotkeysToRepositoryAsync()
+    {
+        IReadOnlyList<TextAction>? existingActions = null;
+        try { existingActions = await _textActionRepo.GetAllAsync(); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load TextActions for hotkey persistence");
+            return;
+        }
+
+        foreach (var wizardItem in HotkeyAssignments)
+        {
+            try
+            {
+                // Skip Command Bar — it's not a TextAction entity
+                if (wizardItem.ActionId == "__commandbar__") continue;
+
+                // Match by DisplayName since wizard ActionNames align with TextAction DisplayNames
+                var textAction = existingActions.FirstOrDefault(a =>
+                    a.DisplayName == wizardItem.ActionName);
+
+                if (textAction is null)
+                {
+                    _logger.LogDebug("Onboarding: no TextAction found for '{Name}', skipping",
+                        wizardItem.ActionName);
+                    continue;
+                }
+
+                // Only update if the hotkey actually changed from what's in the DB
+                if (textAction.Hotkey == wizardItem.Hotkey) continue;
+
+                textAction.Hotkey = wizardItem.Hotkey;
+                textAction.UpdatedAt = DateTimeOffset.UtcNow;
+                await _textActionRepo.UpdateAsync(textAction);
+                _logger.LogInformation("Onboarding: saved hotkey '{Hotkey}' for '{Name}'",
+                    wizardItem.Hotkey, wizardItem.ActionName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to save hotkey for wizard item '{Name}'",
+                    wizardItem.ActionName);
             }
         }
     }

@@ -13,6 +13,7 @@ public class OnboardingWizardViewModelTests
     private readonly Mock<ISettingsRepository> _settingsRepo = new();
     private readonly Mock<IModelConfigurationRepository> _modelConfigRepo = new();
     private readonly Mock<IPersonaRepository> _personaRepo = new();
+    private readonly Mock<ITextActionRepository> _textActionRepo = new();
     private readonly Mock<IEncryptionService> _encryptionService = new();
     private readonly Mock<ILLMProviderService> _llmProviderService = new();
     private readonly Mock<IConfirmationService> _confirmationService = new();
@@ -25,11 +26,16 @@ public class OnboardingWizardViewModelTests
         _settingsRepo.Setup(s => s.GetAsync(It.IsAny<string>()))
             .ReturnsAsync((string)null!);
 
+        // Default text action repo returns empty list (no actions to match)
+        _textActionRepo.Setup(r => r.GetAllAsync())
+            .ReturnsAsync(Array.Empty<TextAction>());
+
         return new OnboardingWizardViewModel(
             _apiKeyRepo.Object,
             _settingsRepo.Object,
             _modelConfigRepo.Object,
             _personaRepo.Object,
+            _textActionRepo.Object,
             _encryptionService.Object,
             _llmProviderService.Object,
             _confirmationService.Object,
@@ -318,11 +324,11 @@ public class OnboardingWizardViewModelTests
     }
 
     // ================================================================
-    // Launch Studio — saves keys then sends message
+    // Launch Studio — saves hotkeys, saves keys, then sends message
     // ================================================================
 
     [Fact]
-    public async Task LaunchStudio_SavesKeysThenSendsMessage()
+    public async Task LaunchStudio_SavesHotkeysThenKeysThenSendsMessage()
     {
         var vm = CreateViewModel();
 
@@ -338,8 +344,48 @@ public class OnboardingWizardViewModelTests
         if (vm.LaunchStudioCommand is IAsyncRelayCommand asyncCmd && asyncCmd.ExecutionTask is not null)
             await asyncCmd.ExecutionTask;
 
+        // Verify GetAllAsync was called for hotkey loading
+        _textActionRepo.Verify(r => r.GetAllAsync(), Times.AtLeastOnce);
+
         // Verify onboarding was marked complete after keys were saved
         _settingsRepo.Verify(s => s.SetAsync("Onboarding_Completed", "true"), Times.Once);
+    }
+
+    [Fact]
+    public async Task LaunchStudio_PersistsChangedHotkeysToRepository()
+    {
+        // CreateViewModel sets up default GetAllAsync → empty array.
+        // We override AFTER creation since SaveHotkeysToRepositoryAsync
+        // is only called at launch time, not during construction.
+        var vm = CreateViewModel();
+
+        // Arrange — seed TextActions that match wizard hotkey items
+        var seededActions = new List<TextAction>
+        {
+            new() { Id = "a1", DisplayName = "Rewrite", Hotkey = "Alt+Q" },
+            new() { Id = "a2", DisplayName = "Summarize", Hotkey = "Alt+W" },
+        };
+        _textActionRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(seededActions);
+        _textActionRepo.Setup(r => r.UpdateAsync(It.IsAny<TextAction>()))
+            .Returns(Task.CompletedTask);
+        _settingsRepo.Setup(s => s.SetAsync("Onboarding_Completed", "true"))
+            .Returns(Task.CompletedTask);
+
+        // Act — change one hotkey in the wizard, then launch
+        var rewriteItem = vm.HotkeyAssignments.First(h => h.ActionName == "Rewrite");
+        rewriteItem.Hotkey = "Ctrl+Shift+R";
+
+        vm.LaunchStudioCommand.Execute(null);
+        if (vm.LaunchStudioCommand is IAsyncRelayCommand asyncCmd && asyncCmd.ExecutionTask is not null)
+            await asyncCmd.ExecutionTask;
+
+        // Assert — UpdateAsync should have been called once for the changed hotkey
+        _textActionRepo.Verify(r => r.UpdateAsync(It.Is<TextAction>(
+            a => a.Id == "a1" && a.Hotkey == "Ctrl+Shift+R")), Times.Once);
+
+        // The unchanged hotkey should NOT have been updated
+        _textActionRepo.Verify(r => r.UpdateAsync(It.Is<TextAction>(
+            a => a.Id == "a2")), Times.Never);
     }
 
     // ================================================================
