@@ -39,6 +39,8 @@ public partial class OnboardingWizardView : WpfUserControl
 
     /// <summary>
     /// Global key handler for the wizard window — handles hotkey recording.
+    /// Uses Keyboard.IsKeyDown for modifier detection and auto-applies
+    /// on valid keypress, matching SettingsView behavior.
     /// </summary>
     private void Window_KeyDown(object sender, WpfKeyEventArgs e)
     {
@@ -57,35 +59,90 @@ public partial class OnboardingWizardView : WpfUserControl
             return;
         }
 
-        if (e.Key == Key.Enter && !string.IsNullOrWhiteSpace(ViewModel.RecordingHotkeyCombo))
-        {
-            ViewModel.ApplyRecordedHotkey(ViewModel.RecordingHotkeyCombo);
+        // Collect currently held modifier keys — use Keyboard.IsKeyDown for reliability
+        var modifiers = new List<string>();
+        if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+            modifiers.Add("Ctrl");
+        if (Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt))
+            modifiers.Add("Alt");
+        if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+            modifiers.Add("Shift");
+        if (Keyboard.IsKeyDown(Key.LWin) || Keyboard.IsKeyDown(Key.RWin))
+            modifiers.Add("Win");
+
+        // Resolve the actual key: when Alt is held, WPF delivers Key.System
+        // with the real key in e.SystemKey.
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+
+        // Ignore modifier-only presses — wait for a non-modifier key
+        if (key == Key.LeftCtrl || key == Key.RightCtrl ||
+            key == Key.LeftShift || key == Key.RightShift ||
+            key == Key.LeftAlt || key == Key.RightAlt ||
+            key == Key.LWin || key == Key.RWin)
             return;
-        }
+
+        // Require at least one modifier for a valid hotkey
+        if (modifiers.Count == 0)
+            return;
+
+        // Format the key name
+        var keyName = FormatKeyName(key);
 
         // Build combo string from modifiers + key
-        var modifiers = new List<string>();
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) modifiers.Add("Ctrl");
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)) modifiers.Add("Alt");
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) modifiers.Add("Shift");
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Windows)) modifiers.Add("Win");
+        modifiers.Add(keyName);
+        var combo = string.Join("+", modifiers);
 
-        var key = e.Key switch
+        // Update live display
+        ViewModel.RecordingHotkeyCombo = combo;
+
+        // Auto-apply on valid keypress (matching Settings behavior)
+        ViewModel.ApplyRecordedHotkey(combo);
+    }
+
+    /// <summary>
+    /// Converts a WPF Key enum value to a human-readable string suitable for display.
+    /// </summary>
+    private static string FormatKeyName(Key key)
+    {
+        // Digit keys D0-D9 → "0"-"9"
+        if (key >= Key.D0 && key <= Key.D9)
+            return key.ToString().Substring(1);
+
+        // Numpad keys
+        if (key >= Key.NumPad0 && key <= Key.NumPad9)
+            return "Num" + key.ToString().Substring(6);
+
+        // Oem keys
+        return key switch
         {
-            Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt
-                or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin => null,
-            Key.System => null,
-            _ => e.Key.ToString(),
+            Key.OemTilde => "`",
+            Key.OemMinus => "-",
+            Key.OemPlus => "=",
+            Key.OemOpenBrackets => "[",
+            Key.OemCloseBrackets => "]",
+            Key.OemPipe => "\\",
+            Key.OemSemicolon => ";",
+            Key.OemQuotes => "'",
+            Key.OemComma => ",",
+            Key.OemPeriod => ".",
+            Key.OemQuestion => "/",
+            Key.OemBackslash => "\\",
+            Key.Space => "Space",
+            Key.Tab => "Tab",
+            Key.Enter => "Enter",
+            Key.Back => "Backspace",
+            Key.Delete => "Delete",
+            Key.Insert => "Insert",
+            Key.Home => "Home",
+            Key.End => "End",
+            Key.PageUp => "PageUp",
+            Key.PageDown => "PageDown",
+            Key.Left => "Left",
+            Key.Right => "Right",
+            Key.Up => "Up",
+            Key.Down => "Down",
+            _ => key.ToString(),
         };
-
-        if (key is null && modifiers.Count == 0)
-            return;
-
-        if (key is not null && modifiers.Count > 0)
-        {
-            var combo = string.Join("+", modifiers) + "+" + key;
-            ViewModel.RecordingHotkeyCombo = combo;
-        }
     }
 
     /// <summary>
