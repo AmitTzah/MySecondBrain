@@ -176,7 +176,7 @@ Below is the expected state after all implementation steps. `[MODIFIED]` marks e
 
 ---
 
-### [ ] Step 2: Appearance, Notifications, Startup, Updates Categories
+### [x] Step 2: Appearance, Notifications, Startup, Updates Categories
 
 - **Goal:** Build four settings categories with full ViewModel properties, persistence, and XAML. The user can configure visual appearance (Dark/Light mode, chat theme, font), notification preferences (sound, streaming, cross-tab alerts), startup behavior (launch on boot, session restore, minimize to tray), and auto-update settings (check frequency, current version display).
 

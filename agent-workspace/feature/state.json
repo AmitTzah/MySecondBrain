@@ -25,12 +25,18 @@
       "name": "Diagnostics Infrastructure & Category UI",
       "classification": "HUMAN/SHT REQUIRED",
       "description": "1. Build and launch: dotnet build src/MySecondBrain.UI/MySecondBrain.UI.csproj then launch src\\MySecondBrain.UI\\bin\\Debug\\net8.0-windows10.0.17763.0\\MySecondBrain.UI.exe\n2. Navigate to Settings → Diagnostics category\n3. Verify Log Level dropdown shows 'Information' (default)\n4. Verify 3 checkboxes checked (LLM API Calls, Tier 1 Hotkey, Tier 2 Command Bar), 5 unchecked\n5. Change Log Level to 'Debug' — verify the dropdown updates\n6. Toggle 'Database' checkbox ON — verify it checks\n7. Click 'Open Logs Folder' — verify Windows Explorer opens at %LOCALAPPDATA%\\MySecondBrain\\logs\\\n8. Close the app, relaunch, navigate back to Diagnostics — verify settings persisted (Debug level + Database checkbox ON)\n9. Click 'Clear Logs' — verify confirmation dialog appears, click Yes, verify 'All log files cleared' message"
+    },
+    {
+      "step": 2,
+      "name": "Appearance, Notifications, Startup, Updates Categories",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "1. Launch the app, navigate to Settings → Appearance\n2. Toggle Dark/Light mode — verify entire app theme changes instantly\n3. Change Chat Theme to 'Bubble' — verify the preview area updates (or note that chat view will use Bubble on next chat load)\n4. Drag font size slider to 18 — verify live preview text enlarges\n5. Navigate to Notifications, toggle 'Sound on Completion' ON, toggle 'Disable Streaming' ON\n6. Navigate to Startup, verify 'Minimize to Tray' is checked by default, toggle 'Launch on Windows Startup' ON\n7. Navigate to Updates, verify current version is displayed, change frequency to 'Weekly'\n8. Close and relaunch the app — verify all settings persisted (Dark mode, Bubble theme, font size 18, sound ON, streaming disabled, startup settings, weekly updates)"
     }
   ],
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 6,
-  "current_step": 1,
+  "current_step": 2,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }
