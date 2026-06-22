@@ -259,6 +259,12 @@ public partial class SettingsViewModel : ObservableObject
     /// </summary>
     private System.Windows.Threading.DispatcherTimer? _copyFeedbackTimer;
 
+    /// <summary>
+    /// Guards the RefreshApiKeysMessage handler from executing before InitializeAsync completes.
+    /// Prevents redundant repository calls if the message somehow arrives during init.
+    /// </summary>
+    private bool _isInitialized;
+
     public SettingsViewModel(
         ISettingsRepository settingsRepo,
         IThemeProvider themeProvider,
@@ -294,6 +300,23 @@ public partial class SettingsViewModel : ObservableObject
 
         CurrentVersion = (_updateChecker.CurrentVersion ?? System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version)
             ?.ToString() ?? "1.0.0.0";
+
+        // Register for RefreshApiKeysMessage immediately (in constructor) so the handler is
+        // active before any async initialization completes. Previously this was at the end of
+        // InitializeAsync(), which created a window where the handler wasn't registered.
+        // SettingsViewModel is Transient — each navigation creates a new instance.
+        WeakReferenceMessenger.Default.Register<RefreshApiKeysMessage>(this, async (_, _) =>
+        {
+            if (!_isInitialized)
+            {
+                _logger.LogDebug("[DIAG] RefreshApiKeysMessage received before InitializeAsync completed — skipping redundant refresh");
+                return;
+            }
+            _logger.LogDebug("[DIAG] RefreshApiKeysMessage received by #{VM} — reloading API key list", this.GetHashCode());
+            await RefreshKeyListAsync();
+            await RefreshAvailableApiKeysAsync();
+        });
+        _logger.LogDebug("[DIAG] SettingsViewModel #{HashCode} created + registered for RefreshApiKeysMessage", this.GetHashCode());
     }
 
     // ================================================================
@@ -1639,13 +1662,10 @@ Welcome to your MySecondBrain wiki. Add `.md` files here and they will be indexe
         await RefreshTextActionListAsync();
         await RefreshHotkeyAssignmentsAsync();
 
-        // Listen for API key changes made by the re-run onboarding wizard
-        WeakReferenceMessenger.Default.Register<RefreshApiKeysMessage>(this, async (_, _) =>
-        {
-            _logger.LogDebug("RefreshApiKeysMessage received — reloading API key list");
-            await RefreshKeyListAsync();
-            await RefreshAvailableApiKeysAsync();
-        });
+        _isInitialized = true;
+
+        // Note: RefreshApiKeysMessage registration is now in the constructor (above)
+        // to ensure the handler is active from VM creation, before async init completes.
     }
 
     /// <summary>

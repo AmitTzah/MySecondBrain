@@ -418,3 +418,53 @@ public async Task OpenAI_ValidateKey_ReturnsTrue()
 - No API keys are committed to the repository (`.gitignore` excludes `.env` files)
 - Test runners set variables via CI/CD secrets or local `.env` files (not committed)
 - Integration test project (`MySecondBrain.Tests.Integration`) is excluded from PR validation that lacks secrets
+
+---
+
+## 9. Random Port Assignment — Kestrel IPC Pattern
+
+The embedded Kestrel server uses OS-assigned random ports (`port: 0`) for loopback IPC. This pattern applies to any local server that needs to avoid port conflicts with other applications.
+
+### 9.1 Port Assignment
+
+```csharp
+builder.WebHost.UseKestrel(options =>
+{
+    options.Listen(IPAddress.Loopback, port: 0);  // 0 = OS assigns a free port
+});
+```
+
+The actual assigned port is retrieved after the server starts via `app.Urls` or `IServerAddressesFeature`:
+
+```csharp
+var addresses = app.Services.GetRequiredService<IServer>().Features
+    .Get<IServerAddressesFeature>()?.Addresses;
+// addresses contains "http://127.0.0.1:51234"
+_port = int.Parse(addresses.First().Split(':').Last());
+```
+
+### 9.2 Port Discovery for External Clients
+
+External clients (e.g., Word Add-in) that need to connect to the Kestrel server must discover the port. Discovery methods:
+
+| Method | Mechanism | Use Case |
+|--------|-----------|----------|
+| **Log file** | `%LOCALAPPDATA%\MySecondBrain\logs\msb-{date}.log` — search for "WebSocket server started on port" | Debugging, manual testing |
+| **Named pipe / shared file** | Write port to a known file path (e.g., `%TEMP%\msb-websocket-port.txt`) | Automated tooling |
+| **Process enumeration** | External process finds MySecondBrain.exe PID → queries listening ports via `netstat` | One-off scripts |
+| **Settings key** | `ISettingsRepository` key `"WebSocketPort"` — set by server on startup | In-process consumers |
+
+### 9.3 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **Random port, not fixed** | Fixed ports risk conflicts with other applications (IIS, Docker, dev servers). Random assignment eliminates the conflict class entirely. |
+| **Loopback only** | `IPAddress.Loopback` prevents network exposure. Even if a port is guessed, only local processes can connect. |
+| **Auth token + loopback binding** | Defense in depth: even if another local process discovers the port, it cannot connect without the 64-char hex auth token. |
+| **Port discovery is the client's problem** | The server doesn't broadcast its port. Clients must use one of the discovery methods above. This follows the principle of least surprise for local IPC. |
+
+---
+
+## 10. Feature 8: No New API Routes
+
+Feature 8 (Settings, Onboarding & Diagnostics) adds zero new network endpoints. All settings persistence, onboarding state, and diagnostics configuration operate entirely through in-process `ISettingsRepository` calls and the existing Kestrel infrastructure. Future features that need new endpoints should extend this file.

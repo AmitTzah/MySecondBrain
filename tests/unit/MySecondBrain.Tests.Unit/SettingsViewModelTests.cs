@@ -2647,4 +2647,45 @@ public class SettingsViewModelTests
         var exception = Record.Exception(() => _sut.ReRunOnboardingCommand.Execute(null));
         Assert.Null(exception);
     }
+
+    // ================================================================
+    // RefreshApiKeysMessage
+    // ================================================================
+
+    [Fact]
+    public async Task RefreshApiKeysMessage_AfterInitialization_CallsGetAllAsync()
+    {
+        // The handler is registered in the constructor. After InitializeAsync completes,
+        // Send should trigger a key list refresh.
+        _apiKeyRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<ApiKey>());
+
+        // Simulate "navigate to Settings" — create fresh VM and complete init
+        var vm = CreateFreshViewModel();
+        await vm.InitializeCommand.ExecuteAsync(null);
+        _apiKeyRepoMock.Invocations.Clear(); // reset counts from init
+
+        // Act — send the message as App.xaml.cs does after wizard closes
+        WeakReferenceMessenger.Default.Send(new RefreshApiKeysMessage());
+
+        // Assert — handler should have called GetAllAsync
+        _apiKeyRepoMock.Verify(r => r.GetAllAsync(), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public void RefreshApiKeysMessage_BeforeInitialization_SkipsRefresh()
+    {
+        // Verify the _isInitialized guard prevents the handler from running
+        // before InitializeAsync completes.
+        _apiKeyRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<ApiKey>());
+
+        // Create a VM but do NOT call InitializeAsync — handler should be
+        // registered (constructor) but skip the refresh due to _isInitialized = false.
+        var vm = CreateFreshViewModel();
+
+        // Act — send the message before init
+        WeakReferenceMessenger.Default.Send(new RefreshApiKeysMessage());
+
+        // Assert — GetAllAsync should NOT have been called
+        _apiKeyRepoMock.Verify(r => r.GetAllAsync(), Times.Never);
+    }
 }

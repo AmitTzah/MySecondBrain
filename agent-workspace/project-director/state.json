@@ -4,7 +4,7 @@
   "total_features": 21,
   "current_feature_index": 7,
   "status": "in_progress",
-  "fd_status": "idle",
+  "fd_status": "spawned",
   "phase_2_substep": null,
   "phase_4_substep": null,
   "phase_5_substep": null,
@@ -26,7 +26,6 @@
     },
     "missing_prerequisites": []
   },
-  "phase_5_substep": null,
   "total_replans": 0,
   "current_branch_name": null
 }

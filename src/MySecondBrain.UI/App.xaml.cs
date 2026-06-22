@@ -239,6 +239,9 @@ public partial class App : Application
 
                 // Notify Settings → Providers tab to refresh its API key list,
                 // since the onboarding wizard may have added new keys.
+                startupLogger.LogInformation(
+                    "[DIAG] About to send RefreshApiKeysMessage — open windows: {WindowCount}",
+                    Current.Windows.Count);
                 WeakReferenceMessenger.Default.Send(new RefreshApiKeysMessage());
                 startupLogger.LogInformation("Re-run onboarding completed — RefreshApiKeysMessage sent");
             });

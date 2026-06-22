@@ -58,12 +58,9 @@
     }
   ],
   "current_phase": 5,
-  "plan_status": "validated",
+  "plan_status": "archived",
   "total_steps": 6,
   "current_step": 6,
   "pivot_in_progress": false,
-  "pivot_in_progress": false,
-  "phase_5_substep": null
-  "pivot_in_progress": false,
-  "phase_5_substep": null
+  "phase_5_substep": "state_finalized"
 }

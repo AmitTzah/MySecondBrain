@@ -1268,3 +1268,474 @@ private async Task DeleteApiKeyAsync(ApiKeyDisplayItem key)
 ```
 
 This pattern applies to any ViewModel that needs user confirmation — delete operations, overwrite warnings, unsaved-changes dialogs. All confirmation dialogs in the application should go through `IConfirmationService` for testability.
+
+---
+
+## 28. ShutdownMode — OnExplicitShutdown for Multi-Window WPF Apps
+
+WPF's default `ShutdownMode="OnMainWindowClose"` (set in `App.xaml`) causes the entire application to exit when the MainWindow closes. For applications that show multiple windows — such as an Onboarding Wizard that transitions to the Studio MainWindow — this default is incorrect.
+
+### 28.1 The Problem
+
+```
+App.xaml: ShutdownMode="OnMainWindowClose"
+  → OnboardingWizardWindow.Show() (no MainWindow visible yet)
+  → Wizard completes → Launch Studio
+  → wizardWindow.Close() → ??? App might shut down if MainWindow was briefly shown
+
+  OR worse:
+
+  → MainWindow.Show() then wizardWindow.Close()
+  → If MainWindow is later closed, app exits normally
+  → But if wizard fails to show MainWindow, app silently exits with no error
+```
+
+### 28.2 The Solution: OnExplicitShutdown
+
+```xml
+<!-- App.xaml -->
+<Application x:Class="MySecondBrain.UI.App"
+             ShutdownMode="OnExplicitShutdown">
+```
+
+With `OnExplicitShutdown`, the application NEVER exits when a window closes. Instead, it exits only when `Application.Current.Shutdown()` is explicitly called.
+
+### 28.3 Shutdown Responsibility
+
+| Trigger | Action |
+|---------|--------|
+| User clicks "Exit" in system tray | `ISystemTrayService.ExitRequested` → `Application.Current.Shutdown()` |
+| MainWindow is closed (X button) | `MainWindow.OnClosing` checks `MinimizeToTray`; if `false`, calls `Application.Current.Shutdown()` |
+| Unhandled fatal exception | `App.DispatcherUnhandledException` → log + `Application.Current.Shutdown()` |
+| OS shutdown/restart | `Application.Current.SessionEnding` → `Application.Current.Shutdown()` |
+
+### 28.4 Window Transition Pattern (Wizard → Studio)
+
+```csharp
+// In App.xaml.cs OnStartup:
+var onboardingCompleted = await settings.GetAsync("Onboarding_Completed");
+
+if (onboardingCompleted != "true")
+{
+    var wizardWindow = _serviceProvider.GetRequiredService<OnboardingWizardWindow>();
+    wizardWindow.Show();
+    // MainWindow is NOT shown — wizard is the only window
+    // wizardWindow.Close() does NOT shut down the app (OnExplicitShutdown)
+    
+    // When wizard completes, it sends LaunchStudioMessage via WeakReferenceMessenger
+}
+else
+{
+    var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+    mainWindow.Show();
+}
+```
+
+### 28.5 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **OnExplicitShutdown, not OnMainWindowClose** | Multi-window lifecycle: wizard → main window, settings modal, overlay windows. The application decides when to exit, not WPF's window count. |
+| **Explicit Shutdown() calls are mandatory** | Every code path that should terminate the app must call `Application.Current.Shutdown()`. Missing calls result in a zombie process with no visible windows. |
+| **System tray "Exit" always calls Shutdown()** | Bypasses minimize-to-tray and all close handlers. This is the guaranteed kill switch. |
+
+---
+
+## 29. Serilog IDestructuringPolicy Limitations — String-Only Redaction
+
+`IDestructuringPolicy` intercepts object destructuring in Serilog's structured logging pipeline. For redacting API key strings that appear as scalar values in log messages, `IDestructuringPolicy` is the correct approach. However, it has a critical limitation: it only fires when Serilog destructures an object — it does NOT intercept strings passed directly as message template parameters.
+
+### 29.1 IDestructuringPolicy Coverage
+
+```csharp
+// ✅ IDestructuringPolicy WILL intercept this:
+logger.LogInformation("Processing key {ApiKey}", someObjectWithKeyProperty);
+// Serilog destructures the object, policy checks each property
+
+// ❌ IDestructuringPolicy will NOT intercept this:
+logger.LogInformation("Processing key {Key}", apiKeyString);
+// A plain string parameter is NOT destructured — it's a scalar
+```
+
+### 29.2 The Proper Layered Approach
+
+For comprehensive log redaction, two mechanisms are needed:
+
+| Layer | Mechanism | What It Catches |
+|-------|-----------|----------------|
+| **Object destructuring** | `IDestructuringPolicy` | API key properties on structured objects (entities, DTOs, ViewModels) |
+| **String parameters** | `ILogEventEnricher` or manual `MaskKey()` call | Direct string parameters in message templates |
+
+### 29.3 ApiKeyDestructuringPolicy Implementation
+
+```csharp
+public class ApiKeyDestructuringPolicy : IDestructuringPolicy
+{
+    public bool TryDestructure(
+        object value,
+        ILogEventPropertyValueFactory propertyValueFactory,
+        out LogEventPropertyValue? result)
+    {
+        if (value is string s && IsApiKey(s))
+        {
+            result = new ScalarValue("[REDACTED]");
+            return true;
+        }
+        result = null;
+        return false;
+    }
+
+    private static bool IsApiKey(string value)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length < 20)
+            return false;
+        return value.StartsWith("sk-", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("sk-ant-", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("AIza", StringComparison.Ordinal)
+            || value.StartsWith("sk-proj-", StringComparison.OrdinalIgnoreCase);
+    }
+}
+```
+
+### 29.4 Registration
+
+```csharp
+// In App.xaml.cs ConfigureServices, in the LoggerConfiguration chain:
+var loggerConfig = new LoggerConfiguration()
+    .Destructure.With<ApiKeyDestructuringPolicy>()  // After MinimumLevel, before sinks
+    .Enrich.WithThreadId()
+    // ...
+```
+
+### 29.5 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **String-only checks** | API keys are strings. Complex object destructuring is not needed for this use case. |
+| **Prefix-based detection** | Faster than entropy analysis. Covers all known provider key formats (`sk-`, `sk-ant-`, `AIza`, `sk-proj-`). |
+| **Not an ILogEventEnricher** | Enrichers add properties; they don't redact them. `IDestructuringPolicy` is the correct Serilog extension point for redaction. |
+| **Manual MaskKey() for direct string logging** | Callers that log raw API key strings must use `ApiKeyHelper.MaskKey(apiKey)` — the policy cannot intercept scalar parameters. |
+
+---
+
+## 30. RuntimeLogFilter — Runtime Log Level/Category Filtering
+
+Serilog's `MinimumLevel` and filter configuration are set at `LoggerConfiguration` build time and cannot be changed at runtime. For a settings UI that lets users change log level and category toggles without restarting the app, a runtime filter wrapper around `ILogger<T>` is needed.
+
+### 30.1 Architecture
+
+```mermaid
+graph TD
+    Caller["42+ Services/ViewModels\ninject ILogger T"]
+    RuntimeFilter["RuntimeLogFilter T\nchecks ISettingsRepository at runtime"]
+    InnerLogger["ILogger T\nSerilog-backed"]
+    Settings["ISettingsRepository\nLogLevel + 8 LogCategory_* keys"]
+    Caller --> RuntimeFilter
+    RuntimeFilter --> InnerLogger
+    RuntimeFilter --> Settings
+```
+
+### 30.2 Implementation Pattern
+
+```csharp
+public class RuntimeLogFilter<T> : ILogger<T>
+{
+    private readonly ILogger<T> _inner;
+    private readonly ISettingsRepository _settings;
+
+    public RuntimeLogFilter(ILogger<T> inner, ISettingsRepository settings)
+    {
+        _inner = inner;
+        _settings = settings;
+    }
+
+    public bool IsEnabled(LogLevel logLevel)
+    {
+        var minLevel = GetConfiguredMinLevel();
+        if (logLevel < minLevel) return false;
+        return IsCategoryEnabled(typeof(T).Name);
+    }
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+        Exception? exception, Func<TState, Exception?, string> formatter)
+    {
+        if (!IsEnabled(logLevel)) return;
+        _inner.Log(logLevel, eventId, state, exception, formatter);
+    }
+
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+        => _inner.BeginScope(state);
+
+    private LogLevel GetConfiguredMinLevel()
+    {
+        var saved = _settings.GetAsync("LogLevel").Result;
+        return saved switch
+        {
+            "Debug" => LogLevel.Debug,
+            "Verbose" => LogLevel.Trace,
+            _ => LogLevel.Information
+        };
+    }
+
+    private bool IsCategoryEnabled(string sourceContext)
+    {
+        var categoryKey = MapSourceContextToCategoryKey(sourceContext);
+        if (categoryKey is null) return true; // Uncategorized = always log
+        var enabled = _settings.GetAsync(categoryKey).Result;
+        return enabled is null || enabled == "true";
+    }
+}
+```
+
+### 30.3 Category Mapping — 8 Log Categories
+
+| Category Key | SourceContext Matches | Default |
+|-------------|----------------------|---------|
+| `LogCategory_LLMApiCalls` | Contains "LLM" or "Provider" | ON |
+| `LogCategory_Tier1HotkeyPipeline` | Contains "Tier1" or "Hotkey" or "Capture" | ON |
+| `LogCategory_Tier2CommandBar` | Contains "Tier2" or "CommandBar" | ON |
+| `LogCategory_Database` | Contains "DbContext" or "Repository" or "Migration" | OFF |
+| `LogCategory_WikiFileSystem` | Contains "Wiki" or "GitService" or "Index" | OFF |
+| `LogCategory_WebSocket` | Contains "WebSocket" or "Kestrel" | OFF |
+| `LogCategory_StartupShutdown` | Contains "App" or "Startup" or "OnExit" | OFF |
+| `LogCategory_SystemIntegration` | Contains "Tray" or "Clipboard" or "Auto" or "Update" | OFF |
+
+### 30.4 Sync-Over-Async Design Note
+
+`ILogger<T>.IsEnabled` and `ILogger<T>.Log` are synchronous methods. The `RuntimeLogFilter` calls `.Result` on `ISettingsRepository.GetAsync()`. This is safe because `ISettingsRepository` reads from an in-memory EF Core cache after first load, so `.Result` does not block on I/O in practice. If deadlocks occur, switch to a cached in-memory snapshot of settings values refreshed on a background timer.
+
+### 30.5 DI Registration
+
+```csharp
+// Register as a decorator — all ILogger<T> resolutions pass through the filter
+services.AddSingleton(typeof(RuntimeLogFilter<>));
+// Note: Registration pattern depends on DI container capabilities.
+// Microsoft.Extensions.DI requires a factory or third-party decorator library.
+```
+
+### 30.6 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **Wrapper, not Serilog filter** | Serilog filters are evaluated at configuration time. Runtime changes require a mutable filter that reads current settings on every `IsEnabled` call. |
+| **8 categories, not arbitrary** | Category mapping is based on `SourceContext` — the `T` in `ILogger<T>`. This follows the existing convention of logging by class name. |
+| **Defaults: 3 ON, 5 OFF** | LLM API calls, hotkey pipeline, and command bar are critical for debugging user-facing features. Database, wiki, WebSocket, startup, and system integration are infrastructure-focused and generate more noise. |
+| **Null/empty settings = enabled** | On first launch, no settings keys exist. All categories and the default Information level are active until the user explicitly changes them. |
+
+---
+
+## 31. WeakReferenceMessenger — Cross-Window Communication Pattern
+
+`WeakReferenceMessenger` (from CommunityToolkit.Mvvm) provides decoupled, memory-safe messaging between ViewModels and between ViewModels and the application shell. This pattern is used for cross-window communication where direct method calls would create tight coupling.
+
+### 31.1 Message Contract
+
+Messages are simple C# records with no base class requirement:
+
+```csharp
+// Defined in MySecondBrain.UI/ViewModels/WizardMessages.cs or Core/Models/
+public record LaunchStudioMessage;
+public record ReRunOnboardingMessage;
+```
+
+### 31.2 Sending (from ViewModel)
+
+```csharp
+// In OnboardingWizardViewModel:
+[RelayCommand]
+private void LaunchStudio()
+{
+    WeakReferenceMessenger.Default.Send(new LaunchStudioMessage());
+}
+
+// In SettingsViewModel:
+[RelayCommand]
+private void ReRunOnboarding()
+{
+    WeakReferenceMessenger.Default.Send(new ReRunOnboardingMessage());
+}
+```
+
+### 31.3 Receiving (in App.xaml.cs)
+
+```csharp
+// Registered in OnStartup, BEFORE any window is shown:
+WeakReferenceMessenger.Default.Register<LaunchStudioMessage>(this, (r, m) =>
+{
+    // Close wizard, show main window
+    var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+    currentWindow.Dispatcher.Invoke(() =>
+    {
+        currentWindow.Close();
+        mainWindow.Show();
+    });
+});
+
+WeakReferenceMessenger.Default.Register<ReRunOnboardingMessage>(this, (r, m) =>
+{
+    // Open wizard as modal dialog over MainWindow
+    mainWindow.Dispatcher.Invoke(() =>
+    {
+        var wizardVm = _serviceProvider.GetRequiredService<OnboardingWizardViewModel>();
+        var wizardWindow = new OnboardingWizardWindow
+        {
+            DataContext = wizardVm,
+            Owner = mainWindow
+        };
+        wizardWindow.ShowDialog();
+    });
+});
+```
+
+### 31.4 Registration Timing — Constructor, Not InitializeAsync
+
+`WeakReferenceMessenger.Default.Register()` must be called in the ViewModel **constructor**, not in any async initialization method. If registration happens in `InitializeAsync()`, messages sent before initialization completes will be silently dropped:
+
+```csharp
+// ✅ CORRECT — register in constructor
+public OnboardingWizardViewModel(...)
+{
+    WeakReferenceMessenger.Default.Register<SomeMessage>(this, (r, m) => { ... });
+}
+
+// ❌ WRONG — messages sent before InitializeAsync runs are lost
+public async Task InitializeAsync()
+{
+    WeakReferenceMessenger.Default.Register<SomeMessage>(this, (r, m) => { ... });
+    await LoadDataAsync();
+}
+```
+
+### 31.5 Unregister — Automatic via Weak References
+
+`WeakReferenceMessenger` uses weak references internally. When a ViewModel (which is Transient) goes out of scope and is garbage collected, the messenger automatically cleans up the registration. No explicit `Unregister()` call is needed. This is a key advantage over `StrongReferenceMessenger` and manual event handlers.
+
+### 31.6 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **WeakReferenceMessenger, not StrongReferenceMessenger** | Transient ViewModels are created and destroyed frequently. Weak references prevent memory leaks without manual unregistration. |
+| **Messages are records, not classes** | Records have value equality and are immutable. No risk of message mutation between send and receive. |
+| **Registration in constructor** | Constructor runs synchronously at DI resolution time. All messages are guaranteed to be received. |
+| **Dispatcher.Invoke for UI operations** | Messenger callbacks may fire on background threads. UI operations (window close, show) must be marshaled to the UI thread. |
+
+---
+
+## 32. Transient ViewModel Lifecycle — Constructor Dependency Access
+
+All ViewModels are registered as **Transient** in DI (see [§3.1](#31-di-lifetime-conventions)). A new instance is created each time a window or user control is navigated to. This has implications for constructor logic.
+
+### 32.1 What Goes in the Constructor
+
+| Allowed | Not Allowed |
+|---------|-------------|
+| Store injected services in readonly fields | Async initialization (`await` cannot be used) |
+| Register `WeakReferenceMessenger` handlers | Heavy data loading |
+| Set initial default values for properties | Database/repository calls |
+| Subscribe to service events | Long-running operations |
+
+### 32.2 Async Initialization — InitializeAsync Pattern
+
+Heavy initialization (data loading, API calls) goes in a separate `InitializeAsync()` method called after the ViewModel is constructed and the View is loaded:
+
+```csharp
+// In code-behind (View.xaml.cs):
+private async void OnLoaded(object sender, RoutedEventArgs e)
+{
+    if (DataContext is MyViewModel vm)
+        await vm.InitializeAsync();
+}
+```
+
+### 32.3 Construction Order Matters
+
+```csharp
+// ✅ Correct order:
+public SettingsViewModel(
+    ISettingsRepository settingsRepo,
+    IThemeProvider themeProvider,
+    IApiKeyRepository apiKeyRepo,
+    ...)
+{
+    // 1. Store services
+    _settingsRepo = settingsRepo;
+    _themeProvider = themeProvider;
+    _apiKeyRepo = apiKeyRepo;
+    
+    // 2. Register messenger handlers (MUST happen before any messages could be sent)
+    WeakReferenceMessenger.Default.Register<ReRunOnboardingMessage>(this, (r, m) => { ... });
+    
+    // 3. Set defaults for observable properties
+    _selectedSettingsCategory = SettingsCategory.Providers;
+    _logLevel = "Information";
+}
+// 4. InitializeAsync() is called separately after View.Loaded
+```
+
+### 32.4 Transient vs Singleton — Lifetime Boundary
+
+ViewModels are Transient; all services they depend on are Singleton. This means:
+
+| Aspect | Effect |
+|--------|--------|
+| **Service state** | Shared across all ViewModel instances. A setting changed in one ViewModel is visible to all others via the shared `ISettingsRepository`. |
+| **ViewModel state** | Fresh per instance. Navigating away and back creates a new ViewModel with default values. |
+| **Messenger** | Each ViewModel instance registers its own handler. When the ViewModel is GC'd, the handler is cleaned up automatically. |
+| **Settings tab memory** | If a ViewModel should "remember" which tab the user was on, the tab selection must be stored in a **static field** or a **Singleton service**, not in the ViewModel's instance field. See [frontend-ui.md §26](frontend-ui.md#26-static-field-pattern--settings-tab-memory). |
+
+---
+
+## 33. DataTrigger vs DataTemplateSelector — When to Use Which
+
+Both `DataTrigger` and [`DataTemplateSelector`](frontend-ui.md#13-screen-navigation--screentemplateselector-pattern) switch UI content based on a bound property. They serve different scenarios, and using the wrong one leads to bugs.
+
+### 33.1 Decision Matrix
+
+| Scenario | Use | Why |
+|----------|-----|-----|
+| **Different ViewModels per screen** | `DataTemplateSelector` | `DataTemplateSelector` keys off the bound value type. Different screens have different ViewModel types. |
+| **Same ViewModel, different sub-views** | `DataTrigger` | All sub-views share one ViewModel. `DataTemplateSelector` cannot differentiate — it only sees `SettingsViewModel`. |
+| **Top-level screen navigation** | `DataTemplateSelector` with `ContentControl` | `MainWindowViewModel.SelectedScreen` is `ScreenType` enum. Each screen has its own ViewModel type. |
+| **Settings category switching** | `DataTrigger` on `ContentControl.Style` | All 16 categories share `SettingsViewModel`. `SelectedSettingsCategory` is an enum but the bound `Content` is always `SettingsViewModel`. |
+
+### 33.2 Why DataTemplateSelector Fails for Settings Categories
+
+```csharp
+// DataTemplateSelector receives the bound object:
+public override DataTemplate? SelectTemplate(object item, DependencyObject container)
+{
+    // item is always SettingsViewModel — cannot differentiate categories!
+    return item switch
+    {
+        SettingsViewModel => ??? // All 16 categories map to the same type
+    };
+}
+```
+
+### 33.3 DataTrigger Implementation for Single-ViewModel Sub-Navigation
+
+```xml
+<ContentControl Content="{Binding}">
+    <ContentControl.Style>
+        <Style TargetType="ContentControl">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Appearance">
+                    <Setter Property="ContentTemplate" Value="{StaticResource AppearanceTemplate}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Diagnostics">
+                    <Setter Property="ContentTemplate" Value="{StaticResource DiagnosticsTemplate}"/>
+                </DataTrigger>
+                <!-- ... one trigger per category ... -->
+            </Style.Triggers>
+        </Style>
+    </ContentControl.Style>
+</ContentControl>
+```
+
+### 33.4 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **DataTrigger over DataTemplateSelector for sub-navigation** | Multiple views sharing one ViewModel require DataTrigger. DataTemplateSelector keys off type, not value, and cannot differentiate same-type objects. |
+| **Not creating 16 sub-ViewModels** | All categories read/write the same `ISettingsRepository`. Splitting into 16 ViewModels would create unnecessary complexity, duplicate repository access patterns, and complicate cross-category interactions (e.g., hotkey changes in Hotkeys tab must update Text Actions tab). |
+| **ContentControl Style, not direct Grid Visibility** | Setting `ContentTemplate` via a Style trigger is cleaner than toggling `Visibility` on 16 stacked `Grid` panels. Only the active template is rendered; hidden panels don't contribute to the visual tree. |
