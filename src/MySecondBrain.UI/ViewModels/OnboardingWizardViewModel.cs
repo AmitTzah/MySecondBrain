@@ -27,6 +27,12 @@ public partial class OnboardingWizardViewModel : ObservableObject
 
     private readonly IApiKeyRepository _apiKeyRepo;
     private readonly ISettingsRepository _settingsRepo;
+
+    /// <summary>
+    /// True when onboarding is being re-run from Settings (Onboarding_Completed was "true").
+    /// Used to suppress Welcome screen and prevent Back from step 0.
+    /// </summary>
+    private bool _isReRun;
     private readonly IModelConfigurationRepository _modelConfigRepo;
     private readonly IPersonaRepository _personaRepo;
     private readonly ITextActionRepository _textActionRepo;
@@ -126,8 +132,8 @@ public partial class OnboardingWizardViewModel : ObservableObject
         OnPropertyChanged(nameof(NextButtonText));
     }
 
-    public bool CanGoBack => CurrentStep > -1;
-    public bool CanGoNext => CurrentStep < 4;
+    public bool CanGoBack => _isReRun ? CurrentStep > 0 : CurrentStep > -1;
+    public bool CanGoNext => CurrentStep >= 0 && CurrentStep < 4;
     public bool CanSkip => CurrentStep >= 0 && CurrentStep < 4;
     public bool IsWelcomeScreen => CurrentStep == -1;
     public bool IsFinishScreen => CurrentStep == 4;
@@ -264,6 +270,15 @@ public partial class OnboardingWizardViewModel : ObservableObject
     [RelayCommand]
     private async Task GoBackAsync()
     {
+        if (_isReRun && CurrentStep <= 0)
+        {
+            // On re-run, prevent going back to Welcome screen (step -1).
+            // Stay at step 0 instead — Back button is already disabled via CanGoBack,
+            // this is a safety guard.
+            CurrentStep = 0;
+            return;
+        }
+
         if (CurrentStep <= 0)
         {
             CurrentStep = -1;
@@ -714,14 +729,36 @@ public partial class OnboardingWizardViewModel : ObservableObject
             _logger.LogWarning(ex, "Failed to load onboarding completion flags");
         }
 
-        var startingStep = DetermineFirstIncompleteStep();
-        if (startingStep == 4)
+        // If onboarding was previously completed, this is a re-run from Settings.
+        // Skip the Welcome screen and go directly to step 0 (API Keys).
+        string? onboardingCompleted = null;
+        try { onboardingCompleted = await _settingsRepo.GetAsync("Onboarding_Completed"); }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to load onboarding completed flag"); }
+
+        if (onboardingCompleted == "true")
         {
-            // All steps completed — wizard shouldn't auto-open, but if it did, show Welcome anyway
+            _isReRun = true;
+            CurrentStep = 0;
+            return;
+        }
+
+        var startingStep = DetermineFirstIncompleteStep();
+
+        if (startingStep == 0)
+        {
+            // First launch — no steps completed yet. Show Welcome screen (step -1).
+            // "Get Started" button navigates to step 0.
+            CurrentStep = -1;
+        }
+        else if (startingStep == 4)
+        {
+            // All steps completed but Onboarding_Completed not set (edge case).
+            // Show Welcome as a graceful fallback.
             CurrentStep = -1;
         }
         else
         {
+            // Resume mid-wizard at first incomplete step.
             CurrentStep = startingStep;
         }
     }

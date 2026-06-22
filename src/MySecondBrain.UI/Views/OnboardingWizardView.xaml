@@ -662,7 +662,7 @@
                     Padding="24,8" FontSize="12" Margin="0,0,8,0"
                     AutomationProperties.AutomationId="WizardSkip"/>
             <Button Content="{Binding NextButtonText}"
-                    Visibility="{Binding IsFinishScreen, Converter={StaticResource InvertedVisibilityConverter}}"
+                    Visibility="{Binding IsStepScreen, Converter={StaticResource BoolToVisibility}}"
                     Command="{Binding GoNextCommand}"
                     Background="{DynamicResource AccentBrush}"
                     Foreground="{DynamicResource AccentForeground}"

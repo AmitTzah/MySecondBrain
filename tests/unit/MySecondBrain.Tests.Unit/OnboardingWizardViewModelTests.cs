@@ -50,23 +50,28 @@ public class OnboardingWizardViewModelTests
     [Fact]
     public void CurrentStep_DefaultsToMinusOne_WelcomeScreen()
     {
-        // Settings returns null for step keys (fresh state → first incomplete = 0)
+        // Settings returns null for step keys and Onboarding_Completed (fresh state)
+        // First incomplete step is 0, which maps to Welcome screen (-1) on first launch
         var vm = CreateViewModel();
 
-        // After init, first incomplete step is 0 since no step is completed
-        Assert.Equal(0, vm.CurrentStep);
+        Assert.Equal(-1, vm.CurrentStep);
     }
 
     [Fact]
     public void GetStarted_SetsCurrentStepToFirstIncomplete()
     {
         // All steps uncompleted → first incomplete = 0
+        // On fresh launch, Welcome screen shows first (step -1)
         _settingsRepo.Setup(s => s.GetAsync("Onboarding_Step1_Completed")).ReturnsAsync((string?)null);
         _settingsRepo.Setup(s => s.GetAsync("Onboarding_Step2_Completed")).ReturnsAsync((string?)null);
         _settingsRepo.Setup(s => s.GetAsync("Onboarding_Step3_Completed")).ReturnsAsync((string?)null);
         _settingsRepo.Setup(s => s.GetAsync("Onboarding_Step4_Completed")).ReturnsAsync((string?)null);
 
         var vm = CreateViewModel();
+        Assert.Equal(-1, vm.CurrentStep);
+
+        // GetStarted navigates from Welcome to first incomplete step
+        vm.GetStartedCommand.Execute(null);
         Assert.Equal(0, vm.CurrentStep);
     }
 

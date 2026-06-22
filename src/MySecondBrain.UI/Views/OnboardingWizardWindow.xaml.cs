@@ -29,11 +29,14 @@ public partial class OnboardingWizardWindow : Window
             }
         };
 
-        // After the ViewModel confirms close, actually close the window
+        // After the ViewModel confirms close, actually close the window.
+        // Use BeginInvoke to avoid re-entering the Closing event handler
+        // (which may have canceled the current close). The deferred Close()
+        // runs after the current handler completes.
         viewModel.CloseConfirmed += () =>
         {
             _isCloseConfirmed = true;
-            Dispatcher.Invoke(Close);
+            Dispatcher.BeginInvoke(Close);
         };
     }
 }
