@@ -796,6 +796,48 @@ public class SettingsViewModelTests
         Assert.Empty(_sut.StatusMessage);
     }
 
+    [Fact]
+    public async Task SelectedSettingsCategory_Change_UpdatesStaticField()
+    {
+        // Verify the static field is updated when category changes
+        _sut.SelectedSettingsCategory = SettingsCategory.Diagnostics;
+
+        // Setup default returns for InitializeAsync on the shared mocks
+        _apiKeyRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<ApiKey>());
+        _modelConfigRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<ModelConfiguration>());
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona>());
+        _textActionRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<TextAction>());
+        _backupProviderMock.Setup(b => b.ValidateCredentialsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
+
+        // Create a new ViewModel instance — InitializeAsync restores from the static field
+        var vm2 = CreateFreshViewModel();
+        await vm2.InitializeCommand.ExecuteAsync(null);
+        Assert.Equal(SettingsCategory.Diagnostics, vm2.SelectedSettingsCategory);
+    }
+
+    /// <summary>
+    /// Creates a fresh SettingsViewModel instance (simulating recreation after navigation).
+    /// </summary>
+    private SettingsViewModel CreateFreshViewModel()
+    {
+        return new SettingsViewModel(
+            _settingsRepoMock.Object,
+            _themeProviderMock.Object,
+            _apiKeyRepoMock.Object,
+            _encryptionServiceMock.Object,
+            _llmProviderServiceMock.Object,
+            _clipboardServiceMock.Object,
+            _confirmationServiceMock.Object,
+            _modelConfigRepoMock.Object,
+            _personaRepoMock.Object,
+            _updateCheckerMock.Object,
+            _loggerMock.Object,
+            _wikiServiceMock.Object,
+            _backupProviderMock.Object,
+            _textActionRepoMock.Object,
+            _dbContextMock.Object);
+    }
+
     // ================================================================
     // AddModelConfigCommand
     // ================================================================
@@ -1851,6 +1893,30 @@ public class SettingsViewModelTests
 
         _settingsRepoMock.Verify(s => s.SetAsync("FontWeight", "Bold"), Times.Once);
         _themeProviderMock.Verify(t => t.SetFontSettings(It.IsAny<string>(), It.IsAny<double>(), System.Windows.FontWeights.Bold), Times.Once);
+    }
+
+    // ================================================================
+    // Appearance — FontSize persisted with InvariantCulture (Bug 5)
+    // ================================================================
+
+    [Fact]
+    public void Appearance_FontSizeChange_PersistsWithInvariantCulture()
+    {
+        // Simulate a culture where comma is the decimal separator
+        var originalCulture = System.Threading.Thread.CurrentThread.CurrentCulture;
+        try
+        {
+            System.Threading.Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
+            _sut.FontSize = 13.5;
+
+            // Verify the persisted value uses dot (InvariantCulture), not comma
+            _settingsRepoMock.Verify(s => s.SetAsync("FontSize", "13.5"), Times.Once);
+            _themeProviderMock.Verify(t => t.SetFontSettings(It.IsAny<string>(), 13.5, It.IsAny<System.Windows.FontWeight>()), Times.Once);
+        }
+        finally
+        {
+            System.Threading.Thread.CurrentThread.CurrentCulture = originalCulture;
+        }
     }
 
     // ================================================================

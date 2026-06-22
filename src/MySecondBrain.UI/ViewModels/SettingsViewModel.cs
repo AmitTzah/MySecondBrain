@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.EntityFrameworkCore;
@@ -224,6 +225,12 @@ public partial class SettingsViewModel : ObservableObject
     private readonly Data.AppDbContext _db;
 
     /// <summary>
+    /// Persists the last selected settings category across ViewModel recreations
+    /// (since SettingsViewModel is Transient — recreated on every navigation to Settings).
+    /// </summary>
+    private static SettingsCategory s_lastSelectedCategory = SettingsCategory.Providers;
+
+    /// <summary>
     /// Path to the application's logs directory under %LOCALAPPDATA%\MySecondBrain\logs\.
     /// </summary>
     private static string LogsFolderPath =>
@@ -311,6 +318,7 @@ public partial class SettingsViewModel : ObservableObject
     partial void OnSelectedSettingsCategoryChanged(SettingsCategory value)
     {
         StatusMessage = string.Empty;
+        s_lastSelectedCategory = value;
     }
 
     // ================================================================
@@ -573,7 +581,7 @@ public partial class SettingsViewModel : ObservableObject
         var wpfWeight = FontWeightStringToWpf(FontWeight);
         _themeProvider.SetFontSettings(FontFamily, FontSize, wpfWeight);
         _ = _settingsRepo.SetAsync("FontFamily", FontFamily);
-        _ = _settingsRepo.SetAsync("FontSize", FontSize.ToString("F1"));
+        _ = _settingsRepo.SetAsync("FontSize", FontSize.ToString("F1", CultureInfo.InvariantCulture));
         _ = _settingsRepo.SetAsync("FontWeight", FontWeight);
     }
 
@@ -1566,6 +1574,9 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task InitializeAsync()
     {
+        // Restore the last selected category from the static field (persists across transient ViewModel recreations)
+        SelectedSettingsCategory = s_lastSelectedCategory;
+
         await RefreshKeyListAsync();
         await RefreshAvailableApiKeysAsync();
         await RefreshModelConfigListAsync();

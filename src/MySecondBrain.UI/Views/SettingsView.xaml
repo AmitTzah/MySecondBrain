@@ -1121,7 +1121,7 @@
                     </Grid.RowDefinitions>
 
                     <!-- Header -->
-                    <TextBlock Grid.Row="0" Text="🩺 Diagnostics" FontSize="16" FontWeight="Bold"
+                    <TextBlock Grid.Row="0" Text="🔬 Diagnostics" FontSize="16" FontWeight="Bold"
                                Foreground="{DynamicResource ContentForeground}"
                                Margin="16,16,16,4"/>
 
