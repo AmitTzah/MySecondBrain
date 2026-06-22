@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
+using MySecondBrain.Data;
 using MySecondBrain.UI.ViewModels;
 
 namespace MySecondBrain.Tests.Unit;
@@ -22,6 +24,10 @@ public class SettingsViewModelTests
     private readonly Mock<ILogger<SettingsViewModel>> _loggerMock;
     private readonly SettingsViewModel _sut;
 
+    private readonly Mock<IWikiService> _wikiServiceMock;
+    private readonly Mock<IBackupProvider> _backupProviderMock;
+    private readonly Mock<AppDbContext> _dbContextMock;
+
     public SettingsViewModelTests()
     {
         _settingsRepoMock = new Mock<ISettingsRepository>();
@@ -35,6 +41,9 @@ public class SettingsViewModelTests
         _personaRepoMock = new Mock<IPersonaRepository>();
         _updateCheckerMock = new Mock<IUpdateChecker>();
         _loggerMock = new Mock<ILogger<SettingsViewModel>>();
+        _wikiServiceMock = new Mock<IWikiService>();
+        _backupProviderMock = new Mock<IBackupProvider>();
+        _dbContextMock = new Mock<AppDbContext>(new DbContextOptions<AppDbContext>());
 
         // Default: confirmations are accepted
         _confirmationServiceMock
@@ -56,7 +65,10 @@ public class SettingsViewModelTests
             _modelConfigRepoMock.Object,
             _personaRepoMock.Object,
             _updateCheckerMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            _wikiServiceMock.Object,
+            _backupProviderMock.Object,
+            _dbContextMock.Object);
     }
 
     // ================================================================
@@ -130,9 +142,10 @@ public class SettingsViewModelTests
     [Fact]
     public void CategoryItems_ContainsAllCategories()
     {
-        Assert.Equal(15, _sut.CategoryItems.Count);
+        Assert.Equal(16, _sut.CategoryItems.Count);
         Assert.Contains(_sut.CategoryItems, c => c.Category == SettingsCategory.Providers);
         Assert.Contains(_sut.CategoryItems, c => c.Category == SettingsCategory.Diagnostics);
+        Assert.Contains(_sut.CategoryItems, c => c.Category == SettingsCategory.Language);
     }
 
     // ================================================================
@@ -2001,5 +2014,310 @@ public class SettingsViewModelTests
         Assert.True(_sut.RestoreLastSession);
         Assert.False(_sut.MinimizeToTray);
         Assert.Equal("Weekly", _sut.UpdateCheckFrequency);
+    }
+
+    // ================================================================
+    // Step 3 — Language
+    // ================================================================
+
+    [Fact]
+    public void Language_AutoDetectRtl_DefaultTrue()
+    {
+        Assert.True(_sut.AutoDetectRtl);
+    }
+
+    [Fact]
+    public void Language_AutoDetectRtlChange_Persists()
+    {
+        _sut.AutoDetectRtl = false;
+        _settingsRepoMock.Verify(s => s.SetAsync("AutoDetectRtl", "false"), Times.Once);
+    }
+
+    // ================================================================
+    // Step 3 — Maintenance
+    // ================================================================
+
+    [Fact]
+    public void Maintenance_DatabaseFileSize_InitialEmpty()
+    {
+        // Default before initialization
+        Assert.Equal(string.Empty, _sut.DatabaseFileSize);
+    }
+
+    [Fact]
+    public void Maintenance_ReclaimableSpace_InitialEmpty()
+    {
+        Assert.Equal(string.Empty, _sut.ReclaimableSpace);
+    }
+
+    [Fact]
+    public void Maintenance_LastCompaction_InitialEmpty()
+    {
+        Assert.Equal(string.Empty, _sut.LastCompaction);
+    }
+
+    // ================================================================
+    // Step 3 — Wiki
+    // ================================================================
+
+    [Fact]
+    public void Wiki_GitVersionControlEnabled_DefaultFalse()
+    {
+        Assert.False(_sut.GitVersionControlEnabled);
+    }
+
+    [Fact]
+    public void Wiki_GitVersionControlEnabledChange_Persists()
+    {
+        _sut.GitVersionControlEnabled = true;
+        _settingsRepoMock.Verify(s => s.SetAsync("GitVersionControlEnabled", "true"), Times.Once);
+    }
+
+    [Fact]
+    public void Wiki_WikiDirectoryPath_InitialEmpty()
+    {
+        Assert.Equal(string.Empty, _sut.WikiDirectoryPath);
+    }
+
+    // ================================================================
+    // Step 3 — Backup
+    // ================================================================
+
+    [Fact]
+    public void Backup_BackupSchedule_DefaultDaily()
+    {
+        Assert.Equal("Daily", _sut.BackupSchedule);
+    }
+
+    [Fact]
+    public void Backup_BackupScheduleChange_Persists()
+    {
+        _sut.BackupSchedule = "Weekly";
+        _settingsRepoMock.Verify(s => s.SetAsync("BackupSchedule", "Weekly"), Times.Once);
+    }
+
+    [Fact]
+    public void Backup_LastBackupTime_InitialEmpty()
+    {
+        Assert.Equal(string.Empty, _sut.LastBackupTime);
+    }
+
+    // ================================================================
+    // Step 3 — Tools
+    // ================================================================
+
+    [Fact]
+    public void Tools_WebSearchAutoApproval_DefaultAsk()
+    {
+        Assert.Equal("Ask", _sut.WebSearchAutoApproval);
+    }
+
+    [Fact]
+    public void Tools_TerminalAutoApproval_DefaultAsk()
+    {
+        Assert.Equal("Ask", _sut.TerminalAutoApproval);
+    }
+
+    [Fact]
+    public void Tools_FileGenerateAutoApproval_DefaultAsk()
+    {
+        Assert.Equal("Ask", _sut.FileGenerateAutoApproval);
+    }
+
+    [Fact]
+    public void Tools_FileEditAutoApproval_DefaultAsk()
+    {
+        Assert.Equal("Ask", _sut.FileEditAutoApproval);
+    }
+
+    [Fact]
+    public void Tools_WebSearchAutoApprovalChange_Persists()
+    {
+        _sut.WebSearchAutoApproval = "AutoApprove";
+        _settingsRepoMock.Verify(s => s.SetAsync("WebSearchAutoApproval", "AutoApprove"), Times.Once);
+    }
+
+    [Fact]
+    public void Tools_TerminalChange_Persists()
+    {
+        _sut.TerminalAutoApproval = "Disabled";
+        _settingsRepoMock.Verify(s => s.SetAsync("TerminalAutoApproval", "Disabled"), Times.Once);
+    }
+
+    [Fact]
+    public void Tools_SttProvider_DefaultOpenAiWhisper()
+    {
+        Assert.Equal("OpenAI Whisper", _sut.SttProvider);
+    }
+
+    [Fact]
+    public void Tools_SttProviderChange_Persists()
+    {
+        _sut.SttProvider = "Windows Speech";
+        _settingsRepoMock.Verify(s => s.SetAsync("SttProvider", "Windows Speech"), Times.Once);
+    }
+
+    [Fact]
+    public void Tools_ToolApprovalOptions_ContainsAllThree()
+    {
+        Assert.Contains("Ask", _sut.ToolApprovalOptions);
+        Assert.Contains("AutoApprove", _sut.ToolApprovalOptions);
+        Assert.Contains("Disabled", _sut.ToolApprovalOptions);
+        Assert.Equal(3, _sut.ToolApprovalOptions.Count);
+    }
+
+    [Fact]
+    public void Tools_TerminalApprovalOptions_DoesNotIncludeAutoApprove()
+    {
+        Assert.Contains("Ask", _sut.TerminalApprovalOptions);
+        Assert.Contains("Disabled", _sut.TerminalApprovalOptions);
+        Assert.DoesNotContain("AutoApprove", _sut.TerminalApprovalOptions);
+        Assert.Equal(2, _sut.TerminalApprovalOptions.Count);
+    }
+
+    [Fact]
+    public void Tools_SttProviderOptions_ContainsAllThree()
+    {
+        Assert.Contains("OpenAI Whisper", _sut.SttProviderOptions);
+        Assert.Contains("Local Whisper", _sut.SttProviderOptions);
+        Assert.Contains("Windows Speech", _sut.SttProviderOptions);
+        Assert.Equal(3, _sut.SttProviderOptions.Count);
+    }
+
+    // ================================================================
+    // Step 3 — Pricing
+    // ================================================================
+
+    [Fact]
+    public void Pricing_MonthlyBudgetLimit_DefaultNull()
+    {
+        Assert.Null(_sut.MonthlyBudgetLimit);
+    }
+
+    [Fact]
+    public void Pricing_MonthlyBudgetLimitChange_Persists()
+    {
+        _sut.MonthlyBudgetLimit = 50.00m;
+        _settingsRepoMock.Verify(s => s.SetAsync("MonthlyBudgetLimit", "50.00"), Times.Once);
+    }
+
+    [Fact]
+    public void Pricing_WarningThreshold_Default80()
+    {
+        Assert.Equal(80, _sut.WarningThreshold);
+    }
+
+    [Fact]
+    public void Pricing_WarningThresholdChange_Persists()
+    {
+        _sut.WarningThreshold = 90;
+        _settingsRepoMock.Verify(s => s.SetAsync("WarningThreshold", "90"), Times.Once);
+    }
+
+    [Fact]
+    public void Pricing_WarningThresholdClampsBelow50()
+    {
+        _sut.WarningThreshold = 10;
+        Assert.Equal(50, _sut.WarningThreshold);
+    }
+
+    [Fact]
+    public void Pricing_WarningThresholdClampsAbove100()
+    {
+        _sut.WarningThreshold = 150;
+        Assert.Equal(100, _sut.WarningThreshold);
+    }
+
+    [Fact]
+    public void Pricing_BlockApiOnLimit_DefaultFalse()
+    {
+        Assert.False(_sut.BlockApiOnLimit);
+    }
+
+    [Fact]
+    public void Pricing_BlockApiOnLimitChange_Persists()
+    {
+        _sut.BlockApiOnLimit = true;
+        _settingsRepoMock.Verify(s => s.SetAsync("BlockApiOnLimit", "true"), Times.Once);
+    }
+
+    // ================================================================
+    // Step 3 — Security
+    // ================================================================
+
+    [Fact]
+    public void Security_EncryptionStatus_ContainsDpapi()
+    {
+        Assert.Contains("DPAPI", _sut.EncryptionStatus);
+    }
+
+    [Fact]
+    public void Security_LockedChatPasswordSet_DefaultFalse()
+    {
+        Assert.False(_sut.LockedChatPasswordSet);
+    }
+
+    [Fact]
+    public void Security_HideLockedChats_DefaultFalse()
+    {
+        Assert.False(_sut.HideLockedChats);
+    }
+
+    [Fact]
+    public void Security_HideLockedChatsChange_Persists()
+    {
+        _sut.HideLockedChats = true;
+        _settingsRepoMock.Verify(s => s.SetAsync("HideLockedChats", "true"), Times.Once);
+    }
+
+    // ================================================================
+    // Step 3 — CategoryItems
+    // ================================================================
+
+    [Fact]
+    public void CategoryItems_Contains16Items()
+    {
+        Assert.Equal(16, _sut.CategoryItems.Count);
+    }
+
+    [Fact]
+    public void CategoryItems_ContainsLanguage()
+    {
+        Assert.Contains(_sut.CategoryItems, c => c.Category == SettingsCategory.Language);
+    }
+
+    // ================================================================
+    // Step 3 — Placeholder commands
+    // ================================================================
+
+    [Fact]
+    public void ConfigureBackupCommand_SetsStatusMessage()
+    {
+        _sut.ConfigureBackupCommand.Execute(null);
+        Assert.Contains("Feature 16", _sut.StatusMessage);
+    }
+
+    [Fact]
+    public void TestMicrophoneCommand_SetsStatusMessage()
+    {
+        _sut.TestMicrophoneCommand.Execute(null);
+        Assert.Contains("not yet implemented", _sut.StatusMessage);
+    }
+
+    [Fact]
+    public void SetGlobalPasswordCommand_SetsStatusMessage()
+    {
+        _sut.SetGlobalPasswordCommand.Execute(null);
+        Assert.Contains("placeholder", _sut.StatusMessage);
+    }
+
+    // ================================================================
+    // Step 3 — IsBusy default
+    // ================================================================
+
+    [Fact]
+    public void IsBusy_DefaultFalse()
+    {
+        Assert.False(_sut.IsBusy);
     }
 }

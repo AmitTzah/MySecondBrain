@@ -88,6 +88,7 @@ public enum SettingsCategory
     Providers,
     Profiles,
     Appearance,
+    Language,
     Wiki,
     Backup,
     TextActions,

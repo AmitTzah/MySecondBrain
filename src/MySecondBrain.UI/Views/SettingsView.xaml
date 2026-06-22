@@ -1612,6 +1612,650 @@
                     </ScrollViewer>
                 </Grid>
 
+                <!-- Language Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Language">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🌐 Language" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Configure language detection and RTL text handling."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <TextBlock Text="Right-to-Left (RTL) Detection" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock Text="Automatically detect RTL text (Hebrew Unicode range U+0590–U+05FF) in chat messages and wiki content."
+                                           FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                           TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                <CheckBox IsChecked="{Binding AutoDetectRtl}"
+                                          Content="Auto-detect RTL text"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          ToolTip="When enabled, text in the Hebrew Unicode range (U+0590–U+05FF) is automatically rendered right-to-left."/>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Wiki Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Wiki">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="📝 Wiki" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Manage your wiki directory, file indexing, and version control settings."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <StackPanel>
+                            <!-- Directory Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12"
+                                    MaxWidth="600" HorizontalAlignment="Left">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Wiki Directory" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Select the folder containing your .md wiki files."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="Path:" FontSize="11"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,6,0"/>
+                                        <TextBlock Text="{Binding WikiDirectoryPath}"
+                                                   FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ContentForeground}"
+                                                   VerticalAlignment="Center"
+                                                   TextWrapping="Wrap" MaxWidth="350"/>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                        <Button Content="📂 Change"
+                                                Padding="12,5"
+                                                Command="{Binding ChangeWikiDirectoryCommand}"
+                                                Style="{StaticResource AccentButtonStyle}"
+                                                Margin="0,0,8,0"
+                                                ToolTip="Select a new wiki directory"/>
+                                        <Button Content="🔄 Re-index Now"
+                                                Padding="12,5"
+                                                Command="{Binding ReindexWikiCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                ToolTip="Re-scan all .md files in the wiki directory"/>
+                                    </StackPanel>
+
+                                    <TextBlock Text="{Binding IndexingStatus}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Git Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    MaxWidth="600" HorizontalAlignment="Left">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Version Control (Git)" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Track changes to your wiki files using Git version control."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+                                    <CheckBox IsChecked="{Binding GitVersionControlEnabled}"
+                                              Content="Initialize git repository"
+                                              FontSize="11"
+                                              Foreground="{DynamicResource ContentForeground}"
+                                              ToolTip="When enabled, a git repository will be initialized in the wiki directory for version tracking."/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Backup Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Backup">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="☁️ Backup" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Configure backup provider, schedule, and run manual backups."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <TextBlock Text="Backup Provider" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding BackupProviderStatus}"
+                                           FontSize="11" Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,10"/>
+
+                                <!-- Schedule -->
+                                <TextBlock Text="Backup Schedule" FontSize="11"
+                                           Foreground="{DynamicResource SubtleBrush}"
+                                           Margin="0,0,0,6"/>
+                                <RadioButton Content="Daily"
+                                             GroupName="BackupSchedule"
+                                             IsChecked="{Binding BackupSchedule, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Daily}"
+                                             FontSize="11"
+                                             Foreground="{DynamicResource ContentForeground}"
+                                             Margin="0,0,0,6"/>
+                                <RadioButton Content="Weekly"
+                                             GroupName="BackupSchedule"
+                                             IsChecked="{Binding BackupSchedule, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Weekly}"
+                                             FontSize="11"
+                                             Foreground="{DynamicResource ContentForeground}"
+                                             Margin="0,0,0,6"/>
+                                <RadioButton Content="Manual Only"
+                                             GroupName="BackupSchedule"
+                                             IsChecked="{Binding BackupSchedule, Converter={StaticResource EnumMatchConverter}, ConverterParameter=ManualOnly}"
+                                             FontSize="11"
+                                             Foreground="{DynamicResource ContentForeground}"
+                                             Margin="0,0,0,10"/>
+
+                                <!-- Last backup -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="Last Backup:" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,6,0"/>
+                                    <TextBlock Text="{Binding LastBackupTime}"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Actions -->
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="🔵 Backup Now"
+                                            Padding="12,5"
+                                            Command="{Binding BackupNowCommand}"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            Margin="0,0,8,0"
+                                            ToolTip="Start a manual backup now"/>
+                                    <Button Content="⚙️ Configure"
+                                            Padding="12,5"
+                                            Command="{Binding ConfigureBackupCommand}"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            ToolTip="Configure backup provider settings"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Tools Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Tools">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🔧 Tools" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Configure tool auto-approval defaults and speech-to-text settings."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <StackPanel>
+                            <!-- Tool Auto-Approval Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    Margin="0,0,0,12"
+                                    MaxWidth="600" HorizontalAlignment="Left">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Tool Auto-Approval Defaults" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Control whether tools require confirmation before executing. Changes affect newly created chat threads."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <!-- Web Search -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="160"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Web Search" FontSize="11"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding ToolApprovalOptions}"
+                                                  SelectedItem="{Binding WebSearchAutoApproval}"
+                                                  FontSize="11" Width="150"
+                                                  HorizontalAlignment="Left"/>
+                                    </Grid>
+
+                                    <!-- Terminal -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="160"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Terminal / Command" FontSize="11"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding TerminalApprovalOptions}"
+                                                  SelectedItem="{Binding TerminalAutoApproval}"
+                                                  FontSize="11" Width="150"
+                                                  HorizontalAlignment="Left"/>
+                                    </Grid>
+
+                                    <!-- File Generate -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="160"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="File Generate" FontSize="11"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding ToolApprovalOptions}"
+                                                  SelectedItem="{Binding FileGenerateAutoApproval}"
+                                                  FontSize="11" Width="150"
+                                                  HorizontalAlignment="Left"/>
+                                    </Grid>
+
+                                    <!-- File Edit -->
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="160"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="File Edit" FontSize="11"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding ToolApprovalOptions}"
+                                                  SelectedItem="{Binding FileEditAutoApproval}"
+                                                  FontSize="11" Width="150"
+                                                  HorizontalAlignment="Left"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Speech-to-Text Section -->
+                            <Border BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" CornerRadius="6"
+                                    Background="{DynamicResource CardBackground}"
+                                    MaxWidth="600" HorizontalAlignment="Left">
+                                <StackPanel Margin="14,12,14,12">
+                                    <TextBlock Text="Speech-to-Text (STT)" FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock Text="Configure the speech recognition provider used for voice input."
+                                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                    <TextBlock Text="Provider" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <ComboBox ItemsSource="{Binding SttProviderOptions}"
+                                              SelectedItem="{Binding SttProvider}"
+                                              FontSize="11" Width="200"
+                                              HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                                    <TextBlock Text="Model" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               Margin="0,0,0,3"/>
+                                    <TextBox Text="{Binding SttModel, UpdateSourceTrigger=PropertyChanged}"
+                                             FontSize="11" Width="200"
+                                             HorizontalAlignment="Left" Margin="0,0,0,10"/>
+
+                                    <Button Content="🎤 Test Microphone"
+                                            Padding="12,5"
+                                            Command="{Binding TestMicrophoneCommand}"
+                                            Style="{StaticResource SecondaryButtonStyle}"
+                                            ToolTip="Test your microphone and STT configuration"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Pricing Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Pricing">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="💰 Pricing" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Set monthly budget limits and configure cost alert thresholds."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <TextBlock Text="Budget Settings" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock Text="Set a monthly budget limit and warning threshold to track API usage costs."
+                                           FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                           TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                <!-- Monthly Budget Limit -->
+                                <TextBlock Text="Monthly Budget Limit ($)" FontSize="11"
+                                           Foreground="{DynamicResource SubtleBrush}"
+                                           Margin="0,0,0,3"/>
+                                <TextBox Text="{Binding MonthlyBudgetLimit, TargetNullValue='', UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="11" Width="150"
+                                         HorizontalAlignment="Left" Margin="0,0,0,10"
+                                         ToolTip="Leave empty for no limit"/>
+
+                                <!-- Warning Threshold -->
+                                <TextBlock Text="Warning Threshold (%)" FontSize="11"
+                                           Foreground="{DynamicResource SubtleBrush}"
+                                           Margin="0,0,0,3"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <Slider Minimum="50" Maximum="100" SmallChange="5" LargeChange="10"
+                                            Value="{Binding WarningThreshold}" Width="180"
+                                            TickFrequency="5" IsSnapToTickEnabled="True"/>
+                                    <TextBlock Text="{Binding WarningThreshold, StringFormat={}{0}%}"
+                                               Width="40" TextAlignment="Center" VerticalAlignment="Center"
+                                               FontSize="11" Foreground="{DynamicResource ContentForeground}"/>
+                                </StackPanel>
+
+                                <!-- Block API on limit -->
+                                <CheckBox IsChecked="{Binding BlockApiOnLimit}"
+                                          Content="Block API calls when limit reached"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          ToolTip="When enabled, API calls to paid providers will be blocked once the monthly budget limit is exceeded."/>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Security Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Security">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🔒 Security" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="View encryption status, manage locked chat passwords, and configure visibility settings."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <!-- Encryption Status -->
+                                <TextBlock Text="Encryption" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,4"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                                    <TextBlock Text="✅" FontSize="14" Margin="0,0,6,0"/>
+                                    <TextBlock Text="{Binding EncryptionStatus}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Locked Chats -->
+                                <TextBlock Text="Locked Chats" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,4"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="{Binding LockedChatPasswordSet, StringFormat='{}🔐 Password set: {0}'}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <Button Content="🔑 Set Global Password"
+                                            Padding="12,5"
+                                            Command="{Binding SetGlobalPasswordCommand}"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            Margin="0,0,8,0"
+                                            ToolTip="Set or change the global password for locked chats"/>
+                                </StackPanel>
+
+                                <CheckBox IsChecked="{Binding HideLockedChats}"
+                                          Content="Hide locked chats from chat list"
+                                          FontSize="11"
+                                          Foreground="{DynamicResource ContentForeground}"
+                                          ToolTip="When enabled, locked chats are hidden from the main chat list and must be unlocked to appear."/>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
+                <!-- Maintenance Category -->
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Maintenance">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="🛠️ Maintenance" FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="16,16,16,4"/>
+
+                    <TextBlock Grid.Row="1" Text="Perform database maintenance tasks such as compaction to reclaim disk space."
+                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                                  Margin="16,0,16,8">
+                        <Border BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="6"
+                                Background="{DynamicResource CardBackground}"
+                                MaxWidth="500" HorizontalAlignment="Left">
+                            <StackPanel Margin="14,12,14,12">
+                                <TextBlock Text="Database Maintenance" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ContentForeground}"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock Text="Compact the SQLite database to reclaim space freed by deleted records. The application remains usable during compaction."
+                                           FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                           TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                                <!-- Database File Size -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="Database Size:" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,6,0"/>
+                                    <TextBlock Text="{Binding DatabaseFileSize}"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Reclaimable Space -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <TextBlock Text="Reclaimable:" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,6,0"/>
+                                    <TextBlock Text="{Binding ReclaimableSpace}"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Last Compaction -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <TextBlock Text="Last Compaction:" FontSize="11"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,6,0"/>
+                                    <TextBlock Text="{Binding LastCompaction}"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource ContentForeground}"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Compact Button with progress -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+                                    <Button Padding="12,5"
+                                            Command="{Binding CompactDatabaseCommand}"
+                                            Margin="0,0,8,0"
+                                            ToolTip="Run SQLite VACUUM to reclaim disk space">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+                                                <Setter Property="Content" Value="🔄 Compact Database"/>
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCompacting}" Value="True">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                        <Setter Property="Content" Value="⏳ Compacting..."/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                    <TextBlock Text="{Binding StatusMessage}"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource SubtleBrush}"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </ScrollViewer>
+                </Grid>
+
                 <!-- Other categories placeholder -->
                 <TextBlock Text="Select a category"
                            Foreground="{DynamicResource SubtleBrush}"
@@ -1641,6 +2285,27 @@
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Updates">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Language">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Wiki">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Backup">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Tools">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Pricing">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Security">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="Maintenance">
                                     <Setter Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
                             </Style.Triggers>

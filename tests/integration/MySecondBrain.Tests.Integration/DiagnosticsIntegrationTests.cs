@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Data;
@@ -140,6 +141,31 @@ public class DiagnosticsIntegrationTests : IDisposable
         // VACUUM should reduce or keep size equal (at minimum, should not throw)
         Assert.True(afterSize <= beforeSize,
             $"Expected VACUUM to reduce or maintain size; before={beforeSize}, after={afterSize}");
+    }
+
+    // ================================================================
+    // Wiki directory settings persistence
+    // ================================================================
+
+    [Fact]
+    public async Task WikiDirectory_Path_PersistsAndRetrieves()
+    {
+        var testPath = @"C:\TestWiki";
+        await _settingsRepo.SetAsync("WikiDirectoryPath", testPath);
+
+        var retrieved = await _settingsRepo.GetAsync("WikiDirectoryPath");
+
+        Assert.Equal(testPath, retrieved);
+    }
+
+    [Fact]
+    public async Task WikiDirectory_GitEnabled_Persists()
+    {
+        await _settingsRepo.SetAsync("GitVersionControlEnabled", "true");
+
+        var retrieved = await _settingsRepo.GetAsync("GitVersionControlEnabled");
+
+        Assert.Equal("true", retrieved);
     }
 
     // ================================================================
