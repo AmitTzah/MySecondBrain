@@ -180,16 +180,21 @@ public partial class App : Application
             {
                 try
                 {
-                    startupLogger.LogInformation("LaunchStudioRequested: closing wizard and showing MainWindow");
+                    startupLogger.LogInformation("LaunchStudio step 1: closing wizard");
                     wizardWindow.Close();
+                    startupLogger.LogInformation("LaunchStudio step 2: resolving MainWindow");
                     var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                    startupLogger.LogInformation("LaunchStudio step 3: showing MainWindow");
                     mainWindow.Show();
+                    startupLogger.LogInformation("LaunchStudio step 4: wiring tray");
                     WireTrayService(mainWindow, startupLogger);
+                    startupLogger.LogInformation("LaunchStudio step 5: starting background services");
                     StartBackgroundServices(startupLogger);
+                    startupLogger.LogInformation("LaunchStudio complete — MainWindow shown");
                 }
                 catch (Exception ex)
                 {
-                    startupLogger.LogError(ex, "LaunchStudioRequested handler crashed");
+                    startupLogger.LogError(ex, "LaunchStudioRequested handler crashed at step X");
                     throw;
                 }
             });
@@ -277,13 +282,20 @@ private void WireTrayService(Window mainWindow, ILogger<App> startupLogger)
 /// </summary>
 private void StartBackgroundServices(ILogger<App> startupLogger)
 {
-    // Start the embedded Kestrel WebSocket server (non-blocking)
-    _ = StartWebSocketServerAsync(startupLogger);
+    try
+    {
+        // Start the embedded Kestrel WebSocket server (non-blocking)
+        _ = StartWebSocketServerAsync(startupLogger);
 
-    // Start global hotkey service
-    var hotkeyService = _serviceProvider.GetRequiredService<IGlobalHotkeyService>();
-    var hotkeyCount = hotkeyService.GetRegisteredHotkeys().Count;
-    startupLogger.LogInformation("Global hotkey service started with {Count} default hotkeys", hotkeyCount);
+        // Start global hotkey service
+        var hotkeyService = _serviceProvider.GetRequiredService<IGlobalHotkeyService>();
+        var hotkeyCount = hotkeyService.GetRegisteredHotkeys().Count;
+        startupLogger.LogInformation("Global hotkey service started with {Count} default hotkeys", hotkeyCount);
+    }
+    catch (Exception ex)
+    {
+        startupLogger.LogError(ex, "StartBackgroundServices failed");
+    }
 }
 
     protected override async void OnExit(ExitEventArgs e)
