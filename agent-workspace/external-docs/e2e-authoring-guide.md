@@ -6,12 +6,20 @@ This guide encodes the conventions, patterns, and principles for writing reliabl
 
 ## 1. Fixture Pattern: One Launch for All Tests
 
-**Rule:** Always use `ICollectionFixture<E2eFixture>`. Never use `IClassFixture<E2eFixture>`.
+**Rule:** Use `ICollectionFixture<E2eFixture>` via a `CollectionDefinition`. Never use `IClassFixture<E2eFixture>`.
 
 ```csharp
 // ✅ CORRECT — app launches once for the entire E2E test suite
+// CollectionDefinitions.cs
+[CollectionDefinition("E2E")]
+public sealed class E2eTestCollection : ICollectionFixture<E2eFixture>
+{
+    // This class has no code — it exists only to define the collection.
+}
+
+// Each test class
 [Collection("E2E")]
-public class MyFeatureE2ETests : ICollectionFixture<E2eFixture>
+public class MyFeatureE2ETests : E2eTestBase
 {
     // ...
 }
@@ -34,7 +42,7 @@ public class MyFeatureE2ETests : IClassFixture<E2eFixture>
 | Each `[Fact]` | Test runs against the shared `MainWindow` / `Automation` references |
 | Suite end | `E2eFixture.Dispose()` calls `App.Close()` → graceful timeout → `App.Kill()` |
 
-The `[Collection("E2E")]` attribute on every test class ensures they all share the same `E2eFixture` instance.
+The `[Collection("E2E")]` attribute on every test class ensures they all share the same `E2eFixture` instance. The actual collection-fixture binding is declared once in `CollectionDefinitions.cs` via `[CollectionDefinition("E2E")]` + `ICollectionFixture<E2eFixture>`.
 
 ---
 
@@ -234,10 +242,10 @@ Assert.NotNull(settingsView);
 
 ### Base Class: `E2eTestBase`
 
-All shared helpers go in an abstract `E2eTestBase` class. Every test class inherits from it.
+All shared helpers go in an abstract `E2eTestBase` class. Every test class inherits from it. `ICollectionFixture<E2eFixture>` is declared in `CollectionDefinitions.cs` — the base class does NOT implement it directly.
 
 ```csharp
-public abstract class E2eTestBase : ICollectionFixture<E2eFixture>
+public abstract class E2eTestBase
 {
     protected readonly ITestOutputHelper _output;
     protected readonly E2eFixture _fixture;
@@ -253,9 +261,9 @@ public abstract class E2eTestBase : ICollectionFixture<E2eFixture>
         _cf = _fixture.Automation.ConditionFactory;
     }
 
-    // ── Shared helpers ──────────────────────────────────────
+    // ── Shared helpers (8 total) ────────────────────────────
 
-    protected Task<Window> UseSharedAppAsync() { /* ... */ }
+    protected async Task UseSharedAppAsync() { /* ... */ }
     protected AutomationElement? FindById(string automationId, AutomationElement? root = null, TimeSpan? timeout = null) { /* ... */ }
     protected AutomationElement? FindByName(string name, AutomationElement? root = null, TimeSpan? timeout = null) { /* ... */ }
     protected AutomationElement? FindByNameContains(string partialName, AutomationElement? root = null, TimeSpan? timeout = null) { /* ... */ }
@@ -269,15 +277,16 @@ public abstract class E2eTestBase : ICollectionFixture<E2eFixture>
 ### Per-Class Helpers
 
 Helpers specific to one test class are private methods in that class. Examples:
-- `EnsureTestApiKeyExistsAsync()` — creates prerequisite API key if not found
 - `FindLogLevelComboBox()` — locates the log level ComboBox in Diagnostics
 - `DeleteListItemByContent()` — finds and deletes a list item by partial name
+- `FindWizardWindow()` — locates the OnboardingWizardWindow in the desktop UIA tree
 
 ### Rules
 
 - No duplicated `FindById`/`FindByName`/`NavigateToSettings` across classes — these live in `E2eTestBase`
 - No duplicated `FindByNameContains` — lives in `E2eTestBase`
 - No duplicated `ConfirmMessageBox` — lives in `E2eTestBase`
+- Per-class helpers that are identically needed across classes (e.g., `FindComboBoxNearLabel` in `SettingsDiagnosticsE2ETests` and `AppearanceOnboardingE2ETests`) are allowed with a documented NOTE to keep copies in sync — this is an accepted trade-off to avoid overgeneralizing the base class
 - Per-class helpers stay private
 
 ---
@@ -292,6 +301,15 @@ Helpers specific to one test class are private methods in that class. Examples:
 
 ### Testing the 5-Step Flow
 
+The wizard uses these AutomationIds (note: no "Btn" suffix — actual IDs are shorter):
+
+| Button | AutomationId |
+|--------|-------------|
+| Get Started (Welcome screen) | `WizardGetStarted` |
+| Skip current step | `WizardSkip` |
+| Back to previous step | `WizardBack` |
+| Launch Studio (Finish screen) | `WizardLaunchStudio` |
+
 ```csharp
 [Fact]
 public async Task OnboardingWizard_Complete5StepFlow_ShouldArriveAtStudio()
@@ -299,41 +317,42 @@ public async Task OnboardingWizard_Complete5StepFlow_ShouldArriveAtStudio()
     // Fresh test DB triggers wizard automatically on first test run
     await UseSharedAppAsync();
 
-    // Step 1: Welcome
+    // Welcome screen
     var welcomeTitle = FindByName("Welcome to MySecondBrain");
     Assert.NotNull(welcomeTitle);
-    var getStartedBtn = FindById("WizardGetStartedBtn");
+    var getStartedBtn = FindById("WizardGetStarted");
     getStartedBtn!.Click();
     await Task.Delay(400);
 
-    // Step 2: API Keys
-    var apiKeyTitle = FindByName("Add Your First API Key");
-    Assert.NotNull(apiKeyTitle);
-    // Either add a key or skip
-    var skipBtn = FindById("WizardSkipBtn");
+    // Step 0: API Keys
+    var step0View = FindById("OnboardingStep0View");
+    Assert.NotNull(step0View);
+    var skipBtn = FindById("WizardSkip");
     skipBtn!.Click();
     await Task.Delay(400);
 
-    // Step 3: Persona
-    var personaTitle = FindByName("Create Your First Persona");
-    Assert.NotNull(personaTitle);
-    // Either create or skip
-    skipBtn = FindById("WizardSkipBtn");
-    skipBtn!.Click();
+    // Step 1: Persona
+    var step1View = FindById("OnboardingStep1View");
+    Assert.NotNull(step1View);
+    FindById("WizardSkip")!.Click();
     await Task.Delay(400);
 
-    // Step 4: Wiki Directory
-    var wikiTitle = FindByName("Choose Your Wiki Directory");
-    Assert.NotNull(wikiTitle);
-    skipBtn = FindById("WizardSkipBtn");
-    skipBtn!.Click();
+    // Step 2: Wiki Directory
+    var step2View = FindById("OnboardingStep2View");
+    Assert.NotNull(step2View);
+    FindById("WizardSkip")!.Click();
     await Task.Delay(400);
 
-    // Step 5: Hotkeys
-    var hotkeyTitle = FindByName("Your Global Hotkeys");
-    Assert.NotNull(hotkeyTitle);
-    var finishBtn = FindById("WizardFinishBtn");
-    finishBtn!.Click();
+    // Step 3: Hotkeys
+    var step3View = FindById("OnboardingStep3View");
+    Assert.NotNull(step3View);
+    FindById("WizardSkip")!.Click();
+    await Task.Delay(400);
+
+    // Finish — Launch Studio
+    var launchBtn = FindById("WizardLaunchStudio");
+    Assert.NotNull(launchBtn);
+    launchBtn!.Click();
     await Task.Delay(500);
 
     // Assert: Wizard closed, Studio Chat is visible
@@ -364,6 +383,8 @@ public async Task OnboardingWizard_ShouldNotAppearAfterCompletion()
 
 ### Testing Re-run Wizard from Settings
 
+The re-launched wizard is dismissed by Skipping through all steps and clicking Launch Studio — not by cancel:
+
 ```csharp
 [Fact]
 public async Task Settings_ReRunOnboardingWizard_ShouldLaunchWizard()
@@ -375,20 +396,32 @@ public async Task Settings_ReRunOnboardingWizard_ShouldLaunchWizard()
     var reRunLink = FindByNameContains("Re-run Onboarding Wizard");
     Assert.NotNull(reRunLink);
     reRunLink!.Click();
-    await Task.Delay(500);
+    await Task.Delay(800);
 
     // Wizard launched — verify Welcome screen
     var welcomeTitle = FindByName("Welcome to MySecondBrain");
     Assert.NotNull(welcomeTitle);
 
-    // Close the wizard via cancel
-    var cancelBtn = FindById("WizardCancelBtn") ?? FindByName("Cancel");
-    cancelBtn?.Click();
+    // Dismiss: Get Started → Skip steps 0-3 → Launch Studio
+    FindById("WizardGetStarted")!.Click();
     await Task.Delay(300);
 
-    // Verify we're back at Settings
-    var settingsView = FindById("SettingsView");
-    Assert.NotNull(settingsView);
+    for (int i = 0; i < 4; i++)
+    {
+        var skip = FindById("WizardSkip");
+        if (skip != null && skip.IsAvailable && skip.IsEnabled)
+        {
+            skip.Click();
+            await Task.Delay(300);
+        }
+    }
+
+    var launchBtn = FindById("WizardLaunchStudio", timeout: TimeSpan.FromSeconds(3));
+    if (launchBtn != null)
+    {
+        launchBtn.Click();
+        await Task.Delay(500);
+    }
 
     _output.WriteLine("Re-run onboarding wizard launched and dismissed.");
 }
@@ -481,22 +514,22 @@ To ensure E2E tests can reliably locate elements, follow these conventions when 
 
 ## 10. Test Class Organization
 
-### Recommended File Structure
+### Current File Structure
 
-After rewrite, the test suite should have these test classes:
+The test suite has these 8 test classes:
 
-| Test Class | Covers | Approx. Tests | Creates Data? |
-|------------|--------|---------------|---------------|
-| `AppShellNavigationThemingE2ETests` | F5: Shell layout, navigation, theme toggle, font size, chat themes, ContentRendererRegistry | ~12 | No |
-| `PlatformServicesE2ETests` | F6: DI resolution, DPI, WebSocket server, auto-update, all 4 platform services | ~10 | No |
-| `SystemTrayHotkeyE2ETests` | F6: System tray context menu, events, recent chats, generation indicator, hotkey registration/conflicts | ~10 | No |
-| `ModelConfigsApiKeysE2ETests` | F7: API key CRUD, test key, model config CRUD | ~6 | Yes (self-cleaning) |
-| `PersonasE2ETests` | F7: Persona CRUD, persona picker dialog | ~4 | Yes (self-cleaning) |
-| `SettingsDiagnosticsE2ETests` | F8: Settings categories, log level, log categories, log file management | ~7 | No |
-| `AppearanceOnboardingE2ETests` | F8: Appearance radio buttons, theme toggle, re-run wizard hyperlink | ~5 | No |
-| `OnboardingWizardE2ETests` | F8: 5-step wizard flow, skip each step, finish, wizard not shown after completion | ~6 | Yes (self-cleaning via completion flag) |
+| Test Class | Covers | Tests | Creates Data? |
+|------------|--------|-------|---------------|
+| `AppShellNavigationThemingE2ETests` | F5: Shell layout, navigation, theme toggle, font size, chat themes, ContentRendererRegistry | 14 | No |
+| `PlatformServicesE2ETests` | F6: DI resolution, DPI, WebSocket server, auto-update, all 4 platform services | 9 | No |
+| `SystemTrayHotkeyE2ETests` | F6: System tray context menu, events, recent chats, generation indicator, hotkey registration/conflicts | 11 | No |
+| `ModelConfigsApiKeysE2ETests` | F7: API key CRUD, test key, model config CRUD | 6 | Yes (self-cleaning) |
+| `PersonasE2ETests` | F7: Persona CRUD, persona picker dialog | 4 | Yes (self-cleaning) |
+| `SettingsDiagnosticsE2ETests` | F8: Settings categories, log level, log categories, log file management | 7 | No |
+| `AppearanceOnboardingE2ETests` | F8: Appearance radio buttons, chat theme, font settings, re-run wizard hyperlink, maintenance | 5 | No |
+| `OnboardingWizardE2ETests` | F8: 5-step wizard flow, per-step skip, finish, wizard not shown after completion, re-run from settings | 6 | Yes (self-cleaning via completion flag) |
 
-**Total: ~60 tests, 8 classes, 1 shared fixture.**
+**Total: 62 tests, 8 classes, 1 shared fixture.**
 
 ### Test Execution Order
 
