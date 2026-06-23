@@ -103,7 +103,29 @@ public abstract class E2eTestBase
             foreach (var element in allElements)
             {
                 if (element.Name?.Contains(partialName, StringComparison.OrdinalIgnoreCase) == true)
-                    return element;
+                {
+                    // If we matched a leaf Text element inside an ItemsControl list item,
+                    // walk up to the DataItem/ListItem container so callers can
+                    // FindFirstDescendant for sibling action buttons (🗑️, ✏️, 📋).
+                    // Only climb to known list-container types; never climb to Grid/Custom
+                    // (which would break Hyperlink clicks in TextBlock inlines).
+                    var result = element;
+                    while (result != null && result.ControlType == ControlType.Text)
+                    {
+                        var parent = result.Parent;
+                        if (parent == null) break;
+                        if (parent.ControlType == ControlType.DataItem ||
+                            parent.ControlType == ControlType.ListItem)
+                        {
+                            result = parent;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    return result ?? element;
+                }
             }
             Wait.UntilInputIsProcessed();
             Thread.Sleep(RetryIntervalMs);
@@ -117,6 +139,15 @@ public abstract class E2eTestBase
     /// </summary>
     protected void NavigateToSettings()
     {
+        // Force a clean DataTemplate instantiation by toggling to Wiki and back.
+        // Avoids stale UIA state from prior tests (known WPF ContentControl caching issue).
+        var navWiki = FindById("NavWiki");
+        if (navWiki != null)
+        {
+            navWiki.Click();
+            Thread.Sleep(300);
+        }
+
         var navSettings = FindById("NavSettings");
         Assert.NotNull(navSettings);
         navSettings!.Click();

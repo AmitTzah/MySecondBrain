@@ -20,6 +20,13 @@ public sealed class E2eFixture : IDisposable
 
     public E2eFixture()
     {
+        // ═══════════════════════════════════════════════════════════════
+        // Show a hands-off countdown before launching the E2E app.
+        // Mouse/keyboard activity during E2E tests steals focus and
+        // breaks WPF UIA interactions.
+        // ═══════════════════════════════════════════════════════════════
+        HandsOffCountdown.Show();
+
         var testOutputDir = Path.Combine(Path.GetTempPath(), "MySecondBrain_E2E");
         Directory.CreateDirectory(testOutputDir);
 
