@@ -273,12 +273,14 @@ public class OnboardingIntegrationTests : IDisposable
         var llmMock = new Mock<ILLMProviderService>();
         var confirmationMock = new Mock<IConfirmationService>();
         var wikiServiceMock = new Mock<IWikiService>();
+        var textActionRepoMock = new Mock<ITextActionRepository>();
 
         return new OnboardingWizardViewModel(
             _apiKeyRepo,
             _settingsRepo,
             _modelConfigRepo,
             _personaRepo,
+            textActionRepoMock.Object,
             encryptionMock.Object,
             llmMock.Object,
             confirmationMock.Object,
