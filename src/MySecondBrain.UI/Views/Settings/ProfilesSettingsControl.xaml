@@ -233,7 +233,8 @@
                                                Foreground="{DynamicResource SubtleBrush}"
                                                Margin="0,0,0,3"/>
                                     <TextBox Text="{Binding EditingModelConfig.DisplayName, UpdateSourceTrigger=PropertyChanged}"
-                                             FontSize="11" Margin="0,0,0,8"/>
+                                             FontSize="11" Margin="0,0,0,8"
+                                             AutomationProperties.AutomationId="ModelConfigDisplayNameInput"/>
 
                                     <TextBlock Text="Provider" FontSize="11"
                                                Foreground="{DynamicResource SubtleBrush}"
@@ -241,7 +242,8 @@
                                     <ComboBox ItemsSource="{Binding AvailableApiKeys}"
                                               SelectedItem="{Binding SelectedModelConfigApiKey}"
                                               DisplayMemberPath="DisplayName"
-                                              FontSize="11" Margin="0,0,0,8"/>
+                                              FontSize="11" Margin="0,0,0,8"
+                                              AutomationProperties.AutomationId="ModelConfigProviderCombo"/>
 
                                     <Grid Margin="0,0,0,8">
                                         <Grid.ColumnDefinitions>
@@ -347,7 +349,8 @@
                                                Margin="0,0,0,3"/>
                                     <ComboBox ItemsSource="{Binding ContextOverflowStrategyOptions}"
                                               SelectedItem="{Binding EditingModelConfig.ContextOverflowStrategy}"
-                                              FontSize="11" Margin="0,0,0,8"/>
+                                              FontSize="11" Margin="0,0,0,8"
+                                              AutomationProperties.AutomationId="ModelConfigContextOverflowCombo"/>
 
                                     <Grid Margin="0,6,0,0">
                                         <Grid.ColumnDefinitions>
