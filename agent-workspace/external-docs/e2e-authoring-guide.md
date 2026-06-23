@@ -86,7 +86,51 @@ Environment.SetEnvironmentVariable("MSB_DB_PATH", testDbPath, EnvironmentVariabl
 
 ---
 
-## 3. Self-Cleaning Tests: Delete What You Create
+## 3. Hands-Off Countdown Window
+
+**Rule:** The `E2eFixture` constructor must display a countdown window before launching the app, giving the human time to release mouse and keyboard.
+
+**Why:** FlaUI drives real mouse/keyboard. Human inputs compete with automation → flaky tests. A 3-second countdown eliminates this. If a human is moving the mouse or typing during test execution, FlaUI automation actions can be interrupted, causing element-not-found errors, click failures, or focus-stealing that cascades into multiple test failures.
+
+**Implementation:** [`HandsOffCountdown.Show()`](../../tests/e2e/MySecondBrain.Tests.E2E/HandsOffCountdown.cs) runs on a dedicated STA thread before `Application.Launch()` in the `E2eFixture` constructor. It displays a borderless, `Topmost=true` window centered on screen:
+
+- "⚠️ HANDS OFF" warning text (yellow, bold, 36pt)
+- Countdown: 3 → 2 → 1 (white, bold, 64pt)
+- "GO!" flash (green, 400ms)
+- Sub-text: "Release mouse & keyboard — E2E tests starting"
+
+The window runs on its own STA thread because WPF windows require a Single-Threaded Apartment. After the countdown completes, the window closes and the thread joins before control returns to the fixture constructor.
+
+**When to skip:** CI/CD pipelines have no human to interfere. Detect this via the `CI` environment variable. In CI, calling `HandsOffCountdown.Show()` wastes 3.4 seconds per suite run.
+
+**Code in `E2eFixture` constructor:** The countdown is the first thing the fixture does — before database setup, before app launch:
+
+```csharp
+public E2eFixture()
+{
+    // ── Hands-Off Countdown ────────────────────────────────
+    // Skip in CI: no human to release mouse/keyboard.
+    if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")))
+    {
+        try
+        {
+            HandsOffCountdown.Show();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[FIXTURE] Countdown window error (non-fatal): {ex.Message}");
+        }
+    }
+
+    // ... test database setup and app launch ...
+}
+```
+
+**Full source:** [`HandsOffCountdown.cs`](../../tests/e2e/MySecondBrain.Tests.E2E/HandsOffCountdown.cs)
+
+---
+
+## 4. Self-Cleaning Tests: Delete What You Create
 
 **Rule:** Every `[Fact]` that creates data must delete it within the same test body using the app's own 🗑️ delete buttons.
 
@@ -179,7 +223,7 @@ private void ConfirmMessageBox(string expectedButton, TimeSpan? timeout = null)
 
 ---
 
-## 4. No Dead Time: Keep the UI Moving
+## 5. No Dead Time: Keep the UI Moving
 
 **Rules:**
 
@@ -214,7 +258,7 @@ Thread.Sleep(3000); // What are we waiting for? Is 3s enough? Too much?
 
 ---
 
-## 5. Constant Visual Movement
+## 6. Constant Visual Movement
 
 Tests should read like a user session — click, observe, click, type, observe. No long stretches of nothing.
 
@@ -238,7 +282,7 @@ Assert.NotNull(settingsView);
 
 ---
 
-## 6. Helper Conventions
+## 7. Helper Conventions
 
 ### Base Class: `E2eTestBase`
 
@@ -291,7 +335,7 @@ Helpers specific to one test class are private methods in that class. Examples:
 
 ---
 
-## 7. Onboarding Wizard Testing
+## 8. Onboarding Wizard Testing
 
 ### How It Works
 
@@ -429,7 +473,7 @@ public async Task Settings_ReRunOnboardingWizard_ShouldLaunchWizard()
 
 ---
 
-## 8. MessageBox Handling
+## 9. MessageBox Handling
 
 WPF `MessageBox.Show()` is a blocking call that creates a separate top-level window. It does NOT appear as a child of the main window in the UIA tree — it's a sibling window on the desktop.
 
@@ -483,7 +527,7 @@ if (msgBox != null)
 
 ---
 
-## 9. Selector Strategy
+## 10. Selector Strategy
 
 **Priority order for finding UIA elements:**
 
@@ -512,7 +556,7 @@ To ensure E2E tests can reliably locate elements, follow these conventions when 
 
 ---
 
-## 10. Test Class Organization
+## 11. Test Class Organization
 
 ### Current File Structure
 
@@ -556,7 +600,7 @@ public async Task Onboarding_ShouldNotAppearAfterCompletion()
 
 ---
 
-## 11. Running the E2E Suite
+## 12. Running the E2E Suite
 
 ### Prerequisites
 
@@ -584,7 +628,7 @@ Or use the convenience script:
 
 ---
 
-## 12. Quick Reference Checklist
+## 13. Quick Reference Checklist
 
 When writing a new E2E test, verify:
 
