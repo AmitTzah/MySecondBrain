@@ -232,7 +232,7 @@ tests/e2e/MySecondBrain.Tests.E2E/
 - **Smoke Test Classification:** HUMAN/SHT REQUIRED — onboarding wizard is a separate `Window` that appears on first launch; visual verification of 5-step flow required.
 - **Suggested Commit Message:** `test: add F8 E2E tests for settings, diagnostics, appearance, and onboarding wizard`
 
-### [ ] Step 5: Final Suite Verification & E2E Authoring Guide Audit
+### [x] Step 5: Final Suite Verification & E2E Authoring Guide Audit
 
 - **Goal:** Run the complete E2E suite, verify all acceptance criteria are met (exit code 0, single launch, zero user-created entities in test DB), and audit the [E2E Authoring Guide](agent-workspace/external-docs/e2e-authoring-guide.md) against the implemented code. Update the guide ONLY if it contradicts reality — do NOT rewrite it.
 - **Actions:**
