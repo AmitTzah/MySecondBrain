@@ -15,7 +15,7 @@
         <Border Grid.Row="0" Background="{DynamicResource HeaderBackground}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
                 Padding="12,8">
-            <Grid AutomationProperties.AutomationId="ChatView">
+            <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
