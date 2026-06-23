@@ -44,6 +44,10 @@ public sealed class E2eFixture : IDisposable
             // If present, auto-dismiss it before waiting for NavChats.
             DismissOnboardingWizardIfPresent();
 
+            // After dismissing the wizard (which was the first/only window GetMainWindow returned),
+            // re-acquire the real MainWindow from the app process.
+            MainWindow = App.GetMainWindow(Automation, TimeSpan.FromSeconds(10));
+
             // Wait for NavChats (proves sidebar rendered)
             var readyCondition = Automation.ConditionFactory.ByAutomationId("NavChats");
             var sw = Stopwatch.StartNew();
