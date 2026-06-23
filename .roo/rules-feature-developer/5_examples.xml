@@ -312,4 +312,87 @@
       <takeaway>All plan revisions — even minor ones — should route through Phase 2 Critic review before execution</takeaway>
     </key_takeaways>
   </example>
+  <example name="hands_off_mode_smoke_test_verification">
+    <scenario>
+      A developer enabled hands-off mode for a GUI feature. Three GUI smoke tests
+      were skipped during execution and collected. Now at feature end, the FD
+      presents them one at a time for verification, tracking each status in state.json.
+      One test fails and Debug mode investigates.
+    </scenario>
+
+    <user_request>
+      "Continue" (resuming at Phase 5 after all execution steps completed in hands-off mode)
+    </user_request>
+
+    <workflow>
+      <step number="1">
+        <description>Phase 5 Step 0: Per-Test Verification Begins</description>
+        <approach>
+          FD reads state.json: hands_off_mode=true, skipped_smoke_tests has 3 entries:
+          - Step 2: "Registration Form Validation" (status: "skipped")
+          - Step 3: "Login Error Display" (status: "skipped")
+          - Step 5: "Dashboard Widget Layout" (status: "skipped")
+
+          FD presents the first test:
+          "Hands-off mode was active. GUI smoke tests were skipped during development.
+          Please test this now:
+
+          **Step 2: Registration Form Validation**
+          → Navigate to /register, submit form with empty email — verify 'Email is required' error appears inline.
+
+          Progress: 0 of 3 verified so far.
+
+          Result?"
+
+          Options: Verified / Failed / Skip for now
+        </approach>
+        <expected_outcome>User clicks "✅ Verified". FD updates entry status to "verified", commits state.json. Proceeds to next test.</expected_outcome>
+      </step>
+
+      <step number="2">
+        <description>Second Test — Also Passes</description>
+        <approach>
+          FD presents Step 3: "Login Error Display" → Navigate to /login, submit with wrong password — verify 'Invalid credentials' toast appears.
+          Progress: 1 of 3 verified.
+        </approach>
+        <expected_outcome>User clicks "✅ Verified". FD updates status, commits. Progress: 2 of 3.</expected_outcome>
+      </step>
+
+      <step number="3">
+        <description>Third Test — Fails, Debug Mode Launched</description>
+        <approach>
+          FD presents Step 5: "Dashboard Widget Layout" → Resize browser to 400px — verify widgets stack vertically without overflow.
+          User clicks "❌ Failed" and describes: "Widgets overlap at narrow widths — the left sidebar bleeds into the main content area."
+
+          FD updates entry status to "failed" in state.json, commits.
+
+          FD spawns a DEBUG mode subtask (not Code) with:
+          - Full plan.md context (Sections 1-4, 6)
+          - Step summary with Step 5 clearly marked
+          - The failing test entry: step 5, "Dashboard Widget Layout", description
+          - User's failure description verbatim
+          - hands_off_mode: false (Debug must interact with user for verification)
+          - Instruction: investigate root cause, fix, add regression test, verify with user
+
+          Debug investigates: adds responsive breakpoint instrumentation, identifies the CSS grid issue (missing minmax(0, 1fr) on the sidebar column), applies fix, writes regression test in tests/unit/, runs quality loop, then asks user: "I fixed the dashboard layout — the grid was missing minmax(0, 1fr). Please verify: resize to 400px and confirm widgets stack vertically. Result?" User confirms fix works.
+
+          FD updates the entry's status from "failed" to "verified" in state.json, commits.
+        </approach>
+        <expected_outcome>
+          Debug mode identified root cause (CSS grid missing minmax), applied fix, wrote regression test, user confirmed. All 3 tests now verified. FD sets phase_5_substep="smoke_tests_verified", commits, proceeds to Step 1 (knowledge update).
+        </expected_outcome>
+      </step>
+    </workflow>
+
+    <key_takeaways>
+      <takeaway>Each smoke test is verified individually with the user — no batch "all passed" guesswork</takeaway>
+      <takeaway>Every verification updates state.json immediately (committed if git enabled) — interruption-safe</takeaway>
+      <takeaway>Failed tests spawn Debug mode for systematic root cause analysis, not Code mode</takeaway>
+      <takeaway>Debug writes a regression test for each fix, preventing recurrence</takeaway>
+      <takeaway>Status transitions in state.json: "skipped" → "verified" or "skipped" → "failed" → (after Debug fix) → "verified"</takeaway>
+      <takeaway>If Debug cannot fix and user selects "I'll fix manually", status reverts to "skipped" so it resurfaces on resume</takeaway>
+      <takeaway>Users can skip tests up to 3 times total (across all tests) — after that, only Verify or Fail options remain</takeaway>
+      <takeaway>phase_5_substep advances to "smoke_tests_verified" only after ALL tests are resolved</takeaway>
+    </key_takeaways>
+  </example>
 </complete_examples>

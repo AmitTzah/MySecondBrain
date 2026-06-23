@@ -70,7 +70,7 @@
     "missing_prerequisites": ["string"]
   },
   "skipped_smoke_tests": [
-    { "step": number, "name": "string", "classification": "string", "description": "string" }
+    { "step": number, "name": "string", "classification": "string", "description": "string", "status": "skipped" | "verified" | "failed" }
   ],
   "current_phase": number,
   "plan_status": "string",
@@ -84,15 +84,15 @@
       <field name="feature_name">The human-readable name of the feature (e.g., "User Authentication").</field>
       <field name="branch_name">The git branch name, or null if git automation is disabled.</field>
       <field name="git_automation_enabled">Whether the orchestrator should run git commands.</field>
-      <field name="hands_off_mode">When true: all user interaction gates are skipped. Model smoke tests are self-verified. HUMAN/SHT smoke tests are skipped and collected for batch presentation at feature end. Architect/Critic already auto-complete (this is the default now). Received in the spawn prompt, or asked of the user if not provided. Defaults to false if never configured.</field>
+      <field name="hands_off_mode">When true: all user interaction gates are skipped. Model smoke tests are self-verified. HUMAN/SHT smoke tests are skipped and collected for one-at-a-time verification at feature end (Phase 5 Step 0). Architect/Critic already auto-complete (this is the default now). Received in the spawn prompt, or asked of the user if not provided. Defaults to false if never configured.</field>
       <field name="smoke_test_automation">Configuration for automated GUI smoke testing via synthetic-human-tester. Smoke testing is only for GUI environments (web, desktop, native) — CLI is self-verified by Code mode. Received in the prompt, or asked of the user if not provided. Contains: enabled (boolean), environments (per-environment config with base_url/app_id/executable_path/window_title + mcp_available/mcp_name/verified populated by MCP verification in Phase 0 Step 4), and missing_prerequisites (list of unavailable MCP names). Passed to implementation in Phase 3 as part of the prompt. Defaults to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] } if never configured.</field>
-      <field name="skipped_smoke_tests">Accumulator for HUMAN/SHT smoke tests that were skipped during hands-off mode. Each entry records: step number, step name, classification, and the verbatim Live Smoke Test description. Populated during Phase 4 from Code subtask completion summaries. Presented to the user in Phase 5. Empty array by default.</field>
+      <field name="skipped_smoke_tests">Accumulator for HUMAN/SHT smoke tests that were skipped during hands-off mode. Each entry records: step number, step name, classification, the verbatim Live Smoke Test description, and a status field ("skipped" | "verified" | "failed"). Populated during Phase 4 from Code subtask completion summaries with initial status "skipped". In Phase 5 Step 0, tests are presented to the user one at a time: each verified test transitions from "skipped" to "verified" in state.json (committed immediately if git automation is enabled). Failed tests transition to "failed" and trigger a Debug mode subtask for root cause analysis. Empty array by default.</field>
       <field name="current_phase">The current major checkpoint: 1 (planning), 3 (execution), 5 (complete). Phases 0, 2, and 4 are transient and not tracked as resume checkpoints.</field>
       <field name="plan_status">One of: "draft", "validated", "archived".</field>
       <field name="total_steps">Number of execution steps in the plan. Populated after Architect finishes in Phase 1. When pivot_in_progress is true, total_steps is set to 0 to signal that the Architect is re-drafting — this is NOT the same as "never drafted"; the resume routing checks pivot_in_progress to distinguish.</field>
       <field name="current_step">The 1-based index of the step currently being executed. 0 means no steps executed yet.</field>
       <field name="pivot_in_progress">Set to true when a major drift or roadblock triggers an Architect re-plan (Phase 4 Step 3). Set back to false after the Architect finishes re-drafting and total_steps is updated. Initialized to false. This flag disambiguates "Architect never drafted" (total_steps=0, pivot_in_progress=false) from "Architect is re-drafting after pivot" (total_steps=0, pivot_in_progress=true). WARNING: total_steps=0 is ambiguous — it means both "Architect never drafted" (pivot_in_progress=false) and "Architect is re-drafting" (pivot_in_progress=true). The pivot_in_progress boolean is the ONLY disambiguator. If state.json is reconstructed, ensure pivot_in_progress is recovered correctly.</field>
-      <field name="phase_5_substep">Tracks progress within Phase 5 for safe resume: null (not started — default, initialized in Phase 1 Step 1), "knowledge_updated" (Step 1 done — Architect completed knowledge base update), "state_finalized" (Step 2 done — state.json finalized to current_phase=5, plan_status="archived"). Set to null after Step 3 archiving completes (state.json is moved to archive/ at that point, so the field is moot). This prevents duplicate knowledge base updates if context is lost mid-Phase-5.</field>
+      <field name="phase_5_substep">Tracks progress within Phase 5 for safe resume: null (not started — default, initialized in Phase 1 Step 1. Also used when Phase 5 is entered with no skipped smoke tests to verify), "smoke_tests_verified" (Step 0 done — all skipped smoke tests have been verified by the user, or there were none to begin with), "knowledge_updated" (Step 1 done — Architect completed knowledge base update), "state_finalized" (Step 2 done — state.json finalized to current_phase=5, plan_status="archived"). Set to null after Step 3 archiving completes (state.json is moved to archive/ at that point, so the field is moot). This enables precise resume within Phase 5: if phase_5_substep is null and skipped_smoke_tests has entries with status "skipped", resume at Step 0. If phase_5_substep is "smoke_tests_verified" or null with no pending skipped tests, resume at Step 1.</field>
     </field_meanings>
   </state_json_schema>
 
@@ -353,7 +353,7 @@
           <description>
             Hands-off mode: when enabled, FD skips all user interaction during execution.
             Model smoke tests are self-verified by Code. HUMAN/SHT smoke tests are skipped
-            and collected for batch presentation at feature end.
+            and collected for one-at-a-time verification at feature end (Phase 5 Step 0).
           </description>
           <decision_tree>
             <branch condition="hands_off_mode was provided in the prompt (boolean)">
@@ -508,7 +508,10 @@
           <route condition="current_phase=5 AND plan_status='archived'">
             <action>Use phase_5_substep from state.json to determine exact resume point:</action>
             <subroute condition="phase_5_substep is null">
-              <action>Phase 5 was entered but Step 1 (knowledge update) never completed. Proceed to Phase 5 Step 1.</action>
+              <action>Phase 5 was entered. Check skipped_smoke_tests in state.json: if any entry has status "skipped", smoke test verification was interrupted — route to Phase 5 Step 0 to resume per-test verification. If no entries have status "skipped" (all are "verified", "failed", or array is empty): route to Phase 5 Step 1 (knowledge update).</action>
+            </subroute>
+            <subroute condition="phase_5_substep='smoke_tests_verified'">
+              <action>Smoke test verification completed. Proceed to Phase 5 Step 1 (knowledge update).</action>
             </subroute>
             <subroute condition="phase_5_substep='knowledge_updated'">
               <action>Knowledge update completed but state.json not yet finalized (Step 2 was interrupted). Proceed to Phase 5 Step 2.</action>
@@ -771,7 +774,7 @@
       <step number="1">
         <title>Read and Verify Subtask Completion</title>
         <action>Read the subtask's completion summary carefully. Note whether it contains the string "SCOPE DRIFT DETECTED" and what details it provides.</action>
-        <action priority="high">Check for skipped smoke tests: if the subtask's completion summary contains the structured marker "<!--SMOKE_TEST_SKIPPED-->", extract the verbatim smoke test description that follows it. Append an entry to the skipped_smoke_tests array in state.json: { "step": [current_step+1], "name": "[step name from plan]", "classification": "HUMAN/SHT REQUIRED", "description": "[verbatim smoke test description]" }. This accumulates skipped GUI smoke tests for batch presentation in Phase 5. The structured marker enables reliable automated detection regardless of how the LLM formats the surrounding text.</action>
+        <action priority="high">Check for skipped smoke tests: if the subtask's completion summary contains the structured marker "<!--SMOKE_TEST_SKIPPED-->", extract the verbatim smoke test description that follows it. Append an entry to the skipped_smoke_tests array in state.json: { "step": [current_step+1], "name": "[step name from plan]", "classification": "HUMAN/SHT REQUIRED", "description": "[verbatim smoke test description]", "status": "skipped" }. This accumulates skipped GUI smoke tests for per-test verification in Phase 5. The structured marker enables reliable automated detection regardless of how the LLM formats the surrounding text.</action>
         <action priority="critical">
           Git diff verification (independent check against self-report):
           1. Read git_automation_enabled from state.json. If false: skip to Step 2 — rely on subtask self-report only.
@@ -1011,58 +1014,143 @@
 
     <steps>
       <step number="0" priority="critical">
-        <title>Present Skipped Smoke Tests (Hands-Off Mode)</title>
+        <title>Verify Skipped Smoke Tests One-at-a-Time (Hands-Off Mode)</title>
         <trigger>Only when hands_off_mode is true in state.json AND skipped_smoke_tests array is non-empty.</trigger>
-        <action>Read skipped_smoke_tests from state.json. If the array is empty: skip this step, proceed to Step 1.</action>
-        <action>If skipped_smoke_tests is non-empty: compile a formatted list of all skipped GUI smoke tests and present them to the user via ask_followup_question.</action>
-        <action>
-          Message format:
-          "Hands-off mode was active. The following [N] GUI smoke tests were skipped during development.
-          Please test them now against the completed feature:
+        <description>
+          When hands-off mode is active, HUMAN/SHT smoke tests were skipped during execution and collected.
+          Now, at feature end, they must be verified one at a time with the user. Each verification is tracked
+          in state.json with a status field ("skipped" → "verified" or "failed"). After each verification,
+          state.json is committed (if git automation enabled) so progress is never lost on interruption.
+          Failed tests are investigated by Debug mode (not Code) for systematic root cause analysis.
+        </description>
 
-          [For each entry in skipped_smoke_tests:]
-          **Step [step]: [name]** (HUMAN/SHT REQUIRED)
-          → [description]
+        <prerequisites>
+          <item>Read hands_off_mode from state.json. If false: skip this step entirely, proceed to Step 1.</item>
+          <item>Read skipped_smoke_tests from state.json. If the array is empty: skip this step, proceed to Step 1.</item>
+          <item priority="critical">If phase_5_substep is "knowledge_updated" or "state_finalized": we are past smoke test verification (Step 1 or Step 2 already completed). Skip this step entirely. Route to Phase 5 Step 1 (if "knowledge_updated") or Phase 5 Step 2 (if "state_finalized") as appropriate. Do NOT re-enter the verification loop and do NOT overwrite phase_5_substep.</item>
+          <item>If phase_5_substep is "smoke_tests_verified": all tests were already verified (resume after crash where Step 0 completed but knowledge update not yet started). Skip this step, proceed to Step 1.</item>
+          <item>Filter skipped_smoke_tests to entries where status is "skipped" (not yet verified). IMPORTANT: if any entry is missing the "status" field entirely (old-format entry from before per-test tracking was introduced), treat it as status="skipped" — default to requiring verification. If no entries match: all tests have been resolved. If phase_5_substep is null: set phase_5_substep="smoke_tests_verified" in state.json, commit if git enabled. Proceed to Step 1.</item>
+        </prerequisites>
 
-          ---
-          After testing all [N] smoke tests, how did it go?"
+        <verification_loop>
+          <description>
+            Present each test ONE AT A TIME to the user. After each response, update state.json immediately
+            so that if the session is interrupted, FD can resume from the first still-"skipped" test.
+          </description>
 
-          Options:
-          1. "All smoke tests passed ✅"
-          2. "Some tests failed — I'll describe below"
-        </action>
-        <decision_tree>
-          <branch condition="User selects 'All smoke tests passed'">
-            <action>Proceed to Step 1 (Update Knowledge Base).</action>
-          </branch>
-          <branch condition="User selects 'Some tests failed'">
-            <action>Wait for user's description of which steps failed and what went wrong. Then:
-              1. Read the user's failure description. Identify which steps failed and what the specific issues are.
-              2. Spawn a Code mode subtask to fix the issues. The Code prompt must include:
-                  - The full plan.md (all sections, all steps — so Code understands the full feature context). For plans with more than 10 steps, pass Sections 1-4 + Section 6 (full context) but only the relevant failing steps from Section 5 (not all steps). Reference the plan.md path for full context if needed.
-                  - The list of failing steps with their Smoke Test Classification and the user's failure description.
-                  - The skipped_smoke_tests entries for the failing steps (so Code knows what was supposed to work).
-                  - The reference.md file path for library/snippet context.
-                  - Suggested areas to investigate based on the failure description.
-                  - Inject: "smoke_test_classification: HUMAN/SHT REQUIRED" as a literal line so Code routes to the correct verification path.
-                  - Inject: "hands_off_mode: false" as a literal line so Code uses normal verification (asks user or spawns SHT for GUI tests).
-                  - If smoke_test_automation is enabled, include the config so Code can spawn SHT for GUI re-verification.
-                  - Include standard subtask_prompt_pattern elements: Instruction 1 (don't read state.json), Instruction 4 (git commit behavior based on git_automation_enabled), and Instruction 5 (git tools based on mcp-config.json).
-                  - Instructions: "Fix the issues causing these smoke test failures. After fixing, re-run your full quality loop (implement → tests → refactor → QA → fix → tests). Then verify ALL failing smoke tests with the user: tell the user exactly what steps to perform to verify each fix works correctly. Present all [N] smoke tests in a single ask_followup_question with a numbered checklist — each item describing the verification action the user must take — asking the user to confirm each step passed. Once the user confirms all fixes work, write a regression test for each fix in tests/unit/ or tests/integration/ (depending on the nature of the fix) so this issue cannot recur. Run these new regression tests as part of your quality loop to confirm they catch the original failure. If smoke_test_automation is enabled, compile a test plan covering all [N] failing smoke tests and spawn SHT with all test steps."
-              3. Wait for Code to complete. Code will: fix the issues, run quality loop, then verify the fixed smoke tests with the user (or SHT).
-              4. When Code returns successfully (user confirmed fixes): proceed to Step 1 (Update Knowledge Base).
-              5. If Code reports it cannot fix the issues: present the situation to the user. Options: "I'll fix manually and come back", "Skip these failing tests and proceed to completion", "Abandon the feature". If user selects "Abandon": update state.json to plan_status="archived", current_phase=5, phase_5_substep="state_finalized" to ensure a clean resume state, then call attempt_completion with abandonment details.
+          <loop_body>
+            <action number="1">
+              <title>Select Next Unverified Test</title>
+              <action>Find the first entry in skipped_smoke_tests where status is "skipped". If none: all done — set phase_5_substep="smoke_tests_verified" in state.json, commit if git enabled, proceed to Step 1.</action>
+              <action>Count how many tests have already been verified (status "verified") and how many total tests exist.</action>
+              <action priority="medium">Validate description: if the selected entry's description is empty, blank, or truncated (ends with "..."), the verbatim description was lost during collection. Fall back: read plan.md Section 5, locate the step by number, extract the full Live Smoke Test text, use it as the description, and update the entry in state.json. If unrecoverable from plan.md: present "[Description unavailable — see plan.md Step [N]]" and note data loss in completion summary.</action>
             </action>
-            <note priority="high">This approach does NOT rewind git history, does NOT unmark completed steps, and does NOT spawn Architect. Code fixes the issues in-place and re-verifies with the user. The feature's git history and state remain intact.</note>
-          </branch>
-        </decision_tree>
+
+            <action number="2">
+              <title>Present Single Test to User</title>
+              <action>Use ask_followup_question with this format:</action>
+              <message_format>
+                "Hands-off mode was active. GUI smoke tests were skipped during development.
+                Please test this now:
+
+                **Step [step]: [name]** (HUMAN/SHT REQUIRED)
+                → [description]
+
+                Progress: [verified_count] of [total_count] verified so far.
+
+                Result?"
+
+                Options:
+                1. "✅ Verified — this test passed"
+                2. "❌ Failed — I'll describe the issue"
+                3. "⏭️ Skip for now — come back to this one"
+              </message_format>
+            </action>
+
+            <action number="3">
+              <title>Handle User Response</title>
+              <decision_tree>
+                <branch condition="User selects 'Verified'">
+                  <action>Update this entry's status to "verified" in state.json.</action>
+                  <action>If git_automation_enabled: commit state.json with message "docs: verify smoke test Step [N] — [name]".</action>
+                  <action>Loop back to action 1 (select next unverified test).</action>
+                </branch>
+
+                <branch condition="User selects 'Failed'">
+                  <action>Update this entry's status to "failed" in state.json.</action>
+                  <action>If git_automation_enabled: commit state.json with message "docs: smoke test Step [N] — [name] failed".</action>
+                  <action>Wait for the user to describe what went wrong.</action>
+                  <action priority="critical">Spawn a DEBUG mode subtask (not Code) to investigate and fix the issue. Debug mode is the correct choice because a failed smoke test requires systematic root cause analysis, not just implementation. The Debug subtask prompt must include:
+                    - The full plan.md Sections 1-4 and 6 (full feature context).
+                    - Section 5: all steps with a one-sentence summary each, with the failing step clearly marked.
+                    - The failing test's full entry from skipped_smoke_tests (step, name, classification, description).
+                    - The user's failure description verbatim.
+                    - The reference.md file path for library/snippet context.
+                    - Inject: "hands_off_mode: false" as a literal line — Debug must interact with the user for verification.
+                    - Inject: "smoke_test_classification: HUMAN/SHT REQUIRED" as a literal line.
+                    - If smoke_test_automation is enabled, include the config.
+                    - Instructions: "Investigate the root cause of this smoke test failure. Use diagnostic-first debugging: add instrumentation, reproduce the issue, analyze output, pinpoint root cause, apply fix, write a regression test that reproduces the original failure, run full quality loop. Then verify the fix with the user: present the exact steps the user must perform to confirm the smoke test now passes. Use ask_followup_question — the user must confirm the fix works. Once confirmed, run final tests and return. Do NOT ask the user any questions during investigation — only at the verification step."
+                    - Include Instruction 1 (don't read state.json), Instruction 4 (git commit behavior based on git_automation_enabled), and Instruction 5 (git tools based on mcp-config.json).
+                  </action>
+                  <action>Wait for Debug subtask to complete.</action>
+                  <decision_tree>
+                    <branch condition="Debug subtask reports success (user confirmed fix)">
+                      <action>Update this entry's status from "failed" to "verified" in state.json.</action>
+                      <action>If git_automation_enabled: commit state.json.</action>
+                      <action>Loop back to action 1 (select next unverified test).</action>
+                    </branch>
+                    <branch condition="Debug subtask reports it cannot fix the issue">
+                      <action>Present the situation to the user via ask_followup_question: "Debug mode was unable to fix the failure for Step [N] ('[name]'). [Include Debug's findings.] How proceed?" Options:
+                        1. "Skip this test — proceed with remaining tests"
+                        2. "I'll fix manually and come back"
+                        3. "Abandon the feature"
+                      </action>
+                      <decision_tree>
+                        <branch condition="User selects 'Skip'">
+                          <action>Leave status as "failed". Note in completion summary: "⚠️ Step [N] ('[name]') smoke test failed and was not resolved." Loop back to action 1.</action>
+                        </branch>
+                        <branch condition="User selects 'I'll fix manually'">
+                          <action priority="critical">Revert this entry's status from "failed" back to "skipped" in state.json — the user is going to fix it themselves and the test must be re-presented on resume. If git_automation_enabled: commit state.json.</action>
+                          <action>Stop. Use attempt_completion with: "Feature paused at smoke test verification — Step [N] ('[name]') needs manual fix. Status reverted to 'skipped' so it will be re-presented on resume. Resume with 'continue' when ready."</action>
+                        </branch>
+                        <branch condition="User selects 'Abandon'">
+                          <action>Update state.json: plan_status="archived", current_phase=5, phase_5_substep="state_finalized". Call attempt_completion with abandonment details.</action>
+                        </branch>
+                      </decision_tree>
+                    </branch>
+                  </decision_tree>
+                </branch>
+
+                <branch condition="User selects 'Skip for now'">
+                  <action>Leave this entry's status as "skipped". Move to the next unverified test.</action>
+                  <action>Loop back to action 1 (select next unverified test). The verification loop naturally cycles back to skipped entries — they still have status "skipped" and will be selected again by action 1 once all other entries are resolved.</action>
+                  <skip_loop_guard priority="high">
+                    Track the total number of times the user has selected "Skip for now" during this verification session (across all tests, not per-test). This is a mental counter — no state.json field needed. After the user has skipped 3 times total: remove the "⏭️ Skip for now" option from the ask_followup_question. Only present "✅ Verified — this test passed" and "❌ Failed — I'll describe the issue". This prevents infinite skip loops while allowing a few legitimate deferrals.
+                  </skip_loop_guard>
+                </branch>
+              </decision_tree>
+            </action>
+          </loop_body>
+        </verification_loop>
+
+        <completion_gate>
+          <description>
+            This gate is reached when all entries in skipped_smoke_tests have status "verified" or "failed"
+            (no entries remain with status "skipped").
+          </description>
+          <action>Count entries with status "failed". If any exist: note them in the completion summary as "⚠️ [N] smoke tests failed and were not resolved: [list step numbers and names]."</action>
+          <action>Set phase_5_substep="smoke_tests_verified" in state.json.</action>
+          <action>If git_automation_enabled: commit state.json with message "docs: smoke test verification complete — [verified_count] verified, [failed_count] unresolved".</action>
+          <action>Proceed to Step 1 (Update Knowledge Base).</action>
+        </completion_gate>
+
         <note>If hands_off_mode is false: this step is skipped — smoke tests were verified inline during execution.</note>
       </step>
 
       <step number="1">
         <title>Update Partitioned Knowledge Base</title>
         <action>Before spawning Architect: read state.json. If phase_5_substep is "knowledge_updated" or "state_finalized": skip this step — knowledge base was already updated (resume after crash). Proceed to Step 2.</action>
-        <action>If phase_5_substep is null: determine the project-type-relevant knowledge files using the project_type from your spawn prompt (same logic as Phase 0 Step 4). Spawn Architect via new_task using the knowledge_base_update_pattern from common patterns. Include the project-type-relevant file list in the prompt so the Architect only updates files that are relevant to this project type (e.g., do NOT spawn an update for frontend-ui.md on a CLI project, do NOT spawn an update for api-routes.md on a pipeline project).</action>
+        <action>If phase_5_substep is null or "smoke_tests_verified": determine the project-type-relevant knowledge files using the project_type from your spawn prompt (same logic as Phase 0 Step 4). Spawn Architect via new_task using the knowledge_base_update_pattern from common patterns. Include the project-type-relevant file list in the prompt so the Architect only updates files that are relevant to this project type (e.g., do NOT spawn an update for frontend-ui.md on a CLI project, do NOT spawn an update for api-routes.md on a pipeline project).</action>
         <action>Wait for completion. After Architect returns: set phase_5_substep="knowledge_updated" in state.json (crash guard: if context is lost after knowledge update, resume skips re-update).</action>
       </step>
 

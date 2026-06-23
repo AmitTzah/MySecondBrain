@@ -93,7 +93,8 @@
     <description>
       Canonical prompt templates for Architect and feature-developer subtasks are defined in the common patterns rules. This includes:
       - technology_sourcing_prompt: Architect prompt for build-vs-reference-vs-library-vs-platform-vs-SaaS evaluation
-      - planning_directory_prompts: Architect prompt for creating planning/ directory files (architecture, tech stack, abstractions, data model, integration points, platform notes, summary)
+      - planning_directory_prompts: Architect prompt for creating planning/ directory files (architecture, tech stack, abstractions, data model, integration points, platform notes, E2E authoring guide, summary)
+      - e2e_authoring_guide_prompt: Architect prompt for generating project-type-adaptive E2E conventions guide (framework, test infrastructure, selector strategies, checklist)
       - wave_map_prompt: Architect prompt for lightweight wave map (feature names, 1-line descriptions, dependencies — no acceptance criteria)
       - assembly_verification_prompt: Architect prompt for numbering and dependency check
       - execution_plan_critic_prompt: Architect-as-Critic prompt for planning/ + roadmap review
@@ -210,7 +211,7 @@
     <pitfall>
       <description>Writing planning/ files or the wave map yourself instead of delegating to Architect</description>
       <why_problematic>The Architect is the planning specialist with research capabilities. Writing plans yourself bypasses their expertise and the Tiered Documentation Retrieval Protocol.</why_problematic>
-      <correct_approach>During initial creation in Phase 2: always spawn Architect subtasks for each stage — technology_sourcing_prompt for sourcing decisions, planning_directory_prompts for planning/ directory creation, wave_map_prompt for the wave map, assembly_verification_prompt for numbering and dependency check, and execution_plan_critic_prompt for Critic review. Exception: during Phase 4 drift resolution, PD may directly edit planning/ .md files (abstractions.md, data-model.md, tech-stack.md, integration-points.md, platform-notes.md, planning-summary.md) to reconcile minor discrepancies with as-built reality — this is drift correction, not net-new planning.</correct_approach>
+      <correct_approach>During initial creation in Phase 2: always spawn Architect subtasks for each stage — technology_sourcing_prompt for sourcing decisions, planning_directory_prompts for planning/ directory creation (including e2e_authoring_guide_prompt for the E2E authoring guide in the last batch), wave_map_prompt for the wave map, assembly_verification_prompt for numbering and dependency check, and execution_plan_critic_prompt for Critic review. Exception: during Phase 4 drift resolution, PD may directly edit planning/ .md files (abstractions.md, data-model.md, tech-stack.md, integration-points.md, platform-notes.md, planning-summary.md, e2e-authoring-guide.md) to reconcile minor discrepancies with as-built reality — this is drift correction, not net-new planning.</correct_approach>
     </pitfall>
 
     <pitfall>

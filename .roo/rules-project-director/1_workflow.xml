@@ -661,21 +661,23 @@
           ├── data-model.md              (entities, relationships — derived from vision/data/)
           ├── integration-points.md      (every external integration, abstraction, fallback)
           ├── platform-notes.md          (WPF patterns, desktop constraints, etc.)
+          ├── e2e-authoring-guide.md     (project-type-adaptive E2E conventions, framework, test infrastructure, selector strategies, checklist)
           └── planning-summary.md        (index tying it all together)
 
           The PD spawns the Architect 2-3 times, creating these files in batches.
+          The E2E authoring guide MUST be generated in the last batch (after tech-stack.md and platform-notes.md exist) so it can reference concrete framework and platform decisions.
         </description>
 
         <action priority="critical">Set phase_2_substep="architecture" in state.json (crash guard).</action>
-        <action priority="critical">Do NOT write the planning/ files yourself. Spawn Architect via new_task using the planning_directory_prompts from common patterns.</action>
+        <action priority="critical">Do NOT write the planning/ files yourself. For batches 1 and 2: spawn Architect via new_task using the planning_directory_prompts from common patterns. For the LAST batch (when e2e-authoring-guide.md is to be generated): spawn Architect via new_task using the e2e_authoring_guide_prompt from common patterns — this prompt handles generating the E2E authoring guide. If there are also remaining planning/ files in the last batch (e.g., planning-summary.md), spawn them in a separate Architect using planning_directory_prompts, or combine into the same spawn with explicit instruction to also create any remaining planning/ files alongside the guide.</action>
         <action>Include: paths to vision docs, path to tech-sourcing.md, platform info, any user constraints.</action>
         <action>Ensure agent-workspace/project-director/planning/ directory exists.</action>
 
         <post_architect_action priority="critical">
           When Architect completes a batch:
           1. Read the files created in agent-workspace/project-director/planning/.
-          2. VALIDATE: Check that the files include: (a) tech stack with justifications referencing vision requirements, (b) core abstractions for every integration point identified in tech-sourcing.md, (c) high-level architecture (component diagram or data flow description), (d) data model derived from vision/data/, (e) platform-specific notes.
-          3. ALWAYS present for human discussion — this is a joint design decision, not a rubber stamp. Use ask_followup_question: "Architecture & Abstractions drafted. Files created: [list]. Tech stack: [summary]. Core abstractions: [list]. This is the foundation everything builds on — let's discuss before we proceed. What would you like to adjust or explore?" Options:
+          2. VALIDATE: Check that the files include: (a) tech stack with justifications referencing vision requirements, (b) core abstractions for every integration point identified in tech-sourcing.md, (c) high-level architecture (component diagram or data flow description), (d) data model derived from vision/data/, (e) platform-specific notes, (f) if e2e-authoring-guide.md was generated in this batch: verify it covers framework selection rationale, test infrastructure approach (test DB, fixtures, countdown for desktop), selector/assertion strategies appropriate to the project type, helper conventions, and a quick-reference checklist. The guide must be project-type-adaptive — desktop GUI gets UIA-based selectors and hands-off countdown; web gets Playwright/Cypress conventions; CLI gets exit-code and stdout assertion patterns; API gets HTTP client and auth token patterns; games get engine-level state assertion and frame-based timing; pipelines get stage isolation and data contract verification.
+          3. ALWAYS present for human discussion — this is a joint design decision, not a rubber stamp. If the batch includes the E2E authoring guide, present it with special emphasis: the Architect must explain the E2E approach in its completion summary, and the PD must highlight the user-visible behaviors (countdown window, mouse/keyboard takeover for desktop, test database isolation) so the user knows exactly what to expect before any test takes control of their machine. Use ask_followup_question: "Architecture & Abstractions drafted. Files created: [list]. Tech stack: [summary]. Core abstractions: [list]. [If E2E guide generated: 'E2E Authoring Guide: [framework], [test infrastructure summary], [key user-visible behaviors — countdown, mouse takeover, etc.].'] This is the foundation everything builds on — let's discuss before we proceed. What would you like to adjust or explore?" Options:
              "Approved — proceed to the next batch", "Approved — architecture is complete (all planning/ files done)", "I need to read the planning/ files first", "I have feedback / want to discuss specific decisions", "I'll make manual edits to the planning/ files."
           4. If more planning/ files remain to be created: loop back to spawn Architect for the next batch. Update phase_2_substep stays "architecture".
           5. If all planning/ files are complete and approved: set phase_2_substep="wave_map" in state.json. Proceed to Step 4.
@@ -1273,7 +1275,7 @@
           </branch>
 
           <branch condition="MINOR DRIFT — small discrepancies that don't affect other features">
-            <action>PD edits the relevant vision .md file(s) and planning/ .md file(s) (abstractions.md, data-model.md, tech-stack.md, integration-points.md, platform-notes.md, planning-summary.md) directly to reflect reality. If any new screens, data entities, or feature-artifact mappings were added, update vision-summary.md's Feature Index table. If the drift involved a technology change, also update the relevant component entry in tech-sourcing.md. Note in current-state.md under "Vision Updates": what changed and why.</action>
+            <action>PD edits the relevant vision .md file(s) and planning/ .md file(s) (abstractions.md, data-model.md, tech-stack.md, integration-points.md, platform-notes.md, planning-summary.md, e2e-authoring-guide.md) directly to reflect reality. If any new screens, data entities, or feature-artifact mappings were added, update vision-summary.md's Feature Index table. If the drift involved a technology change, also update the relevant component entry in tech-sourcing.md. If new E2E patterns emerged (selector conventions, helper methods, infrastructure quirks), update e2e-authoring-guide.md. Note in current-state.md under "Vision Updates": what changed and why.</action>
             <action>If the drift changes what should be tested end-to-end, update the feature's roadmap E2E spec directly in roadmap.md.</action>
             <action>Set phase_4_substep="scope_evaluated" in state.json. Proceed to Step 4.</action>
           </branch>
@@ -1288,7 +1290,7 @@
             <decision_tree>
               <branch condition="Re-plan">
                 <action>Set phase_4_substep="replan_in_progress" in state.json.</action>
-                <action>PD edits the relevant vision .md file(s) and planning/ .md file(s) (abstractions.md, data-model.md, tech-stack.md, integration-points.md, platform-notes.md, planning-summary.md) directly to reflect the detected drift. The vision docs must be current BEFORE spawning the Architect re-plan.</action>
+                <action>PD edits the relevant vision .md file(s) and planning/ .md file(s) (abstractions.md, data-model.md, tech-stack.md, integration-points.md, platform-notes.md, planning-summary.md, e2e-authoring-guide.md) directly to reflect the detected drift. The vision docs must be current BEFORE spawning the Architect re-plan.</action>
                 <action>Spawn Architect with: updated vision docs, list of completed features (1 through current_feature_index), and instruction to revise roadmap for remaining features only — including their E2E specs.</action>
                 <action>After Architect returns: validate total_features >= current_feature_index. Present revised roadmap for user approval (same gate as Phase 2 Step 4). Update total_features and increment total_replans after approval.</action>
                 <action>After re-plan approved: set phase_4_substep="scope_evaluated". Proceed to Step 4.</action>
@@ -1337,7 +1339,7 @@
         <sub_step number="3">
           <title>Spawn the E2E Generation Subtask</title>
           <action>Spawn Code mode subtask via new_task using the e2e_test_generation_prompt from common patterns.</action>
-          <action>Include: tech stack context from planning/, feature name (sanitized), and the EXACT E2E spec from roadmap.md (NOT from FD's archived plan).</action>
+          <action>Include: tech stack context from planning/, the E2E authoring guide at planning/e2e-authoring-guide.md (MANDATORY — the subtask MUST read this file before writing any test code; it defines the project's E2E conventions, framework, selector strategies, helper patterns, and checklist), feature name (sanitized), and the EXACT E2E spec from roadmap.md (NOT from FD's archived plan).</action>
           <action>Wait for completion.</action>
         </sub_step>
 
@@ -1411,7 +1413,7 @@
           - Pipeline: architecture.md, database.md, data-contracts.md, pipeline-topology.md
           If vision/vision-config.json does not exist: default to GUI (4 files) — backward compatible.</action>
         <action>Check if the project-type-relevant knowledge files exist in agent-workspace/knowledge/. If any project-type-relevant files are missing, see knowledge_files_do_not_exist in error_handling. If present, read all project-type-relevant files.</action>
-        <action>Read ALL planning/ files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md) — these represent the ORIGINAL DESIGN INTENT. You will cross-reference them against knowledge/ (as-built reality) to detect architectural drift.</action>
+        <action>Read ALL planning/ files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md, e2e-authoring-guide.md) — these represent the ORIGINAL DESIGN INTENT. You will cross-reference them against knowledge/ (as-built reality) to detect architectural drift.</action>
         <audit_checklist>
           <item>Spaghetti Code: circular dependencies or tightly coupled components?</item>
           <item>Duplicated Logic: same patterns described in multiple places without shared abstraction?</item>
@@ -1512,7 +1514,7 @@
         </description>
 
         <action>Read all vision docs in agent-workspace/project-director/vision/.</action>
-        <action>Read ALL planning/ files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md) — these represent the design intent. Compare them against the audit findings (Step 6) to detect whether as-built reality diverged from the planned architecture.</action>
+        <action>Read ALL planning/ files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md, e2e-authoring-guide.md) — these represent the design intent. Compare them against the audit findings (Step 6) to detect whether as-built reality diverged from the planned architecture.</action>
         <action>Compare the audit findings (Step 6), the drift evaluation (Step 3), and the FD's completion summary against the vision docs. Is the vision still an accurate description of the intended final app?</action>
 
         <re_evaluation_decision_tree>
@@ -1521,7 +1523,7 @@
           </branch>
 
           <branch condition="MINOR DRIFT — small discrepancies that don't affect other features">
-            <action>PD edits the relevant vision .md file(s) and planning/ .md file(s) (abstractions.md, data-model.md, tech-stack.md, integration-points.md, platform-notes.md, planning-summary.md) directly to reflect reality. If any new screens, data entities, or feature-artifact mappings were added, update vision-summary.md's Feature Index table. If the drift involved a technology change, also update the relevant component entry in tech-sourcing.md. Note in current-state.md under "Vision Updates": what changed and why.</action>
+            <action>PD edits the relevant vision .md file(s) and planning/ .md file(s) (abstractions.md, data-model.md, tech-stack.md, integration-points.md, platform-notes.md, planning-summary.md, e2e-authoring-guide.md) directly to reflect reality. If any new screens, data entities, or feature-artifact mappings were added, update vision-summary.md's Feature Index table. If the drift involved a technology change, also update the relevant component entry in tech-sourcing.md. If new E2E patterns emerged, update e2e-authoring-guide.md. Note in current-state.md under "Vision Updates": what changed and why.</action>
           </branch>
 
           <branch condition="MAJOR DRIFT — changes that affect remaining roadmap features (not already handled in Step 3)">

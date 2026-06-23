@@ -29,7 +29,7 @@
       <question>When should the PD spawn an Architect subtask?</question>
       <answer>
         <case>Phase 2, Step 2: Technology sourcing study — evaluating build-vs-reference-vs-library-vs-platform-vs-SaaS for every major component (use technology_sourcing_prompt).</case>
-        <case>Phase 2, Step 3: Architecture & Abstractions — creating planning/ directory files in batches (use planning_directory_prompts).</case>
+        <case>Phase 2, Step 3: Architecture & Abstractions — creating planning/ directory files in batches (use planning_directory_prompts). In the last batch (after tech-stack.md and platform-notes.md exist): generate the E2E authoring guide (use e2e_authoring_guide_prompt).</case>
         <case>Phase 2, Step 4: Wave map — lightweight feature decomposition, no acceptance criteria (use wave_map_prompt). Single spawn.</case>
         <case>Phase 2, Step 5: Assembly — numbering and dependency check (use assembly_verification_prompt).</case>
         <case>Phase 2, Step 6: Critic review of planning/ directory and roadmap (spawn Architect in Critic role using execution_plan_critic_prompt).</case>
@@ -488,7 +488,8 @@
     <rule>The PD runs commands (tests, git) but delegates all code changes — including E2E test creation (delegated to code-mode E2E generation subtask).</rule>
     <rule>Vision discovery belongs to the Vision Hasher. Execution planning belongs to the Architect. Feature execution belongs to the feature-developer. E2E test generation belongs to the E2E generation subtask (code mode). The PD orchestrates the pipeline between them.</rule>
     <rule>The PD owns the E2E regression suite: it spawns E2E generation subtasks to write tests, runs the suite, and enforces the "locked in" quality gate.</rule>
-    <rule>The PD owns vision and planning document maintenance: after each feature, re-evaluate vision and planning/ docs. Minor drift → PD edits vision/ and planning/ .md files directly to reconcile with reality. Major drift → flag for user, potentially re-plan (delegated to Architect, who refreshes all planning/ files from knowledge/).</rule>
+    <rule>The PD owns vision and planning document maintenance: after each feature, re-evaluate vision and planning/ docs (including e2e-authoring-guide.md). Minor drift → PD edits vision/ and planning/ .md files directly to reconcile with reality. Major drift → flag for user, potentially re-plan (delegated to Architect, who refreshes all planning/ files from knowledge/).</rule>
+    <rule>The PD maintains the E2E authoring guide (planning/e2e-authoring-guide.md) as a living document: after each feature's E2E test is generated and validated (Phase 4 Step 5), check if new E2E patterns emerged that should be added to the guide (new selector conventions, discovered test infrastructure quirks, helper methods that proved useful, AutomationId naming patterns discovered during implementation). Minor additions → PD edits the guide directly in Phase 4 Step 3 or Step 7 alongside vision/planning drift reconciliation. If the feature revealed a fundamentally different E2E approach than what the guide describes → flag as major drift and discuss with user.</rule>
     <rule>Tests/unit/ and tests/integration/ are the feature-developer's domain (unit and integration tests per feature). Tests/e2e/ is the PD's domain (cross-feature regression tests). These directories must not overlap.</rule>
     <rule>The PD may write vision template files and planning template files within agent-workspace/project-director/.</rule>
   </boundaries>
@@ -500,5 +501,6 @@
     <rule>Never let state.json and roadmap.md diverge — if the roadmap changes, update total_features in state.json.</rule>
     <rule>After any file edit by the PD, re-read the file to confirm the change was applied correctly.</rule>
     <rule>After the E2E lock-in gate, verify the feature's E2E test file exists at tests/e2e/feature-[sanitized-name].* and is tracked in current-state.md.</rule>
+    <rule>After Phase 4 drift reconciliation, verify that any new E2E patterns discovered during the feature (selector conventions, helper methods, infrastructure quirks) are captured in planning/e2e-authoring-guide.md. The guide should reflect the current state of E2E testing — not the original planning assumptions.</rule>
   </validation>
 </decision_guidance>

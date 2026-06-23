@@ -383,6 +383,161 @@
     </instructions>
   </planning_directory_prompts>
 
+  <e2e_authoring_guide_prompt>
+    <name>Architect Prompt for E2E Authoring Guide (Phase 2 Step 3, Last Batch)</name>
+    <description>
+      After tech-stack.md and platform-notes.md exist, the PD spawns the Architect to generate
+      planning/e2e-authoring-guide.md — a project-type-adaptive guide that encodes the conventions,
+      patterns, and principles for writing reliable, fast, and maintainable end-to-end tests.
+      This guide is generated ONCE during planning and updated during Phase 4 drift reconciliation
+      as new patterns emerge. The Architect MUST explain the approach in its completion summary
+      so the PD can present it for human discussion.
+    </description>
+    <instructions>
+      <item number="1">
+        <title>Read the Planning/ Directory and Vision Config</title>
+        Read all existing planning/ files — especially tech-stack.md, platform-notes.md, architecture.md, and abstractions.md. Read vision/vision-config.json to determine project_type. Read the vision docs to understand the app's scope and interaction patterns.
+      </item>
+      <item number="2">
+        <title>Determine E2E Framework</title>
+        Based on the project type and tech stack, select the appropriate E2E testing framework:
+        - GUI/web (React, Next.js, Vue, etc.): Playwright or Cypress
+        - GUI/desktop (.NET WPF, WinUI, WinForms, Avalonia): WinAppDriver with FlaUI, or Appium with WinAppDriver
+        - GUI/desktop (Electron, Tauri): Playwright (Electron support) or Spectron
+        - GUI/mobile (React Native, Flutter): Appium, Maestro, or Detox
+        - CLI: custom test harness (bash scripts, expect, or language-native process execution)
+        - API: Supertest, REST Client, or HttpClient-based test projects
+        - Library/SDK: integration test projects that exercise the public API
+        - Game (Unity): Unity Test Framework with PlayMode tests
+        - Game (Godot): GUT (Godot Unit Testing) with scene-based tests
+        - Game (Unreal): Unreal Automation System
+        - Game (custom engine): custom test harness with engine-level state queries
+        - Pipeline: stage-isolated test harnesses with data contract verification
+        Document the rationale for the framework choice (why it fits this specific project).
+      </item>
+      <item number="3">
+        <title>Design Test Infrastructure</title>
+        Cover these infrastructure concerns, adapted to the project type:
+        <infrastructure_items>
+          <item name="headless_execution" priority="critical">
+            PREFER HEADLESS EXECUTION whenever the project type and framework support it. Headless mode eliminates the "loss of control" problem entirely — no visible browser window, no mouse/keyboard takeover, no countdown needed.
+            Headless capability by project type:
+            - Web (Playwright): YES — `headless: true` in config. Chromium, Firefox, WebKit all support headless. This is the DEFAULT and STRONGLY PREFERRED mode. Only use headed mode for debugging specific visual issues.
+            - Web (Cypress): YES — `cypress run` is headless by default. `cypress open` is interactive (headed) for development only.
+            - CLI: N/A — already headless by nature (no GUI).
+            - API: N/A — already headless by nature (HTTP requests).
+            - Library: N/A — already headless by nature (code execution).
+            - Pipeline: N/A — already headless by nature (data processing).
+            - Desktop GUI (.NET WPF/WinUI/WinForms): NO — FlaUI and WinAppDriver require a real desktop session. Mouse/keyboard automation needs visible windows. Headless is not possible. The hands-off countdown IS required.
+            - Desktop GUI (Electron): PARTIAL — Playwright can drive Electron in headless mode, but native OS dialogs (file pickers, notifications) still require a display.
+            - Mobile (Appium): PARTIAL — Android emulators can run headless; iOS simulators require a display.
+            - Game (Unity): PARTIAL — `-batchmode -nographics` for server builds; PlayMode tests typically need a display for rendering.
+            - Game (Godot): PARTIAL — `--headless` for server builds; scene tests may need rendering.
+            Document: for this specific project, is headless possible? If yes: make it the default. If partial: document what works headless and what doesn't. If no: explain why and note that the hands-off countdown is mandatory.
+          </item>
+          <item name="fixture_pattern">How tests share app instances: collection fixtures (one launch for all tests) vs class fixtures (launch per class). Recommend the most efficient approach for the project type. For desktop apps: one launch for all tests via shared fixture. For web: Playwright's built-in browser context isolation.</item>
+          <item name="test_database">If the app uses a database: strategy for test isolation — separate test DB, environment variable overrides, transaction rollback, or seeded test data. Document how the app selects the test DB path and how the fixture manages it.</item>
+          <item name="hands_off_countdown" condition="headless execution is NOT available for this project type">
+            REQUIRED when headless is not possible: the E2E fixture MUST display a countdown window before launching the app, giving the human time to release mouse and keyboard. This applies to desktop GUI apps (.NET WPF/WinUI), headed web tests (debugging only), and games without headless mode. The automation drives real mouse/keyboard — human inputs compete with automation and cause flaky tests. Document:
+            - Countdown behavior: 3 → 2 → 1 → "GO!" flash
+            - Warning text: "⚠️ HANDS OFF — Release mouse & keyboard"
+            - CI detection: skip countdown when CI environment variable is set (CI has no human to interfere)
+            - Implementation: separate STA thread before app launch (for desktop)
+            This section tells the user exactly what to expect when E2E tests run (sudden mouse/keyboard takeover, countdown window appearance). If headless mode IS available, state explicitly: "Headless mode is used — no countdown needed. Tests run invisibly. You can keep using your machine normally."
+          </item>
+          <item name="cleanup_strategy">Self-cleaning tests: every test that creates data must delete it within the same test body. No class-level Dispose() with multi-step cleanup. No static cleanup counters. Rationale: cascading failures from stale data.</item>
+          <item name="no_dead_time">Maximum timeouts: 3 seconds for UI element discovery. No Thread.Sleep() over 500ms without justification. Prefer polling with short intervals over long sleeps.</item>
+        </infrastructure_items>
+      </item>
+      <item number="4">
+        <title>Define Selector and Assertion Strategies</title>
+        Adapt to project type:
+        <selector_strategies>
+          <strategy type="gui_web">
+            Priority: data-testid → accessibility role/label → semantic HTML → CSS class (last resort).
+            Document a naming convention for test IDs if the project doesn't have one.
+          </strategy>
+          <strategy type="gui_desktop">
+            Priority: AutomationId (x:Name in XAML) → Name (exact) → Name (partial) → ControlType scanning.
+            If the project uses XAML, document AutomationId naming conventions:
+            - Navigation buttons: Nav{ScreenName}
+            - Action buttons: {Action}{Entity}Button
+            - Input fields: {Entity}{Field}Input
+            - ComboBoxes: {Entity}{Property}Combo
+            - Views: {ScreenName}View
+          </strategy>
+          <strategy type="cli">
+            Assertions on: exit codes (0 = success, non-zero with specific codes for error types), stdout patterns (regex or exact match), stderr content, file output existence/content.
+            Document the project's exit code conventions.
+          </strategy>
+          <strategy type="api">
+            Assertions on: HTTP status codes, response body structure (JSON schema or key fields), response headers, timing/SLA.
+            Document auth token management (how the test obtains and refreshes tokens).
+          </strategy>
+          <strategy type="game">
+            Priority: game object properties (health, position, state) → scene state (loaded, active) → UI element queries (engine-specific) → frame captures (visual verification, last resort).
+            Engine-specific: Unity (GameObject.Find + GetComponent), Godot (get_node + property access), Unreal (Automation System commandlets).
+            Document input simulation patterns (keyboard, mouse, gamepad) and frame-based waiting (WaitForFrames vs real-time delays).
+          </strategy>
+          <strategy type="library">
+            Assertions on: return values, thrown exceptions, side effects (files created, network calls made), performance benchmarks.
+            Document how to exercise the public API surface from test code.
+          </strategy>
+          <strategy type="pipeline">
+            Assertions on: stage inputs/outputs, data schemas at each stage boundary, error handling (malformed input → expected error), throughput/latency.
+            Document stage isolation: how to test a single stage without running the full pipeline.
+          </strategy>
+        </selector_strategies>
+      </item>
+      <item number="5">
+        <title>Define Helper Conventions</title>
+        Document the base class and shared helper pattern:
+        - All shared helpers go in an abstract test base class
+        - Per-class helpers are private methods in the test class
+        - No duplicated finder/wait/navigate helpers across classes
+        - Naming conventions for helper methods
+      </item>
+      <item number="6">
+        <title>Document Test Organization</title>
+        Describe how test files should be organized: naming convention (feature-[sanitized-name].ext), one file per feature, test classes grouped by domain area, test ordering considerations (ordering-dependent tests need explicit guards).
+      </item>
+      <item number="7">
+        <title>Include Quick-Reference Checklist</title>
+        Add a checklist section at the end of the guide. When writing a new E2E test, verify:
+        - Framework-specific setup requirements
+        - Fixture pattern correct (collection vs class)
+        - Test database isolated (if applicable)
+        - All timeouts ≤ 3 seconds
+        - No Thread.Sleep() > 500ms without comment
+        - Self-cleaning: create → verify → delete → verify deleted
+        - Selector priority followed
+        - Shared helpers in base class, per-class helpers private
+        - MessageBox/dialog handling documented (for GUI)
+        - Run command documented
+      </item>
+      <item number="8">
+        <title>Explain the Approach — Converse with the User</title>
+        <priority>critical</priority>
+        In your completion summary, explain the E2E approach conversationally so the PD can present it to the user. Cover:
+        - Framework choice and why
+        - Headless capability: can tests run invisibly in the background? If yes (web, CLI, API): "Tests run headless — you can keep using your machine normally. No windows will pop up." If partial: explain what runs headless and what doesn't. If no (desktop GUI): explain why and note the countdown is mandatory.
+        - What the user will see when E2E tests run: if headless → "terminal output only, no visible windows"; if headed → countdown, app launching, mouse/keyboard automation for desktop, browser opening for web
+        - How test data is isolated from their real data
+        - That tests clean up after themselves
+        - Any prerequisites the user needs to install (WinAppDriver, Playwright browsers, Appium server)
+        This is NOT a rubber-stamp approval — the user needs to understand and agree to the E2E approach before any test takes control of their machine.
+      </item>
+      <item number="9">
+        <title>Write the File</title>
+        Write the complete guide to agent-workspace/project-director/planning/e2e-authoring-guide.md. Use the structure: 1. Headless Execution (preferred when available — explains whether tests run invisibly or take control), 2. Fixture Pattern, 3. Test Database/Infrastructure, 4. Hands-Off Countdown (only when headless is not available), 5. Self-Cleaning Tests, 6. No Dead Time, 7. Constant Visual Movement (GUI) / Active Interaction (other types), 8. Helper Conventions, 9. Selector Strategy, 10. Test Organization, 11. Running the E2E Suite, 12. Quick Reference Checklist. Adapt section titles and content to the project type — a CLI guide won't have "Selector Strategy" (it has "Output Assertion Patterns"), a game won't have "UIA Selectors" (it has "Game State Queries"). The headless section is always first — it sets expectations for whether the user loses control of their machine.
+      </item>
+      <item number="10">
+        <title>Completion</title>
+        Use attempt_completion immediately. Do not ask for approval — the PD handles the review gate with the user. Your completion summary MUST include a conversational explanation of the E2E approach (see item 8).
+      </item>
+    </instructions>
+  </e2e_authoring_guide_prompt>
+
   <wave_map_prompt>
     <name>Architect Prompt for Wave Map (Phase 2 Step 4)</name>
     <description>
@@ -641,7 +796,7 @@
 
       CRITICAL — Refresh ALL planning/ files AND tech-sourcing.md to reconcile with as-built reality:
       1. Read ALL knowledge/ files (architecture.md, database.md, api-routes.md, frontend-ui.md) — these represent what WAS ACTUALLY BUILT.
-      2. Read ALL planning/ files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md) — these represent the ORIGINAL DESIGN INTENT.
+      2. Read ALL planning/ files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, e2e-authoring-guide.md, planning-summary.md) — these represent the ORIGINAL DESIGN INTENT.
       3. Read agent-workspace/project-director/tech-sourcing.md — the original technology sourcing decisions.
       4. For each planning/ file, reconcile: where knowledge/ (as-built) diverges from planning/ (design intent), knowledge/ takes precedence. Update the planning/ file to reflect what was actually built, while preserving any forward-looking design intent for remaining features.
       5. Check tech-sourcing.md: do the technology sourcing decisions still hold for the remaining features? If new integration points from the re-plan require technologies not covered in tech-sourcing.md, add sourcing recommendations for them. If a previously chosen technology was replaced in practice (visible in knowledge/), update the sourcing decision to match reality.
@@ -679,7 +834,7 @@ Perform a strict architectural review across five dimensions:
 
 4. FEATURE ORDERING: Do dependencies flow forward (later features depend on earlier features, never the reverse)? Can features actually be built in the specified order? Are there features that depend on features in a later wave?
 
-5. PLANNING/ COMPLETENESS: Are all 7 planning files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md) present and internally consistent? Do the abstraction interfaces in abstractions.md match the integration points in integration-points.md? Does the tech stack in tech-stack.md match the architecture described in architecture.md?
+5. PLANNING/ COMPLETENESS: Are all 8 planning files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, e2e-authoring-guide.md, planning-summary.md) present and internally consistent? Do the abstraction interfaces in abstractions.md match the integration points in integration-points.md? Does the tech stack in tech-stack.md match the architecture described in architecture.md? Does the E2E authoring guide's framework choice align with the tech stack?
 
 Edit the files to fix any flaws you find. For vision gaps (orphaned requirements or unmoored features), flag them in your completion summary — do NOT edit vision docs.
 
@@ -721,9 +876,13 @@ CRITICAL: If you found ZERO flaws and made ZERO changes, use attempt_completion 
       </section>
 
       <section name="instructions">
+        <item number="0" priority="critical">
+          <title>Read the E2E Authoring Guide (MANDATORY — Before Any Code)</title>
+          Read agent-workspace/project-director/planning/e2e-authoring-guide.md BEFORE writing any test code. This guide encodes the project's E2E conventions: fixture patterns, test infrastructure (test DB, countdown window), selector strategies, helper conventions, timeout rules, self-cleaning test patterns, and the quick-reference checklist. Every E2E test you write MUST follow these conventions. If the guide specifies a framework: use that framework — do not select a different one. If the guide specifies selector conventions (e.g., AutomationId naming for XAML): follow them exactly. If the guide specifies a hands-off countdown for desktop projects: note it in your Setup Notes but do NOT implement it — the fixture handles it. If the guide does NOT exist (planning/ directory missing or guide not yet generated): note this as a warning in your completion summary but proceed — the PD will reconcile later.
+        </item>
         <item number="1">
           <title>Analyze the Project Type and Select E2E Framework</title>
-          Based on the tech stack, determine the project type and choose the appropriate E2E testing framework:
+          Check the E2E authoring guide first — if it already specifies a framework, use that framework. Otherwise, based on the tech stack, determine the project type and choose the appropriate E2E testing framework:
           - Web applications (React, Next.js, Vue, Svelte, Angular, plain HTML/JS): Evaluate Playwright, Cypress, or other browser-testing frameworks and choose the one best suited to the project's existing tooling and conventions
           - WPF/WinUI/.NET desktop applications: Use WinAppDriver with FlaUI, or a custom test harness with UI Automation
           - CLI/terminal applications: Use shell scripts, expect, or a custom test harness

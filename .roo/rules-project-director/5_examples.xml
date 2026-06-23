@@ -85,12 +85,13 @@
 
           PD presents for human discussion. User reviews the abstractions and architecture. User approves. PD spawns Architect for batch 2.
 
-          Batch 2: data-model.md, integration-points.md, platform-notes.md, planning-summary.md. Architect creates the remaining files:
+          Batch 2: data-model.md, integration-points.md, platform-notes.md, e2e-authoring-guide.md, planning-summary.md. Architect creates the remaining files. The E2E authoring guide is generated last in this batch — after tech-stack.md and platform-notes.md — so it can reference concrete framework and platform decisions.
 
           - data-model.md: Conversation, Message, Artifact, PromptTemplate entities with relationships and attributes derived from vision/data/.
           - integration-points.md: OpenAI API, Auth0, local file system — all wrapped by abstractions from abstractions.md with fallback strategies.
           - platform-notes.md: WPF patterns (XAML bindings, DataTemplate, UserControl composition), ClickOnce deployment, auto-update via Squirrel.Windows.
-          - planning-summary.md: Index tying all 7 files together with quick-reference tables.
+          - e2e-authoring-guide.md: WPF-specific E2E conventions — FlaUI with WinAppDriver, CollectionFixture pattern (one launch for all tests), SQLite test database via MSB_DB_PATH env var, hands-off countdown window (3-second with CI skip), AutomationId selector priority (Nav{Screen}, {Action}{Entity}Button, {Entity}{Field}Input), self-cleaning test pattern, MessageBox handling, quick-reference checklist.
+          - planning-summary.md: Index tying all 8 files together with quick-reference tables.
 
           PD presents for human discussion. User approves all files. PD sets phase_2_substep="wave_map".
         </approach>
