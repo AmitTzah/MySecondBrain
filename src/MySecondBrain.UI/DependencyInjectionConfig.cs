@@ -38,10 +38,17 @@ public static class DependencyInjectionConfig
     public static void ConfigureServices(IServiceCollection services)
     {
         // === Database ===
-        var dbPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "MySecondBrain", "msb.db");
-        Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+        var dbPath = Environment.GetEnvironmentVariable("MSB_DB_PATH")
+            ?? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "MySecondBrain",
+                "msb.db");
+
+        var dbDir = Path.GetDirectoryName(dbPath);
+        if (dbDir is not null)
+        {
+            Directory.CreateDirectory(dbDir);
+        }
 
         services.AddSingleton(_ =>
         {

@@ -12,10 +12,11 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
     public AppDbContext CreateDbContext(string[] args)
     {
-        var dbPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "MySecondBrain",
-            "msb.db");
+        var dbPath = Environment.GetEnvironmentVariable("MSB_DB_PATH")
+            ?? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "MySecondBrain",
+                "msb.db");
 
         var dbDir = Path.GetDirectoryName(dbPath);
         if (dbDir is not null)
