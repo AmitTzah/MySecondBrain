@@ -8,58 +8,13 @@ using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 
+using static MySecondBrain.UI.Services.Win32HotkeyInterop;
+using static MySecondBrain.UI.Services.KnownSystemHotkeys;
+
 namespace MySecondBrain.UI.Services;
 
 public class GlobalHotkeyService : IGlobalHotkeyService
 {
-    // === P/Invoke Declarations ===
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
-
-    [DllImport("user32.dll")]
-    private static extern short GetKeyState(int nVirtKey);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-    private static extern IntPtr GetModuleHandle(string lpModuleName);
-
-    // === Constants ===
-
-    private const uint MOD_ALT = 0x0001;
-    private const uint MOD_CONTROL = 0x0002;
-    private const uint MOD_SHIFT = 0x0004;
-    private const uint MOD_WIN = 0x0008;
-    private const uint MOD_NOREPEAT = 0x4000;
-
-    private const int WM_HOTKEY = 0x0312;
-    private const int WH_KEYBOARD_LL = 13;
-    private const int WM_KEYDOWN = 0x0100;
-    private const int WM_SYSKEYDOWN = 0x0104;
-
-    // Virtual key codes for low-level hook modifier state checking
-    private const int VK_MENU = 0x12;    // Alt
-    private const int VK_CONTROL = 0x11; // Ctrl
-    private const int VK_SHIFT = 0x10;   // Shift
-    private const int VK_LWIN = 0x5B;    // Left Windows
-    private const int VK_RWIN = 0x5C;    // Right Windows
-
-    // === Delegate ===
-
-    private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
-
     // === Fields ===
 
     private readonly ILogger<GlobalHotkeyService> _logger;
@@ -82,34 +37,6 @@ public class GlobalHotkeyService : IGlobalHotkeyService
     private readonly Dictionary<string, HotkeyAssignment> _fallbackHotkeys = new(StringComparer.OrdinalIgnoreCase);
 
     private bool _disposed;
-
-    // === Known System Hotkeys ===
-
-    private static readonly (ModifierKeys Modifiers, VirtualKey Key)[] KnownSystemHotkeys =
-    [
-        // Win key shortcuts
-        (ModifierKeys.Windows, VirtualKey.D),      // Win+D — Show Desktop
-        (ModifierKeys.Windows, VirtualKey.L),      // Win+L — Lock
-        (ModifierKeys.Windows, VirtualKey.R),      // Win+R — Run
-        (ModifierKeys.Windows, VirtualKey.E),      // Win+E — Explorer
-        (ModifierKeys.Windows, VirtualKey.S),      // Win+S — Search
-        (ModifierKeys.Windows, VirtualKey.F4),     // Win+F4 — Close (not a real system one, but safe)
-        // Alt combos
-        (ModifierKeys.Alt, VirtualKey.Tab),        // Alt+Tab — Switch
-        (ModifierKeys.Alt, VirtualKey.F4),         // Alt+F4 — Close
-        (ModifierKeys.Alt, VirtualKey.Escape),     // Alt+Esc — Cycle
-        (ModifierKeys.Alt, VirtualKey.Space),      // Alt+Space — System menu
-        (ModifierKeys.Alt, VirtualKey.PrintScreen),// Alt+PrtScn — Active window screenshot
-        // Ctrl combos
-        (ModifierKeys.Control | ModifierKeys.Alt, VirtualKey.Delete), // Ctrl+Alt+Del
-        (ModifierKeys.Control | ModifierKeys.Shift, VirtualKey.Escape), // Ctrl+Shift+Esc
-        // Win+Shift combos
-        (ModifierKeys.Windows | ModifierKeys.Shift, VirtualKey.S),    // Win+Shift+S — Snipping
-        // Win+Ctrl combos
-        (ModifierKeys.Windows | ModifierKeys.Control, VirtualKey.D),  // Win+Ctrl+D — Virtual Desktop
-        (ModifierKeys.Windows | ModifierKeys.Control, VirtualKey.Left), // Win+Ctrl+Left — Prev Desktop
-        (ModifierKeys.Windows | ModifierKeys.Control, VirtualKey.Right), // Win+Ctrl+Right — Next Desktop
-    ];
 
     // === Event ===
 
@@ -232,7 +159,7 @@ public class GlobalHotkeyService : IGlobalHotkeyService
             }
 
             // Check known system hotkeys
-            foreach (var (sysMod, sysKey) in KnownSystemHotkeys)
+            foreach (var (sysMod, sysKey) in All)
             {
                 if (sysMod == modifiers && sysKey == key)
                     return true;
