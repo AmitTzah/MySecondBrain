@@ -179,7 +179,7 @@ tests/e2e/MySecondBrain.Tests.E2E/
 - **Smoke Test Classification:** HUMAN/SHT REQUIRED — the WPF app must be visible on screen for FlaUI to interact with it, and the test verifies actual UI rendering (theme toggle, font size display, navigation).
 - **Suggested Commit Message:** `test: add F5-F6 E2E tests for app shell, platform services, system tray, and hotkeys`
 
-### [ ] Step 3: F7 E2E Tests — Model Configurations, API Keys & Personas (Self-Cleaning)
+### [x] Step 3: F7 E2E Tests — Model Configurations, API Keys & Personas (Self-Cleaning)
 
 - **Goal:** Write ~10 E2E tests covering Feature 7 (Model Configurations, API Keys & Personas). All tests are **self-cleaning** — they create data, verify it, then delete via 🗑️ buttons within the same `[Fact]`. Tests inherit from `E2eTestBase`.
 - **Actions:**
