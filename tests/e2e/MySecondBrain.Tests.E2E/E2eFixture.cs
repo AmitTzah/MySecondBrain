@@ -39,6 +39,11 @@ public sealed class E2eFixture : IDisposable
             Automation = new UIA3Automation();
             MainWindow = App.GetMainWindow(Automation, TimeSpan.FromSeconds(10));
 
+            // Check if the onboarding wizard window is present (fresh test DB scenario).
+            // The wizard is a separate top-level Window that blocks MainWindow's NavChats.
+            // If present, auto-dismiss it before waiting for NavChats.
+            DismissOnboardingWizardIfPresent();
+
             // Wait for NavChats (proves sidebar rendered)
             var readyCondition = Automation.ConditionFactory.ByAutomationId("NavChats");
             var sw = Stopwatch.StartNew();
@@ -129,6 +134,70 @@ public sealed class E2eFixture : IDisposable
             try { File.Delete(_testDbPath); }
             catch (Exception ex) { Console.WriteLine($"[FIXTURE] DB delete error: {ex.Message}"); }
         }
+    }
+
+    /// <summary>
+    /// Checks if the OnboardingWizardWindow exists in the UIA desktop tree and,
+    /// if so, auto-completes the wizard by clicking through all steps to dismiss it.
+    /// This handles the case where a fresh test database triggers the first-launch wizard.
+    /// </summary>
+    private void DismissOnboardingWizardIfPresent()
+    {
+        var desktop = Automation.GetDesktop();
+        var wizardCondition = Automation.ConditionFactory.ByAutomationId("OnboardingWizardWindow");
+        var sw = Stopwatch.StartNew();
+        AutomationElement? wizardWindow = null;
+
+        while (sw.Elapsed < TimeSpan.FromSeconds(3))
+        {
+            wizardWindow = desktop.FindFirstDescendant(wizardCondition);
+            if (wizardWindow != null) break;
+            Wait.UntilInputIsProcessed();
+            Thread.Sleep(200);
+        }
+
+        if (wizardWindow == null)
+        {
+            Console.WriteLine("[FIXTURE] No onboarding wizard detected — proceeding normally.");
+            return;
+        }
+
+        Console.WriteLine("[FIXTURE] Onboarding wizard detected — auto-dismissing.");
+
+        // Click "Get Started" on the welcome screen
+        var getStarted = wizardWindow.FindFirstDescendant(
+            Automation.ConditionFactory.ByAutomationId("WizardGetStarted"));
+        if (getStarted != null && getStarted.IsAvailable && getStarted.IsEnabled)
+        {
+            getStarted.Click();
+            Wait.UntilInputIsProcessed();
+            Thread.Sleep(300);
+        }
+
+        // Skip through steps 0-3 (the 4 steps before the Finish screen)
+        for (int i = 0; i < 4; i++)
+        {
+            var skipBtn = wizardWindow.FindFirstDescendant(
+                Automation.ConditionFactory.ByAutomationId("WizardSkip"));
+            if (skipBtn != null && skipBtn.IsAvailable && skipBtn.IsEnabled)
+            {
+                skipBtn.Click();
+                Wait.UntilInputIsProcessed();
+                Thread.Sleep(300);
+            }
+        }
+
+        // Click "Launch Studio" to finish the wizard (extra delay for window close animation)
+        var launchBtn = wizardWindow.FindFirstDescendant(
+            Automation.ConditionFactory.ByAutomationId("WizardLaunchStudio"));
+        if (launchBtn != null && launchBtn.IsAvailable && launchBtn.IsEnabled)
+        {
+            launchBtn.Click();
+            Wait.UntilInputIsProcessed();
+            Thread.Sleep(500);
+        }
+
+        Console.WriteLine("[FIXTURE] Onboarding wizard dismissed.");
     }
 
     private static string GetAppPath()
