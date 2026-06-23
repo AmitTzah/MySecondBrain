@@ -1,0 +1,22 @@
+{
+  "feature_name": "E2E Test Suite Rewrite & Authoring Guide",
+  "branch_name": "feature/e2e-rewrite",
+  "git_automation_enabled": true,
+  "hands_off_mode": true,
+  "smoke_test_automation": {
+    "enabled": false,
+    "environments": {
+      "web": null,
+      "native": null,
+      "desktop": null
+    },
+    "missing_prerequisites": []
+  },
+  "skipped_smoke_tests": [],
+  "current_phase": 5,
+  "plan_status": "archived",
+  "total_steps": 5,
+  "current_step": 5,
+  "pivot_in_progress": false,
+  "phase_5_substep": "state_finalized"
+}

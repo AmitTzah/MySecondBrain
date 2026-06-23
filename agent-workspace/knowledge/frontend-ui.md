@@ -1933,3 +1933,243 @@ if (saved is not null
 | **InvariantCulture for all float/double/decimal** | Any numeric value persisted to string must use invariant culture. The app may be used on systems with any locale. |
 | **`NumberStyles.Float` for parsing** | Allows both integer ("14") and floating-point ("14.5") formats. |
 | **Fallback on parse failure** | If `double.TryParse` fails (corrupted data), fall back to a safe default (e.g., `14.0` for font size). Never crash on a bad setting value. |
+
+---
+
+## 34. E2E Testing — FlaUI UIA3 Selector Strategy
+
+All E2E tests use FlaUI's UIA3 automation provider to drive the WPF application through its UI Automation tree. The selector strategy is a strict priority chain.
+
+### 34.1 Priority Order
+
+| Priority | Selector | Method | Reliability | Speed |
+|----------|----------|--------|-------------|-------|
+| 1 (Preferred) | `AutomationId` | `_cf.ByAutomationId("id")` + `FindById()` | Highest — unique per element | Fastest |
+| 2 (Fallback) | `Name` | `_cf.ByName("name")` + `FindByName()` | Medium — names can collide | Medium |
+| 3 (Last resort) | `ControlType` + `Name` | `_cf.ByControlType(ControlType.Button).And(_cf.ByName("🗑️"))` | Low — brittle to UI changes | Slowest |
+
+### 34.2 Known WPF UIA Limitations
+
+| Limitation | Affected Controls | Workaround |
+|------------|------------------|------------|
+| `Grid`/`Panel` don't expose AutomationId | All layout containers | Use `FindByNameContains` on child content, or target descendant elements |
+| `PasswordBox` requires `SetValue()` | `PasswordBox` | Use `AsTextBox().Text = value` (UIA Value pattern), never keyboard simulation |
+| `ComboBox` items only discoverable when expanded | `ComboBox` | Expand first (`AsComboBox().Expand()`), then find items, then select |
+| `VirtualizingStackPanel` hides off-screen items | `ListBox`, `DataGrid` | Scroll item into view before attempting to find it, or use `FindAllDescendants` to force virtualization |
+| `TextBlock` with inline `Run` elements hides `Text` property | `TextBlock` | Bind `Run.Text` individually; `TextBlock.Text` is ignored when inline children exist |
+
+### 34.3 AutomationId Catalog — 20+ IDs Added for E2E
+
+The E2E rewrite added 20+ `AutomationProperties.AutomationId` attributes across XAML files to enable reliable element discovery:
+
+| Category | AutomationIds Added |
+|----------|---------------------|
+| Navigation | `NavChats`, `NavWiki`, `NavMedia`, `NavArtifacts`, `NavUsage`, `NavSettings` |
+| Chat Header | `ThemeToggleBtn`, `ChatThemeCombo`, `DecreaseFontBtn`, `IncreaseFontBtn`, `FontSizeDisplay`, `PersonaSelector` |
+| Shell | `ChatView`, `SettingsView`, `SidebarSplitter`, `RightPanelSplitter` |
+| API Key Form | `AddApiKeyButton`, `ApiKeyFormTitle`, `ProviderTypeCombo`, `DisplayNameInput`, `ApiKeyInput`, `TestKeyButton`, `SaveApiKeyButton`, `CustomProviderNameInput`, `CustomEndpointUrlInput` |
+| Model Config Form | `AddModelConfigButton`, `ModelIdentifierCombo`, `FetchModelsButton`, `SaveModelConfigButton` |
+| Persona Form | `AddPersonaButton`, `PersonaDisplayNameInput`, `PersonaSystemPromptInput`, `PersonaDefaultModelConfigCombo`, `PersonaChatModeCombo`, `SavePersonaButton` |
+| Persona Picker | `PersonaPickerDialog`, `PersonaPickerSearchBox`, `PersonaPickerList`, `PersonaPickerSelectBtn`, `PersonaPickerCancelBtn` |
+| Onboarding Wizard | `OnboardingWizardWindow`, `OnboardingWizardView`, `OnboardingWizardGrid`, `WizardGetStarted`, `WizardBack`, `WizardSkip`, `WizardNext`, `WizardAddApiKey`, `WizardTestAllKeys`, `WizardSavePersona`, `WizardCreatePersona`, `WizardResetHotkeys`, `WizardChooseWikiFolder`, `WizardCreateWikiFolder`, `WizardLaunchStudio`, `WizardImportChat` |
+| Step Views | `OnboardingStep0View`, `OnboardingStep1View`, `OnboardingStep2View`, `OnboardingStep3View`, `OnboardingStep4View` |
+| Other Views | `GlobalArtifactsBrowserView`, `MediaLibraryView`, `ModelComparisonView`, `UsageDashboardView`, `WikiBrowserView` |
+
+### 34.4 New AutomationId Convention
+
+When adding new interactable elements to XAML, add `AutomationProperties.AutomationId` as a first-class attribute:
+
+```xml
+<Button Content="Save"
+        AutomationProperties.AutomationId="SaveModelConfigButton"
+        Command="{Binding SaveModelConfigCommand}"/>
+```
+
+This applies to all `Button`, `TextBox`, `ComboBox`, `RadioButton`, `CheckBox`, `ListBox`, and any other element that E2E tests interact with.
+
+---
+
+## 35. E2E Test File Organization
+
+The E2E test suite follows a specific file organization pattern that future test files must follow.
+
+### 35.1 Directory Structure
+
+```
+tests/e2e/MySecondBrain.Tests.E2E/
+├── E2eFixture.cs                              # ICollectionFixture, MSB_DB_PATH, app lifecycle
+├── E2eTestBase.cs                             # Abstract base with 8 shared UIA helpers
+├── GlobalUsings.cs                            # Shared usings for all test files
+├── CollectionDefinitions.cs                   # [CollectionDefinition("E2E")]
+├── HandsOffCountdown.cs                       # Prevents accidental mouse interference
+├── MySecondBrain.Tests.E2E.csproj             # xUnit + FlaUI + coverlet references
+├── AppShellNavigationThemingE2ETests.cs       # ~12 tests: shell, nav, theming, font
+├── PlatformServicesE2ETests.cs                # ~10 tests: DI, DPI, WebSocket, auto-update
+├── SystemTrayHotkeyE2ETests.cs                # ~10 tests: system tray, hotkeys
+├── ModelConfigsApiKeysE2ETests.cs             # ~6 tests: API key CRUD, model config CRUD
+├── PersonasE2ETests.cs                        # ~4 tests: persona CRUD
+├── SettingsDiagnosticsE2ETests.cs             # ~7 tests: settings categories, log level
+├── AppearanceOnboardingE2ETests.cs            # ~5 tests: theme, appearance, re-run wizard
+└── OnboardingWizardE2ETests.cs                # ~6 tests: 5-step flow, skip, finish
+```
+
+### 35.2 Scale
+
+| Metric | Count |
+|--------|-------|
+| Test classes | 8 |
+| Total tests | ~62 |
+| Shared fixture | 1 (`E2eFixture`) |
+| App launches per run | 1 |
+| Shared helpers | 8 (`E2eTestBase`) |
+
+### 35.3 Test Class Naming Convention
+
+- File name: `{FeatureArea}E2ETests.cs`
+- Class name: `{FeatureArea}E2ETests` (sealed)
+- Inheritance: `E2eTestBase`
+- Required attributes: `[Collection("E2E")]` + `ICollectionFixture<E2eFixture>`
+- Constructor: `(E2eFixture fixture, ITestOutputHelper output) : base(fixture, output)`
+
+---
+
+## 36. HandsOffCountdown — Preventing Accidental Mouse Interference
+
+The `HandsOffCountdown` window blocks accidental mouse input during E2E test execution. FlaUI drives the app via UIA calls, but a physical mouse movement can interfere with test interactions.
+
+### 36.1 Window Pattern
+
+```csharp
+public partial class HandsOffCountdown : Window
+{
+    public HandsOffCountdown()
+    {
+        // Full-screen transparent overlay
+        WindowState = WindowState.Maximized;
+        WindowStyle = WindowStyle.None;
+        AllowsTransparency = true;
+        Background = Brushes.Transparent;
+        Topmost = true;
+        ShowInTaskbar = false;
+        // Countdown text in center
+    }
+}
+```
+
+### 36.2 Usage
+
+Launched before the E2E suite starts and closed after completion. The countdown gives the developer time to move their hands away from the mouse:
+
+```
+[3] ... [2] ... [1] ... Hands off! Tests starting...
+```
+
+---
+
+## 37. MessageBox Handling via Desktop Window Search
+
+WPF `MessageBox.Show()` creates a separate top-level window that is NOT a child of the main application window. The `ConfirmMessageBox` helper handles this pattern.
+
+### 37.1 Discovery Pattern
+
+```csharp
+protected void ConfirmMessageBox(string expectedButton, TimeSpan? timeout = null)
+{
+    var limit = timeout ?? TimeSpan.FromSeconds(3);
+    var sw = Stopwatch.StartNew();
+    while (sw.Elapsed < limit)
+    {
+        var windows = _fixture.Automation.GetDesktop()
+            .FindAllDescendants(_cf.ByControlType(ControlType.Window));
+        foreach (var w in windows)
+        {
+            if (w.Name?.Contains("Confirm", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                var btn = w.FindFirstDescendant(
+                    _cf.ByControlType(ControlType.Button).And(_cf.ByName(expectedButton)));
+                btn?.Click();
+                return;
+            }
+        }
+        Wait.UntilInputIsProcessed();
+        Thread.Sleep(200);
+    }
+}
+```
+
+### 37.2 Key Behaviors
+
+| Aspect | Detail |
+|--------|--------|
+| Search scope | `Automation.GetDesktop()` — all top-level windows, not just MainWindow descendants |
+| Window identification | Window title contains "Confirm" (case-insensitive) |
+| Button targeting | By name (e.g., "Yes", "No", "OK") — `ControlType.Button` AND `ByName` |
+| Timeout | 3s default — MessageBox appears synchronously, should be near-instant |
+| Poll interval | 200ms |
+
+### 37.3 Delete Confirmation Flow
+
+The 🗑️ delete pattern always triggers a confirmation MessageBox:
+
+```
+Click 🗑️ → MessageBox "Confirm Delete" appears with Yes/No → ConfirmMessageBox("Yes") → entity deleted
+```
+
+---
+
+## 38. Settings Category Header Expectations (16 Categories)
+
+The Settings screen renders 16 categories in a sidebar `ListBox`. Each category has an emoji icon prefix in its display label. These are used by `SelectSettingsCategory` for partial-name matching.
+
+### 38.1 Category Catalog with Emoji Icons
+
+| # | Category | Label Pattern | Emoji |
+|---|----------|--------------|-------|
+| 1 | Providers | "🔑 Providers" | 🔑 |
+| 2 | Profiles | "👤 Profiles" | 👤 |
+| 3 | Appearance | "🎨 Appearance" | 🎨 |
+| 4 | Wiki | "📚 Wiki" | 📚 |
+| 5 | Backup | "💾 Backup" | 💾 |
+| 6 | Text Actions | "⚡ Text Actions" | ⚡ |
+| 7 | Hotkeys | "⌨️ Hotkeys" | ⌨️ |
+| 8 | Tools | "🔧 Tools" | 🔧 |
+| 9 | Language | "🌐 Language" | 🌐 |
+| 10 | Notifications | "🔔 Notifications" | 🔔 |
+| 11 | Startup | "🚀 Startup" | 🚀 |
+| 12 | Updates | "🔄 Updates" | 🔄 |
+| 13 | Pricing | "💰 Pricing" | 💰 |
+| 14 | Security | "🔒 Security" | 🔒 |
+| 15 | Diagnostics | "🩺 Diagnostics" | 🩺 |
+| 16 | Maintenance | "🛠️ Maintenance" | 🛠️ |
+
+### 38.2 Selection in E2E Tests
+
+```csharp
+NavigateToSettings();
+SelectSettingsCategory("Diagnostics");  // Partial name match via FindByNameContains
+```
+
+The `SelectSettingsCategory` helper finds the `ListBoxItem` whose name contains the partial string, then clicks it. The emoji prefix ensures unique partial matches across categories.
+
+---
+
+## 39. E2E Authoring Guide Reference
+
+The authoritative behavioral specification for all E2E testing conventions is the [E2E Authoring Guide](agent-workspace/external-docs/e2e-authoring-guide.md). All E2E test code must conform to its 12 sections:
+
+| Section | Topic | Key Rule |
+|---------|-------|----------|
+| §1 | Fixture Pattern | `ICollectionFixture<E2eFixture>` on every test class |
+| §2 | Test Database | `MSB_DB_PATH` env var in 3 source files |
+| §3 | Self-Cleaning Tests | Create→verify→delete within same Fact |
+| §4 | No Dead Time | Max 3s timeouts, max 500ms Thread.Sleep |
+| §5 | Constant Visual Movement | Active interaction sequences, not long waits |
+| §6 | Helper Conventions | All 7 shared helpers in `E2eTestBase` |
+| §7 | Onboarding Wizard Testing | Static `_wizardCompleted` flag for ordering |
+| §8 | MessageBox Handling | Desktop window search, not MainWindow search |
+| §9 | Selector Strategy | `AutomationId > Name > ControlType` |
+| §10 | Test Class Organization | 8 test classes, 1 fixture, 1 launch |
+| §11 | Running the E2E Suite | `dotnet test tests/e2e/MySecondBrain.Tests.E2E --configuration Debug` |
+| §12 | Quick Reference Checklist | All 12 checks must pass |
+
+When the guide and implementation diverge, the guide is the source of truth. The guide must be audited after every E2E-related feature to ensure it matches the code.

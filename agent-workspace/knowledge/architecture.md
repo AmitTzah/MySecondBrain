@@ -1739,3 +1739,288 @@ public override DataTemplate? SelectTemplate(object item, DependencyObject conta
 | **DataTrigger over DataTemplateSelector for sub-navigation** | Multiple views sharing one ViewModel require DataTrigger. DataTemplateSelector keys off type, not value, and cannot differentiate same-type objects. |
 | **Not creating 16 sub-ViewModels** | All categories read/write the same `ISettingsRepository`. Splitting into 16 ViewModels would create unnecessary complexity, duplicate repository access patterns, and complicate cross-category interactions (e.g., hotkey changes in Hotkeys tab must update Text Actions tab). |
 | **ContentControl Style, not direct Grid Visibility** | Setting `ContentTemplate` via a Style trigger is cleaner than toggling `Visibility` on 16 stacked `Grid` panels. Only the active template is rendered; hidden panels don't contribute to the visual tree. |
+
+---
+
+## 34. E2E Test Suite Architecture — ICollectionFixture\<E2eFixture\> Pattern
+
+The E2E test suite uses xUnit's `ICollectionFixture<E2eFixture>` (shared fixture per test collection) rather than `IClassFixture<E2eFixture>` (fixture per test class). This is a fundamental architectural decision that eliminates cumulative app launch dead time.
+
+### 34.1 ICollectionFixture vs IClassFixture
+
+| Aspect | IClassFixture (Old) | ICollectionFixture (New) |
+|--------|---------------------|--------------------------|
+| App launches | 1 per test class (~8 launches) | 1 for all ~62 tests |
+| Cumulative launch time | ~112s (8 × 14s) | ~14s (1 × 14s) |
+| Cumulative shutdown time | ~40s (8 × 5s) | ~5s (1 × 5s) |
+| Effective test time | ~3 min (all launches) | ~3 min (1 launch) |
+| Test isolation | Class-level (via new DB per class) | Per-test (self-cleaning pattern) |
+
+### 34.2 Wiring
+
+Every test class uses two attributes:
+
+```csharp
+[Collection("E2E")]
+public sealed class AppShellNavigationThemingE2ETests : E2eTestBase, ICollectionFixture<E2eFixture>
+{
+    public AppShellNavigationThemingE2ETests(E2eFixture fixture, ITestOutputHelper output)
+        : base(fixture, output) { }
+}
+```
+
+The `[Collection("E2E")]` attribute enforces **sequential execution** — no two tests run in parallel against the same app instance. xUnit creates one `E2eFixture` instance for the entire collection.
+
+### 34.3 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **ICollectionFixture, not IClassFixture** | 8 app launches cost ~2 minutes of dead time. One launch serves all tests and still maintains isolation via self-cleaning tests. |
+| **Sequential execution** | A single WPF app instance cannot handle concurrent UIA interactions. `[Collection("E2E")]` guarantees sequential access. |
+| **One fixture, one dispose** | Output contains exactly one `[FIXTURE] Launching app` and one `[FIXTURE] Cleaning up` line — verifiable proof of single-launch architecture. |
+
+---
+
+## 35. MSB_DB_PATH Environment Variable Injection
+
+The `MSB_DB_PATH` environment variable redirects the SQLite database path for E2E test isolation. It is set by `E2eFixture` at the process level (`EnvironmentVariableTarget.Process`) and checked by three source files before falling back to the default `%LOCALAPPDATA%\MySecondBrain\msb.db`.
+
+### 35.1 Injection Points (3 Files)
+
+| File | Method | Pattern |
+|------|--------|---------|
+| [`AppDbContext.cs`](src/MySecondBrain.Data/AppDbContext.cs:25) | `OnConfiguring()` | Design-time fallback; checks `MSB_DB_PATH` before default |
+| [`AppDbContextFactory.cs`](src/MySecondBrain.Data/AppDbContextFactory.cs:15) | `CreateDbContext()` | EF Core tooling (migrations); same check |
+| [`DependencyInjectionConfig.cs`](src/MySecondBrain.UI/DependencyInjectionConfig.cs:41) | `ConfigureServices()` | Runtime DI registration; factory delegate checks `MSB_DB_PATH` |
+
+### 35.2 Canonical Pattern
+
+```csharp
+var dbPath = Environment.GetEnvironmentVariable("MSB_DB_PATH")
+    ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "MySecondBrain", "msb.db");
+```
+
+### 35.3 Test Database Path
+
+| Property | Value |
+|----------|-------|
+| Test output directory | `Path.Combine(Path.GetTempPath(), "MySecondBrain_E2E")` |
+| Test database path | `{testOutputDir}\e2e-test.db` |
+| Env var scope | `EnvironmentVariableTarget.Process` (scoped to test process, never persisted system-wide) |
+| Isolation guarantee | Fresh database every run; deleted before launch and after suite complete |
+
+### 35.4 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **Environment variable, not config file** | No file I/O race conditions. Process-scoped. No cleanup needed between runs. |
+| **Three injection points, one pattern** | All three code paths that resolve the database path must check the env var. Missing any one would cause part of the app to use the real user database. |
+| **Fallback is always the real path** | When `MSB_DB_PATH` is not set (unit tests, integration tests, production), the default `%LOCALAPPDATA%` path is used. The env var is opt-in for E2E only. |
+| **Transparent to unit/integration tests** | Existing 429 unit tests and 25 integration tests don't set `MSB_DB_PATH` and continue to use their normal test databases. |
+
+---
+
+## 36. E2eFixture Lifecycle
+
+The `E2eFixture` implements `IDisposable` and manages the full application lifecycle for the E2E test suite.
+
+### 36.1 Lifecycle Diagram
+
+```mermaid
+graph TD
+    Ctor["E2eFixture constructor"]
+    CreateDir["Create test output directory\nPath.GetTempPath/MySecondBrain_E2E"]
+    DeleteOld["Delete old e2e-test.db if exists"]
+    SetEnv["Set MSB_DB_PATH env var\nEnvironmentVariableTarget.Process"]
+    Launch["Launch MySecondBrain.UI.exe\nvia Application.Launch"]
+    GetWindow["Get MainWindow\nAutomation.GetDesktop + FindFirst"]
+    WaitNav["Wait for NavChats AutomationId\n8s timeout, 200ms poll"]
+    WaitFont["Wait for IncreaseFontBtn\n6s timeout, 150ms poll"]
+    Tests["~62 Facts execute sequentially\nvia Collection=E2E"]
+    Dispose["E2eFixture.Dispose"]
+    Close["App.Close → wait 5s → App.Kill\nif not exited"]
+    DisposeAuto["Automation.Dispose"]
+    DeleteDB["Delete e2e-test.db"]
+    Ctor --> CreateDir --> DeleteOld --> SetEnv --> Launch --> GetWindow --> WaitNav --> WaitFont --> Tests --> Dispose --> Close --> DisposeAuto --> DeleteDB
+```
+
+### 36.2 Readiness Checks
+
+| Check | Element | Timeout | Poll Interval | Purpose |
+|-------|---------|---------|---------------|---------|
+| Window discovery | `App.GetMainWindow(Automation, 10s)` | 10s | — | Proves app launched and created a window |
+| NavChats | `ByAutomationId("NavChats")` | 8s | 200ms | Proves sidebar rendered with UIA tree populated |
+| IncreaseFontBtn | `ByAutomationId("IncreaseFontBtn")` | 6s | 150ms | Proves ChatView UIA subtree fully populated |
+
+### 36.3 Dispose Sequence (Order Matters)
+
+```
+1. Log "[FIXTURE] Cleaning up..."
+2. Try: App.Close() → wait 5s for graceful exit
+3. If not exited: App.Kill() (force kill)
+4. Try: Automation.Dispose()
+5. Try: App.Dispose()
+6. Try: File.Delete(_testDbPath)
+```
+
+The app executable path is resolved by walking up from `AppDomain.CurrentDomain.BaseDirectory` to find the solution root, then building the path to `src/MySecondBrain.UI/bin/Debug/net8.0-windows10.0.17763.0/MySecondBrain.UI.exe`.
+
+### 36.4 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **Graceful close before kill** | `App.Close()` sends `WM_CLOSE` and allows the app to flush logs and dispose services. `App.Kill()` is a fallback for hung processes. |
+| **Delete DB after dispose** | The app process must be fully stopped before deleting the database to avoid file locks. |
+| **Solution-root-relative exe path** | The test project runs from a different directory than the build output. Walking up from `BaseDirectory` finds the solution root reliably regardless of test runner working directory. |
+
+---
+
+## 37. E2eTestBase — Shared UIA Helper Abstraction
+
+`E2eTestBase` is an abstract base class that all 8 E2E test classes inherit. It provides 7 shared helper methods (plus `UseSharedAppAsync()`), eliminating duplication that existed across legacy test classes.
+
+### 37.1 Helper Catalog (8 Methods)
+
+| Helper | Signature | Behavior |
+|--------|-----------|----------|
+| `UseSharedAppAsync` | `() → Task` | `MainWindow.Focus()` + `Task.Delay(200)` — brings window to foreground |
+| `FindById` | `(string automationId, AutomationElement? root, TimeSpan? timeout) → AutomationElement?` | Polls with 200ms intervals, 3s default timeout, `IsAvailable` guard |
+| `FindByName` | `(string name, AutomationElement? root, TimeSpan? timeout) → AutomationElement?` | Exact name match via `_cf.ByName()` |
+| `FindByNameContains` | `(string partialName, AutomationElement? root, TimeSpan? timeout) → AutomationElement?` | Enumerates all descendants, partial name match with `OrdinalIgnoreCase` |
+| `NavigateToSettings` | `() → void` | Clicks `NavSettings` RadioButton via `FindById`, waits 400ms for screen transition, asserts `SettingsView` visible |
+| `SelectSettingsCategory` | `(string categoryMatch) → void` | Finds `ListBoxItem` by partial name match (`FindByNameContains`), clicks it, waits 300ms |
+| `ConfirmMessageBox` | `(string expectedButton, TimeSpan? timeout) → void` | Searches all top-level windows for a "Confirm" window, clicks the named button within it |
+| `SetPasswordInput` | `(string automationId, string text) → void` | Finds `PasswordBox` by AutomationId, uses `AsTextBox().Text = text` (UIA Value pattern, not keyboard) |
+
+### 37.2 Default Timing Constants
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `DefaultTimeout` | `TimeSpan.FromSeconds(3)` | Max wait for any UIA element discovery |
+| `RetryIntervalMs` | `200` | Polling interval between UIA search attempts |
+
+### 37.3 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **ICollectionFixture on concrete classes, not base** | xUnit requires `ICollectionFixture<T>` on the concrete test class. The base class provides shared fields and methods but does NOT implement `ICollectionFixture`. |
+| **FindById over FindByName** | AutomationId is the fastest and most reliable UIA selector. Name-based lookups are fallbacks for elements that lack AutomationIds. |
+| **Per-class private helpers remain** | Methods specific to one test class (e.g., `EnsureTestApiKeyExistsAsync`, `DeleteListItemByContent`) stay in their respective classes. Only cross-cutting helpers go in the base. |
+
+---
+
+## 38. Self-Cleaning E2E Test Pattern
+
+Every E2E test that creates data (API keys, model configs, personas) deletes that data within the same `[Fact]` body. This eliminates the need for class-level `Dispose()` cleanup, static counters, or test ordering dependencies.
+
+### 38.1 Five-Phase Pattern
+
+```
+1. ARRANGE   → Navigate to the right screen/settings category
+2. ACT       → Create the entity (fill form, click Save)
+3. ASSERT    → Verify entity appears in list
+4. CLEANUP   → Find 🗑️ delete button on the entity → click → confirm MessageBox
+5. ASSERT    → Verify entity is gone from list
+```
+
+### 38.2 Delete Button Convention
+
+All 🗑️ delete buttons use `Content="🗑️"` with `Style="{StaticResource IconButtonStyle}"`. They are located via:
+
+```csharp
+var deleteBtn = savedItem.FindFirstDescendant(
+    _cf.ByControlType(ControlType.Button).And(_cf.ByName("🗑️")));
+deleteBtn.Click();
+await Task.Delay(500);
+ConfirmMessageBox("Yes");
+await Task.Delay(500);
+```
+
+### 38.3 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **Delete within same Fact** | No test depends on data from another test. If a test crashes mid-cleanup, only that test's data is orphaned — subsequent tests are unaffected. |
+| **No Dispose() cleanup** | xUnit `Dispose()` runs even on test failure, but may not have access to the app's UIA tree if the app crashed. In-test cleanup is more reliable. |
+| **No static counters** | Static state survives across test runs within the same process. Self-cleaning tests leave zero ambient state. |
+| **Verify deleted after cleanup** | The second assert proves the delete actually worked — not just that the delete button was clicked. |
+
+---
+
+## 39. No-Dead-Time Rules for E2E Tests
+
+All E2E tests must follow strict timing rules to minimize suite execution time and prevent flaky tests from excessive waiting.
+
+### 39.1 Timing Constraints
+
+| Rule | Limit | Justification |
+|------|-------|---------------|
+| Maximum UIA timeout | 3 seconds | Any element not discoverable within 3s is a genuine failure, not a timing issue |
+| Maximum `Thread.Sleep` | 500ms | Any sleep over 500ms must have a comment explaining why no UIA-ready signal exists |
+| Maximum `Task.Delay` | 500ms | Same as Thread.Sleep; screen transitions and animations should settle within 500ms |
+| Polling interval | 200ms | Balance between responsiveness and CPU usage |
+
+### 39.2 Justified Exceptions
+
+| Scenario | Duration | Justification |
+|----------|----------|---------------|
+| App launch readiness | 10s window discovery + 8s NavChats + 6s IncreaseFontBtn | Cold-start app launch involves .NET JIT, EF Core migration, and WPF layout |
+| `NavigateToSettings` transition | 400ms | WPF screen template swap + DataTemplateSelector resolution |
+| `SelectSettingsCategory` transition | 300ms | DataTrigger-based sub-navigation within settings |
+| Delete → confirm → verify | 500ms × 3 | MessageBox appears as a separate window; UIA needs time to discover it |
+| `UseSharedAppAsync` | 200ms | Window focus + input processing |
+
+### 39.3 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **3s timeout, not 5s or 10s** | A healthy WPF app on modern hardware should render any UIA element within 3s. Longer timeouts mask real bugs. |
+| **Polling, not Wait.UntilInputIsProcessed alone** | `Wait.UntilInputIsProcessed()` can return before the UIA tree updates. Polling with `Thread.Sleep(200)` is more reliable. |
+| **Comment requirement for >500ms sleeps** | Makes dead time visible in code review and forces developers to justify why a UIA-ready signal doesn't exist. |
+
+---
+
+## 40. Onboarding Wizard Auto-Dismiss in E2E Context
+
+When the E2E test database is fresh (no `Onboarding_Completed` setting), the onboarding wizard auto-launches on first app start. The `E2eFixture` constructor must handle this.
+
+### 40.1 Auto-Dismiss Strategy
+
+The fixture dismisses the onboarding wizard immediately after app launch so all tests start from the MainWindow with ChatView visible. This is done by:
+
+1. After `GetMainWindow()`, check if an `OnboardingWizardWindow` exists
+2. If found, find and click `WizardSkip` repeatedly through all steps (skipping is faster than completing)
+3. On the Finish step, click `WizardLaunchStudio`
+4. Re-acquire `MainWindow` (the wizard close may have changed the foreground window)
+
+### 40.2 Wizard Completion Guard
+
+Within test classes, onboarding tests use a static `_wizardCompleted` flag:
+
+```csharp
+private static bool _wizardCompleted;
+
+[Fact]
+public async Task Onboarding_ShouldComplete5StepFlow()
+{
+    // ... complete wizard ...
+    _wizardCompleted = true;
+}
+
+[Fact]
+public async Task Onboarding_ShouldNotAppearAfterCompletion()
+{
+    if (!_wizardCompleted)
+        Assert.Fail("This test must run after Onboarding_ShouldComplete5StepFlow.");
+    // ... verify wizard does not appear ...
+}
+```
+
+### 40.3 Design Decision
+
+| Decision | Rationale |
+|----------|-----------|
+| **Auto-dismiss in fixture, not individual tests** | All ~54 non-onboarding tests need the wizard dismissed. Doing it once in the fixture saves ~54 × (skip clicks + waits). |
+| **Static flag for ordering** | xUnit runs tests within a class in declaration order by default. The static flag provides an explicit guard against runner reordering. |
+| **Skip, don't complete** | Skipping each step is faster than filling forms. The wizard is tested separately in dedicated onboarding tests. |

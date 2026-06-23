@@ -18,6 +18,7 @@ This file is the index of the `planning/` directory. It is what the Feature Deve
 | 6 | [`platform-notes.md`](platform-notes.md) | 2 | WPF-specific implementation guidance: MVVM with CommunityToolkit.Mvvm, XAML DataTemplate patterns (chat messages, wiki browser, code blocks, BiDi), DI lifetimes, three-tier window management (WS_EX_NOACTIVATE, overlay positioning, focus), system tray, global hotkeys (RegisterHotKey), PerMonitorV2 DPI, MSIX packaging, auto-update, and 10 known WPF pitfalls with workarounds. |
 | 7 | **`planning-summary.md`** | 2 | **This file.** Index and quick reference for the entire planning directory. Architecture decision log. |
 | — | [`tech-sourcing.md`](../tech-sourcing.md) | 0 | Upstream: 36 technology sourcing decisions with alternatives analysis and risk levels. The foundation upon which Batch 1 and 2 planning files are built. |
+| — | [**`e2e-authoring-guide.md`**](../../agent-workspace/external-docs/e2e-authoring-guide.md) | — | **E2E test authoring conventions**: fixture pattern (ICollectionFixture), test database isolation (MSB_DB_PATH), self-cleaning tests (create→verify→delete via 🗑️), no-dead-time rules (3s max timeout, 500ms max sleep), selector strategy (AutomationId > Name > ControlType), helper conventions (E2eTestBase), onboarding wizard testing, MessageBox handling, XAML naming conventions, test class organization. |
 
 ---
 

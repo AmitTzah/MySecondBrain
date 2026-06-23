@@ -622,4 +622,37 @@ A Serilog `IDestructuringPolicy` (`ApiKeyDestructuringPolicy`) is registered at 
 
 ---
 
+## 14. E2E Testing Conventions
+
+All E2E tests for MySecondBrain follow the conventions documented in the [E2E Authoring Guide](../../agent-workspace/external-docs/e2e-authoring-guide.md). Every developer writing E2E tests must reference that guide. Key platform-specific notes:
+
+### FlaUI.UIA3 + xUnit
+
+E2E tests use FlaUI.UIA3 (UIAutomationClient) to drive the WPF application through its UIA provider. Tests are written with xUnit and organized under `tests/e2e/MySecondBrain.Tests.E2E/`.
+
+### Fixture Pattern
+
+Use `ICollectionFixture<E2eFixture>` with `[Collection("E2E")]` for all test classes. The `E2eFixture` launches the app once for the entire suite, waits for the UIA tree to populate, and tears down when the suite ends.
+
+### Test Database Isolation
+
+Set `MSB_DB_PATH` environment variable to a test-specific path (`{testOutputDir}\e2e-test.db`) before launching the app. Three files check this variable: [`AppDbContext.cs`](../../src/MySecondBrain.Data/AppDbContext.cs), [`AppDbContextFactory.cs`](../../src/MySecondBrain.Data/AppDbContextFactory.cs), and [`DependencyInjectionConfig.cs`](../../src/MySecondBrain.UI/DependencyInjectionConfig.cs). Delete the test database on fixture teardown.
+
+### UIA Selector Strategy
+
+Prefer `AutomationId` (`x:Name` in XAML) over `Name` over `ControlType` scanning. WPF elements expose `x:Name` values as UIA `AutomationId`. See the authoring guide for naming conventions.
+
+### Message Box Handling
+
+WPF `MessageBox.Show()` creates a separate top-level window. Use `_fixture.Automation.GetDesktop().FindAllDescendants()` to find MessageBox windows by title, then interact with their Button children.
+
+### Known WPF UIA Limitations
+
+- WPF Grid/Panel elements don't expose AutomationId to UIA — use child elements as anchors
+- PasswordBox supports the UIA Value pattern — prefer `SetValue()` over keyboard simulation
+- ComboBox items are only discoverable in UIA when the dropdown is expanded
+- VirtualizingStackPanel hides off-screen items from UIA — scroll items into view before finding them
+
+---
+
 *Platform notes document — Batch 2 of planning/ directory. See also: [`architecture.md`](architecture.md), [`tech-stack.md`](tech-stack.md).*
