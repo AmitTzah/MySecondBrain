@@ -22,7 +22,7 @@ public class DiContainerTests : IDisposable
     public DiContainerTests()
     {
         var services = new ServiceCollection();
-        App.ConfigureServices(services);
+        DependencyInjectionConfig.ConfigureServices(services);
         _provider = services.BuildServiceProvider(new ServiceProviderOptions
         {
             ValidateOnBuild = true

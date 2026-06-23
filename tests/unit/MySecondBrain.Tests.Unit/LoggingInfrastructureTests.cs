@@ -21,7 +21,7 @@ public class LoggingInfrastructureTests : IDisposable
         Directory.CreateDirectory(_logDir);
 
         var services = new ServiceCollection();
-        App.ConfigureServices(services);
+        DependencyInjectionConfig.ConfigureServices(services);
         _provider = services.BuildServiceProvider();
     }
 

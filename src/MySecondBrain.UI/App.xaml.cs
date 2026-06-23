@@ -1,8 +1,6 @@
 using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Reflection;
 using System.Windows;
+
 using CommunityToolkit.Mvvm.Messaging;
 
 using Microsoft.EntityFrameworkCore;
@@ -12,25 +10,11 @@ using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 using MySecondBrain.Data;
-using MySecondBrain.Data.Repositories;
-using MySecondBrain.Services.Audio;
-using MySecondBrain.Services.Backup;
-using MySecondBrain.Services.Chat;
-using MySecondBrain.Services.Chat.Import;
-using MySecondBrain.Services.Encryption;
-using MySecondBrain.Services.LLM;
-using MySecondBrain.Services.Search;
-using MySecondBrain.Services.Tools;
-using MySecondBrain.Services.Update;
-using MySecondBrain.Services.Wiki;
-using MySecondBrain.UI.Controls;
-using MySecondBrain.Services.Logging;
 using MySecondBrain.UI.Services;
 using MySecondBrain.UI.ViewModels;
 using MySecondBrain.UI.Views;
 
 using Serilog;
-using Serilog.Formatting.Json;
 // Resolves ambiguity with System.Windows.Forms.Application from UseWindowsForms=true
 using Application = System.Windows.Application;
 
@@ -50,7 +34,7 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         var services = new ServiceCollection();
-        ConfigureServices(services);
+        DependencyInjectionConfig.ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();
 
         var startupLogger = _serviceProvider.GetRequiredService<ILogger<App>>();
@@ -135,187 +119,119 @@ public partial class App : Application
             startupLogger.LogError(ex, "Failed to restore theme/font settings, continuing with defaults");
         }
 
-    // Log DPI awareness mode and per-monitor DPI info for diagnostics
-    try
-    {
-        startupLogger.LogInformation("DPI mode: PerMonitorV2 (ApplicationHighDpiMode in .csproj)");
-        var screenCount = System.Windows.Forms.Screen.AllScreens.Length;
-        startupLogger.LogInformation("Screen count: {Count}", screenCount);
-        for (var i = 0; i < screenCount; i++)
+        // Log DPI awareness mode and per-monitor DPI info for diagnostics
+        try
         {
-            var s = System.Windows.Forms.Screen.AllScreens[i];
-            startupLogger.LogInformation(
-                "Screen[{Idx}]: bounds=({L},{T})-({R},{B}), primary={Primary}, device={Dev}",
-                i, s.Bounds.Left, s.Bounds.Top, s.Bounds.Right, s.Bounds.Bottom,
-                s.Primary, s.DeviceName?.TrimEnd('\0'));
-        }
-
-        // WPF PerMonitorV2 handles DPI scaling automatically via device-independent pixels.
-        // The HwndSource will fire DpiChanged events per-monitor when the window moves.
-        startupLogger.LogInformation(
-            "DPI scaling: WPF device-independent pixels handle per-monitor scaling natively");
-    }
-    catch (Exception ex)
-    {
-        startupLogger.LogWarning(ex, "Failed to log DPI diagnostics");
-    }
-
-    startupLogger.LogInformation("MySecondBrain started");
-
-    // ================================================================
-    // First-Launch Detection
-    // ================================================================
-    var settingsRepo = _serviceProvider.GetRequiredService<ISettingsRepository>();
-    var onboardingCompleted = await settingsRepo.GetAsync("Onboarding_Completed");
-
-    if (onboardingCompleted != "true")
-    {
-        // First launch or incomplete onboarding — show wizard as the only window
-        var wizardWindow = _serviceProvider.GetRequiredService<OnboardingWizardWindow>();
-        var wizardVm = (OnboardingWizardViewModel)wizardWindow.DataContext;
-
-        wizardVm.LaunchStudioRequested += () =>
-        {
-            Current.Dispatcher.Invoke(() =>
+            startupLogger.LogInformation("DPI mode: PerMonitorV2 (ApplicationHighDpiMode in .csproj)");
+            var screenCount = System.Windows.Forms.Screen.AllScreens.Length;
+            startupLogger.LogInformation("Screen count: {Count}", screenCount);
+            for (var i = 0; i < screenCount; i++)
             {
-                try
-                {
-                    startupLogger.LogInformation("LaunchStudio step 1: closing wizard");
-                    wizardWindow.Close();
-                    startupLogger.LogInformation("LaunchStudio step 2: resolving MainWindow");
-                    var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-                    startupLogger.LogInformation("LaunchStudio step 3: showing MainWindow");
-                    mainWindow.Show();
-                    startupLogger.LogInformation("LaunchStudio step 4: wiring tray");
-                    WireTrayService(mainWindow, startupLogger);
-                    startupLogger.LogInformation("LaunchStudio step 5: starting background services");
-                    StartBackgroundServices(startupLogger);
-                    startupLogger.LogInformation("LaunchStudio complete — MainWindow shown");
-                }
-                catch (Exception ex)
-                {
-                    startupLogger.LogError(ex, "LaunchStudioRequested handler crashed at step X");
-                    throw;
-                }
-            });
-        };
-
-        wizardWindow.Show();
-    }
-    else
-    {
-        // Onboarding complete — normal launch
-        var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-        mainWindow.Show();
-        WireTrayService(mainWindow, startupLogger);
-        StartBackgroundServices(startupLogger);
-    }
-
-    // ================================================================
-    // Wire Re-run Onboarding from Settings
-    // ================================================================
-    WeakReferenceMessenger.Default.Register<ReRunOnboardingMessage>(this, (_, _) =>
-    {
-        // Find the main window if it exists
-        var mainWindow = Current.Windows.OfType<MainWindow>().FirstOrDefault();
-        if (mainWindow is not null)
-        {
-            mainWindow.Dispatcher.Invoke(() =>
-            {
-                var wizardWindow = _serviceProvider.GetRequiredService<OnboardingWizardWindow>();
-                var wizardVm = (OnboardingWizardViewModel)wizardWindow.DataContext;
-
-                wizardVm.LaunchStudioRequested += () =>
-                {
-                    Current.Dispatcher.Invoke(() =>
-                    {
-                        startupLogger.LogInformation("LaunchStudio re-run: closing modal wizard");
-                        wizardWindow.Close();
-                    });
-                };
-
-                wizardWindow.Owner = mainWindow;
-                wizardWindow.ShowDialog(); // Modal — blocks until wizard closes
-
-                // Notify Settings → Providers tab to refresh its API key list,
-                // since the onboarding wizard may have added new keys.
+                var s = System.Windows.Forms.Screen.AllScreens[i];
                 startupLogger.LogInformation(
-                    "[DIAG] About to send RefreshApiKeysMessage — open windows: {WindowCount}",
-                    Current.Windows.Count);
-                WeakReferenceMessenger.Default.Send(new RefreshApiKeysMessage());
-                startupLogger.LogInformation("Re-run onboarding completed — RefreshApiKeysMessage sent");
-            });
+                    "Screen[{Idx}]: bounds=({L},{T})-({R},{B}), primary={Primary}, device={Dev}",
+                    i, s.Bounds.Left, s.Bounds.Top, s.Bounds.Right, s.Bounds.Bottom,
+                    s.Primary, s.DeviceName?.TrimEnd('\0'));
+            }
+
+            // WPF PerMonitorV2 handles DPI scaling automatically via device-independent pixels.
+            // The HwndSource will fire DpiChanged events per-monitor when the window moves.
+            startupLogger.LogInformation(
+                "DPI scaling: WPF device-independent pixels handle per-monitor scaling natively");
         }
-    });
-}
-
-/// <summary>
-/// Wires the system tray service events after a main window is available.
-/// </summary>
-private void WireTrayService(Window mainWindow, ILogger<App> startupLogger)
-{
-    var trayService = _serviceProvider.GetRequiredService<ISystemTrayService>();
-    var mainWindowViewModel = mainWindow.DataContext as MainWindowViewModel;
-    if (mainWindowViewModel is null)
-        startupLogger.LogWarning("MainWindow.DataContext is not a MainWindowViewModel");
-
-    trayService.Show();
-
-    trayService.OpenStudioRequested += (_, _) =>
-    {
-        mainWindow.Dispatcher.Invoke(() =>
+        catch (Exception ex)
         {
-            mainWindow.Show();
-            mainWindow.WindowState = WindowState.Normal;
-            mainWindow.Activate();
-        });
-    };
+            startupLogger.LogWarning(ex, "Failed to log DPI diagnostics");
+        }
 
-    trayService.NewChatRequested += (_, _) =>
-    {
-        startupLogger.LogInformation("New chat requested — not yet implemented");
-    };
+        startupLogger.LogInformation("MySecondBrain started");
 
-    trayService.CommandBarRequested += (_, _) =>
-    {
-        startupLogger.LogInformation("Command bar requested — not yet implemented");
-    };
+        // ================================================================
+        // First-Launch Detection
+        // ================================================================
+        var settingsRepo = _serviceProvider.GetRequiredService<ISettingsRepository>();
+        var onboardingCompleted = await settingsRepo.GetAsync("Onboarding_Completed");
 
-    trayService.SettingsRequested += (_, _) =>
-    {
-        mainWindow.Dispatcher.Invoke(() =>
+        if (onboardingCompleted != "true")
         {
+            // First launch or incomplete onboarding — show wizard as the only window
+            var wizardWindow = _serviceProvider.GetRequiredService<OnboardingWizardWindow>();
+            var wizardVm = (OnboardingWizardViewModel)wizardWindow.DataContext;
+
+            wizardVm.LaunchStudioRequested += () =>
+            {
+                Current.Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        startupLogger.LogInformation("LaunchStudio step 1: closing wizard");
+                        wizardWindow.Close();
+                        startupLogger.LogInformation("LaunchStudio step 2: resolving MainWindow");
+                        var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                        startupLogger.LogInformation("LaunchStudio step 3: showing MainWindow");
+                        mainWindow.Show();
+                        startupLogger.LogInformation("LaunchStudio step 4: wiring tray");
+                        AppStartupHelpers.WireTrayService(_serviceProvider, mainWindow, startupLogger);
+                        startupLogger.LogInformation("LaunchStudio step 5: starting background services");
+                        AppStartupHelpers.StartBackgroundServices(_serviceProvider, startupLogger);
+                        startupLogger.LogInformation("LaunchStudio complete — MainWindow shown");
+                    }
+                    catch (Exception ex)
+                    {
+                        startupLogger.LogError(ex, "LaunchStudioRequested handler crashed at step X");
+                        throw;
+                    }
+                });
+            };
+
+            wizardWindow.Show();
+        }
+        else
+        {
+            // Onboarding complete — normal launch
+            var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
-            mainWindow.WindowState = WindowState.Normal;
-            mainWindow.Activate();
-            if (mainWindowViewModel is not null)
-                mainWindowViewModel.SelectedScreen = ScreenType.Settings;
+            AppStartupHelpers.WireTrayService(_serviceProvider, mainWindow, startupLogger);
+            AppStartupHelpers.StartBackgroundServices(_serviceProvider, startupLogger);
+        }
+
+        // ================================================================
+        // Wire Re-run Onboarding from Settings
+        // ================================================================
+        WeakReferenceMessenger.Default.Register<ReRunOnboardingMessage>(this, (_, _) =>
+        {
+            // Find the main window if it exists
+            var mainWindow = Current.Windows.OfType<MainWindow>().FirstOrDefault();
+            if (mainWindow is not null)
+            {
+                mainWindow.Dispatcher.Invoke(() =>
+                {
+                    var wizardWindow = _serviceProvider.GetRequiredService<OnboardingWizardWindow>();
+                    var wizardVm = (OnboardingWizardViewModel)wizardWindow.DataContext;
+
+                    wizardVm.LaunchStudioRequested += () =>
+                    {
+                        Current.Dispatcher.Invoke(() =>
+                        {
+                            startupLogger.LogInformation("LaunchStudio re-run: closing modal wizard");
+                            wizardWindow.Close();
+                        });
+                    };
+
+                    wizardWindow.Owner = mainWindow;
+                    wizardWindow.ShowDialog(); // Modal — blocks until wizard closes
+
+                    // Notify Settings → Providers tab to refresh its API key list,
+                    // since the onboarding wizard may have added new keys.
+                    startupLogger.LogInformation(
+                        "[DIAG] About to send RefreshApiKeysMessage — open windows: {WindowCount}",
+                        Current.Windows.Count);
+                    WeakReferenceMessenger.Default.Send(new RefreshApiKeysMessage());
+                    startupLogger.LogInformation("Re-run onboarding completed — RefreshApiKeysMessage sent");
+                });
+            }
         });
-    };
-
-    trayService.ExitRequested += (_, _) => App.Current.Shutdown();
-}
-
-/// <summary>
-/// Starts background services (WebSocket server, global hotkeys) after the main window is shown.
-/// </summary>
-private void StartBackgroundServices(ILogger<App> startupLogger)
-{
-    try
-    {
-        // Start the embedded Kestrel WebSocket server (non-blocking)
-        _ = StartWebSocketServerAsync(startupLogger);
-
-        // Start global hotkey service
-        var hotkeyService = _serviceProvider.GetRequiredService<IGlobalHotkeyService>();
-        var hotkeyCount = hotkeyService.GetRegisteredHotkeys().Count;
-        startupLogger.LogInformation("Global hotkey service started with {Count} default hotkeys", hotkeyCount);
     }
-    catch (Exception ex)
-    {
-        startupLogger.LogError(ex, "StartBackgroundServices failed");
-    }
-}
 
     protected override async void OnExit(ExitEventArgs e)
     {
@@ -345,171 +261,5 @@ private void StartBackgroundServices(ILogger<App> startupLogger)
         Log.CloseAndFlush();
         (_serviceProvider as IDisposable)?.Dispose();
         base.OnExit(e);
-    }
-
-    private async Task StartWebSocketServerAsync(ILogger<App>? startupLogger)
-    {
-        try
-        {
-            var wsServer = _serviceProvider.GetRequiredService<ILocalWebSocketServer>();
-            await wsServer.StartAsync();
-            startupLogger?.LogInformation("WebSocket server lifecycle started");
-        }
-        catch (Exception ex)
-        {
-            startupLogger?.LogError(ex, "Failed to start WebSocket server");
-        }
-    }
-
-    public static void ConfigureServices(IServiceCollection services)
-    {
-        // === Database ===
-        var dbPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "MySecondBrain", "msb.db");
-        Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
-
-        services.AddSingleton(_ =>
-        {
-            var options = new DbContextOptionsBuilder<AppDbContext>()
-                .UseSqlite($"Data Source={dbPath}")
-                .Options;
-            return new AppDbContext(options);
-        });
-
-        // === Repositories (Singleton) ===
-        services.AddSingleton<IChatThreadRepository, ChatThreadRepository>();
-        services.AddSingleton<IMessageRepository, MessageRepository>();
-        services.AddSingleton<IPersonaRepository, PersonaRepository>();
-        services.AddSingleton<IModelConfigurationRepository, ModelConfigurationRepository>();
-        services.AddSingleton<IApiKeyRepository, ApiKeyRepository>();
-        services.AddSingleton<IWikiIndexRepository, WikiIndexRepository>();
-        services.AddSingleton<IUsageRepository, UsageRepository>();
-        services.AddSingleton<ISettingsRepository, SettingsRepository>();
-        services.AddSingleton<ITextActionRepository, TextActionRepository>();
-
-        // === Application Services (Singleton) ===
-        services.AddSingleton<ILLMProviderService, LLMProviderService>();
-        services.AddSingleton<IChatThreadService, ChatThreadService>();
-        services.AddSingleton<IWikiService, WikiService>();
-        services.AddSingleton<ILLMProviderFactory, LLMProviderFactory>();
-        services.AddSingleton<ITokenizerFactory, TokenizerFactory>();
-        services.AddSingleton<IToolOrchestrator, ToolOrchestrator>();
-        services.AddSingleton<IChatSearchService, Fts5ChatSearchService>();
-        services.AddSingleton<IAutoCleanupService, PeriodicAutoCleanupService>();
-        services.AddSingleton<IEncryptionService, DpapiEncryptionService>();
-        services.AddSingleton<IChatEncryptionService, AesGcmChatEncryptionService>();
-        services.AddSingleton<IWikiFileWatcher, FileSystemWatcherAdapter>();
-        services.AddSingleton<ILocalWebSocketServer, KestrelWebSocketServer>();
-        services.AddSingleton<ISystemTrayService, WinFormsSystemTrayService>();
-        services.AddSingleton<IGlobalHotkeyService, GlobalHotkeyService>();
-        services.AddSingleton<IHwndCaptureService, Win32HwndCaptureService>();
-        services.AddSingleton<ITextInjectionService, UiaTextInjectionService>();
-        services.AddSingleton<ISpellCheckService, HunspellSpellCheckService>();
-        services.AddSingleton<IWikiGitService, LibGit2SharpGitService>();
-        services.AddSingleton<IThemeProvider, WpfThemeProvider>();
-
-        // === Transient Services ===
-        services.AddTransient<IClipboardService, WpfClipboardService>();
-        services.AddTransient<IConfirmationService, WpfConfirmationService>();
-        services.AddTransient<IAudioService, NaudioAudioService>();
-        services.AddTransient<ICameraService, AForgeCameraService>();
-        services.AddTransient<IVideoPlayerService, WpfVideoPlayerService>();
-
-        // === Multi-Implementation Providers (Singleton) ===
-        services.AddSingleton<ILLMProvider, OpenAIProvider>();
-        services.AddSingleton<ILLMProvider, AnthropicProvider>();
-        services.AddSingleton<ILLMProvider, GoogleProvider>();
-        services.AddSingleton<ILLMProvider, OpenAICompatibleProvider>();
-
-        services.AddSingleton<ISTTProvider, OpenAIWhisperProvider>();
-        services.AddSingleton<ISTTProvider, LocalWhisperProvider>();
-        services.AddSingleton<ISTTProvider, WindowsSpeechProvider>();
-
-        services.AddSingleton<IBackupProvider, GcsBackupProvider>();
-        services.AddSingleton<IBackupProvider, LocalFolderBackupProvider>();
-
-        services.AddSingleton<ISearchProvider, GoogleCustomSearchProvider>();
-        services.AddSingleton<ISearchProvider, BingSearchProvider>();
-
-        services.AddSingleton<ITokenizer, SharpTokenTokenizer>();
-        services.AddSingleton<ITokenizer, AnthropicTokenizer>();
-        services.AddSingleton<ITokenizer, FallbackTokenizer>();
-
-        services.AddSingleton<IChatImporter, ChatGPTImporter>();
-        services.AddSingleton<IChatImporter, ClaudeImporter>();
-
-        services.AddSingleton<IToolExecutor, WebSearchToolExecutor>();
-        services.AddSingleton<IToolExecutor, TerminalToolExecutor>();
-        services.AddSingleton<IToolExecutor, FileGenerateToolExecutor>();
-        services.AddSingleton<IToolExecutor, FileEditToolExecutor>();
-        services.AddSingleton<IToolExecutor, WikiSearchToolExecutor>();
-
-        services.AddSingleton<IUpdateChecker, AutoUpdaterDotNet>();
-        services.AddSingleton<IUpdateChecker, MsixAppInstallerUpdater>();
-
-        // === Content Block Renderers (Singleton) ===
-        services.AddSingleton<IContentRendererRegistry, ContentRendererRegistry>();
-        services.AddSingleton<IContentBlockRenderer, MarkdownTextRenderer>();
-        services.AddSingleton<IContentBlockRenderer, CodeBlockRenderer>();
-        services.AddSingleton<IContentBlockRenderer, ArtifactReferenceRenderer>();
-        services.AddSingleton<IContentBlockRenderer, ImageRenderer>();
-        services.AddSingleton<IContentBlockRenderer, MediaRenderer>();
-        services.AddSingleton<IContentBlockRenderer, ThinkingRenderer>();
-        services.AddSingleton<IContentBlockRenderer, ToolCallRenderer>();
-
-        // === ViewModels (Transient) ===
-        services.AddTransient<MainWindowViewModel>();
-        services.AddTransient<ChatThreadViewModel>();
-        services.AddTransient<SettingsViewModel>();
-        services.AddTransient<WikiBrowserViewModel>();
-        services.AddTransient<UsageDashboardViewModel>();
-        services.AddTransient<MediaLibraryViewModel>();
-        services.AddTransient<GlobalArtifactsBrowserViewModel>();
-        services.AddTransient<Tier1OverlayViewModel>();
-        services.AddTransient<Tier2CommandBarViewModel>();
-        services.AddTransient<ModelComparisonViewModel>();
-        services.AddTransient<OnboardingWizardViewModel>();
-
-        // === MainWindow (Singleton — one main window) ===
-        services.AddSingleton<MainWindow>();
-
-        // === Onboarding Wizard Window (Transient — new window each time) ===
-        services.AddTransient<OnboardingWizardWindow>();
-
-        // === Logging ===
-        var appVersion = Assembly.GetEntryAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0";
-        var logPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "MySecondBrain", "logs", "msb-.log");
-
-        var loggerConfig = new LoggerConfiguration()
-#if DEBUG
-            .MinimumLevel.Debug()
-#else
-            .MinimumLevel.Information()
-#endif
-            .Destructure.With<ApiKeyDestructuringPolicy>()
-            .Enrich.With<ApiKeyRedactionEnricher>()
-            .Enrich.WithThreadId()
-            .Enrich.WithMachineName()
-            .Enrich.WithProperty("AppVersion", appVersion)
-            .WriteTo.File(
-                formatter: new JsonFormatter(),
-                logPath,
-                rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 30);
-
-#if DEBUG
-        loggerConfig = loggerConfig.WriteTo.Console();
-#endif
-
-        Log.Logger = loggerConfig.CreateLogger();
-
-        services.AddLogging(builder =>
-        {
-            builder.ClearProviders();
-            builder.AddSerilog();
-        });
     }
 }
