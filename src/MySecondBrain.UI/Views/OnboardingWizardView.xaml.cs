@@ -1,5 +1,4 @@
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using MySecondBrain.UI.ViewModels;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -143,27 +142,5 @@ public partial class OnboardingWizardView : WpfUserControl
             Key.Down => "Down",
             _ => key.ToString(),
         };
-    }
-
-    /// <summary>
-    /// Bridges the PasswordBox secure password to the ViewModel's ApiKeyInputValue.
-    /// </summary>
-    public string ApiKeyPassword
-    {
-        get => ViewModel.ApiKeyInputValue;
-        set
-        {
-            ViewModel.ApiKeyInputValue = value;
-            if (ApiKeyPasswordBox is not null && ApiKeyPasswordBox.Password != value)
-                ApiKeyPasswordBox.Password = value;
-        }
-    }
-
-    private void ApiKeyPasswordBox_PasswordChanged(object sender, RoutedEventArgs e)
-    {
-        if (sender is PasswordBox pb)
-        {
-            ViewModel.ApiKeyInputValue = pb.Password;
-        }
     }
 }

@@ -1,0 +1,69 @@
+<UserControl x:Class="MySecondBrain.UI.Views.Onboarding.OnboardingStep2View"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:MySecondBrain.UI.ViewModels"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="580"
+             AutomationProperties.AutomationId="OnboardingStep2View">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <vm:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <StackPanel VerticalAlignment="Center">
+        <TextBlock Text="Set Up Your Personal Wiki" FontSize="18" FontWeight="SemiBold"
+                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+        <TextBlock Text="Your wiki is a folder of Markdown files on your computer. AI can read it, write to it, and help you build your second brain."
+                   FontSize="12" Foreground="{DynamicResource SubtleBrush}"
+                   TextWrapping="Wrap" Margin="0,0,0,20"/>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16">
+            <Button Content="Choose Existing Folder" FontSize="12" Padding="14,6"
+                    Margin="0,0,8,0"
+                    Background="{DynamicResource AccentBrush}"
+                    Foreground="{DynamicResource AccentForeground}"
+                    BorderThickness="0"
+                    Command="{Binding ChooseExistingWikiFolderCommand}"
+                    AutomationProperties.AutomationId="WizardChooseWikiFolder"/>
+            <Button Content="Create New Wiki Folder" FontSize="12" Padding="14,6"
+                    Background="Transparent"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    Foreground="{DynamicResource ContentForeground}"
+                    Command="{Binding CreateNewWikiFolderCommand}"
+                    AutomationProperties.AutomationId="WizardCreateWikiFolder"/>
+        </StackPanel>
+
+        <!-- Path display -->
+        <Border Background="{DynamicResource InputBackground}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                CornerRadius="4" Padding="10,8" Margin="0,0,0,8">
+            <StackPanel>
+                <TextBlock Text="{Binding WikiDirectoryPath}" FontSize="11"
+                           FontFamily="Consolas"
+                           Foreground="{DynamicResource ContentForeground}"
+                           Visibility="{Binding WikiDirectoryPath, Converter={StaticResource NullToVisibilityConverter}}"/>
+                <TextBlock Text="{Binding WikiFileCount}" FontSize="10"
+                           Foreground="{DynamicResource SubtleBrush}" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Status message -->
+        <TextBlock Text="{Binding WikiStatusMessage}" FontSize="10"
+                   Foreground="{DynamicResource AccentBrush}"
+                   Margin="0,0,0,12"/>
+
+        <!-- Git checkbox -->
+        <CheckBox IsChecked="{Binding GitVersionControlEnabled}"
+                  Content="Initialize git repository for version control"
+                  FontSize="11"
+                  Foreground="{DynamicResource ContentForeground}"
+                  Margin="0,0,0,6"/>
+        <CheckBox IsChecked="{Binding GitAutoCommitEnabled}"
+                  Content="Auto-commit on file change"
+                  FontSize="11"
+                  Foreground="{DynamicResource SubtleBrush}"
+                  Margin="24,0,0,0"/>
+    </StackPanel>
+</UserControl>

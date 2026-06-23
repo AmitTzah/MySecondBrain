@@ -3,52 +3,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:MySecondBrain.UI.ViewModels"
              xmlns:models="clr-namespace:MySecondBrain.Core.Models;assembly=MySecondBrain.Core"
+             xmlns:viewsOnboarding="clr-namespace:MySecondBrain.UI.Views.Onboarding"
              Background="{DynamicResource ContentBackground}"
              AutomationProperties.AutomationId="OnboardingWizardView">
     <UserControl.Resources>
         <ResourceDictionary>
             <!-- Converters -->
             <vm:StepDotConverter x:Key="StepDotConverter"/>
-            <vm:ProviderTypeDisplayConverter x:Key="ProviderTypeDisplayConverter"/>
-            <vm:StepVisibilityConverter x:Key="StepVisibilityConverter"/>
-            <vm:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
-            <vm:EmptyStateVisibilityConverter x:Key="ZeroToCollapsedConverter"/>
             <vm:InvertedVisibilityConverter x:Key="InvertedVisibilityConverter"/>
             <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
-
-            <!-- DataTemplates for step content -->
-            <DataTemplate x:Key="ApiKeyItemTemplate">
-                <Border Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,0,0,4">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding ProviderLabel}" FontSize="11"
-                                   FontWeight="SemiBold" Foreground="{DynamicResource ContentForeground}"
-                                   VerticalAlignment="Center" Margin="0,0,8,0" MinWidth="70"/>
-                        <StackPanel Grid.Column="1" Orientation="Vertical">
-                            <TextBlock Text="{Binding MaskedValue}" FontSize="11"
-                                       FontFamily="Consolas" Foreground="{DynamicResource SubtleBrush}"/>
-                            <TextBlock Text="{Binding DisplayName}" FontSize="10"
-                                       Foreground="{DynamicResource SubtleBrush}"
-                                       Visibility="{Binding DisplayName, Converter={StaticResource NullToVisibilityConverter}}"/>
-                        </StackPanel>
-                        <TextBlock Grid.Column="2" Text="{Binding Status}" FontSize="10"
-                                   Foreground="{DynamicResource AccentBrush}"
-                                   VerticalAlignment="Center" Margin="8,0"/>
-                        <Button Grid.Column="3" Content="✕" FontSize="10"
-                                Background="Transparent" BorderThickness="0"
-                                Foreground="{DynamicResource SubtleBrush}"
-                                Command="{Binding DataContext.RemoveApiKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                CommandParameter="{Binding}"
-                                Width="22" Height="22" Margin="4,0,0,0"/>
-                    </Grid>
-                </Border>
-            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -243,400 +206,82 @@
                 <!-- ============================================================
                      Screen 0: API Keys
                      ============================================================ -->
-                <ScrollViewer Visibility="{Binding CurrentStep, Converter={StaticResource StepVisibilityConverter}, ConverterParameter=0}"
-                              VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <TextBlock Text="Add Your API Keys" FontSize="18" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
-                        <TextBlock Text="Connect to AI providers using your own keys. You can add more anytime in Settings."
-                                   FontSize="12" Foreground="{DynamicResource SubtleBrush}"
-                                   TextWrapping="Wrap" Margin="0,0,0,16"/>
-
-                        <!-- Add Key Form -->
-                        <Grid Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <!-- Provider dropdown -->
-                            <ComboBox Grid.Row="0" Grid.ColumnSpan="3"
-                                      ItemsSource="{Binding AllProviderTypes}"
-                                      SelectedItem="{Binding SelectedApiKeyProvider}"
-                                      FontSize="12" Margin="0,0,0,6"
-                                      Background="{DynamicResource InputBackground}"
-                                      Foreground="{DynamicResource ContentForeground}"/>
-
-                            <!-- Labels -->
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="API Key"
-                                       FontSize="10" Foreground="{DynamicResource SubtleBrush}"
-                                       Margin="0,0,0,2"/>
-                            <TextBlock Grid.Row="1" Grid.Column="1" Text="Display Name (optional)"
-                                       FontSize="10" Foreground="{DynamicResource SubtleBrush}"
-                                       Margin="0,0,0,2"/>
-
-                            <!-- Password box + display name -->
-                            <PasswordBox x:Name="ApiKeyPasswordBox" Grid.Row="2" Grid.Column="0"
-                                         FontSize="12" Width="200"
-                                         Background="{DynamicResource InputBackground}"
-                                         BorderBrush="{DynamicResource BorderBrush}"
-                                         BorderThickness="1" Margin="0,0,6,6"
-                                         PasswordChanged="ApiKeyPasswordBox_PasswordChanged"/>
-                            <TextBox Grid.Row="2" Grid.Column="1"
-                                     Text="{Binding ApiKeyDisplayNameInputValue, UpdateSourceTrigger=PropertyChanged}"
-                                     FontSize="12"
-                                     Background="{DynamicResource InputBackground}"
-                                     Foreground="{DynamicResource ContentForeground}"
-                                     BorderBrush="{DynamicResource BorderBrush}"
-                                     BorderThickness="1" Margin="0,0,6,6"/>
-
-                            <!-- Add Key button -->
-                            <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
-                                    Content="Add Key" FontSize="12" FontWeight="SemiBold"
-                                    Padding="16,6"
-                                    Background="{DynamicResource AccentBrush}"
-                                    Foreground="{DynamicResource AccentForeground}"
-                                    BorderThickness="0" Margin="0,0,6,0"
-                                    Command="{Binding AddApiKeyCommand}"
-                                    AutomationProperties.AutomationId="WizardAddApiKey"/>
-                        </Grid>
-
-                        <!-- Keys List -->
-                        <ItemsControl ItemsSource="{Binding WizardApiKeys}"
-                                      ItemTemplate="{StaticResource ApiKeyItemTemplate}"
-                                      Margin="0,0,0,8"/>
-
-                        <!-- Empty State -->
-                        <TextBlock Text="No keys added yet. Add at least one API key to start using AI models."
-                                   FontSize="11" Foreground="{DynamicResource SubtleBrush}"
-                                   Visibility="{Binding WizardApiKeys.Count, Converter={StaticResource ZeroToCollapsedConverter}}"
-                                   Margin="0,0,0,8"/>
-
-                        <!-- Test All Keys -->
-                        <Button Content="Test All Keys" FontSize="11"
-                                Padding="12,4"
-                                Background="Transparent"
-                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                Foreground="{DynamicResource AccentBrush}"
-                                HorizontalAlignment="Left"
-                                Command="{Binding TestAllApiKeysCommand}"
-                                AutomationProperties.AutomationId="WizardTestAllKeys"/>
-                    </StackPanel>
-                </ScrollViewer>
+                <viewsOnboarding:OnboardingStep0View>
+                    <viewsOnboarding:OnboardingStep0View.Style>
+                        <Style TargetType="viewsOnboarding:OnboardingStep0View">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CurrentStep}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </viewsOnboarding:OnboardingStep0View.Style>
+                </viewsOnboarding:OnboardingStep0View>
 
                 <!-- ============================================================
                      Screen 1: Persona
                      ============================================================ -->
-                <ScrollViewer Visibility="{Binding CurrentStep, Converter={StaticResource StepVisibilityConverter}, ConverterParameter=1}"
-                              VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <TextBlock Text="Choose Your Assistant" FontSize="18" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
-                        <TextBlock Text="A Persona defines how the AI behaves. Pick one and customize it to your style."
-                                   FontSize="12" Foreground="{DynamicResource SubtleBrush}"
-                                   TextWrapping="Wrap" Margin="0,0,0,16"/>
-
-                        <!-- 3 Starter Persona Cards -->
-                        <ItemsControl ItemsSource="{Binding StarterPersonas}" Margin="0,0,0,12">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Vertical"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="{x:Type vm:StarterPersonaCard}">
-                                    <Border Background="{DynamicResource ContentBackground}"
-                                            BorderBrush="{DynamicResource BorderBrush}"
-                                            BorderThickness="1" CornerRadius="6"
-                                            Padding="12,10" Margin="0,0,0,6"
-                                            Cursor="Hand">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                                        <Setter Property="Background" Value="{DynamicResource AccentBackground}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <Border.InputBindings>
-                                            <MouseBinding MouseAction="LeftClick"
-                                                          Command="{Binding DataContext.SelectPersonaCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                          CommandParameter="{Binding}"/>
-                                        </Border.InputBindings>
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource ContentForeground}"/>
-                                            <TextBlock Text="{Binding PromptPreview}" FontSize="10"
-                                                       Foreground="{DynamicResource SubtleBrush}"
-                                                       TextWrapping="Wrap" Margin="0,4,0,0"/>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <!-- Customization Panel (visible when persona selected or creating from scratch) -->
-                        <Border Background="{DynamicResource InputBackground}"
-                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                CornerRadius="6" Padding="12" Margin="0,0,0,12">
-                            <StackPanel>
-                                <TextBlock Text="Customize Persona" FontSize="12" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,8"/>
-                                <TextBox Text="{Binding PersonaDisplayName, UpdateSourceTrigger=PropertyChanged}"
-                                         FontSize="12"
-                                         Background="{DynamicResource ContentBackground}"
-                                         Foreground="{DynamicResource ContentForeground}"
-                                         BorderBrush="{DynamicResource BorderBrush}"
-                                         BorderThickness="1" Margin="0,0,0,6"/>
-                                <TextBox Text="{Binding PersonaSystemPrompt, UpdateSourceTrigger=PropertyChanged}"
-                                         FontSize="11" AcceptsReturn="True" TextWrapping="Wrap"
-                                         MinHeight="60" MaxHeight="120"
-                                         Background="{DynamicResource ContentBackground}"
-                                         Foreground="{DynamicResource ContentForeground}"
-                                         BorderBrush="{DynamicResource BorderBrush}"
-                                         BorderThickness="1" Margin="0,0,0,6"/>
-                                <ComboBox ItemsSource="{Binding ChatModeOptions}"
-                                          SelectedItem="{Binding PersonaChatMode}"
-                                          FontSize="12" Margin="0,0,0,8"
-                                          Background="{DynamicResource ContentBackground}"
-                                          Foreground="{DynamicResource ContentForeground}"/>
-                                <Button Content="Save Persona" FontSize="12" FontWeight="SemiBold"
-                                        Padding="16,6" HorizontalAlignment="Left"
-                                        Background="{DynamicResource AccentBrush}"
-                                        Foreground="{DynamicResource AccentForeground}"
-                                        BorderThickness="0"
-                                        Command="{Binding SavePersonaCommand}"
-                                        AutomationProperties.AutomationId="WizardSavePersona"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Create from Scratch link -->
-                        <TextBlock Text="Create from Scratch" FontSize="11"
-                                   Foreground="{DynamicResource AccentBrush}"
-                                   Cursor="Hand" TextDecorations="Underline"
-                                   AutomationProperties.AutomationId="WizardCreatePersona">
-                            <TextBlock.InputBindings>
-                                <MouseBinding MouseAction="LeftClick"
-                                              Command="{Binding CreateFromScratchCommand}"/>
-                            </TextBlock.InputBindings>
-                        </TextBlock>
-                    </StackPanel>
-                </ScrollViewer>
+                <viewsOnboarding:OnboardingStep1View>
+                    <viewsOnboarding:OnboardingStep1View.Style>
+                        <Style TargetType="viewsOnboarding:OnboardingStep1View">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CurrentStep}" Value="1">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </viewsOnboarding:OnboardingStep1View.Style>
+                </viewsOnboarding:OnboardingStep1View>
 
                 <!-- ============================================================
                      Screen 2: Wiki
                      ============================================================ -->
-                <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource StepVisibilityConverter}, ConverterParameter=2}"
-                            VerticalAlignment="Center">
-                    <TextBlock Text="Set Up Your Personal Wiki" FontSize="18" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
-                    <TextBlock Text="Your wiki is a folder of Markdown files on your computer. AI can read it, write to it, and help you build your second brain."
-                               FontSize="12" Foreground="{DynamicResource SubtleBrush}"
-                               TextWrapping="Wrap" Margin="0,0,0,20"/>
-
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16">
-                        <Button Content="Choose Existing Folder" FontSize="12" Padding="14,6"
-                                Margin="0,0,8,0"
-                                Background="{DynamicResource AccentBrush}"
-                                Foreground="{DynamicResource AccentForeground}"
-                                BorderThickness="0"
-                                Command="{Binding ChooseExistingWikiFolderCommand}"
-                                AutomationProperties.AutomationId="WizardChooseWikiFolder"/>
-                        <Button Content="Create New Wiki Folder" FontSize="12" Padding="14,6"
-                                Background="Transparent"
-                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                Foreground="{DynamicResource ContentForeground}"
-                                Command="{Binding CreateNewWikiFolderCommand}"
-                                AutomationProperties.AutomationId="WizardCreateWikiFolder"/>
-                    </StackPanel>
-
-                    <!-- Path display -->
-                    <Border Background="{DynamicResource InputBackground}"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                            CornerRadius="4" Padding="10,8" Margin="0,0,0,8">
-                        <StackPanel>
-                            <TextBlock Text="{Binding WikiDirectoryPath}" FontSize="11"
-                                       FontFamily="Consolas"
-                                       Foreground="{DynamicResource ContentForeground}"
-                                       Visibility="{Binding WikiDirectoryPath, Converter={StaticResource NullToVisibilityConverter}}"/>
-                            <TextBlock Text="{Binding WikiFileCount}" FontSize="10"
-                                       Foreground="{DynamicResource SubtleBrush}" Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Status message -->
-                    <TextBlock Text="{Binding WikiStatusMessage}" FontSize="10"
-                               Foreground="{DynamicResource AccentBrush}"
-                               Margin="0,0,0,12"/>
-
-                    <!-- Git checkbox -->
-                    <CheckBox IsChecked="{Binding GitVersionControlEnabled}"
-                              Content="Initialize git repository for version control"
-                              FontSize="11"
-                              Foreground="{DynamicResource ContentForeground}"
-                              Margin="0,0,0,6"/>
-                    <CheckBox IsChecked="{Binding GitAutoCommitEnabled}"
-                              Content="Auto-commit on file change"
-                              FontSize="11"
-                              Foreground="{DynamicResource SubtleBrush}"
-                              Margin="24,0,0,0"/>
-                </StackPanel>
+                <viewsOnboarding:OnboardingStep2View>
+                    <viewsOnboarding:OnboardingStep2View.Style>
+                        <Style TargetType="viewsOnboarding:OnboardingStep2View">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CurrentStep}" Value="2">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </viewsOnboarding:OnboardingStep2View.Style>
+                </viewsOnboarding:OnboardingStep2View>
 
                 <!-- ============================================================
                      Screen 3: Hotkeys
                      ============================================================ -->
-                <StackPanel Visibility="{Binding CurrentStep, Converter={StaticResource StepVisibilityConverter}, ConverterParameter=3}">
-                    <TextBlock Text="Review Your Hotkeys" FontSize="18" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
-                    <TextBlock Text="These global shortcuts work from any Windows application — no need to switch windows."
-                               FontSize="12" Foreground="{DynamicResource SubtleBrush}"
-                               TextWrapping="Wrap" Margin="0,0,0,16"/>
-
-                    <!-- Hotkey Table Header -->
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="80"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Action" FontSize="10" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource SubtleBrush}"/>
-                        <TextBlock Grid.Column="1" Text="Hotkey" FontSize="10" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource SubtleBrush}"/>
-                    </Grid>
-
-                    <!-- Hotkey Items -->
-                    <ItemsControl ItemsSource="{Binding HotkeyAssignments}" Margin="0,0,0,12">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:WizardHotkeyItem}">
-                                <Border BorderBrush="{DynamicResource BorderBrush}"
-                                        BorderThickness="0,0,0,1" Padding="4,6">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="80"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="{Binding ActionName}" FontSize="12"
-                                                       Foreground="{DynamicResource ContentForeground}"/>
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="1" Text="{Binding Hotkey}" FontSize="11"
-                                                   FontFamily="Consolas"
-                                                   Foreground="{DynamicResource AccentBrush}"
-                                                   VerticalAlignment="Center"/>
-                                        <Button Grid.Column="2" Content="Change" FontSize="10"
-                                                Padding="10,2"
-                                                Background="Transparent"
-                                                BorderBrush="{DynamicResource BorderBrush}"
-                                                BorderThickness="1"
-                                                Foreground="{DynamicResource AccentBrush}"
-                                                Command="{Binding DataContext.ChangeWizardHotkeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                CommandParameter="{Binding}"/>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <!-- Reset to Defaults -->
-                    <TextBlock Text="Reset to Defaults" FontSize="11"
-                               Foreground="{DynamicResource AccentBrush}"
-                               Cursor="Hand" TextDecorations="Underline"
-                               HorizontalAlignment="Left"
-                               AutomationProperties.AutomationId="WizardResetHotkeys">
-                        <TextBlock.InputBindings>
-                            <MouseBinding MouseAction="LeftClick"
-                                          Command="{Binding ResetWizardHotkeysToDefaultsCommand}"/>
-                        </TextBlock.InputBindings>
-                    </TextBlock>
-                </StackPanel>
+                <viewsOnboarding:OnboardingStep3View>
+                    <viewsOnboarding:OnboardingStep3View.Style>
+                        <Style TargetType="viewsOnboarding:OnboardingStep3View">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CurrentStep}" Value="3">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </viewsOnboarding:OnboardingStep3View.Style>
+                </viewsOnboarding:OnboardingStep3View>
 
                 <!-- ============================================================
                      Screen 4: Finish
                      ============================================================ -->
-                <StackPanel Visibility="{Binding IsFinishScreen, Converter={StaticResource BoolToVisibility}}"
-                            VerticalAlignment="Center">
-                    <TextBlock Text="✓" FontSize="48" Foreground="{DynamicResource AccentBrush}"
-                               HorizontalAlignment="Center" Margin="0,0,0,8"/>
-                    <TextBlock Text="You're All Set!" FontSize="22" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ContentForeground}"
-                               HorizontalAlignment="Center" Margin="0,0,0,20"/>
-
-                    <!-- Summary Card -->
-                    <Border Background="{DynamicResource InputBackground}"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                            CornerRadius="6" Padding="16,12" Margin="0,0,0,20">
-                        <StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                <TextBlock Text="🔑" FontSize="14" VerticalAlignment="Center"
-                                           Margin="0,0,4,0"/>
-                                <TextBlock FontSize="12"
-                                           Text="{Binding ConfiguredKeyCount, StringFormat='{}{0} API key(s) added'}"
-                                           Foreground="{DynamicResource ContentForeground}"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                <TextBlock Text="🤖" FontSize="14" VerticalAlignment="Center"
-                                           Margin="0,0,4,0"/>
-                                <TextBlock FontSize="12"
-                                           Text="{Binding ConfiguredPersonaName, StringFormat='Persona: {0}'}"
-                                           Foreground="{DynamicResource ContentForeground}"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                <TextBlock Text="📝" FontSize="14" VerticalAlignment="Center"
-                                           Margin="0,0,4,0"/>
-                                <TextBlock FontSize="12"
-                                           Text="{Binding ConfiguredWikiPath, StringFormat='Wiki: {0}'}"
-                                           Foreground="{DynamicResource ContentForeground}"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                <TextBlock Text="⌨️" FontSize="14" VerticalAlignment="Center"
-                                           Margin="0,0,4,0"/>
-                                <TextBlock FontSize="12"
-                                           Text="{Binding ConfiguredHotkeyCount, StringFormat='{}{0} hotkeys configured'}"
-                                           Foreground="{DynamicResource ContentForeground}"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Actions -->
-                    <StackPanel HorizontalAlignment="Center">
-                        <Button Content="Launch Studio" FontSize="14" FontWeight="SemiBold"
-                                Padding="32,10"
-                                Background="{DynamicResource AccentBrush}"
-                                Foreground="{DynamicResource AccentForeground}"
-                                BorderThickness="0" Margin="0,0,0,8"
-                                Command="{Binding LaunchStudioCommand}"
-                                AutomationProperties.AutomationId="WizardLaunchStudio"/>
-                        <TextBlock Text="Import from ChatGPT or Claude" FontSize="11"
-                                   Foreground="{DynamicResource AccentBrush}"
-                                   Cursor="Hand" TextDecorations="Underline"
-                                   HorizontalAlignment="Center"
-                                   AutomationProperties.AutomationId="WizardImportChat">
-                            <TextBlock.InputBindings>
-                                <MouseBinding MouseAction="LeftClick"
-                                              Command="{Binding ImportFromChatGptCommand}"/>
-                            </TextBlock.InputBindings>
-                        </TextBlock>
-                        <TextBlock Text="You can re-run this wizard anytime from Settings → Onboarding."
-                                   FontSize="10" Foreground="{DynamicResource SubtleBrush}"
-                                   HorizontalAlignment="Center" Margin="0,8,0,0"/>
-                    </StackPanel>
-                </StackPanel>
+                <viewsOnboarding:OnboardingStep4View>
+                    <viewsOnboarding:OnboardingStep4View.Style>
+                        <Style TargetType="viewsOnboarding:OnboardingStep4View">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsFinishScreen}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </viewsOnboarding:OnboardingStep4View.Style>
+                </viewsOnboarding:OnboardingStep4View>
             </Grid>
         </Border>
 

@@ -1,0 +1,80 @@
+<UserControl x:Class="MySecondBrain.UI.Views.Onboarding.OnboardingStep4View"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="580"
+             AutomationProperties.AutomationId="OnboardingStep4View">
+    <StackPanel VerticalAlignment="Center">
+        <TextBlock Text="✓" FontSize="48" Foreground="{DynamicResource AccentBrush}"
+                   HorizontalAlignment="Center" Margin="0,0,0,8"/>
+        <TextBlock Text="You're All Set!" FontSize="22" FontWeight="SemiBold"
+                   Foreground="{DynamicResource ContentForeground}"
+                   HorizontalAlignment="Center" Margin="0,0,0,20"/>
+
+        <!-- Summary Card -->
+        <Border Background="{DynamicResource InputBackground}"
+                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                CornerRadius="6" Padding="16,12" Margin="0,0,0,20">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock Text="🔑" FontSize="14" VerticalAlignment="Center"
+                               Margin="0,0,4,0"/>
+                    <TextBlock FontSize="12"
+                               Text="{Binding ConfiguredKeyCount, StringFormat='{}{0} API key(s) added'}"
+                               Foreground="{DynamicResource ContentForeground}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock Text="🤖" FontSize="14" VerticalAlignment="Center"
+                               Margin="0,0,4,0"/>
+                    <TextBlock FontSize="12"
+                               Text="{Binding ConfiguredPersonaName, StringFormat='Persona: {0}'}"
+                               Foreground="{DynamicResource ContentForeground}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock Text="📝" FontSize="14" VerticalAlignment="Center"
+                               Margin="0,0,4,0"/>
+                    <TextBlock FontSize="12"
+                               Text="{Binding ConfiguredWikiPath, StringFormat='Wiki: {0}'}"
+                               Foreground="{DynamicResource ContentForeground}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock Text="⌨️" FontSize="14" VerticalAlignment="Center"
+                               Margin="0,0,4,0"/>
+                    <TextBlock FontSize="12"
+                               Text="{Binding ConfiguredHotkeyCount, StringFormat='{}{0} hotkeys configured'}"
+                               Foreground="{DynamicResource ContentForeground}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Actions -->
+        <StackPanel HorizontalAlignment="Center">
+            <Button Content="Launch Studio" FontSize="14" FontWeight="SemiBold"
+                    Padding="32,10"
+                    Background="{DynamicResource AccentBrush}"
+                    Foreground="{DynamicResource AccentForeground}"
+                    BorderThickness="0" Margin="0,0,0,8"
+                    Command="{Binding LaunchStudioCommand}"
+                    AutomationProperties.AutomationId="WizardLaunchStudio"/>
+            <TextBlock Text="Import from ChatGPT or Claude" FontSize="11"
+                       Foreground="{DynamicResource AccentBrush}"
+                       Cursor="Hand" TextDecorations="Underline"
+                       HorizontalAlignment="Center"
+                       AutomationProperties.AutomationId="WizardImportChat">
+                <TextBlock.InputBindings>
+                    <MouseBinding MouseAction="LeftClick"
+                                  Command="{Binding ImportFromChatGptCommand}"/>
+                </TextBlock.InputBindings>
+            </TextBlock>
+            <TextBlock Text="You can re-run this wizard anytime from Settings → Onboarding."
+                       FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                       HorizontalAlignment="Center" Margin="0,8,0,0"/>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

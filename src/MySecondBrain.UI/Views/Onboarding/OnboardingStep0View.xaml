@@ -1,0 +1,136 @@
+<UserControl x:Class="MySecondBrain.UI.Views.Onboarding.OnboardingStep0View"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:MySecondBrain.UI.ViewModels"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="580"
+             AutomationProperties.AutomationId="OnboardingStep0View">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <vm:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+            <vm:EmptyStateVisibilityConverter x:Key="ZeroToCollapsedConverter"/>
+            <vm:ProviderTypeDisplayConverter x:Key="ProviderTypeDisplayConverter"/>
+
+            <DataTemplate x:Key="ApiKeyItemTemplate">
+                <Border Background="{DynamicResource InputBackground}" BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1" CornerRadius="4" Padding="8,6" Margin="0,0,0,4">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding ProviderLabel}" FontSize="11"
+                                   FontWeight="SemiBold" Foreground="{DynamicResource ContentForeground}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" MinWidth="70"/>
+                        <StackPanel Grid.Column="1" Orientation="Vertical">
+                            <TextBlock Text="{Binding MaskedValue}" FontSize="11"
+                                       FontFamily="Consolas" Foreground="{DynamicResource SubtleBrush}"/>
+                            <TextBlock Text="{Binding DisplayName}" FontSize="10"
+                                       Foreground="{DynamicResource SubtleBrush}"
+                                       Visibility="{Binding DisplayName, Converter={StaticResource NullToVisibilityConverter}}"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="{Binding Status}" FontSize="10"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   VerticalAlignment="Center" Margin="8,0"/>
+                        <Button Grid.Column="3" Content="✕" FontSize="10"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource SubtleBrush}"
+                                Command="{Binding DataContext.RemoveApiKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                Width="22" Height="22" Margin="4,0,0,0"/>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <TextBlock Text="Add Your API Keys" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+            <TextBlock Text="Connect to AI providers using your own keys. You can add more anytime in Settings."
+                       FontSize="12" Foreground="{DynamicResource SubtleBrush}"
+                       TextWrapping="Wrap" Margin="0,0,0,16"/>
+
+            <!-- Add Key Form -->
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Provider dropdown -->
+                <ComboBox Grid.Row="0" Grid.ColumnSpan="3"
+                          ItemsSource="{Binding AllProviderTypes}"
+                          SelectedItem="{Binding SelectedApiKeyProvider}"
+                          FontSize="12" Margin="0,0,0,6"
+                          Background="{DynamicResource InputBackground}"
+                          Foreground="{DynamicResource ContentForeground}"/>
+
+                <!-- Labels -->
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="API Key"
+                           FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                           Margin="0,0,0,2"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="Display Name (optional)"
+                           FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                           Margin="0,0,0,2"/>
+
+                <!-- Password box + display name -->
+                <PasswordBox x:Name="ApiKeyPasswordBox" Grid.Row="2" Grid.Column="0"
+                             FontSize="12" Width="200"
+                             Background="{DynamicResource InputBackground}"
+                             BorderBrush="{DynamicResource BorderBrush}"
+                             BorderThickness="1" Margin="0,0,6,6"
+                             PasswordChanged="ApiKeyPasswordBox_PasswordChanged"/>
+                <TextBox Grid.Row="2" Grid.Column="1"
+                         Text="{Binding ApiKeyDisplayNameInputValue, UpdateSourceTrigger=PropertyChanged}"
+                         FontSize="12"
+                         Background="{DynamicResource InputBackground}"
+                         Foreground="{DynamicResource ContentForeground}"
+                         BorderBrush="{DynamicResource BorderBrush}"
+                         BorderThickness="1" Margin="0,0,6,6"/>
+
+                <!-- Add Key button -->
+                <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                        Content="Add Key" FontSize="12" FontWeight="SemiBold"
+                        Padding="16,6"
+                        Background="{DynamicResource AccentBrush}"
+                        Foreground="{DynamicResource AccentForeground}"
+                        BorderThickness="0" Margin="0,0,6,0"
+                        Command="{Binding AddApiKeyCommand}"
+                        AutomationProperties.AutomationId="WizardAddApiKey"/>
+            </Grid>
+
+            <!-- Keys List -->
+            <ItemsControl ItemsSource="{Binding WizardApiKeys}"
+                          ItemTemplate="{StaticResource ApiKeyItemTemplate}"
+                          Margin="0,0,0,8"/>
+
+            <!-- Empty State -->
+            <TextBlock Text="No keys added yet. Add at least one API key to start using AI models."
+                       FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                       Visibility="{Binding WizardApiKeys.Count, Converter={StaticResource ZeroToCollapsedConverter}}"
+                       Margin="0,0,0,8"/>
+
+            <!-- Test All Keys -->
+            <Button Content="Test All Keys" FontSize="11"
+                    Padding="12,4"
+                    Background="Transparent"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    Foreground="{DynamicResource AccentBrush}"
+                    HorizontalAlignment="Left"
+                    Command="{Binding TestAllApiKeysCommand}"
+                    AutomationProperties.AutomationId="WizardTestAllKeys"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
