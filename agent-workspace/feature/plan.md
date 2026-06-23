@@ -124,7 +124,7 @@ tests/e2e/MySecondBrain.Tests.E2E/
 
 ## 5. Execution Steps
 
-### [ ] Step 1: MSB_DB_PATH + E2eFixture + E2eTestBase Infrastructure
+### [x] Step 1: MSB_DB_PATH + E2eFixture + E2eTestBase Infrastructure
 
 - **Goal:** Implement the MSB_DB_PATH environment variable pattern in 3 source files, rewrite `E2eFixture` for `ICollectionFixture` with fresh test DB and single-app-launch lifecycle, create `E2eTestBase` abstract class with all 7 shared helpers, and update `GlobalUsings.cs` and `.csproj` as needed.
 - **Actions:**
