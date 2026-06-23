@@ -1,0 +1,301 @@
+<UserControl x:Class="MySecondBrain.UI.Views.Settings.ProvidersSettingsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:MySecondBrain.UI.ViewModels"
+             xmlns:models="clr-namespace:MySecondBrain.Core.Models;assembly=MySecondBrain.Core"
+             xmlns:converters="clr-namespace:MySecondBrain.UI.Converters">
+    <UserControl.Resources><ResourceDictionary><Style x:Key="IconButtonStyle" TargetType="Button"><Setter Property="Width" Value="28"/><Setter Property="Height" Value="24"/><Setter Property="FontSize" Value="11"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/><Setter Property="Margin" Value="2,0"/><Style.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="0.85"/></Trigger><Trigger Property="IsPressed" Value="True"><Setter Property="Opacity" Value="0.7"/></Trigger></Style.Triggers></Style><Style x:Key="AccentButtonStyle" TargetType="Button"><Setter Property="OverridesDefaultStyle" Value="True"/><Setter Property="Background" Value="{DynamicResource AccentBrush}"/><Setter Property="Foreground" Value="White"/><Setter Property="BorderThickness" Value="0"/><Setter Property="FontSize" Value="11"/><Setter Property="Padding" Value="12,5"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="0.85"/></Trigger><Trigger Property="IsPressed" Value="True"><Setter Property="Opacity" Value="0.7"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style><Style x:Key="SecondaryButtonStyle" TargetType="Button"><Setter Property="OverridesDefaultStyle" Value="True"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Foreground" Value="{DynamicResource ContentForeground}"/><Setter Property="FontSize" Value="11"/><Setter Property="Padding" Value="12,5"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="0.85"/></Trigger><Trigger Property="IsPressed" Value="True"><Setter Property="Opacity" Value="0.7"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+            <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+
+            <!-- API Key list item template -->
+            <DataTemplate x:Key="ApiKeyListItemTemplate" DataType="vm:ApiKeyDisplayItem">
+                <Border Padding="10,8" Margin="0,0,0,2" Background="{DynamicResource CardBackground}"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6">
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Width="8" Height="8" CornerRadius="4" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <Border.Style><Style TargetType="Border"><Setter Property="Background" Value="#4CAF50"/><Style.Triggers><DataTrigger Binding="{Binding IsValid}" Value="False"><Setter Property="Background" Value="#FF5252"/></DataTrigger></Style.Triggers></Style></Border.Style>
+                        </Border>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="{Binding DisplayName}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource ContentForeground}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <TextBlock Text="{Binding ProviderLabel}" FontSize="10" Foreground="{DynamicResource SubtleBrush}" Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding MaskedValue}" FontSize="10" Foreground="{DynamicResource SubtleBrush}"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button ToolTip="Copy API key to clipboard" Command="{Binding DataContext.CopyKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}">
+                                <Button.Style><Style TargetType="Button" BasedOn="{StaticResource IconButtonStyle}"><Setter Property="Content" Value="📋"/><Style.Triggers><DataTrigger Binding="{Binding IsCopied}" Value="True"><Setter Property="Content" Value="✅"/><Setter Property="Foreground" Value="#4CAF50"/></DataTrigger></Style.Triggers></Style></Button.Style>
+                            </Button>
+                            <Button Content="✏️" Style="{StaticResource IconButtonStyle}" ToolTip="Edit" Command="{Binding DataContext.EditApiKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"/>
+                            <Button Content="🗑️" Style="{StaticResource IconButtonStyle}" ToolTip="Delete API key" Command="{Binding DataContext.DeleteApiKeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="🔑 API Keys" FontSize="16" FontWeight="Bold"
+                   Foreground="{DynamicResource ContentForeground}"
+                   Margin="16,16,16,4"/>
+
+        <TextBlock Grid.Row="1" Text="Manage your LLM provider API keys. Keys are encrypted using Windows DPAPI and tied to your user account."
+                   FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                   TextWrapping="Wrap" Margin="16,0,16,12"/>
+
+        <Grid Grid.Row="2" Margin="16,0,16,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="380"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="6"
+                    Background="{DynamicResource CardBackground}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" Margin="12,10,12,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Saved Keys" FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ContentForeground}"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="+ Add API Key"
+                                Padding="8,4"
+                                Command="{Binding AddApiKeyCommand}"
+                                Style="{StaticResource AccentButtonStyle}"
+                                AutomationProperties.AutomationId="AddApiKeyButton"/>
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="1" Margin="10,0,10,8"
+                                  VerticalScrollBarVisibility="Auto">
+                        <Grid>
+                            <ItemsControl ItemsSource="{Binding ApiKeys}"
+                                          ItemTemplate="{StaticResource ApiKeyListItemTemplate}">
+                                <ItemsControl.Style>
+                                    <Style TargetType="ItemsControl">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ApiKeys.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ItemsControl.Style>
+                            </ItemsControl>
+
+                            <TextBlock Text="No API keys configured yet. Click '+ Add API Key' to add one."
+                                       FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                                       TextWrapping="Wrap" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" Margin="20">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ApiKeys.Count}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Width="4" Margin="0"
+                          HorizontalAlignment="Center"
+                          Background="Transparent"
+                          IsEnabled="False"/>
+
+            <Border Grid.Column="2" BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="6"
+                    Background="{DynamicResource CardBackground}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEditingKey}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="14,12,14,12">
+                        <TextBlock Text="{Binding FormTitle}" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ContentForeground}"
+                                   Margin="0,0,0,14"
+                                   AutomationProperties.AutomationId="ApiKeyFormTitle"/>
+
+                        <TextBlock Text="Provider" FontSize="11"
+                                   Foreground="{DynamicResource SubtleBrush}"
+                                   Margin="0,0,0,3"/>
+                        <ComboBox ItemsSource="{Binding AllProviderTypes}"
+                                  SelectedItem="{Binding SelectedProviderType}"
+                                  FontSize="11" Margin="0,0,0,10"
+                                  AutomationProperties.AutomationId="ProviderTypeCombo"/>
+
+                        <TextBlock Text="Display Name (optional)" FontSize="11"
+                                   Foreground="{DynamicResource SubtleBrush}"
+                                   Margin="0,0,0,3"/>
+                        <TextBox Text="{Binding DisplayNameInputValue, UpdateSourceTrigger=PropertyChanged}"
+                                 FontSize="11" Margin="0,0,0,10"
+                                 AutomationProperties.AutomationId="DisplayNameInput"/>
+
+                        <TextBlock Text="API Key" FontSize="11"
+                                   Foreground="{DynamicResource SubtleBrush}"
+                                   Margin="0,0,0,3"/>
+                        <PasswordBox x:Name="ApiKeyPasswordBox"
+                                     FontSize="11" Margin="0,0,0,10"
+                                     AutomationProperties.AutomationId="ApiKeyInput"/>
+
+                        <StackPanel>
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOpenAiCompatibleSelected}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+
+                            <TextBlock Text="Custom Provider Name" FontSize="11"
+                                       Foreground="{DynamicResource SubtleBrush}"
+                                       Margin="0,0,0,3"/>
+                            <TextBox Text="{Binding CustomProviderNameValue, UpdateSourceTrigger=PropertyChanged}"
+                                     FontSize="11" Margin="0,0,0,10"
+                                     AutomationProperties.AutomationId="CustomProviderNameInput"/>
+
+                            <TextBlock Text="Custom Endpoint URL" FontSize="11"
+                                       Foreground="{DynamicResource SubtleBrush}"
+                                       Margin="0,0,0,3"/>
+                            <TextBox Text="{Binding CustomEndpointUrlValue, UpdateSourceTrigger=PropertyChanged}"
+                                     FontSize="11" Margin="0,0,0,10"
+                                     AutomationProperties.AutomationId="CustomEndpointUrlInput"/>
+                        </StackPanel>
+
+                        <Grid Margin="0,4,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Button Grid.Column="0" Content="Test Key"
+                                    Padding="12,5"
+                                    Command="{Binding TestApiKeyCommand}"
+                                    AutomationProperties.AutomationId="TestKeyButton">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+                                        <Setter Property="Opacity" Value="1"/>
+                                        <Setter Property="IsEnabled" Value="True"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsTesting}" Value="True">
+                                                <Setter Property="Opacity" Value="0.6"/>
+                                                <Setter Property="IsEnabled" Value="False"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+
+                            <Grid Grid.Column="1" Margin="10,0,0,0"
+                                  VerticalAlignment="Center">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="✅" FontSize="14">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsTestSuccess}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Grid.Column="1" Text="{Binding TestResultMessage}"
+                                           FontSize="10" Margin="4,0,0,0"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource SubtleBrush}"/>
+                                <TextBlock Grid.Column="1" Text="Testing..." FontSize="10"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource SubtleBrush}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsTesting}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Grid>
+
+                            <Button Grid.Column="2" Content="Cancel"
+                                    Margin="0,0,8,0"
+                                    Command="{Binding CancelEditCommand}"
+                                    Style="{StaticResource SecondaryButtonStyle}"/>
+
+                            <Button Grid.Column="3" Content="Save API Key"
+                                    Padding="12,5"
+                                    Command="{Binding SaveApiKeyCommand}"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    AutomationProperties.AutomationId="SaveApiKeyButton"/>
+                        </Grid>
+
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   FontSize="10" Margin="0,0,0,0"
+                                   Foreground="{DynamicResource SubtleBrush}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <Border Grid.Column="2" BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="6"
+                    Background="{DynamicResource CardBackground}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEditingKey}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <TextBlock Text="Select an API key or click '+ Add API Key' to manage keys."
+                           FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           TextWrapping="Wrap" Margin="20"/>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

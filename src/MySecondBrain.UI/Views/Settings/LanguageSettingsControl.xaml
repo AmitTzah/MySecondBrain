@@ -1,0 +1,32 @@
+<UserControl x:Class="MySecondBrain.UI.Views.Settings.LanguageSettingsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="🌐 Language" FontSize="16" FontWeight="Bold"
+                   Foreground="{DynamicResource ContentForeground}" Margin="16,16,16,4"/>
+        <TextBlock Grid.Row="1" Text="Configure language detection and RTL text handling."
+                   FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                   TextWrapping="Wrap" Margin="16,0,16,12"/>
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="16,0,16,8">
+            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
+                    Background="{DynamicResource CardBackground}" MaxWidth="500" HorizontalAlignment="Left">
+                <StackPanel Margin="14,12,14,12">
+                    <TextBlock Text="Right-to-Left (RTL) Detection" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+                    <TextBlock Text="Automatically detect RTL text (Hebrew Unicode range U+0590-U+05FF) in chat messages and wiki content."
+                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                               TextWrapping="Wrap" Margin="0,0,0,10"/>
+                    <CheckBox IsChecked="{Binding AutoDetectRtl}"
+                              Content="Auto-detect RTL text" FontSize="11"
+                              Foreground="{DynamicResource ContentForeground}"
+                              ToolTip="When enabled, text in the Hebrew Unicode range (U+0590-U+05FF) is automatically rendered right-to-left."/>
+                </StackPanel>
+            </Border>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

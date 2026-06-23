@@ -1,0 +1,32 @@
+<UserControl x:Class="MySecondBrain.UI.Views.Settings.StartupSettingsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="🚀 Startup" FontSize="16" FontWeight="Bold"
+                   Foreground="{DynamicResource ContentForeground}" Margin="16,16,16,4"/>
+        <TextBlock Grid.Row="1" Text="Configure application startup behavior, session restore, and system tray preferences."
+                   FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                   TextWrapping="Wrap" Margin="16,0,16,12"/>
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="16,0,16,8">
+            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
+                    Background="{DynamicResource CardBackground}" MaxWidth="500" HorizontalAlignment="Left">
+                <StackPanel Margin="14,12,14,12">
+                    <CheckBox IsChecked="{Binding LaunchOnWindowsStartup}" Content="Launch on Windows Startup" FontSize="11"
+                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,8"
+                              ToolTip="Automatically start MySecondBrain when you log into Windows."/>
+                    <CheckBox IsChecked="{Binding RestoreLastSession}" Content="Restore Last Session" FontSize="11"
+                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,8"
+                              ToolTip="Reopen the last chat threads and tabs when the application starts."/>
+                    <CheckBox IsChecked="{Binding MinimizeToTray}" Content="Minimize to System Tray" FontSize="11"
+                              Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,0"
+                              ToolTip="Minimize the application to the system tray instead of the taskbar."/>
+                </StackPanel>
+            </Border>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

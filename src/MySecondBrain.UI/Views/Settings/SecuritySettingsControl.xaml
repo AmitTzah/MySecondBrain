@@ -1,0 +1,83 @@
+<UserControl x:Class="MySecondBrain.UI.Views.Settings.SecuritySettingsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <Style x:Key="AccentButtonStyle" TargetType="Button">
+                <Setter Property="OverridesDefaultStyle" Value="True"/>
+                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="Padding" Value="12,5"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="3" Padding="{TemplateBinding Padding}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Opacity" Value="0.85"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Opacity" Value="0.7"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.5"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="🔒 Security" FontSize="16" FontWeight="Bold"
+                   Foreground="{DynamicResource ContentForeground}" Margin="16,16,16,4"/>
+        <TextBlock Grid.Row="1" Text="View encryption status, manage locked chat passwords, and configure visibility settings."
+                   FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                   TextWrapping="Wrap" Margin="16,0,16,12"/>
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="16,0,16,8">
+            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
+                    Background="{DynamicResource CardBackground}" MaxWidth="500" HorizontalAlignment="Left">
+                <StackPanel Margin="14,12,14,12">
+                    <TextBlock Text="Encryption" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <TextBlock Text="✅" FontSize="14" Margin="0,0,6,0"/>
+                        <TextBlock Text="{Binding EncryptionStatus}" FontSize="11"
+                                   Foreground="{DynamicResource ContentForeground}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Text="Locked Chats" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="{Binding LockedChatPasswordSet, StringFormat='{}🔐 Password set: {0}'}" FontSize="11"
+                                   Foreground="{DynamicResource ContentForeground}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <Button Content="🔑 Set Global Password" Padding="12,5"
+                                Command="{Binding SetGlobalPasswordCommand}"
+                                Style="{StaticResource AccentButtonStyle}" Margin="0,0,8,0"
+                                ToolTip="Set or change the global password for locked chats"/>
+                    </StackPanel>
+                    <CheckBox IsChecked="{Binding HideLockedChats}" Content="Hide locked chats from chat list" FontSize="11"
+                              Foreground="{DynamicResource ContentForeground}"
+                              ToolTip="When enabled, locked chats are hidden from the main chat list and must be unlocked to appear."/>
+                </StackPanel>
+            </Border>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
