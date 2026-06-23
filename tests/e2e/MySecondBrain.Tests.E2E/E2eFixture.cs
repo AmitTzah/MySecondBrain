@@ -12,7 +12,7 @@ namespace MySecondBrain.Tests.E2E;
 /// </summary>
 public sealed class E2eFixture : IDisposable
 {
-    public Application App { get; }
+    public FlaUI.Core.Application App { get; }
     public UIA3Automation Automation { get; }
     public Window MainWindow { get; }
 
@@ -33,7 +33,7 @@ public sealed class E2eFixture : IDisposable
         var appPath = GetAppPath();
         Console.WriteLine($"[FIXTURE] Launching app: {appPath}");
 
-        App = Application.Launch(appPath);
+        App = FlaUI.Core.Application.Launch(appPath);
         try
         {
             Automation = new UIA3Automation();

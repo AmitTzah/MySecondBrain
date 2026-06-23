@@ -7,6 +7,7 @@
     <IsTestProject>true</IsTestProject>
     <WindowsSdkPackageVersion>10.0.17763.56</WindowsSdkPackageVersion>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <Description>E2E tests for MySecondBrain using FlaUI.UIA3 + xUnit — WPF desktop automation</Description>
   </PropertyGroup>
