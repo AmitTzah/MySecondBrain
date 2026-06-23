@@ -42,7 +42,7 @@ Feature 8: Built as envisioned with minor architectural improvement (ApiKeyRedac
 | Framework | Run Command | Test Files | Locked-In Features |
 |-----------|-------------|------------|--------------------|
 | FlaUI.UIA3 + xUnit (ICollectionFixture) | `dotnet test tests/e2e/MySecondBrain.Tests.E2E --configuration Debug` | 8 (AppShellNavigationTheming, PlatformServices, SystemTrayHotkey, ModelConfigsApiKeys, Personas, SettingsDiagnostics, AppearanceOnboarding, OnboardingWizard) | Features 5, 6, 7, 8, 9 |
-| Suite: 62 tests, single app launch, ~3 min runtime. Self-cleaning (🗑️ delete buttons). Separate test DB via MSB_DB_PATH env var. Authoring guide: external-docs/e2e-authoring-guide.md. |
+| Suite: 62 tests, single app launch, ~3 min runtime. Self-cleaning (🗑️ delete buttons). Separate test DB via MSB_DB_PATH env var. Authoring guide: planning/e2e-authoring-guide.md. |
 
 ## 6. Unit Test Suite
 

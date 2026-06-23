@@ -296,7 +296,7 @@ MySecondBrain has three test layers with clear boundaries.
 | `AppearanceOnboardingE2ETests` | 5 | Appearance settings, re-run wizard, maintenance |
 | `OnboardingWizardE2ETests` | 6 | 5-step wizard flow, skip, finish, re-run |
 
-For a deep dive into E2E architecture, fixture lifecycle, and authoring conventions, see [§8 (E2E Testing Deep Dive)](#8-e2e-testing-deep-dive) and the [E2E Authoring Guide](agent-workspace/external-docs/e2e-authoring-guide.md).
+For a deep dive into E2E architecture, fixture lifecycle, and authoring conventions, see [§8 (E2E Testing Deep Dive)](#8-e2e-testing-deep-dive) and the [E2E Authoring Guide](agent-workspace/project-director/planning/e2e-authoring-guide.md).
 
 ### 4.5 Running All Tests
 
@@ -811,7 +811,7 @@ All 8 test classes inherit from [`E2eTestBase`](tests/e2e/MySecondBrain.Tests.E2
 
 ### 8.7 E2E Authoring Guide
 
-For detailed conventions on writing new E2E tests, refer to the [E2E Authoring Guide](agent-workspace/external-docs/e2e-authoring-guide.md). Key conventions:
+For detailed conventions on writing new E2E tests, refer to the [E2E Authoring Guide](agent-workspace/project-director/planning/e2e-authoring-guide.md). Key conventions:
 
 - All XAML elements that tests interact with must have `x:Name` (which becomes AutomationId)
 - 3-second maximum timeout for element discovery
@@ -974,7 +974,7 @@ git push -u origin feature/<feature-name>
 - [Architecture Knowledge](agent-workspace/knowledge/architecture.md) — Full architectural patterns reference
 - [Database Knowledge](agent-workspace/knowledge/database.md) — Complete database schema and patterns
 - [Frontend UI Knowledge](agent-workspace/knowledge/frontend-ui.md) — WPF patterns, theming, navigation
-- [E2E Authoring Guide](agent-workspace/external-docs/e2e-authoring-guide.md) — How to write E2E tests
+- [E2E Authoring Guide](agent-workspace/project-director/planning/e2e-authoring-guide.md) — How to write E2E tests
 - [Serilog Reference](agent-workspace/external-docs/serilog.md) — Serilog configuration reference
 - [EF Core + SQLite Reference](agent-workspace/external-docs/ef-core-sqlite.md) — EF Core patterns
 

@@ -624,7 +624,7 @@ A Serilog `IDestructuringPolicy` (`ApiKeyDestructuringPolicy`) is registered at 
 
 ## 14. E2E Testing Conventions
 
-All E2E tests for MySecondBrain follow the conventions documented in the [E2E Authoring Guide](../../agent-workspace/external-docs/e2e-authoring-guide.md). Every developer writing E2E tests must reference that guide. Key platform-specific notes:
+All E2E tests for MySecondBrain follow the conventions documented in the [E2E Authoring Guide](e2e-authoring-guide.md). Every developer writing E2E tests must reference that guide. Key platform-specific notes:
 
 ### FlaUI.UIA3 + xUnit
 
