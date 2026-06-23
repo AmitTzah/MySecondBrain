@@ -33,6 +33,27 @@ public sealed class SettingsDiagnosticsE2ETests : E2eTestBase
         "Maintenance",
     ];
 
+    // Actual header text (with icons) for each settings category, matching the XAML TextBlock values
+    private static readonly Dictionary<string, string> ExpectedHeaders = new()
+    {
+        ["Providers"] = "🔑 API Keys",
+        ["Profiles"] = "👤 Profiles",
+        ["Appearance"] = "🎨 Appearance",
+        ["Wiki"] = "📝 Wiki",
+        ["Backup"] = "☁️ Backup",
+        ["Text Actions"] = "⚡ Text Actions",
+        ["Hotkeys"] = "⌨️ Hotkeys",
+        ["Tools"] = "🔧 Tools",
+        ["Language"] = "🌐 Language",
+        ["Notifications"] = "🔔 Notifications",
+        ["Startup"] = "🚀 Startup",
+        ["Updates"] = "🔄 Updates",
+        ["Pricing"] = "💰 Pricing",
+        ["Security"] = "🔒 Security",
+        ["Diagnostics"] = "🔬 Diagnostics",
+        ["Maintenance"] = "🛠️ Maintenance",
+    };
+
     public SettingsDiagnosticsE2ETests(E2eFixture fixture, ITestOutputHelper output)
         : base(fixture, output) { }
 
@@ -57,6 +78,22 @@ public sealed class SettingsDiagnosticsE2ETests : E2eTestBase
         _output.WriteLine($"All {ExpectedCategories.Length} settings categories verified.");
     }
 
+    /// <summary>
+    /// Selects a settings category in the sidebar by searching within the SettingsView root only.
+    /// Unlike SelectSettingsCategory (which searches the entire MainWindow), this scoped search
+    /// avoids matching navigation RadioButtons (e.g., "📝 Wiki" NavWiki) that share names with
+    /// settings categories.
+    /// </summary>
+    private void SelectSettingsCategoryScoped(string categoryName)
+    {
+        var settingsView = FindById("SettingsView");
+        Assert.NotNull(settingsView);
+        var categoryItem = FindByNameContains(categoryName, root: settingsView);
+        Assert.NotNull(categoryItem);
+        categoryItem!.Click();
+        Thread.Sleep(300);
+    }
+
     [Fact]
     public async Task SettingsCategory_ShouldShowCorrectHeader()
     {
@@ -66,14 +103,13 @@ public sealed class SettingsDiagnosticsE2ETests : E2eTestBase
         // Select each category and verify the content area header
         foreach (var category in ExpectedCategories)
         {
-            SelectSettingsCategory(category);
-            await Task.Delay(300);
+            SelectSettingsCategoryScoped(category);
 
             // Find the SettingsView content area (Column 1 of the outer Grid)
             var settingsView = FindById("SettingsView");
             Assert.NotNull(settingsView);
 
-            // Search for a TextBlock that contains the category name and is sized as a header
+            // Search for a TextBlock that contains the expected header text and is sized as a header
             // (FontSize 16, FontWeight SemiBold). We search with ByControlType to avoid
             // matching the sidebar ListBoxItem, which is in a different column.
             AutomationElement? contentHeader = null;
@@ -81,7 +117,7 @@ public sealed class SettingsDiagnosticsE2ETests : E2eTestBase
             foreach (var el in allElements)
             {
                 if (el.ControlType == ControlType.Text &&
-                    el.Name?.Contains(category, StringComparison.OrdinalIgnoreCase) == true)
+                    el.Name?.Contains(ExpectedHeaders[category], StringComparison.OrdinalIgnoreCase) == true)
                 {
                     // Verify it's a header-sized element by checking the bounding rectangle
                     // Sidebar items are ~12px font; headers are more prominent
