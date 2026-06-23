@@ -201,7 +201,7 @@ tests/e2e/MySecondBrain.Tests.E2E/
 - **Smoke Test Classification:** HUMAN/SHT REQUIRED — UIA interactions with ComboBox, PasswordBox, and 🗑️ delete buttons require the app to be visible.
 - **Suggested Commit Message:** `test: add F7 self-cleaning E2E tests for model configs, API keys, and personas`
 
-### [ ] Step 4: F8 E2E Tests — Settings, Appearance, Diagnostics & Onboarding Wizard
+### [x] Step 4: F8 E2E Tests — Settings, Appearance, Diagnostics & Onboarding Wizard
 
 - **Goal:** Write ~18 E2E tests covering Feature 8 (Settings, Diagnostics, Appearance, and Onboarding Wizard). Tests verify all 16 settings categories, appearance controls, diagnostics log management, and the onboarding wizard 5-step flow. Onboarding wizard tests run FIRST (fresh DB triggers wizard).
 - **Actions:**

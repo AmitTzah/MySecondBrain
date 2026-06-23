@@ -24,12 +24,18 @@
       "name": "F7 E2E Tests — Model Configurations, API Keys & Personas (Self-Cleaning)",
       "classification": "HUMAN/SHT REQUIRED",
       "description": "Run `dotnet test tests/e2e/MySecondBrain.Tests.E2E --configuration Debug --filter \"FullyQualifiedName~ModelConfig|FullyQualifiedName~Persona\"`. Verify all ~10 tests pass and exit code 0. After suite, verify `e2e-test.db` exists but querying `SELECT COUNT(*) FROM ApiKeys WHERE DisplayName LIKE 'E2E%'` returns 0 (confirms all test data was self-cleaned)."
+    },
+    {
+      "step": 4,
+      "name": "F8 E2E Tests — Settings, Appearance, Diagnostics & Onboarding Wizard",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "Run `dotnet test tests/e2e/MySecondBrain.Tests.E2E --configuration Debug --filter \"FullyQualifiedName~Settings|FullyQualifiedName~Appearance|FullyQualifiedName~Onboarding\"`. Verify all ~18 tests pass. Verify the onboarding wizard \"complete flow\" test runs before \"should not appear\" (check test output order)."
     }
   ],
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 5,
-  "current_step": 3,
+  "current_step": 4,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }
