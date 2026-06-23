@@ -110,9 +110,8 @@ public sealed class SettingsDiagnosticsE2ETests : E2eTestBase
         SelectSettingsCategory("Diagnostics");
         await Task.Delay(300);
 
-        // The log level ComboBox has no explicit AutomationId, so find it by context
-        // It's the first ComboBox in the Diagnostics content (Log Level section)
-        var logLevelCombo = FindComboBoxNearLabel("Log Level");
+        // Find the log level ComboBox by AutomationId
+        var logLevelCombo = FindById("DiagnosticsLogLevelCombo")?.AsComboBox();
         Assert.NotNull(logLevelCombo);
 
         // Expand to see options
@@ -140,7 +139,7 @@ public sealed class SettingsDiagnosticsE2ETests : E2eTestBase
         SelectSettingsCategory("Diagnostics");
         await Task.Delay(300);
 
-        var logLevelCombo = FindComboBoxNearLabel("Log Level");
+        var logLevelCombo = FindById("DiagnosticsLogLevelCombo")?.AsComboBox();
         Assert.NotNull(logLevelCombo);
 
         // Record initial selection
@@ -173,7 +172,7 @@ public sealed class SettingsDiagnosticsE2ETests : E2eTestBase
         await Task.Delay(300);
 
         // Verify selection persisted across navigation
-        var comboAfterReturn = FindComboBoxNearLabel("Log Level");
+        var comboAfterReturn = FindById("DiagnosticsLogLevelCombo")?.AsComboBox();
         Assert.NotNull(comboAfterReturn);
         comboAfterReturn!.Expand();
         await Task.Delay(200);
@@ -205,8 +204,8 @@ public sealed class SettingsDiagnosticsE2ETests : E2eTestBase
         SelectSettingsCategory("Diagnostics");
         await Task.Delay(300);
 
-        // Find the "LLM API Calls" CheckBox
-        var llmCheckBox = FindCheckBoxByName("LLM API Calls");
+        // Find the "LLM API Calls" CheckBox by AutomationId
+        var llmCheckBox = FindById("DiagnosticsLLMApiCallsCheckBox")?.AsCheckBox();
         Assert.NotNull(llmCheckBox);
 
         // Toggle off if currently on
@@ -221,8 +220,8 @@ public sealed class SettingsDiagnosticsE2ETests : E2eTestBase
             _output.WriteLine("LLM API Calls already OFF.");
         }
 
-        // Refresh and verify unchecked (use Assert.False to handle null IsChecked correctly)
-        var afterOff = FindCheckBoxByName("LLM API Calls");
+        // Refresh and verify unchecked
+        var afterOff = FindById("DiagnosticsLLMApiCallsCheckBox")?.AsCheckBox();
         Assert.NotNull(afterOff);
         Assert.False(afterOff!.IsChecked == true, "LLM API Calls should be unchecked.");
         _output.WriteLine("LLM API Calls confirmed unchecked.");
@@ -231,7 +230,7 @@ public sealed class SettingsDiagnosticsE2ETests : E2eTestBase
         afterOff.Click();
         await Task.Delay(300);
 
-        var afterOn = FindCheckBoxByName("LLM API Calls");
+        var afterOn = FindById("DiagnosticsLLMApiCallsCheckBox")?.AsCheckBox();
         Assert.NotNull(afterOn);
         Assert.True(afterOn!.IsChecked == true, "LLM API Calls should be checked.");
         _output.WriteLine("LLM API Calls toggled back ON.");
@@ -247,8 +246,8 @@ public sealed class SettingsDiagnosticsE2ETests : E2eTestBase
         SelectSettingsCategory("Diagnostics");
         await Task.Delay(300);
 
-        // Find the "Open Logs Folder" button by its content
-        var openLogsBtn = FindByNameContains("Open Logs Folder");
+        // Find the "Open Logs Folder" button by AutomationId
+        var openLogsBtn = FindById("DiagnosticsOpenLogsFolderBtn");
         Assert.NotNull(openLogsBtn);
         _output.WriteLine("Diagnostics: 'Open Logs Folder' button exists.");
     }
@@ -261,59 +260,10 @@ public sealed class SettingsDiagnosticsE2ETests : E2eTestBase
         SelectSettingsCategory("Diagnostics");
         await Task.Delay(300);
 
-        // Find the "Clear Logs" button by its content
-        var clearLogsBtn = FindByNameContains("Clear Logs");
+        // Find the "Clear Logs" button by AutomationId
+        var clearLogsBtn = FindById("DiagnosticsClearLogsBtn");
         Assert.NotNull(clearLogsBtn);
         _output.WriteLine("Diagnostics: 'Clear Logs' button exists.");
     }
 
-    // ============================================================
-    // Helpers
-    // ============================================================
-
-    /// <summary>
-    /// Finds a ComboBox that is the nearest sibling after a TextBlock with matching label text.
-    /// Used for controls without explicit AutomationIds — we locate them by nearby label.
-    ///
-    /// NOTE: This helper is also duplicated in AppearanceOnboardingE2ETests.cs.
-    /// Keep both copies in sync if modifying.
-    /// </summary>
-    private FlaUI.Core.AutomationElements.ComboBox? FindComboBoxNearLabel(string labelText)
-    {
-        // Find the label TextBlock first
-        var label = FindByNameContains(labelText, timeout: TimeSpan.FromSeconds(2));
-        if (label == null) return null;
-
-        // Walk up to find the containing card border, then find the ComboBox within it
-        var parent = label.Parent;
-        while (parent != null)
-        {
-            var combo = parent.FindFirstChild(_cf.ByControlType(ControlType.ComboBox));
-            if (combo != null && combo.IsAvailable)
-                return combo.AsComboBox();
-            parent = parent.Parent;
-        }
-
-        // Fallback: find any ComboBox in the SettingsView
-        _output.WriteLine($"[WARN] FindComboBoxNearLabel('{labelText}'): label-parent walk failed, using SettingsView-wide fallback.");
-        var settingsView = FindById("SettingsView");
-        if (settingsView == null) return null;
-
-        var allCombos = settingsView.FindAllDescendants(_cf.ByControlType(ControlType.ComboBox));
-        var firstCombo = allCombos.FirstOrDefault(c => c.IsAvailable);
-        if (firstCombo != null)
-        {
-            _output.WriteLine($"[WARN] Fallback returned ComboBox '{firstCombo.Name}' which may not be the correct one.");
-        }
-        return firstCombo?.AsComboBox();
-    }
-
-    /// <summary>
-    /// Finds a CheckBox whose Name contains the given text and returns it as a typed CheckBox.
-    /// </summary>
-    private FlaUI.Core.AutomationElements.CheckBox? FindCheckBoxByName(string name)
-    {
-        var element = FindByNameContains(name, timeout: TimeSpan.FromSeconds(2));
-        return element?.AsCheckBox();
-    }
 }

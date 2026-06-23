@@ -30,10 +30,12 @@
                         <StackPanel Orientation="Horizontal">
                             <RadioButton Content="🌙 Dark" GroupName="AppTheme"
                                          IsChecked="{Binding AppTheme, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Dark}"
-                                         FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,20,0"/>
+                                         FontSize="11" Foreground="{DynamicResource ContentForeground}" Margin="0,0,20,0"
+                                         AutomationProperties.AutomationId="AppearanceDarkRadioBtn"/>
                             <RadioButton Content="☀️ Light" GroupName="AppTheme"
                                          IsChecked="{Binding AppTheme, Converter={StaticResource EnumMatchConverter}, ConverterParameter=Light}"
-                                         FontSize="11" Foreground="{DynamicResource ContentForeground}"/>
+                                         FontSize="11" Foreground="{DynamicResource ContentForeground}"
+                                         AutomationProperties.AutomationId="AppearanceLightRadioBtn"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -46,7 +48,8 @@
                                    FontSize="10" Foreground="{DynamicResource SubtleBrush}"
                                    TextWrapping="Wrap" Margin="0,0,0,10"/>
                         <ComboBox ItemsSource="{Binding ChatThemeOptions}" SelectedItem="{Binding ChatTheme}"
-                                  FontSize="11" Width="200" HorizontalAlignment="Left"/>
+                                   FontSize="11" Width="200" HorizontalAlignment="Left"
+                                   AutomationProperties.AutomationId="AppearanceChatThemeCombo"/>
                     </StackPanel>
                 </Border>
                 <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
@@ -59,19 +62,22 @@
                                    TextWrapping="Wrap" Margin="0,0,0,10"/>
                         <TextBlock Text="Font Family" FontSize="11" Foreground="{DynamicResource SubtleBrush}" Margin="0,0,0,3"/>
                         <ComboBox ItemsSource="{Binding FontFamilyOptions}" SelectedItem="{Binding FontFamily}"
-                                  FontSize="11" Width="220" HorizontalAlignment="Left" Margin="0,0,0,10" IsEditable="True"/>
+                                   FontSize="11" Width="220" HorizontalAlignment="Left" Margin="0,0,0,10" IsEditable="True"
+                                   AutomationProperties.AutomationId="AppearanceFontFamilyCombo"/>
                         <TextBlock Text="Font Size" FontSize="11" Foreground="{DynamicResource SubtleBrush}" Margin="0,0,0,3"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                             <Slider Minimum="10" Maximum="24" SmallChange="1" LargeChange="2"
                                     Value="{Binding FontSize}" Width="180"
-                                    TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    AutomationProperties.AutomationId="AppearanceFontSizeSlider"/>
                             <TextBlock Text="{Binding FontSize, StringFormat={}{0:F0}px}" Width="40"
                                        TextAlignment="Center" VerticalAlignment="Center"
                                        FontSize="11" Foreground="{DynamicResource ContentForeground}"/>
                         </StackPanel>
                         <TextBlock Text="Font Weight" FontSize="11" Foreground="{DynamicResource SubtleBrush}" Margin="0,0,0,3"/>
                         <ComboBox ItemsSource="{Binding FontWeightOptions}" SelectedItem="{Binding FontWeight}"
-                                  FontSize="11" Width="120" HorizontalAlignment="Left" Margin="0,0,0,10"/>
+                                   FontSize="11" Width="120" HorizontalAlignment="Left" Margin="0,0,0,10"
+                                   AutomationProperties.AutomationId="AppearanceFontWeightCombo"/>
                         <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4"
                                 Background="{DynamicResource ContentBackground}" Padding="12,8">
                             <TextBlock Text="{Binding FontPreviewText}" FontFamily="{Binding FontFamily}"

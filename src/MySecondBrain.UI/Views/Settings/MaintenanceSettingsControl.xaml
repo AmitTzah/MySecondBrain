@@ -79,7 +79,8 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Button Padding="12,5" Command="{Binding CompactDatabaseCommand}" Margin="0,0,8,0"
-                                ToolTip="Run SQLite VACUUM to reclaim disk space">
+                                 AutomationProperties.AutomationId="MaintenanceCompactDatabaseBtn"
+                                 ToolTip="Run SQLite VACUUM to reclaim disk space">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
                                     <Setter Property="Content" Value="🔄 Compact Database"/>

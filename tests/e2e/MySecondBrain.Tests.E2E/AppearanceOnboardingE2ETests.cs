@@ -27,9 +27,9 @@ public sealed class AppearanceOnboardingE2ETests : E2eTestBase
         SelectSettingsCategory("Appearance");
         await Task.Delay(300);
 
-        // Find the Dark and Light RadioButtons in the Theme section
-        var darkRadioBtn = FindByNameContains("Dark");
-        var lightRadioBtn = FindByNameContains("Light");
+        // Find the Dark and Light RadioButtons by AutomationId
+        var darkRadioBtn = FindById("AppearanceDarkRadioBtn");
+        var lightRadioBtn = FindById("AppearanceLightRadioBtn");
 
         Assert.NotNull(darkRadioBtn);
         Assert.NotNull(lightRadioBtn);
@@ -90,8 +90,8 @@ public sealed class AppearanceOnboardingE2ETests : E2eTestBase
         SelectSettingsCategory("Appearance");
         await Task.Delay(300);
 
-        // Find the Chat Theme ComboBox (second ComboBox in Appearance: "Chat Theme" section)
-        var chatThemeCombo = FindComboBoxNearLabel("Chat Theme");
+        // Find the Chat Theme ComboBox by AutomationId
+        var chatThemeCombo = FindById("AppearanceChatThemeCombo")?.AsComboBox();
         Assert.NotNull(chatThemeCombo);
 
         chatThemeCombo!.Expand();
@@ -119,28 +119,18 @@ public sealed class AppearanceOnboardingE2ETests : E2eTestBase
         SelectSettingsCategory("Appearance");
         await Task.Delay(300);
 
-        // Font Family ComboBox
-        var fontFamilyLabel = FindByNameContains("Font Family");
-        Assert.NotNull(fontFamilyLabel);
-        _output.WriteLine("Appearance: 'Font Family' label found.");
-
-        // Assert the Font Family ComboBox is present (matches test name "ShouldBePresent")
-        var fontFamilyCombo = FindComboBoxNearLabel("Font Family");
+        // Font Family ComboBox — find by AutomationId
+        var fontFamilyCombo = FindById("AppearanceFontFamilyCombo")?.AsComboBox();
         Assert.NotNull(fontFamilyCombo);
         _output.WriteLine("Appearance: Font Family ComboBox found.");
 
-        // Font Size — find the label (Slider has no AutomationId)
-        var fontSizeLabel = FindByNameContains("Font Size");
-        Assert.NotNull(fontSizeLabel);
-        _output.WriteLine("Appearance: 'Font Size' label found.");
+        // Font Size Slider — find by AutomationId
+        var fontSizeSlider = FindById("AppearanceFontSizeSlider");
+        Assert.NotNull(fontSizeSlider);
+        _output.WriteLine("Appearance: Font Size Slider found.");
 
-        // Font Weight ComboBox
-        var fontWeightLabel = FindByNameContains("Font Weight");
-        Assert.NotNull(fontWeightLabel);
-        _output.WriteLine("Appearance: 'Font Weight' label found.");
-
-        // Assert the Font Weight ComboBox is present (matches test name "ShouldBePresent")
-        var fontWeightCombo = FindComboBoxNearLabel("Font Weight");
+        // Font Weight ComboBox — find by AutomationId
+        var fontWeightCombo = FindById("AppearanceFontWeightCombo")?.AsComboBox();
         Assert.NotNull(fontWeightCombo);
 
         fontWeightCombo!.Expand();
@@ -165,7 +155,7 @@ public sealed class AppearanceOnboardingE2ETests : E2eTestBase
         await Task.Delay(300);
 
         // The "🔄 Re-run Onboarding Wizard" hyperlink is in the Settings sidebar footer
-        var reRunLink = FindByNameContains("Re-run Onboarding Wizard");
+        var reRunLink = FindById("ReRunOnboardingLink");
         Assert.NotNull(reRunLink);
         _output.WriteLine("Settings sidebar: '🔄 Re-run Onboarding Wizard' hyperlink found.");
     }
@@ -182,49 +172,10 @@ public sealed class AppearanceOnboardingE2ETests : E2eTestBase
         SelectSettingsCategory("Maintenance");
         await Task.Delay(300);
 
-        // Find the "Compact Database" button (content may vary based on VM state)
-        var compactBtn = FindByNameContains("Compact Database");
+        // Find the "Compact Database" button by AutomationId
+        var compactBtn = FindById("MaintenanceCompactDatabaseBtn");
         Assert.NotNull(compactBtn);
         _output.WriteLine("Maintenance: 'Compact Database' button exists.");
     }
 
-    // ============================================================
-    // Helpers
-    // ============================================================
-
-    /// <summary>
-    /// Finds a ComboBox that is the nearest sibling after a TextBlock with matching label text.
-    /// Used for controls without explicit AutomationIds — we locate them by nearby label.
-    ///
-    /// NOTE: This helper is also duplicated in SettingsDiagnosticsE2ETests.cs.
-    /// Keep both copies in sync if modifying.
-    /// </summary>
-    private FlaUI.Core.AutomationElements.ComboBox? FindComboBoxNearLabel(string labelText)
-    {
-        var label = FindByNameContains(labelText, timeout: TimeSpan.FromSeconds(2));
-        if (label == null) return null;
-
-        // Walk up to find the containing card border, then find the ComboBox within it
-        var parent = label.Parent;
-        while (parent != null)
-        {
-            var combo = parent.FindFirstChild(_cf.ByControlType(ControlType.ComboBox));
-            if (combo != null && combo.IsAvailable)
-                return combo.AsComboBox();
-            parent = parent.Parent;
-        }
-
-        // Fallback: find any ComboBox in the SettingsView
-        _output.WriteLine($"[WARN] FindComboBoxNearLabel('{labelText}'): label-parent walk failed, using SettingsView-wide fallback.");
-        var settingsView = FindById("SettingsView");
-        if (settingsView == null) return null;
-
-        var allCombos = settingsView.FindAllDescendants(_cf.ByControlType(ControlType.ComboBox));
-        var firstCombo = allCombos.FirstOrDefault(c => c.IsAvailable);
-        if (firstCombo != null)
-        {
-            _output.WriteLine($"[WARN] Fallback returned ComboBox '{firstCombo.Name}' which may not be the correct one.");
-        }
-        return firstCombo?.AsComboBox();
-    }
 }

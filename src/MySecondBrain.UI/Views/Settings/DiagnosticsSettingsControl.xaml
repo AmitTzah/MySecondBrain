@@ -25,7 +25,8 @@
                                    FontSize="10" Foreground="{DynamicResource SubtleBrush}"
                                    TextWrapping="Wrap" Margin="0,0,0,10"/>
                         <ComboBox ItemsSource="{Binding LogLevelOptions}" SelectedItem="{Binding LogLevel}"
-                                  FontSize="11" Width="200" HorizontalAlignment="Left"/>
+                                   FontSize="11" Width="200" HorizontalAlignment="Left"
+                                   AutomationProperties.AutomationId="DiagnosticsLogLevelCombo"/>
                     </StackPanel>
                 </Border>
                 <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
@@ -37,8 +38,9 @@
                                    FontSize="10" Foreground="{DynamicResource SubtleBrush}"
                                    TextWrapping="Wrap" Margin="0,0,0,10"/>
                         <CheckBox IsChecked="{Binding LogCategory_LLMApiCalls}" Content="LLM API Calls" FontSize="11"
-                                  Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"
-                                  ToolTip="Log all LLM provider API requests and responses. Includes provider name, model, token counts, and latency."/>
+                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"
+                                   AutomationProperties.AutomationId="DiagnosticsLLMApiCallsCheckBox"
+                                   ToolTip="Log all LLM provider API requests and responses. Includes provider name, model, token counts, and latency."/>
                         <CheckBox IsChecked="{Binding LogCategory_Tier1HotkeyPipeline}" Content="Tier 1 Hotkey Pipeline" FontSize="11"
                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"
                                   ToolTip="Log global hotkey captures, command routing, and tier 1 overlay lifecycle events."/>
@@ -72,11 +74,13 @@
                                    TextWrapping="Wrap" Margin="0,0,0,10"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                             <Button Content="📂 Open Logs Folder" Padding="12,5" Command="{Binding OpenLogsFolderCommand}"
-                                    Style="{StaticResource AccentButtonStyle}" Margin="0,0,8,0"
-                                    ToolTip="Open the logs directory in Windows Explorer"/>
+                                     Style="{StaticResource AccentButtonStyle}" Margin="0,0,8,0"
+                                     AutomationProperties.AutomationId="DiagnosticsOpenLogsFolderBtn"
+                                     ToolTip="Open the logs directory in Windows Explorer"/>
                             <Button Content="🗑️ Clear Logs" Padding="12,5" Command="{Binding ClearLogsCommand}"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    ToolTip="Delete all .log and .json files in the logs folder"/>
+                                     Style="{StaticResource SecondaryButtonStyle}"
+                                     AutomationProperties.AutomationId="DiagnosticsClearLogsBtn"
+                                     ToolTip="Delete all .log and .json files in the logs folder"/>
                         </StackPanel>
                         <TextBlock Text="{Binding StatusMessage}" FontSize="10"
                                    Foreground="{DynamicResource SubtleBrush}" TextWrapping="Wrap"/>

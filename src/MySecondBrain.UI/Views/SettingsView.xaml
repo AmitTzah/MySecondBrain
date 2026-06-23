@@ -82,9 +82,10 @@
                          Background="Transparent" BorderThickness="0"
                          Foreground="{DynamicResource SidebarForeground}" FontSize="12"/>
 
-                <TextBlock Grid.Row="2" Margin="12,8,12,12">
+                <TextBlock Grid.Row="2" Margin="12,8,12,12"
+                           AutomationProperties.AutomationId="ReRunOnboardingLink">
                     <Hyperlink Foreground="{DynamicResource AccentBrush}" FontSize="11" TextDecorations="Underline"
-                               Command="{Binding ReRunOnboardingCommand}">🔄 Re-run Onboarding Wizard</Hyperlink>
+                                Command="{Binding ReRunOnboardingCommand}">🔄 Re-run Onboarding Wizard</Hyperlink>
                 </TextBlock>
             </Grid>
         </Border>
