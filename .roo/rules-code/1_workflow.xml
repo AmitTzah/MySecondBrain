@@ -14,8 +14,10 @@
     approach: add [DEBUG] logs → user reproduces → analyze → fix → add regression test → remove
     [DEBUG] logs → re-run quality loop → return to verification gate.
 
-    When stuck after 2-3 failed diagnostic→fix→verification cycles, code mode offers a Debug subtask
-    (user consent required). When the user reports visual dissatisfaction with working functionality,
+    When stuck after 1 failed diagnostic→fix→verification cycle, code mode auto-launches a Debug subtask
+    to investigate independently. When automated tests fail across 3 auto-fix attempts during the
+    quality loop, code mode auto-launches a Debug subtask. When the user reports visual dissatisfaction
+    with working functionality,
     code mode auto-launches a UI Designer subtask (ui-designer mode) for design polish — no confirmation needed
     since the user already expressed visual dissatisfaction with working functionality.
 
@@ -127,8 +129,14 @@
       <steps>
         <step>Identify every test/lint/check command in the project (package.json scripts, Makefile targets, CI config, etc.)</step>
         <step>Run them all unfiltered. Do not cherry-pick — run the entire automated suite. Never use --filter or similar flags.</step>
-        <step>If any fail: diagnose, fix, and re-run the full suite. Repeat until everything passes.</step>
-        <step>Do NOT proceed to refactoring until all automated checks pass with zero failures.</step>
+        <step>If any fail: diagnose and fix the failures.</step>
+        <step>Track the total number of auto-fix attempts you've made across ALL failing tests. A single attempt = diagnose the current failures → apply ONE fix → re-run the full suite. If the set of failing tests changes between attempts (new tests start failing, or some previously-failing tests now pass), reset the attempt counter — you're in a new situation with potentially different root causes.</step>
+        <step>If tests keep failing after 3 auto-fix attempts (same or evolving failure set, but never reaching all-pass): this is a stuck test failure. Stop trying to fix it yourself and auto-launch a Debug subtask (no user consent — this is automatic like QA). See subtask_delegation_workflow → test_failure_stuck for the full spawn workflow.</step>
+        <step>After the Debug subtask returns with its fix: review the fix for correctness, then re-run the full unfiltered automated test suite. Evaluate the result:
+          - All tests pass: proceed to self_refactor.
+          - The same test(s) still fail: stop. Do NOT loop. Tell the user: "Automated test [name] still fails after 3 auto-fix attempts and a Debug subtask investigation. Here is the Debug subtask's analysis: [summary]. Manual investigation may be needed." Call attempt_completion.
+          - Different tests fail (the original test passes but new tests fail): Debug's fix introduced a regression. Diagnose these new failures with a fresh attempt counter starting at 1. Do NOT re-spawn Debug — this is a new problem.</step>
+        <step>Do NOT proceed to refactoring until all automated checks pass with zero failures OR the Debug-escalation stop condition is reached.</step>
       </steps>
       <guard>
         If no automated tests or checks exist in the project, note this and proceed.
@@ -614,6 +622,10 @@
 
       <branch name="user_reports_broken">
         <trigger>User describes a runtime issue — something doesn't work correctly</trigger>
+        <first_time_guard priority="high">
+          If this is the FIRST time the user reports this issue broken at the verification gate (no prior diagnostic→fix→quality-loop→verification cycle has completed for this issue): proceed with the diagnostic-first workflow below.
+          If this is the SECOND time (you've already completed one full diagnostic→fix→quality-loop→verification cycle and the user still reports it broken): skip this branch entirely. Go directly to stuck_after_single_cycle below — auto-launch Debug.
+        </first_time_guard>
         <action>Activate the diagnostic-first debugging workflow (defined below in diagnostic_first_debugging).</action>
         <flow>
           1. Add [DEBUG] diagnostic output statements → give user reproduction steps → analyze output. The ONLY exception: a single-character typo in a string literal or variable name that is immediately identifiable from the error message alone — fix the one character directly and skip to step 3.
@@ -641,10 +653,13 @@
         <action>Do NOT interpret an ambiguous response as "works" or "broken." Always clarify and re-ask.</action>
       </branch>
 
-      <branch name="stuck_after_multiple_cycles">
-        <trigger>2-3 full cycles of: diagnostic → fix → quality loop → verification gate → user still reports broken. Different approaches attempted each time. Diagnostic output gathered each cycle.</trigger>
-        <action>Offer a Debug subtask via ask_followup_question (user consent required).</action>
+      <branch name="stuck_after_single_cycle">
+        <trigger>1 full cycle of: diagnostic → fix → quality loop → verification gate → user still reports broken. Diagnostic output was gathered.</trigger>
+        <action>Auto-launch a Debug subtask — no user consent needed. One failed cycle with diagnostic evidence is enough to justify a fresh investigation. The Debug subtask provides an independent perspective before Code mode burns more cycles guessing.</action>
         <action>See subtask_delegation_workflow → stuck_resolution scenario for full workflow.</action>
+        <hands_off_mode_note priority="high">
+          When hands_off_mode is true (check your spawn prompt): instruct the Debug subtask explicitly — "Do NOT ask the user any questions. Investigate independently. Apply the fix. Report what the problem was and how you fixed it."
+        </hands_off_mode_note>
         <escalation after_debug_fails>
           If the Debug subtask returns a root cause analysis and proposed fix, and after applying the fix + quality loop the verification gate still fails: this is a deeply complex issue beyond automated resolution. Tell the user: "The Debug subtask identified [root cause] and we applied [fix], but the issue persists. This may require human architectural review." Use attempt_completion with a detailed summary of everything attempted. Do NOT loop indefinitely.
         </escalation>
@@ -664,16 +679,19 @@
 
       <iteration_rule>If diagnostic output is inconclusive, add MORE targeted statements at the divergence point and ask the user to reproduce again. This counts as one continuing session — not a failed attempt.</iteration_rule>
 
-      <relationship_to_stuck_resolution>Only offer a Debug subtask after 2-3 full cycles of: diagnostic → fix → quality loop → verification gate → user still reports broken. Each cycle must include diagnostic output and a genuinely different fix approach.</relationship_to_stuck_resolution>
+      <relationship_to_stuck_resolution>Auto-launch a Debug subtask after 1 full cycle of: diagnostic → fix → quality loop → verification gate → user still reports broken. One failed cycle with diagnostic evidence is enough — Debug provides an independent investigation before Code mode burns more cycles guessing.</relationship_to_stuck_resolution>
     </phase>
   </main_workflow>
 
   <subtask_delegation_workflow>
     <overview>
-      Four delegation scenarios exist. Two are automatic (QA review, UI/design polish via UI Designer subtask),
+      Five delegation scenarios exist. Three are automatic (QA review, test failure Debug, UI/design polish via UI Designer subtask),
       one is automatic when configured (synthetic-human-tester GUI smoke test — only for GUI environments: web, desktop, native),
-      one requires user consent (stuck resolution via Debug subtask).
-      The Debug subtask is proposed via the ask tool and never launched without explicit user approval.
+      one is automatic for stuck resolution (Debug subtask after 1 failed verification cycle — no user consent needed).
+
+      Debug subtasks are launched in two situations:
+      1. Test failure stuck: 3 failed auto-fix attempts on the same test during the quality loop → auto-launch (no consent).
+      2. Verification stuck: 1 failed diagnostic→fix→verification cycle → auto-launch (no consent).
 
       SHT is only used for GUI verification that Code mode cannot self-verify. CLI verification, build results,
       .exe launch, and integration test results are self-verified by Code mode — never escalated to SHT.
@@ -785,63 +803,113 @@ options:                                 # optional
       </workflow>
     </scenario>
 
-    <scenario name="stuck_resolution" type="user_consent_required">
+    <scenario name="test_failure_stuck" type="automatic">
       <trigger>
-        2-3 full cycles of: diagnostic → fix → quality loop → verification gate → user still reports broken.
-        Each cycle included diagnostic output gathering and a genuinely different fix approach.
-        The troubleshooting loop is not converging toward a solution.
+        3 failed auto-fix attempts on the SAME test failure during the automated_testing_1 phase
+        of the quality loop. Each attempt involved diagnose → apply ONE fix → re-run full suite,
+        and the same test(s) still fail.
       </trigger>
       <indicators>
-        <indicator>The same problem persists after 2-3 full diagnostic→fix→verification cycles</indicator>
-        <indicator>At least 2 genuinely different fix approaches have been attempted</indicator>
-        <indicator>Diagnostic output was gathered each cycle but did not lead to resolution</indicator>
-        <indicator>The troubleshooting loop is not converging toward a solution</indicator>
+        <indicator>The same test(s) have failed across 3 full diagnose→fix→re-run cycles</indicator>
+        <indicator>At least 3 genuinely different fix approaches have been attempted</indicator>
+        <indicator>Code mode's own diagnosis is not converging on the root cause</indicator>
       </indicators>
+      <debug_spawn_philosophy priority="critical">
+        <rule>Do NOT tell Debug what to fix or how to fix it. Do NOT prescribe a solution.</rule>
+        <rule>Give Debug ALL context it needs to investigate independently: the test failure output (full error messages, stack traces, assertion diffs), the test code, the code under test, what approaches you've already tried (so Debug doesn't repeat them), and any diagnostic output you've gathered.</rule>
+        <rule>Explicitly instruct Debug: "Investigate the root cause independently. Come up with your own solution. Apply the fix. Report what the problem was and how you fixed it."</rule>
+        <rule>When hands_off_mode is true: also instruct Debug — "Do NOT ask the user any questions. Work autonomously."</rule>
+      </debug_spawn_philosophy>
+      <workflow>
+        <step>
+          <action>Recognize the stuck test pattern</action>
+          <detail>
+            After 3 failed auto-fix attempts on the same test failure, acknowledge that your own
+            diagnosis is not converging. A fresh Debug investigation is needed.
+          </detail>
+        </step>
+        <step>
+          <action>Auto-launch the Debug subtask</action>
+          <detail>
+            Spawn a Debug mode subtask immediately — no user consent needed. This is automatic,
+            like QA. The Debug subtask gets:
+            - The full test failure output (error messages, stack traces, assertion diffs)
+            - The test code and the code under test (file paths and relevant sections)
+            - Every approach you already tried and why each failed
+            - Any diagnostic output gathered during your auto-fix attempts
+            - Explicit instruction: investigate independently, find root cause, apply fix, report
+
+            If hands_off_mode is true: add "Do NOT ask the user any questions. Investigate, fix, and report autonomously."
+          </detail>
+        </step>
+        <step>
+          <action>After Debug returns: review and verify</action>
+          <detail>
+            Review the Debug subtask's fix for correctness. Run the full unfiltered automated test suite.
+            If all tests pass (including the previously failing ones): proceed to self_refactor.
+            If the same test still fails: stop. Tell the user the details and call attempt_completion.
+            Do NOT loop. Do NOT re-spawn Debug.
+          </detail>
+        </step>
+      </workflow>
+    </scenario>
+
+    <scenario name="stuck_resolution" type="automatic">
+      <trigger>
+        1 full cycle of: diagnostic → fix → quality loop → verification gate → user still reports broken.
+        Diagnostic output was gathered. The troubleshooting did not resolve the issue.
+      </trigger>
+      <indicators>
+        <indicator>The same problem persists after 1 full diagnostic→fix→verification cycle</indicator>
+        <indicator>Diagnostic output was gathered but did not lead to resolution</indicator>
+        <indicator>The troubleshooting approach did not converge</indicator>
+      </indicators>
+      <debug_spawn_philosophy priority="critical">
+        <rule>Do NOT tell Debug what to fix or how to fix it. Do NOT prescribe a solution.</rule>
+        <rule>Give Debug ALL context it needs to investigate independently: the original problem statement, the diagnostic output gathered, what fix you attempted and why it didn't work, relevant file paths, and any constraints.</rule>
+        <rule>Explicitly instruct Debug: "Investigate the root cause independently. Come up with your own solution. Apply the fix. Report what the problem was and how you fixed it."</rule>
+        <rule>When hands_off_mode is true: also instruct Debug — "Do NOT ask the user any questions. Work autonomously."</rule>
+      </debug_spawn_philosophy>
       <workflow>
         <step>
           <action>Recognize the stuck pattern</action>
           <detail>
-            After 2-3 full cycles without resolution, acknowledge that the diagnostic-first
-            approach is not converging and a fresh investigation perspective may help.
+            After 1 full cycle without resolution, acknowledge that the diagnostic-first
+            approach did not converge. Auto-launch Debug for a fresh investigation — one cycle with evidence is enough.
           </detail>
         </step>
         <step>
-          <action>Ask the user if they want a Debug subtask</action>
+          <action>Auto-launch the Debug subtask</action>
           <detail>
-            Use the ask tool to propose launching a Debug mode subtask. Frame the question:
-            "We've tried [N] diagnostic→fix→verification cycles without resolving this. Would you
-            like me to launch a Debug subtask to investigate the problem from scratch? A fresh
-            agent specialized in systematic debugging can sometimes spot what we're missing."
+            Spawn a Debug mode subtask immediately — no user consent needed. Give Debug:
+            - The original problem statement
+            - The diagnostic output gathered during the failed cycle
+            - What fix was attempted and why it didn't work
+            - Relevant file paths and any constraints
+            - Explicit instruction: investigate independently, find root cause, apply fix, report
+
+            If hands_off_mode is true: add "Do NOT ask the user any questions. Investigate, fix, and report autonomously."
           </detail>
         </step>
         <step>
-          <action>If approved, launch the Debug subtask</action>
+          <action>After Debug returns: review, apply, and verify</action>
           <detail>
-            Spawn a Debug mode subtask with: the original problem statement, every approach tried
-            and why it failed, all diagnostic output gathered across cycles, relevant file paths,
-            and any constraints. The Debug subtask investigates systematically and reports back
-            with root cause analysis and a proposed fix.
-          </detail>
-        </step>
-        <step>
-          <action>If declined, try a different approach</action>
-          <detail>
-            Acknowledge the user's preference and pivot to a different strategy: step back to
-            first principles, try an alternative technology, or suggest a different decomposition
-            of the problem.
+            Review the Debug subtask's root cause analysis and fix. Apply the fix (if Debug didn't already).
+            Run the full quality loop (implement → tests → refactor → tests → QA → fix → tests).
+            Return to the verification gate.
           </detail>
         </step>
       </workflow>
     </scenario>
 
     <subtask_integration>
-      <description>After a subtask completes (UI polish UI Designer subtask or stuck-resolution Debug subtask)</description>
+      <description>After a subtask completes (UI Designer polish, test failure Debug, or stuck-resolution Debug subtask)</description>
       <steps>
         <step>Review the subtask's output for correctness and quality</step>
         <step>For UI Designer subtask: verify changes integrate cleanly with existing code and don't break functionality</step>
-        <step>For Debug subtask: review the root cause analysis and proposed fix, then apply the fix yourself</step>
+        <step>For Debug subtask (either test_failure_stuck or stuck_resolution): review the root cause analysis and fix for correctness. For test_failure_stuck: Debug already applied the fix — verify with tests. For stuck_resolution: apply the fix yourself</step>
         <step>Run the full quality loop on any resulting changes (implement → tests → refactor → tests → QA → fix → tests)</step>
-        <step>Return to the verification gate — ask the user to verify</step>
+        <step>For stuck_resolution Debug: return to the verification gate. For test_failure_stuck Debug (where tests now pass): proceed through self_refactor → QA → verification gate normally</step>
       </steps>
     </subtask_integration>
   </subtask_delegation_workflow>

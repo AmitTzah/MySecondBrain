@@ -5,7 +5,7 @@
     <principle>Follow existing code patterns; do not introduce new patterns without justification</principle>
     <principle>Ask clarifying questions only when critical ambiguity remains — otherwise proceed</principle>
     <principle>The QA review subtask is automatic and mandatory — never ask for consent to launch it</principle>
-    <principle>UI Designer subtask (visual polish) is automatic — launch without consent when user reports visual dissatisfaction or SHT detects visual breakage. Debug subtask (stuck resolution) requires user consent via the ask tool</principle>
+    <principle>UI Designer subtask (visual polish) is automatic — launch without consent when user reports visual dissatisfaction or SHT detects visual breakage. Debug subtasks (test failure stuck and verification stuck) are automatic — launch without consent</principle>
     <principle>Every dismissed QA finding must include a specific, defensible justification</principle>
     <principle>Review subtask output before integrating; the delegating agent owns quality</principle>
     <principle>If Default Shell is cmd.exe, prefer cmd.exe built-ins (del, copy, move, type, mkdir, rmdir) for simple file operations. For complex tasks that cmd.exe cannot handle (byte-level transforms, JSON manipulation, regex over files), invoke PowerShell explicitly via `powershell -NoProfile -Command "..."`. Never write raw PowerShell cmdlets directly — they must be wrapped in a `powershell` invocation.</principle>
@@ -25,9 +25,13 @@
 
   <subtask_decision_framework>
     <overview>
-      Four delegation scenarios exist. Two are automatic (QA review, UI/design polish via UI Designer subtask),
+      Five delegation scenarios exist. Three are automatic (QA review, test failure Debug, UI/design polish via UI Designer subtask),
       one is automatic when configured (synthetic-human-tester GUI smoke test — only for GUI environments),
-      one requires user consent (stuck resolution via Debug subtask).
+      one is automatic for stuck resolution (Debug subtask after 1 failed verification cycle).
+
+      Debug subtasks are launched in two situations:
+      1. Test failure stuck: 3 failed auto-fix attempts on the same test during the quality loop → auto-launch.
+      2. Verification stuck: 1 failed diagnostic→fix→verification cycle → auto-launch.
 
       SHT is only spawned for GUI verification that Code cannot self-verify. CLI, build, launch,
       and integration test verification are self-verified — never escalated.
@@ -96,27 +100,57 @@
       </decision_criteria>
     </scenario>
 
-    <scenario name="stuck_resolution" type="user_consent_required">
+    <scenario name="test_failure_stuck" type="automatic">
+      <description>
+        When the same automated test(s) fail across 3 auto-fix attempts during the quality loop's
+        automated_testing_1 phase, Code mode auto-launches a Debug subtask. The Debug investigates
+        independently, finds the root cause, applies the fix, and reports what the problem was
+        and how it was fixed. This is automatic — no user consent needed.
+      </description>
       <decision_criteria>
         <required>
-          <criterion>2-3 full diagnostic→fix→quality-loop→verification cycles have completed without resolution</criterion>
-          <criterion>The same problem persists across multiple cycles</criterion>
-          <criterion>At least 2 genuinely different fix approaches have been attempted</criterion>
-          <criterion>Diagnostic output was gathered in each cycle — evidence was collected before every fix attempt</criterion>
+          <criterion>3 full diagnose→fix→re-run cycles have completed on the SAME test failure</criterion>
+          <criterion>At least 3 genuinely different fix approaches have been attempted</criterion>
+          <criterion>Code mode's own diagnosis is not converging on the root cause</criterion>
+        </required>
+        <when_not_to_offer>
+          <condition>Fewer than 3 auto-fix attempts — continue diagnosing</condition>
+          <condition>The test failure is different each time (not the same test) — each distinct failure resets its own counter</condition>
+          <condition>The project has no automated tests — there's nothing to fail</condition>
+        </when_not_to_offer>
+        <debug_spawn_rules>
+          <rule>Do NOT tell Debug what to fix or how. Give context, not prescriptions.</rule>
+          <rule>Include: full test failure output, test code, code under test, approaches already tried, diagnostic output gathered.</rule>
+          <rule>Instruct Debug: "Investigate independently. Find root cause. Apply fix. Report what the problem was and how you fixed it."</rule>
+          <rule>When hands_off_mode is true: also instruct "Do NOT ask the user any questions."</rule>
+        </debug_spawn_rules>
+      </decision_criteria>
+    </scenario>
+
+    <scenario name="stuck_resolution" type="automatic">
+      <decision_criteria>
+        <required>
+          <criterion>1 full diagnostic→fix→quality-loop→verification cycle has completed without resolution</criterion>
+          <criterion>Diagnostic output was gathered — evidence was collected before the fix attempt</criterion>
+          <criterion>The troubleshooting approach did not converge — the same problem persists</criterion>
         </required>
         <signals_of_stuck>
-          <signal>The same error or symptom persists despite different fixes across multiple verification cycles</signal>
-          <signal>Each diagnostic→fix→quality-loop cycle produces unexpected or inconsistent results</signal>
-          <signal>The troubleshooting is cycling through similar approaches without convergence</signal>
-          <signal>Diagnostic logs were added each cycle but were inconclusive or revealed progressively deeper problems</signal>
+          <signal>The same error or symptom persists after the fix was applied and verified</signal>
+          <signal>The diagnostic output was gathered but did not clearly identify a root cause</signal>
+          <signal>The troubleshooting did not converge — the fix did not resolve the issue</signal>
         </signals_of_stuck>
         <when_not_to_offer>
-          <condition>Only 1 cycle has completed — methodical debugging may require multiple rounds of log refinement</condition>
           <condition>Diagnostic logging has not been attempted for a runtime issue — add logs and ask the user to reproduce first</condition>
           <condition>The issue is about missing information, not a stuck problem — ask clarifying questions instead</condition>
           <condition>The user is actively guiding the debugging and making progress</condition>
           <condition>External factors (API downtime, environment issues) are the cause — a subtask won't help</condition>
         </when_not_to_offer>
+        <debug_spawn_rules>
+          <rule>Do NOT tell Debug what to fix or how. Give context, not prescriptions.</rule>
+          <rule>Include: original problem statement, diagnostic output gathered, what fix was attempted and why it failed, relevant file paths, constraints.</rule>
+          <rule>Instruct Debug: "Investigate independently. Find root cause. Apply fix. Report what the problem was and how you fixed it."</rule>
+          <rule>When hands_off_mode is true: also instruct "Do NOT ask the user any questions."</rule>
+        </debug_spawn_rules>
       </decision_criteria>
     </scenario>
   </subtask_decision_framework>
@@ -137,8 +171,15 @@
     </handoff_to_code>
 
     <handoff_to_debug>
-      <description>Code mode spawns a Debug subtask for the stuck-resolution scenario after 2-3 failed diagnostic→fix→verification cycles. The Debug subtask investigates systematically and reports back with root cause analysis and a proposed fix. Code mode then applies the fix and runs its quality loop.</description>
-      <trigger>Stuck Resolution: 2-3 full diagnostic→fix→quality-loop→verification cycles without resolution, multiple genuinely different approaches attempted, diagnostic output gathered each cycle. Offer via ask tool — do NOT launch without consent.</trigger>
+      <description>Code mode spawns Debug subtasks in two automatic scenarios:
+        1. Test failure stuck: 3 failed auto-fix attempts on the same test during the quality loop → auto-launch Debug (no consent). Debug investigates independently, finds root cause, applies fix, and reports.
+        2. Verification stuck: 1 failed diagnostic→fix→verification cycle → auto-launch Debug (no consent). Debug investigates independently and reports root cause + fix.
+        
+        In both cases: give Debug full context but do NOT prescribe a solution. Instruct Debug to investigate independently. When hands_off_mode is true: instruct Debug not to ask the user any questions.</description>
+      <triggers>
+        <trigger name="test_failure_stuck">3 failed auto-fix attempts on the SAME test failure during automated_testing_1. Auto-launch — no consent needed.</trigger>
+        <trigger name="verification_stuck">1 full diagnostic→fix→quality-loop→verification cycle without resolution. Auto-launch — no consent needed.</trigger>
+      </triggers>
     </handoff_to_debug>
 
     <staying_in_code_mode>

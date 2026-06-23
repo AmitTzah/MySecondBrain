@@ -89,29 +89,36 @@
     </subtask_brief_structure>
   </pattern>
 
+  <pattern name="test_failure_debug_subtask">
+    <description>Auto-launching a Debug subtask after 3 failed auto-fix attempts on the same test during the quality loop</description>
+    <context>3 auto-fix attempts (diagnose → apply ONE fix → re-run full suite) on the same test failure, and the test(s) still fail. Code mode's own diagnosis is not converging.</context>
+    <subtask_brief_structure>
+      <element>Full test failure output (error messages, stack traces, assertion diffs)</element>
+      <element>The test code and the code under test (file paths and relevant sections)</element>
+      <element>Every approach already tried and why each failed (so Debug doesn't repeat them)</element>
+      <element>Any diagnostic output gathered during auto-fix attempts</element>
+      <element>Critical instruction: "Investigate the root cause independently. Come up with your own solution. Apply the fix. Report what the problem was and how you fixed it. Do NOT ask the user any questions." (when hands_off_mode is true, emphasize "Do NOT ask the user any questions. Work autonomously.")</element>
+      <element>Do NOT prescribe a solution — Debug must investigate independently</element>
+    </subtask_brief_structure>
+  </pattern>
+
   <pattern name="stuck_resolution_subtask">
-    <description>Offering a Debug subtask after 2-3 failed diagnostic→fix→verification cycles</description>
-    <context>2-3 full cycles of: diagnostic → fix → quality loop → verification gate → user still reports broken. Different approaches attempted each cycle. Diagnostic output gathered each cycle.</context>
-    <ask_framing>
-      <example>
-        "We've tried [N] diagnostic→fix→verification cycles without resolving [the problem]. Would you like me to launch
-        a Debug subtask to investigate from scratch? A fresh agent specialized in systematic debugging can
-        sometimes spot root causes we've been missing."
-      </example>
-    </ask_framing>
+    <description>Auto-launching a Debug subtask after 1 failed diagnostic→fix→verification cycle</description>
+    <context>1 full cycle of: diagnostic → fix → quality loop → verification gate → user still reports broken. Diagnostic output was gathered.</context>
     <subtask_brief_structure>
       <element>Original problem statement (as the user first described it)</element>
-      <element>Every approach tried and why it failed</element>
-      <element>All diagnostic output gathered across all cycles</element>
+      <element>Diagnostic output gathered during the failed cycle</element>
+      <element>What fix was attempted and why it didn't resolve the issue</element>
       <element>Relevant file paths and code sections</element>
       <element>Any constraints or requirements</element>
-      <element>Explicit instruction: investigate systematically, identify root cause, propose a fix — do not implement without understanding</element>
+      <element>Critical instruction: "Investigate the root cause independently. Come up with your own solution. Apply the fix. Report what the problem was and how you fixed it. Do NOT ask the user any questions." (when hands_off_mode is true, emphasize "Do NOT ask the user any questions. Work autonomously.")</element>
+      <element>Do NOT prescribe a solution — Debug must investigate independently</element>
     </subtask_brief_structure>
   </pattern>
 
   <pattern name="subtask_integration">
-    <description>Reviewing and integrating subtask results (for user-consent subtasks)</description>
-    <context>After a design-polish or stuck-resolution subtask completes</context>
+    <description>Reviewing and integrating subtask results (for UI Designer and Debug subtasks)</description>
+    <context>After a UI Designer polish, test failure Debug, or verification stuck Debug subtask completes</context>
     <review_checklist>
       <item>Do the changes match the brief?</item>
       <item>Are the changes consistent with existing code patterns?</item>

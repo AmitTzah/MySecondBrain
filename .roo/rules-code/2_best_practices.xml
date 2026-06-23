@@ -57,13 +57,16 @@
     </principle>
 
     <principle priority="high">
-      <name>Auto-Launch vs User-Consent Subtasks</name>
+      <name>Auto-Launch Subtasks (All Automatic)</name>
       <description>
-        Three subtask types, two consent models:
-        - **Auto-launch (no consent needed):** QA review (mandatory quality gate), synthetic-human-tester GUI smoke test (when smoke_test_automation is enabled — replaces manual GUI verification only; CLI/build/integration are self-verified by Code mode), UI Designer (when SHT reports VISUAL: 🔴 obvious breakage, or when user explicitly expresses visual dissatisfaction with working functionality).
-        - **User consent required:** Debug subtask for stuck resolution (after 2-3 failed diagnostic→fix→verification cycles). Always use the ask tool to propose — never launch without explicit user approval.
+        Five subtask types, all automatic — no user consent needed:
+        - **QA review**: Mandatory quality gate after implementation and refactoring.
+        - **Test failure Debug**: After 3 failed auto-fix attempts on the same test during the quality loop — auto-launch Debug. Give context, don't prescribe solutions.
+        - **Verification stuck Debug**: After 1 failed diagnostic→fix→verification cycle — auto-launch Debug. Give context, don't prescribe solutions.
+        - **Synthetic-human-tester GUI smoke test**: When smoke_test_automation is enabled — replaces manual GUI verification only (CLI/build/integration are self-verified).
+        - **UI Designer**: When SHT reports VISUAL: 🔴 obvious breakage, or when user explicitly expresses visual dissatisfaction with working functionality.
       </description>
-      <rationale>QA, SHT, and SHT-triggered UI Designer are quality gates that don't need permission. Debug subtasks are optional workflow enhancements — the user decides whether a fresh investigation is warranted.</rationale>
+      <rationale>All subtasks are quality mechanisms that don't need permission. Debug subtasks are triggered by objective signals (test failure count, verification failure) rather than user preference — they're automatic circuit breakers, not optional enhancements.</rationale>
     </principle>
 
     <principle priority="high">
@@ -80,7 +83,7 @@
 
     <principle priority="medium">
       <name>One Subtask at a Time</name>
-      <description>Launch one subtask and wait for its completion before launching another. The QA subtask runs alone — do not launch parallel design-polish or stuck-resolution subtasks during QA review.</description>
+      <description>Launch one subtask and wait for its completion before launching another. The QA subtask runs alone — do not launch parallel Debug or UI Designer subtasks during QA review.</description>
       <rationale>Sequential subtasks avoid merge conflicts and ensure each change builds on a clean state.</rationale>
     </principle>
   </subtask_delegation_principles>
@@ -129,15 +132,15 @@
     </pitfall>
 
     <pitfall>
-      <description>Launching a subtask without asking first (for user-consent subtasks)</description>
-      <why_problematic>The user loses control over their session. Subtasks consume resources and may not be desired.</why_problematic>
-      <correct_approach>Always use the ask tool to propose user-consent subtasks. QA is the only automatic subtask.</correct_approach>
+      <description>Prescribing a solution to a Debug subtask instead of letting it investigate independently</description>
+      <why_problematic>Debug mode is a systematic investigation specialist. Telling it "try X" or "the fix is Y" defeats the purpose — you're asking for a fresh perspective but pre-loading it with your own conclusions. The Debug subtask may latch onto your prescribed approach rather than finding the real root cause.</why_problematic>
+      <correct_approach>Give Debug ALL context (problem, what you tried, diagnostic output, relevant files) but explicitly instruct: "Investigate independently. Find the root cause. Apply the fix. Report what the problem was and how you fixed it." Do NOT suggest fixes or approaches.</correct_approach>
     </pitfall>
 
     <pitfall>
       <description>Offering a subtask too early (after only 1-2 attempts)</description>
       <why_problematic>The user may feel the agent is giving up too easily or avoiding hard problems.</why_problematic>
-      <correct_approach>Attempt 2-3 full diagnostic→fix→quality-loop→verification cycles with genuinely different approaches before offering the Debug subtask. One failed cycle is not "stuck" — methodical debugging may need multiple rounds.</correct_approach>
+      <correct_approach>After 1 full diagnostic→fix→quality-loop→verification cycle without resolution, auto-launch a Debug subtask. One cycle with diagnostic evidence is enough to justify a fresh investigation — Debug provides independent perspective before Code mode burns more cycles guessing.</correct_approach>
     </pitfall>
 
     <pitfall>

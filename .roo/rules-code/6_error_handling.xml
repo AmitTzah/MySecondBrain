@@ -38,7 +38,7 @@
   </scenario>
 
   <scenario name="subtask_fails">
-    <description>A user-consent subtask (design polish or stuck resolution) fails to complete</description>
+    <description>A subtask (UI Designer, test failure Debug, or verification stuck Debug) fails to complete</description>
     <recovery>
       <step>Review the subtask output to understand what went wrong</step>
       <step>If the failure is due to unclear instructions, re-launch with a clarified brief</step>
@@ -52,7 +52,7 @@
   </scenario>
 
   <scenario name="subtask_produces_wrong_output">
-    <description>A user-consent subtask completes but the changes don't match the brief</description>
+    <description>A subtask (UI Designer, test failure Debug, or verification stuck Debug) completes but the changes don't match the brief</description>
     <recovery>
       <step>Identify specifically what is wrong: incorrect approach, inconsistent patterns, broken tests, or missed requirements</step>
       <step>If the issues are minor, fix them directly in-session</step>
@@ -80,13 +80,28 @@
   </scenario>
 
   <scenario name="user_declines_subtask">
-    <description>The user says no to a user-consent subtask offer (design polish or stuck resolution)</description>
+    <description>The user explicitly rejects or cancels an auto-launched UI Designer subtask. (All subtasks are now automatic — this scenario only applies to the rare case where the user interrupts an in-progress auto-launched subtask.)</description>
     <recovery>
       <step>Acknowledge the user's preference without argument</step>
-      <step>For design polish: proceed with design changes in the current session</step>
-      <step>For stuck resolution: pivot to a genuinely different approach — step back to first principles, try an alternative technology or pattern, or suggest decomposing the problem differently</step>
+      <step>Proceed with design changes in the current session instead</step>
       <step>Do not re-offer the same subtask in the same session unless the situation meaningfully changes</step>
     </recovery>
+  </scenario>
+
+  <scenario name="repeated_test_failure_during_quality_loop">
+    <description>The same automated test(s) continue to fail after 3 auto-fix attempts and a Debug subtask investigation</description>
+    <trigger>The automated_testing_1 phase circuit breaker fired: 3 auto-fix attempts failed, Debug subtask was launched, Debug returned a fix, but the same test(s) STILL fail after applying the Debug fix.</trigger>
+    <recovery>
+      <step>Stop immediately. Do NOT loop. Do NOT re-spawn Debug. Do NOT try another fix yourself.</step>
+      <step>Tell the user clearly: "Automated test [name] still fails after 3 auto-fix attempts and a Debug subtask investigation. The Debug subtask identified the root cause as [summary] and applied [fix], but the test continues to fail. This may require human architectural review or a different approach."</step>
+      <step>Include in your completion: the full test failure output, what Code mode tried (all 3 approaches), what Debug found and fixed, and the current state.</step>
+      <step>Call attempt_completion. Do not continue the quality loop.</step>
+    </recovery>
+    <prevention>
+      <item>The circuit breaker ensures Code mode never loops indefinitely on test failures</item>
+      <item>Each auto-fix attempt should be genuinely different — not variations of the same approach</item>
+      <item>Debug subtask gets full context to avoid repeating already-tried approaches</item>
+    </prevention>
   </scenario>
 
   <scenario name="code_change_breaks_tests">
@@ -207,7 +222,7 @@
       <rule>Never skip diagnostic output unless the issue is a proven single-character typo — guessing at fixes without evidence wastes the user's time</rule>
       <rule>Always remove ALL diagnostic output statements after the fix is confirmed — they are temporary instrumentation, not permanent code</rule>
       <rule>If diagnostic output is inconclusive, add more targeted statements rather than guessing at a fix</rule>
-      <rule>This diagnostic workflow counts as one "cycle" for stuck-resolution tracking — each full cycle (diagnostic → fix → quality loop → verification gate → user still reports broken) is one completed attempt. After 2-3 such cycles, offer a Debug subtask.</rule>
+      <rule>This diagnostic workflow counts as one "cycle" for stuck-resolution tracking — each full cycle (diagnostic → fix → quality loop → verification gate → user still reports broken) is one completed attempt. After 1 such cycle, auto-launch a Debug subtask.</rule>
     </guardrails>
   </scenario>
 </error_handling>

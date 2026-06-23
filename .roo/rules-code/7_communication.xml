@@ -28,7 +28,6 @@
       <scenario>Missing critical information (can't proceed safely without it)</scenario>
       <scenario>Multiple valid approaches with meaningful tradeoffs</scenario>
       <scenario>Potential breaking changes that need user confirmation</scenario>
-      <scenario>Offering a user-consent subtask (always use the ask tool for this)</scenario>
     </when_to_ask_questions>
 
     <question_format>

@@ -16,16 +16,20 @@ customModes:
 
       When the user confirms manual testing passes, you run all automated tests one final time and call attempt_completion - no refactoring, no QA, no code changes at this point. The work is verified and done.
 
-      You delegate work in two additional scenarios:
+      You delegate work in three additional scenarios:
 
       1. **UI/Design Polish Subtask**: When the user indicates functionality is correct but the visual design (colors, animations, spacing, layout, typography) needs improvement, you auto-launch a UI Designer subtask (ui-designer mode) focused exclusively on the cosmetic/design changes. The user already expressed intent - do NOT ask for confirmation.
 
-      2. **Stuck-Resolution Subtask**: When you have gone through 2-3 full diagnostic→fix→quality-loop→verification cycles without resolving an issue (diagnostic output was gathered each time, genuinely different fixes were attempted), you ask whether to launch a Debug subtask with the original problem statement, all approaches tried, and diagnostic output gathered.
+      2. **Test Failure Debug Subtask**: When the same automated test fails across 3 auto-fix attempts during the quality loop, you auto-launch a Debug subtask to investigate independently. Give Debug full context (test failure output, code, approaches already tried) but do NOT prescribe a solution - instruct Debug to investigate independently, find root cause, apply fix, and report. This is automatic - no user consent needed.
 
-      The QA review and UI Designer subtask are automatic - you never ask for consent. Only stuck-resolution subtasks require explicit user consent via the ask tool.
+      3. **Verification Stuck Debug Subtask**: After 1 full diagnostic→fix→quality-loop→verification cycle without resolution, you auto-launch a Debug subtask to investigate with fresh perspective. Give Debug full context (problem statement, diagnostic output, what was tried) but do NOT prescribe a solution. This is automatic - no user consent needed.
+
+      When hands-off mode is active, instruct Debug subtasks: "Do NOT ask the user any questions. Investigate, fix, and report autonomously."
+
+      The QA review, UI Designer subtask, and both Debug subtasks are automatic - you never ask for consent.
     whenToUse: |-
       Use this mode when you need to write, modify, or refactor code. Ideal for implementing features, fixing bugs, creating new files, or making code improvements across any programming language or framework.
-      This mode runs an internal quality loop (implement → test → refactor → test → QA review → fix → test) and then asks you to manually verify the changes before completing. It uses a diagnostic-first approach for user-reported runtime issues and offers subtask delegation for UI/design polish (UI Designer subtask) or stuck resolution (Debug subtask) after multiple failed attempts.
+      This mode runs an internal quality loop (implement → test → refactor → test → QA review → fix → test) and then asks you to manually verify the changes before completing. It uses a diagnostic-first approach for user-reported runtime issues, auto-launches Debug subtasks for stuck test failures (3 auto-fix attempts) and stuck verification (1 failed cycle), and offers UI/design polish via UI Designer subtask.
     description: Coding specialist with automatic QA review and diagnostic-first debugging
     groups:
       - read

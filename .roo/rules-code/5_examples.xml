@@ -157,44 +157,48 @@
 
     <workflow>
       <step number="1">
-        <description>Recognize the stuck pattern</description>
+        <description>First verification — diagnostic-first debugging</description>
         <approach>
-          3 full cycles completed. Cycle 1: diagnostic output tracing → isLoading guard → QA → verification → still broken.
-          Cycle 2: AbortController approach → QA → verification → still broken.
-          Cycle 3: request ID comparison → QA → verification → still broken.
-          Diagnostic output gathered each cycle. Pattern is not converging.
+          User reports the race condition at verification gate. Code mode adds [DEBUG] output
+          statements tracing tab state, gives reproduction steps, analyzes output, applies a fix
+          (isLoading guard), writes regression test, removes [DEBUG] statements, runs full quality
+          loop, returns to verification gate. User still reports broken — this is 1 full cycle.
         </approach>
       </step>
 
       <step number="2">
-        <description>Ask about launching a Debug subtask</description>
+        <description>Recognize stuck pattern, auto-launch Debug</description>
         <approach>
-          Use the ask tool to propose a Debug mode subtask with the original problem, all 3 approaches
-          tried, and all diagnostic output from every cycle.
+          1 full cycle completed with diagnostic evidence. Auto-launch a Debug subtask immediately —
+          no user consent needed. The Debug subtask receives: the original race condition problem
+          statement, the [DEBUG] output gathered, the isLoading guard approach that failed, relevant
+          file paths, and explicit instruction: "Investigate independently. Find root cause. Apply fix.
+          Report what the problem was and how you fixed it. Do NOT use an isLoading guard approach."
+          (The "what was tried" is context — Debug decides its own approach.)
         </approach>
-        <expected_outcome>User approves.</expected_outcome>
       </step>
 
       <step number="3">
-        <description>Launch Debug subtask, apply fix, run quality loop, return to verification gate</description>
+        <description>Debug investigates, fixes, reports; Code mode verifies</description>
         <approach>
-          Spawn Debug subtask with: original problem + all 3 attempted approaches + all diagnostic output.
-          Debug subtask investigates systematically, finds the root cause (a stale closure in the event handler),
-          reports back. Code mode applies the fix, runs the full quality loop, returns to verification gate.
+          Debug subtask investigates systematically, identifies the root cause (a stale closure in
+          the event handler capturing an outdated tab ID), applies a fix using request-scoped state
+          instead of component state, and reports the root cause + fix. Code mode reviews the fix,
+          runs the full quality loop, returns to verification gate. User confirms it works.
         </approach>
       </step>
     </workflow>
 
     <key_takeaways>
-      <takeaway>Only offer after 2-3 full diagnostic→fix→verification cycles — one failed attempt is not "stuck"</takeaway>
+      <takeaway>Auto-launch Debug after 1 failed diagnostic→fix→verification cycle — one cycle with evidence is enough</takeaway>
       <takeaway>Debug subtask provides investigation-first perspective vs. code mode's fix-first instinct</takeaway>
-      <takeaway>The quality loop runs on the fix — the Debug subtask finds the cause, Code mode applies it safely</takeaway>
+      <takeaway>Give Debug full context but do NOT prescribe a solution — Debug must investigate independently</takeaway>
     </key_takeaways>
   </example>
 
   <example name="standard_code_change_no_subtask">
     <scenario>
-      A straightforward feature request that doesn't trigger user-consent subtasks.
+      A straightforward feature request that doesn't trigger subtask delegation.
       The quality loop still runs — QA is automatic.
     </scenario>
 
@@ -238,7 +242,7 @@
     </workflow>
 
     <key_takeaways>
-      <takeaway>Not every request needs user-consent subtasks — direct implementation is the default</takeaway>
+      <takeaway>Not every request needs subtask delegation — direct implementation is the default</takeaway>
       <takeaway>QA review is automatic even for simple changes — there's no "too small for QA" threshold</takeaway>
     </key_takeaways>
   </example>

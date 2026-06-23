@@ -870,7 +870,7 @@
             1. Read plan.md and reference.md — understand the current feature state.
             2. Insert a NEW step immediately after the just-completed step [current_step] — name it 'Step [current_step+1]: Structural Refactoring — Split [filenames]'. This step must:
                - Goal: Split oversized files into focused modules without changing behavior.
-               - Actions: For each file, specify which logical sections to extract and where (new file paths).
+               - Actions: For each file, specify which logical sections to extract and where (new file paths). When a split produces 3 or more related files that form a logical group, create a new subdirectory for them rather than dumping them in the parent directory. Name the directory after the group's purpose.
                - Unit Tests to Write: None — pure structural change, existing tests cover behavior.
                - Integration Tests to Write: None — no infrastructure changes.
                - Automated Test Commands: Run the full unfiltered test suite after splitting.
