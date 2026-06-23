@@ -5,7 +5,7 @@ using Xunit.Abstractions;
 namespace MySecondBrain.Tests.E2E;
 
 /// <summary>
-/// E2E tests for Feature 7: Model Configurations, API Keys & Personas.
+/// E2E tests for AC-1 (Add API Key) and AC-2 (Create Model Configuration) of Feature 7.
 ///
 /// PREREQUISITES:
 /// 1. Build the solution in Debug|Any CPU before running these tests.
@@ -15,15 +15,13 @@ namespace MySecondBrain.Tests.E2E;
 /// COVERAGE:
 /// AC-1: Add API Key — navigate to Settings→Providers, click Add, fill form, test key, save
 /// AC-2: Create Model Configuration — navigate to Settings→Profiles, fill model config form, save
-/// AC-3: Create Persona — fill persona form, link model config and chat mode, save
-/// AC-4: Chat Persona Picker — use Ctrl+N dialog to select persona, verify header updates
 ///
-/// NOTE: These tests create real data in the SQLite database (API keys, model configs, personas).
-/// Run after a feature build that includes the Settings UI with model config + persona management.
+/// NOTE: These tests create real data in the SQLite database (API keys, model configs).
+/// Run after a feature build that includes the Settings UI with model config management.
 /// The Dispose() method resets navigation to Chats but does NOT clean up created data.
 /// </summary>
 [Collection("E2E")]
-public class ModelConfigsPersonasTests : IClassFixture<E2eFixture>, IDisposable
+public class ModelConfigsApiKeysE2ETests : IClassFixture<E2eFixture>, IDisposable
 {
     private readonly ITestOutputHelper _output;
     private readonly E2eFixture _fixture;
@@ -39,13 +37,11 @@ public class ModelConfigsPersonasTests : IClassFixture<E2eFixture>, IDisposable
     private static readonly string TestApiKeyName = $"E2E Key {_runId}";
     private static readonly string TestModelConfigName = $"E2E GPT4o {_runId}";
     private const string TestModelIdentifier = "gpt-4o";
-    private static readonly string TestPersonaName = $"E2E Asst {_runId}";
-    private const string TestSystemPrompt = "You are an E2E test assistant. Respond helpfully.";
 
     // ── Diagnostic: class-level init timestamp ──────────────────────────
     private static readonly string _diagClassInit = DateTimeOffset.UtcNow.ToString("HH:mm:ss.fff");
 
-    public ModelConfigsPersonasTests(E2eFixture fixture, ITestOutputHelper output)
+    public ModelConfigsApiKeysE2ETests(E2eFixture fixture, ITestOutputHelper output)
     {
         _fixture = fixture;
         _output = output;
@@ -63,8 +59,8 @@ public class ModelConfigsPersonasTests : IClassFixture<E2eFixture>, IDisposable
 
     // ── Cleanup tracking ──────────────────────────────────────────────
     // Only the last test to clean up actually runs the UI delete flow.
-    // Set to number of [Fact] methods in this class (including skipped).
-    private static int _remainingCleanups = 4;
+    // Set to number of [Fact] methods in this class.
+    private static int _remainingCleanups = 2;
 
     /// <summary>
     /// Per-test cleanup: reset navigation. On the last cleanup pass,
@@ -102,23 +98,16 @@ public class ModelConfigsPersonasTests : IClassFixture<E2eFixture>, IDisposable
     }
 
     /// <summary>
-    /// Deletes persona → model config → API key via UI buttons and MessageBox confirmations.
-    /// Order matters: persona must be deleted before model config (avoids "referencing personas" warning),
-    /// and model config before API key (avoids dependency warning).
+    /// Deletes model config → API key via UI buttons and MessageBox confirmations.
+    /// Order matters: model config must be deleted before API key (avoids dependency warning).
     /// </summary>
     private void PerformCleanup()
     {
         try
         {
-            // ── Delete Persona (Profiles → Personas section) ────────────
+            // ── Delete Model Config (Profiles → Model Configurations section) ────
             NavigateToSettings();
             SelectSettingsCategory("Profiles", "Profiles");
-            Thread.Sleep(500);
-            DeleteListItemByContent(TestPersonaName, "Persona");
-            _sessionCreated.Remove("persona");
-
-            // ── Delete Model Config (Profiles → Model Configurations section) ────
-            // After persona delete, the Profiles page refreshes — wait for it.
             Thread.Sleep(500);
             DeleteListItemByContent(TestModelConfigName, "Model Configuration");
             _sessionCreated.Remove("modelconfig");
@@ -396,7 +385,7 @@ public class ModelConfigsPersonasTests : IClassFixture<E2eFixture>, IDisposable
     }
 
     // ════════════════════════════════════════════════════════════════════
-    // Full E2E Flow: API Key → Model Config → Persona → Chat Selection
+    // AC-1: Add API Key
     // ════════════════════════════════════════════════════════════════════
 
     [Fact]
@@ -514,6 +503,10 @@ public class ModelConfigsPersonasTests : IClassFixture<E2eFixture>, IDisposable
             $"_sessionCreated=[{string.Join(",", _sessionCreated)}]");
         _output.WriteLine("AC-1 PASSED: Add API Key flow completed successfully.");
     }
+
+    // ════════════════════════════════════════════════════════════════════
+    // AC-2: Create Model Configuration
+    // ════════════════════════════════════════════════════════════════════
 
     [Fact]
     public async Task AC2_CreateModelConfiguration_ShouldSaveAndDisplay()
@@ -690,245 +683,6 @@ public class ModelConfigsPersonasTests : IClassFixture<E2eFixture>, IDisposable
         _output.WriteLine("AC-2 PASSED: Create Model Configuration flow completed successfully.");
     }
 
-    [Fact]
-    public async Task AC3_CreatePersona_ShouldSaveAndDisplay()
-    {
-        _output.WriteLine($"[DIAG] ═══ AC3 START at {DateTimeOffset.UtcNow:HH:mm:ss.fff}. " +
-            $"sessionKeys=[{string.Join(",", _sessionCreated)}]");
-        // Arrange
-        await UseSharedAppAsync();
-        NavigateToSettings();
-
-        // Ensure prerequisite data exists (API key + model config)
-        await EnsureTestApiKeyExistsAsync();
-        await EnsureTestModelConfigExistsAsync();
-
-        // Navigate to Profiles category
-        SelectSettingsCategory("Profiles", "Profiles");
-        await Task.Delay(300);
-
-        // ── Step 1: Click "+ New Persona" ──────────────────────────────
-        // Skip if a persona was already created this session.
-        // Note: We don't verify via FindByNameContains here because the Profiles
-        // page shows model configs above personas, and the persona list may be
-        // scrolled out of the UIA-visible region. The _sessionCreated tracking
-        // guarantees the persona was already persisted by another test.
-        if (_sessionCreated.Contains("persona"))
-        {
-            _output.WriteLine("[DIAG-AC3] Persona already in _sessionCreated. " +
-                "Skipping (created by prior test).");
-            _output.WriteLine("AC-3 PASSED: Persona exists (pre-created by another test).");
-            return;
-        }
-
-        var addPersonaBtn = FindById("AddPersonaButton");
-        Assert.NotNull(addPersonaBtn);
-        Assert.True(addPersonaBtn!.IsEnabled, "Add Persona button should be enabled.");
-        addPersonaBtn.Click();
-        await Task.Delay(600);
-
-        // Assert: persona editing form is visible
-        var savePersonaBtn = FindById("SavePersonaButton");
-        Assert.NotNull(savePersonaBtn);
-        Assert.True(savePersonaBtn!.IsEnabled, "Save Persona button should be enabled.");
-        _output.WriteLine("Persona form opened.");
-
-        // ── Step 2: Set Persona Display Name ───────────────────────────
-        var personaNameInput = FindById("PersonaDisplayNameInput");
-        Assert.NotNull(personaNameInput);
-        personaNameInput!.AsTextBox().Text = TestPersonaName;
-        _output.WriteLine($"Persona name set to '{TestPersonaName}'.");
-
-        // ── Step 3: Set System Prompt ────────────────────────────────────
-        var systemPromptInput = FindById("PersonaSystemPromptInput");
-        Assert.NotNull(systemPromptInput);
-        systemPromptInput!.AsTextBox().Text = TestSystemPrompt;
-        _output.WriteLine("System prompt set.");
-
-        // ── Step 4: Select Default Model Configuration ───────────────────
-        var modelConfigCombo = FindById("PersonaDefaultModelConfigCombo");
-        Assert.NotNull(modelConfigCombo);
-        var mcCombo = modelConfigCombo!.AsComboBox();
-        mcCombo.Expand();
-        await Task.Delay(300);
-        var mcItems = mcCombo.Items;
-        if (mcItems.Length > 0)
-        {
-            mcItems[0].Click();
-            await Task.Delay(200);
-            _output.WriteLine(
-                $"Selected model config: '{mcCombo.SelectedItem?.Name}'");
-        }
-        mcCombo.Collapse();
-
-        // ── Step 5: Select Default Chat Mode ─────────────────────────────
-        var chatModeCombo = FindById("PersonaChatModeCombo");
-        Assert.NotNull(chatModeCombo);
-        var cmCombo = chatModeCombo!.AsComboBox();
-        cmCombo.Select("Standard");
-        await Task.Delay(200);
-        var selectedMode = cmCombo.SelectedItem?.Name ?? string.Empty;
-        Assert.Equal("Standard", selectedMode);
-        _output.WriteLine("Chat mode set to 'Standard'.");
-
-        // ── Step 6: Save the Persona ─────────────────────────────────────
-        _output.WriteLine($"[DIAG-AC3-DIRECT] About to save persona '{TestPersonaName}'. " +
-            $"_sessionCreated=[{string.Join(",", _sessionCreated)}]");
-        try
-        {
-            if (savePersonaBtn.Patterns.Invoke.IsSupported)
-            {
-                savePersonaBtn.Patterns.Invoke.Pattern.Invoke();
-                _output.WriteLine("Save invoked via Invoke pattern.");
-            }
-            else
-            {
-                savePersonaBtn.Click();
-            }
-        }
-        catch
-        {
-            savePersonaBtn.Click();
-        }
-
-        await Task.Delay(1500);
-
-        // Track creation to prevent duplicates from other tests
-        _sessionCreated.Add("persona");
-        _output.WriteLine($"[DIAG-AC3] Added 'persona' to _sessionCreated: " +
-            $"[{string.Join(",", _sessionCreated)}]");
-
-        // Verify the saved persona appears in the list
-        var savedPersona = FindByNameContains(TestPersonaName,
-            timeout: TimeSpan.FromSeconds(3));
-        Assert.NotNull(savedPersona);
-        _output.WriteLine($"Persona '{TestPersonaName}' visible in list.");
-
-        _output.WriteLine($"[DIAG] ═══ AC3 END at {DateTimeOffset.UtcNow:HH:mm:ss.fff}. " +
-            $"_sessionCreated=[{string.Join(",", _sessionCreated)}]");
-        _output.WriteLine("AC-3 PASSED: Create Persona flow completed successfully.");
-    }
-
-    [Fact(Skip = "Ctrl+N keyboard shortcut unreliable in automated E2E. Requires actual keyboard focus which FlaUI cannot guarantee.")]
-    public async Task AC4_ChatPersonaPicker_ShouldSelectPersonaAndUpdateHeader()
-    {
-        _output.WriteLine($"[DIAG] ═══ AC4 START at {DateTimeOffset.UtcNow:HH:mm:ss.fff}. " +
-            $"sessionKeys=[{string.Join(",", _sessionCreated)}]");
-        // Arrange
-        await UseSharedAppAsync();
-
-        // Ensure prerequisite data exists
-        await EnsureTestApiKeyExistsAsync();
-        await EnsureTestModelConfigExistsAsync();
-        await EnsureTestPersonaExistsAsync();
-
-        // Ensure we're on the Chat screen
-        var navChats = FindById("NavChats");
-        Assert.NotNull(navChats);
-        navChats!.Click();
-        await Task.Delay(500);
-
-        // Wait for ChatView to be fully loaded
-        var chatView = FindById("ChatView");
-        Assert.NotNull(chatView);
-        _output.WriteLine("ChatView loaded.");
-
-        // ── Step 1: Open Persona Picker via Ctrl+N ──────────────────────
-        // Focus a known ChatView element first to ensure keyboard focus
-        // is in the ChatView (where the Ctrl+N KeyBinding is registered).
-        var focusElement = FindById("PersonaSelector");
-        if (focusElement != null)
-        {
-            focusElement.Focus();
-            Thread.Sleep(200);
-        }
-        else
-        {
-            // Fallback: focus the main window
-            _fixture.MainWindow.Focus();
-            Thread.Sleep(300);
-        }
-
-        // Send Ctrl+N using Press+Type+Release sequence.
-        // TypeSimultaneously sometimes doesn't route correctly to WPF KeyBindings.
-        Keyboard.Press(VirtualKeyShort.LCONTROL);
-        Thread.Sleep(50);
-        Keyboard.Type(VirtualKeyShort.KEY_N);
-        Thread.Sleep(100);
-        Keyboard.Release(VirtualKeyShort.LCONTROL);
-        await Task.Delay(800);
-
-        // Assert: Persona Picker dialog is open
-        var pickerDialog = FindById("PersonaPickerDialog");
-        Assert.NotNull(pickerDialog);
-        _output.WriteLine("Persona Picker dialog opened via Ctrl+N.");
-
-        // ── Step 2: Search for the test persona ──────────────────────────
-        var searchBox = FindById("PersonaPickerSearchBox", pickerDialog);
-        Assert.NotNull(searchBox);
-        searchBox!.AsTextBox().Text = TestPersonaName;
-        await Task.Delay(500);
-        _output.WriteLine($"Searched for '{TestPersonaName}' in picker.");
-
-        // ── Step 3: Select the persona from the list ─────────────────────
-        var pickerList = FindById("PersonaPickerList", pickerDialog);
-        Assert.NotNull(pickerList);
-        var listBox = pickerList!.AsListBox();
-        Assert.NotNull(listBox);
-
-        // Find and select our test persona in the list
-        var listItems = listBox.Items;
-        AutomationElement? targetItem = null;
-        foreach (var item in listItems)
-        {
-            if (item.Name.Contains(TestPersonaName, StringComparison.OrdinalIgnoreCase))
-            {
-                targetItem = item;
-                break;
-            }
-        }
-
-        Assert.NotNull(targetItem);
-        targetItem!.Click();
-        await Task.Delay(200);
-        _output.WriteLine($"Selected '{TestPersonaName}' in persona list.");
-
-        // ── Step 4: Click "Select" to confirm ────────────────────────────
-        var selectBtn = FindById("PersonaPickerSelectBtn", pickerDialog);
-        Assert.NotNull(selectBtn);
-        Assert.True(selectBtn!.IsEnabled, "Select button should be enabled.");
-        selectBtn.Click();
-        await Task.Delay(800);
-
-        // Assert: dialog should close
-        var dialogAfter = FindById("PersonaPickerDialog",
-            timeout: TimeSpan.FromSeconds(2));
-        Assert.Null(dialogAfter);
-        _output.WriteLine("Persona picker dialog closed.");
-
-        // ── Step 5: Verify the chat header shows the persona name ────────
-        // The persona name appears in the ChatView header as the first TextBlock
-        // in the header bar. It's bound to ActivePersona.DisplayName.
-        // Find it by looking for a TextBlock with the persona name.
-        var personaHeader = FindByName(TestPersonaName);
-        Assert.NotNull(personaHeader);
-        Assert.False(personaHeader!.IsOffscreen,
-            "Persona name should be visible in chat header.");
-        _output.WriteLine($"Chat header shows persona name: '{TestPersonaName}'.");
-
-        // Also verify the PersonaSelector ComboBox shows the selected persona
-        var personaSelector = FindById("PersonaSelector");
-        Assert.NotNull(personaSelector);
-        var selectorCombo = personaSelector!.AsComboBox();
-        var selectedPersona = selectorCombo.SelectedItem?.Name ?? string.Empty;
-        Assert.Contains(TestPersonaName, selectedPersona, StringComparison.OrdinalIgnoreCase);
-        _output.WriteLine($"PersonaSelector shows: '{selectedPersona}'.");
-
-        _output.WriteLine($"[DIAG] ═══ AC4 END at {DateTimeOffset.UtcNow:HH:mm:ss.fff}. " +
-            $"_sessionCreated=[{string.Join(",", _sessionCreated)}]");
-        _output.WriteLine("AC-4 PASSED: Persona picker flow completed successfully.");
-    }
-
     // ════════════════════════════════════════════════════════════════════
     // Prerequisite setup helpers (idempotent — skip if already exists)
     // ════════════════════════════════════════════════════════════════════
@@ -989,257 +743,5 @@ public class ModelConfigsPersonasTests : IClassFixture<E2eFixture>, IDisposable
             _output.WriteLine($"[DIAG-ENSURE-APIKEY] Saved. _sessionCreated now: " +
                 $"[{string.Join(",", _sessionCreated)}]");
         }
-    }
-
-    /// <summary>
-    /// Ensures a test model configuration exists. Creates one if not found.
-    /// Assumes we're on the Settings screen.
-    /// </summary>
-    private async Task EnsureTestModelConfigExistsAsync()
-    {
-        // Skip if already created in this session
-        if (_sessionCreated.Contains("modelconfig"))
-        {
-            _output.WriteLine($"[DIAG-ENSURE-MODELCONFIG] Already in _sessionCreated. Skipping.");
-            return;
-        }
-
-        _output.WriteLine($"[DIAG-ENSURE-MODELCONFIG] Creating model config " +
-            $"'{TestModelConfigName}'...");
-        SelectSettingsCategory("Profiles", "Profiles");
-        await Task.Delay(1000);
-
-        _output.WriteLine($"Test model config '{TestModelConfigName}' not found. Creating...");
-
-        var addModelConfigBtn = FindById("AddModelConfigButton");
-        if (addModelConfigBtn == null)
-        {
-            _output.WriteLine("WARNING: Could not find AddModelConfigButton.");
-            return;
-        }
-
-        addModelConfigBtn.Click();
-        await Task.Delay(600);
-
-        var saveBtn = FindById("SaveModelConfigButton");
-        if (saveBtn == null)
-        {
-            _output.WriteLine("WARNING: Could not find SaveModelConfigButton.");
-            return;
-        }
-
-        var settingsView = FindById("SettingsView");
-        if (settingsView == null)
-        {
-            _output.WriteLine("WARNING: SettingsView not found.");
-            return;
-        }
-
-        // Set Display Name (first Edit control in the SettingsView)
-        var allEdits = settingsView.FindAllDescendants(
-            _cf.ByControlType(ControlType.Edit));
-        if (allEdits.Length >= 1)
-        {
-            allEdits[0].AsTextBox().Text = TestModelConfigName;
-            await Task.Delay(200);
-        }
-
-        // Select first available API key from the first unnamed ComboBox
-        var allCombos = settingsView.FindAllDescendants(
-            _cf.ByControlType(ControlType.ComboBox));
-        foreach (var combo in allCombos)
-        {
-            if (combo.AutomationId != "ModelIdentifierCombo"
-                && combo.AutomationId != "PersonaDefaultModelConfigCombo"
-                && combo.AutomationId != "PersonaChatModeCombo")
-            {
-                var pc = combo.AsComboBox();
-                pc.Expand();
-                await Task.Delay(200);
-                var items = pc.Items;
-                if (items.Length > 0)
-                    items[0].Click();
-                pc.Collapse();
-                await Task.Delay(100);
-                break;
-            }
-        }
-
-        // Set Model Identifier
-        var modelIdCombo = FindById("ModelIdentifierCombo")?.AsComboBox();
-        if (modelIdCombo != null)
-            modelIdCombo.EditableText = TestModelIdentifier;
-
-        // Set Temperature
-        var allSliders = settingsView.FindAllDescendants(
-            _cf.ByControlType(ControlType.Slider));
-        if (allSliders.Length > 0)
-            allSliders[0].AsSlider().Value = 0.7;
-
-        // Set Context Overflow
-        foreach (var combo in allCombos)
-        {
-            if (combo.AutomationId != "ModelIdentifierCombo"
-                && combo.AutomationId != "PersonaDefaultModelConfigCombo"
-                && combo.AutomationId != "PersonaChatModeCombo")
-            {
-                try
-                {
-                    combo.AsComboBox().Select("SlidingWindow");
-                    await Task.Delay(100);
-                }
-                catch
-                {
-                    continue;
-                }
-                break;
-            }
-        }
-
-        await Task.Delay(200);
-
-        // Save via Invoke pattern
-        try
-        {
-            if (saveBtn.Patterns.Invoke.IsSupported)
-                saveBtn.Patterns.Invoke.Pattern.Invoke();
-            else
-                saveBtn.Click();
-        }
-        catch
-        {
-            saveBtn.Click();
-        }
-        await Task.Delay(1500);
-
-        _sessionCreated.Add("modelconfig");
-        _output.WriteLine($"[DIAG-ENSURE-MODELCONFIG] Save attempted. " +
-            $"_sessionCreated now: [{string.Join(",", _sessionCreated)}]");
-    }
-
-    /// <summary>
-    /// Ensures a test persona exists. Creates one if not found.
-    /// Assumes prerequisite data exists (API key + model config).
-    /// </summary>
-    private async Task EnsureTestPersonaExistsAsync()
-    {
-        // Skip if already created in this session
-        if (_sessionCreated.Contains("persona"))
-        {
-            _output.WriteLine($"[DIAG-ENSURE-PERSONA] Already in _sessionCreated. Skipping.");
-            return;
-        }
-
-        _output.WriteLine($"[DIAG-ENSURE-PERSONA] Creating persona '{TestPersonaName}'...");
-        SelectSettingsCategory("Profiles", "Profiles");
-        await Task.Delay(1000);
-
-        _output.WriteLine($"Test persona '{TestPersonaName}' not found. Creating...");
-
-        var addPersonaBtn = FindById("AddPersonaButton");
-        if (addPersonaBtn == null)
-        {
-            _output.WriteLine("WARNING: Could not find AddPersonaButton.");
-            return;
-        }
-
-        addPersonaBtn.Click();
-        await Task.Delay(600);
-
-        // Set Display Name
-        var nameInput = FindById("PersonaDisplayNameInput")?.AsTextBox();
-        if (nameInput != null)
-            nameInput.Text = TestPersonaName;
-
-        // Set System Prompt
-        var promptInput = FindById("PersonaSystemPromptInput")?.AsTextBox();
-        if (promptInput != null)
-            promptInput.Text = TestSystemPrompt;
-
-        // Select first model config
-        var mcCombo = FindById("PersonaDefaultModelConfigCombo")?.AsComboBox();
-        if (mcCombo != null)
-        {
-            mcCombo.Expand();
-            await Task.Delay(200);
-            var items = mcCombo.Items;
-            if (items.Length > 0)
-                items[0].Click();
-            mcCombo.Collapse();
-            await Task.Delay(100);
-        }
-
-        // Set Chat Mode to Standard
-        var cmCombo = FindById("PersonaChatModeCombo")?.AsComboBox();
-        cmCombo?.Select("Standard");
-        await Task.Delay(200);
-
-        // Save
-        var saveBtn = FindById("SavePersonaButton");
-        if (saveBtn != null)
-        {
-            saveBtn.Click();
-            await Task.Delay(1000);
-            _sessionCreated.Add("persona");
-            _output.WriteLine($"[DIAG-ENSURE-PERSONA] Save attempted. " +
-                $"_sessionCreated now: [{string.Join(",", _sessionCreated)}]");
-        }
-    }
-
-    /// <summary>
-    /// Finds the form container Border by walking up from a known child element.
-    /// The model config/persona editing form is a Border with a StackPanel inside.
-    /// </summary>
-    private AutomationElement? FindFormContainer(AutomationElement child)
-    {
-        // Walk up the UIA tree from the Save button to find the form container
-        // that contains all form fields (TextBoxes, ComboBoxes, Sliders).
-        // The UIA tree looks like: Save Button → StackPanel → Grid → Border → ...
-        var current = child;
-        var maxDepth = 15;
-        for (var i = 0; i < maxDepth; i++)
-        {
-            try
-            {
-                var parent = current.Parent;
-                if (parent == null || parent == current)
-                    break;
-
-                current = parent;
-
-                // Check if this parent node contains form fields at the child level
-                var hasEdit = current.FindFirst(TreeScope.Children,
-                    _cf.ByControlType(ControlType.Edit)) != null;
-                var hasCombo = current.FindFirst(TreeScope.Children,
-                    _cf.ByControlType(ControlType.ComboBox)) != null;
-
-                if (hasEdit || hasCombo)
-                {
-                    _output.WriteLine($"FindFormContainer at depth {i + 1}: " +
-                        $"ControlType={current.ControlType}, Name='{current.Name?.Substring(0, Math.Min(40, current.Name?.Length ?? 0))}'");
-                }
-            }
-            catch
-            {
-                break;
-            }
-        }
-
-        return current != child ? current : null;
-    }
-
-    /// <summary>
-    /// Finds the ScrollViewer in the Profiles category content area.
-    /// This is used to ensure the Persona section is scrolled into view.
-    /// </summary>
-    private AutomationElement? FindProfilesScrollViewer()
-    {
-        var settingsView = FindById("SettingsView");
-        if (settingsView == null) return null;
-
-        // The Profiles category content has a ScrollViewer
-        return settingsView.FindFirstDescendant(
-            _cf.ByControlType(ControlType.Pane)
-               .And(_cf.ByControlType(ControlType.ScrollBar).Not()));
     }
 }

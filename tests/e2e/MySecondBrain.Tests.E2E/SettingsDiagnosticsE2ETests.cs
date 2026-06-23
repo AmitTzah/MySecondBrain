@@ -4,7 +4,7 @@ using Xunit.Abstractions;
 namespace MySecondBrain.Tests.E2E;
 
 /// <summary>
-/// E2E tests for Feature 8: Settings, Onboarding & Diagnostics.
+/// E2E tests for AC-1 through AC-7 of Feature 8: Settings & Diagnostics.
 ///
 /// PREREQUISITES:
 /// 1. Build the solution in Debug|Any CPU before running these tests.
@@ -19,19 +19,12 @@ namespace MySecondBrain.Tests.E2E;
 /// AC-5: Can change log level from Information to Debug and back
 /// AC-6: Toggle LLM API Calls log category off then on
 /// AC-7: Open Logs Folder and Clear Logs buttons exist in Log File Management
-/// AC-8: Appearance section has Dark/Light theme RadioButtons
-/// AC-9: Appearance theme toggle switches between Dark and Light
-/// AC-10: Re-run Onboarding Wizard hyperlink exists in Settings sidebar footer
-///
-/// NOTE: Onboarding Wizard (first-launch flow) cannot be tested here because the
-/// E2eFixture seeds the database with settings, which marks onboarding as completed.
-/// The "Re-run Onboarding" hyperlink in Settings sidebar is verified instead.
 ///
 /// These tests create no persistent data — they read UI state and toggle settings
 /// that are re-read on next SettingsViewModel initialization (Transient).
 /// </summary>
 [Collection("E2E")]
-public class SettingsOnboardingDiagnosticsTests : IClassFixture<E2eFixture>, IDisposable
+public class SettingsDiagnosticsE2ETests : IClassFixture<E2eFixture>, IDisposable
 {
     private readonly ITestOutputHelper _output;
     private readonly E2eFixture _fixture;
@@ -64,7 +57,7 @@ public class SettingsOnboardingDiagnosticsTests : IClassFixture<E2eFixture>, IDi
     // ── Log level options ──────────────────────────────────────────────────
     private static readonly string[] LogLevelOptions = ["Information", "Debug", "Verbose"];
 
-    public SettingsOnboardingDiagnosticsTests(E2eFixture fixture, ITestOutputHelper output)
+    public SettingsDiagnosticsE2ETests(E2eFixture fixture, ITestOutputHelper output)
     {
         _fixture = fixture;
         _output = output;
@@ -208,6 +201,91 @@ public class SettingsOnboardingDiagnosticsTests : IClassFixture<E2eFixture>, IDi
             .Where(i => !string.IsNullOrEmpty(i.Name))
             .Select(i => i.Name!)
             .ToArray();
+    }
+
+    /// <summary>
+    /// Finds an element whose UIA Name CONTAINS the given text (partial match).
+    /// </summary>
+    private AutomationElement? FindByNameContains(string partialName,
+        AutomationElement? root = null,
+        TimeSpan? timeout = null)
+    {
+        root ??= _fixture.MainWindow;
+        if (root == null) return null;
+
+        var limit = timeout ?? DefaultTimeout;
+        var sw = Stopwatch.StartNew();
+
+        while (sw.Elapsed < limit)
+        {
+            var allElements = root.FindAllDescendants(
+                _cf.ByControlType(ControlType.Text)
+                   .Or(_cf.ByControlType(ControlType.ListItem))
+                   .Or(_cf.ByControlType(ControlType.Custom))
+                   .Or(_cf.ByControlType(ControlType.Button))
+                   .Or(_cf.ByControlType(ControlType.RadioButton))
+                   .Or(_cf.ByControlType(ControlType.CheckBox)));
+            foreach (var elem in allElements)
+            {
+                if (!string.IsNullOrEmpty(elem.Name)
+                    && elem.Name.Contains(partialName, StringComparison.OrdinalIgnoreCase)
+                    && elem.IsAvailable)
+                {
+                    return elem;
+                }
+            }
+            Wait.UntilInputIsProcessed();
+            Thread.Sleep(RetryIntervalMs);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Locates the Log Level ComboBox in the Diagnostics section.
+    /// Searches for a ComboBox whose items contain the log level option strings.
+    /// </summary>
+    private AutomationElement? FindLogLevelComboBox()
+    {
+        var settingsView = FindById("SettingsView");
+        if (settingsView == null) return null;
+
+        var allCombos = settingsView.FindAllDescendants(
+            _cf.ByControlType(ControlType.ComboBox));
+
+        foreach (var combo in allCombos)
+        {
+            try
+            {
+                var comboCtrl = combo.AsComboBox();
+                comboCtrl.Expand();
+                Wait.UntilInputIsProcessed();
+                Thread.Sleep(200);
+                var items = comboCtrl.Items;
+                comboCtrl.Collapse();
+
+                if (items.Length >= 3)
+                {
+                    var itemTexts = items
+                        .Select(i => i.Name)
+                        .Where(n => !string.IsNullOrEmpty(n))
+                        .ToList();
+
+                    // Check if this ComboBox matches the known log level options
+                    if (itemTexts.Intersect(LogLevelOptions, StringComparer.OrdinalIgnoreCase).Count() >= 2)
+                    {
+                        return combo;
+                    }
+                }
+            }
+            catch
+            {
+                // Some ComboBoxes may not support Expand/Collapse; skip them
+                continue;
+            }
+        }
+
+        return null;
     }
 
     // ════════════════════════════════════════════════════════════════════
@@ -507,239 +585,5 @@ public class SettingsOnboardingDiagnosticsTests : IClassFixture<E2eFixture>, IDi
         _output.WriteLine("Log File Management section header found.");
 
         _output.WriteLine("AC-7 PASSED: Log File Management section has both buttons.");
-    }
-
-    // ════════════════════════════════════════════════════════════════════
-    // AC-8: Appearance — Dark/Light Theme RadioButtons
-    // ════════════════════════════════════════════════════════════════════
-
-    [Fact]
-    public async Task AC8_Appearance_ThemeRadioButtonsExist()
-    {
-        // Arrange
-        await UseSharedAppAsync();
-        NavigateToSettings();
-        SelectSettingsCategory("Appearance");
-        await Task.Delay(400);
-
-        // Assert — "🌙 Dark" RadioButton exists
-        var darkRadio = FindByNameContains("Dark");
-        Assert.NotNull(darkRadio);
-        _output.WriteLine("Dark theme RadioButton found.");
-
-        // Assert — "☀️ Light" RadioButton exists
-        var lightRadio = FindByNameContains("Light");
-        Assert.NotNull(lightRadio);
-        _output.WriteLine("Light theme RadioButton found.");
-
-        _output.WriteLine("AC-8 PASSED: Appearance section has Dark and Light theme RadioButtons.");
-    }
-
-    // ════════════════════════════════════════════════════════════════════
-    // AC-9: Appearance — Theme Toggle Switches
-    // ════════════════════════════════════════════════════════════════════
-
-    [Fact]
-    public async Task AC9_Appearance_ThemeToggleSwitchesBetweenDarkAndLight()
-    {
-        // Arrange
-        await UseSharedAppAsync();
-        NavigateToSettings();
-        SelectSettingsCategory("Appearance");
-        await Task.Delay(400);
-
-        // Find the theme RadioButtons by looking for RadioButton elements
-        var settingsView = FindById("SettingsView");
-        Assert.NotNull(settingsView);
-
-        var allRadioButtons = settingsView!.FindAllDescendants(
-            _cf.ByControlType(ControlType.RadioButton));
-
-        // Find Dark and Light radio buttons
-        AutomationElement? darkRadio = null;
-        AutomationElement? lightRadio = null;
-
-        foreach (var rb in allRadioButtons)
-        {
-            var name = rb.Name ?? string.Empty;
-            if (name.Contains("🌙") || name.Contains("Dark"))
-                darkRadio = rb;
-            else if (name.Contains("☀️") || name.Contains("Light"))
-                lightRadio = rb;
-        }
-
-        Assert.NotNull(darkRadio);
-        Assert.NotNull(lightRadio);
-
-        // Record initial state — check which is selected
-        // In a RadioButton group, ToggleState.Off / ToggleState.On indicates selection
-        var darkToggleSupported = darkRadio!.Patterns.Toggle.IsSupported;
-        var lightToggleSupported = lightRadio!.Patterns.Toggle.IsSupported;
-        var initialDark = darkToggleSupported
-            ? darkRadio.Patterns.Toggle.Pattern.ToggleState == ToggleState.On
-            : false;
-        _output.WriteLine($"Initial state — Dark selected: {initialDark} " +
-            $"(Dark toggle: {darkToggleSupported}, Light toggle: {lightToggleSupported})");
-
-        // Act — Toggle by clicking the opposite theme
-        if (initialDark)
-        {
-            lightRadio!.Click();
-            await Task.Delay(600);
-
-            // Assert — Light should now be selected
-            if (lightToggleSupported)
-            {
-                Assert.Equal(ToggleState.On, lightRadio.Patterns.Toggle.Pattern.ToggleState);
-            }
-            _output.WriteLine("Clicked Light theme. Light should now be selected.");
-        }
-        else
-        {
-            darkRadio!.Click();
-            await Task.Delay(600);
-
-            // Assert — Dark should now be selected
-            if (darkToggleSupported)
-            {
-                Assert.Equal(ToggleState.On, darkRadio.Patterns.Toggle.Pattern.ToggleState);
-            }
-            _output.WriteLine("Clicked Dark theme. Dark should now be selected.");
-        }
-
-        // Toggle back to restore original state
-        if (initialDark)
-        {
-            darkRadio.Click();
-            await Task.Delay(600);
-
-            if (darkToggleSupported)
-            {
-                Assert.Equal(ToggleState.On, darkRadio.Patterns.Toggle.Pattern.ToggleState);
-            }
-            _output.WriteLine("Clicked Dark theme (restored).");
-        }
-        else
-        {
-            lightRadio.Click();
-            await Task.Delay(600);
-
-            if (lightToggleSupported)
-            {
-                Assert.Equal(ToggleState.On, lightRadio.Patterns.Toggle.Pattern.ToggleState);
-            }
-            _output.WriteLine("Clicked Light theme (restored).");
-        }
-
-        _output.WriteLine("AC-9 PASSED: Appearance theme toggles between Dark and Light.");
-    }
-
-    // ════════════════════════════════════════════════════════════════════
-    // AC-10: Re-run Onboarding Wizard Hyperlink
-    // ════════════════════════════════════════════════════════════════════
-
-    [Fact]
-    public async Task AC10_Settings_ReRunOnboardingHyperlinkExists()
-    {
-        // Arrange
-        await UseSharedAppAsync();
-        NavigateToSettings();
-
-        // Assert — The "🔄 Re-run Onboarding Wizard" hyperlink text is present
-        var reRunLink = FindByNameContains("Re-run Onboarding Wizard");
-        Assert.NotNull(reRunLink);
-        Assert.False(reRunLink!.IsOffscreen,
-            "Re-run Onboarding Wizard hyperlink should be visible in the settings sidebar footer.");
-
-        _output.WriteLine("AC-10 PASSED: Re-run Onboarding Wizard hyperlink exists in Settings sidebar.");
-    }
-
-    // ════════════════════════════════════════════════════════════════════
-    // Helpers
-    // ════════════════════════════════════════════════════════════════════
-
-    /// <summary>
-    /// Finds an element whose UIA Name CONTAINS the given text (partial match).
-    /// </summary>
-    private AutomationElement? FindByNameContains(string partialName,
-        AutomationElement? root = null,
-        TimeSpan? timeout = null)
-    {
-        root ??= _fixture.MainWindow;
-        if (root == null) return null;
-
-        var limit = timeout ?? DefaultTimeout;
-        var sw = Stopwatch.StartNew();
-
-        while (sw.Elapsed < limit)
-        {
-            var allElements = root.FindAllDescendants(
-                _cf.ByControlType(ControlType.Text)
-                   .Or(_cf.ByControlType(ControlType.ListItem))
-                   .Or(_cf.ByControlType(ControlType.Custom))
-                   .Or(_cf.ByControlType(ControlType.Button))
-                   .Or(_cf.ByControlType(ControlType.RadioButton))
-                   .Or(_cf.ByControlType(ControlType.CheckBox)));
-            foreach (var elem in allElements)
-            {
-                if (!string.IsNullOrEmpty(elem.Name)
-                    && elem.Name.Contains(partialName, StringComparison.OrdinalIgnoreCase)
-                    && elem.IsAvailable)
-                {
-                    return elem;
-                }
-            }
-            Wait.UntilInputIsProcessed();
-            Thread.Sleep(RetryIntervalMs);
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Locates the Log Level ComboBox in the Diagnostics section.
-    /// Searches for a ComboBox whose items contain the log level option strings.
-    /// </summary>
-    private AutomationElement? FindLogLevelComboBox()
-    {
-        var settingsView = FindById("SettingsView");
-        if (settingsView == null) return null;
-
-        var allCombos = settingsView.FindAllDescendants(
-            _cf.ByControlType(ControlType.ComboBox));
-
-        foreach (var combo in allCombos)
-        {
-            try
-            {
-                var comboCtrl = combo.AsComboBox();
-                comboCtrl.Expand();
-                Wait.UntilInputIsProcessed();
-                Thread.Sleep(200);
-                var items = comboCtrl.Items;
-                comboCtrl.Collapse();
-
-                if (items.Length >= 3)
-                {
-                    var itemTexts = items
-                        .Select(i => i.Name)
-                        .Where(n => !string.IsNullOrEmpty(n))
-                        .ToList();
-
-                    // Check if this ComboBox matches the known log level options
-                    if (itemTexts.Intersect(LogLevelOptions, StringComparer.OrdinalIgnoreCase).Count() >= 2)
-                    {
-                        return combo;
-                    }
-                }
-            }
-            catch
-            {
-                // Some ComboBoxes may not support Expand/Collapse; skip them
-                continue;
-            }
-        }
-
-        return null;
     }
 }
