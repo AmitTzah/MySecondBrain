@@ -51,12 +51,16 @@ public class OnboardingIntegrationTests : IDisposable
     public async Task FullWizardFlow_AllSteps_CompletesSuccessfully()
     {
         var vm = CreateViewModel();
+        await vm.Initialization;
 
-        // Start at Welcome (init sets to first incomplete = 0)
+        // First launch — init shows Welcome screen (CurrentStep = -1)
+        Assert.Equal(-1, vm.CurrentStep);
+
+        // Navigate to step 0 via "Get Started" then step through
+        vm.GetStartedCommand.Execute(null);
         Assert.Equal(0, vm.CurrentStep);
 
         // Step 0 → 1
-        vm.CurrentStep = 0;
         await vm.GoNextCommand.ExecuteAsync(null);
         Assert.Equal(1, vm.CurrentStep);
         var step1Val = await _settingsRepo.GetAsync("Onboarding_Step1_Completed");
@@ -94,18 +98,10 @@ public class OnboardingIntegrationTests : IDisposable
         await _settingsRepo.SetAsync("Onboarding_Step2_Completed", "true");
 
         var vm = CreateViewModel();
+        await vm.Initialization;
 
-        // After init, should start at step 3 (first incomplete = 2... wait, 0-indexed)
-        // Step1 = key 0 "Onboarding_Step1_Completed" → CurrentStep should be 2 (step 3)
-        // Let me think again:
-        // Step0Completed = Onboarding_Step1_Completed (Step 1 key)
-        // Step1Completed = Onboarding_Step2_Completed (Step 2 key)
-        // Step2Completed = Onboarding_Step3_Completed (Step 3 key)
-        // Step3Completed = Onboarding_Step4_Completed (Step 4 key)
-        //
-        // We set Step1_Completed + Step2_Completed = true
-        // So Step0Completed = true, Step1Completed = true
-        // First incomplete = 2
+        // After init: Step1Completed and Step2Completed are true → first incomplete
+        // step index is 2 (zero-based), which maps to step 3 in the wizard UI
         Assert.Equal(2, vm.CurrentStep);
     }
 
@@ -122,6 +118,7 @@ public class OnboardingIntegrationTests : IDisposable
         await _settingsRepo.SetAsync("Onboarding_Step4_Completed", "true");
 
         var vm = CreateViewModel();
+        await vm.Initialization;
 
         // All steps complete → determineFirstIncompleteStep returns 4
         // The ViewModel sets CurrentStep = -1 (Welcome) when all complete
@@ -136,6 +133,7 @@ public class OnboardingIntegrationTests : IDisposable
     public async Task SkipAllSteps_WizardAdvancesToFinish()
     {
         var vm = CreateViewModel();
+        await vm.Initialization;
         vm.CurrentStep = 0;
 
         // Skip step 0 → 1
@@ -160,9 +158,10 @@ public class OnboardingIntegrationTests : IDisposable
     // ================================================================
 
     [Fact]
-    public void Onboarding_AddApiKey_AppearsInList()
+    public async Task Onboarding_AddApiKey_AppearsInList()
     {
         var vm = CreateViewModel();
+        await vm.Initialization;
         vm.CurrentStep = 0;
 
         // Add a key
@@ -179,9 +178,10 @@ public class OnboardingIntegrationTests : IDisposable
     // ================================================================
 
     [Fact]
-    public void SelectPersona_SetsDisplayNameAndSystemPrompt()
+    public async Task SelectPersona_SetsDisplayNameAndSystemPrompt()
     {
         var vm = CreateViewModel();
+        await vm.Initialization;
         vm.CurrentStep = 1;
 
         // Select "Code Helper"
@@ -208,12 +208,16 @@ public class OnboardingIntegrationTests : IDisposable
         var onboardingCompleted = await _settingsRepo.GetAsync("Onboarding_Completed");
         Assert.Null(onboardingCompleted);
 
-        // Create the ViewModel — it should start at step 0 (first incomplete)
+        // Create the ViewModel — init shows Welcome screen (CurrentStep = -1) on first launch
         var vm = CreateViewModel();
+        await vm.Initialization;
+        Assert.Equal(-1, vm.CurrentStep);
+
+        // Navigate to step 0 via "Get Started"
+        vm.GetStartedCommand.Execute(null);
         Assert.Equal(0, vm.CurrentStep);
 
         // Simulate completing all steps by persisting all step flags and Onboarding_Completed
-        vm.CurrentStep = 0;
         await vm.GoNextCommand.ExecuteAsync(null); // Step 0 → 1
         await vm.GoNextCommand.ExecuteAsync(null); // Step 1 → 2
         await vm.GoNextCommand.ExecuteAsync(null); // Step 2 → 3
@@ -254,17 +258,14 @@ public class OnboardingIntegrationTests : IDisposable
         await _settingsRepo.SetAsync("Onboarding_Completed", "true");
 
         // Creating the ViewModel — it should detect all steps completed
-        // and stay at Welcome screen (CurrentStep = -1)
+        // with Onboarding_Completed=true → re-run mode, skip to step 0
         var vm = CreateViewModel();
+        await vm.Initialization;
 
-        // All steps complete → determineFirstIncompleteStep returns 4
-        // The ViewModel sets CurrentStep = -1 (Welcome) when all complete
-        Assert.Equal(-1, vm.CurrentStep);
+        // Onboarding_Completed = "true" triggers re-run mode (_isReRun = true)
+        // which jumps directly to step 0, skipping the Welcome screen
+        Assert.Equal(0, vm.CurrentStep);
     }
-
-    // ================================================================
-    // Helper
-    // ================================================================
 
     private OnboardingWizardViewModel CreateViewModel()
     {

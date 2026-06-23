@@ -110,9 +110,15 @@ public partial class OnboardingWizardViewModel : ObservableObject
         // Build default hotkey assignments
         BuildDefaultHotkeys();
 
-        // Resume logic
-        _ = InitializeAsync();
+        // Resume logic — expose the task so tests can await completion
+        Initialization = InitializeAsync();
     }
+
+    /// <summary>
+    /// Task representing the completion of async initialization.
+    /// Tests can await this to ensure initialization completes before asserting state.
+    /// </summary>
+    public Task Initialization { get; }
 
     // ================================================================
     // State Machine
