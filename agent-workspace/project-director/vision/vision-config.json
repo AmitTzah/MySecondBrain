@@ -1,0 +1,6 @@
+{
+  "project_type": "gui",
+  "interface_surface": "screen-based UI",
+  "deliverable_format": "Per-screen .md spec + interactive .html mock",
+  "phases": ["foundation", "screens", "flows", "edge_cases", "wire_up"]
+}
