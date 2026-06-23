@@ -182,6 +182,18 @@ public sealed class AppShellNavigationThemingE2ETests : E2eTestBase
     {
         await UseSharedAppAsync();
         var toggleBtn = FindById("ThemeToggleBtn");
+        if (toggleBtn == null)
+        {
+            // ChatView DataTemplate may not have rendered yet (e.g. when a preceding
+            // test changed theme state, leaving the UIA subtree stale). Navigate away
+            // and back to force a fresh render.
+            _output.WriteLine("ThemeToggleBtn not found initially — navigating away and back to force ChatView render.");
+            FindById("NavWiki")?.Click();
+            await Task.Delay(400);
+            FindById("NavChats")?.Click();
+            await Task.Delay(600);
+            toggleBtn = FindById("ThemeToggleBtn");
+        }
         Assert.NotNull(toggleBtn);
         var initialContent = toggleBtn!.Name; // e.g., "🌙" or "☀"
         _output.WriteLine($"Initial theme icon: '{initialContent}'");
