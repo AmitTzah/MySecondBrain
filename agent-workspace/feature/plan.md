@@ -141,7 +141,7 @@ tests/e2e/MySecondBrain.Tests.E2E/
 - **Smoke Test Classification:** Model
 - **Suggested Commit Message:** `feat: add MSB_DB_PATH env var, rewrite E2eFixture for ICollectionFixture, create E2eTestBase with shared helpers`
 
-### [ ] Step 2: F5-F6 E2E Tests — App Shell, Platform Services & System Tray
+### [x] Step 2: F5-F6 E2E Tests — App Shell, Platform Services & System Tray
 
 - **Goal:** Write ~32 E2E tests covering Features 5 (App Shell, Navigation & Theming) and 6 (Windows Platform). These tests do NOT create data — they verify the shell layout, navigation, theme toggling, font controls, DI platform service resolution, system tray menu, and global hotkey registration. All tests inherit from `E2eTestBase` and use `ICollectionFixture<E2eFixture>`.
 - **Actions:**

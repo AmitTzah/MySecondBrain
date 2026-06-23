@@ -12,11 +12,18 @@
     },
     "missing_prerequisites": []
   },
-  "skipped_smoke_tests": [],
+  "skipped_smoke_tests": [
+    {
+      "step": 2,
+      "name": "F5-F6 E2E Tests — App Shell, Platform Services & System Tray",
+      "classification": "HUMAN/SHT REQUIRED",
+      "description": "Run `dotnet test tests/e2e/MySecondBrain.Tests.E2E --configuration Debug --filter \"FullyQualifiedName~AppShell|FullyQualifiedName~Platform|FullyQualifiedName~SystemTray\"`. Verify exit code 0 and all ~32 tests pass. Verify only ONE `[FIXTURE] Launching app` line appears in output (proves ICollectionFixture is working)."
+    }
+  ],
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 5,
-  "current_step": 1,
+  "current_step": 2,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }
