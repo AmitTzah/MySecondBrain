@@ -1,21 +1,25 @@
 # Studio Chat — Screen Specification
 
 ## Purpose
-The Studio Chat is the Tier 3 primary workspace where the user engages in deep, multi-turn AI conversations. It provides the full chat experience: Markdown rendering, code syntax highlighting, streaming responses, multiple chat tabs, message branching, artifacts, model comparison, and all quality-of-life features. The user spends 90% of their time on this screen.
+
+The Studio Chat is the Tier 3 primary workspace where the user engages in deep, multi-turn AI conversations. It provides the full chat experience: Markdown rendering, code syntax highlighting, streaming responses, multiple chat tabs, message branching, WebView2-powered artifacts panel, model comparison, and all quality-of-life features. The user spends 90% of their time on this screen.
 
 ## Layout
+
 Three-column resizable layout:
 - **Left:** Sidebar (app navigation + chat list)
-- **Center:** Main content (tab bar + chat header + conversation view + message input)
-- **Right:** Collapsible side panel (Artifacts tab + Chat Nav tab)
+- **Center:** Main content (tab bar + chat header + conversation view [WPF] + message input)
+- **Right:** Collapsible side panel (Artifacts [WebView2] + Chat Nav [WPF])
 
 ## Regions
 
 ### Region 1: Sidebar (Left Column)
+
 **Width:** Resizable, min 150px, max 50% of window. Default ~280px.
 
 **App Navigation (top section):**
-Six icon+label navigation items:
+
+Seven icon+label navigation items:
 1. 💬 Chats (active by default — this screen)
 2. 📝 Wiki — navigates to [`wiki-browser.html`](wiki-browser.html)
 3. 🖼️ Media — navigates to [`media-library.html`](media-library.html)
@@ -43,7 +47,7 @@ Six icon+label navigation items:
 **Empty State (no chats):**
 "No chats yet. Press Ctrl+N to start a new conversation."
 
-### Region 2: Main Content (Center Column)
+### Region 2: Main Content (Center Column) — WPF-Native
 
 **Tab Bar:**
 - Horizontal row of chat tabs. Each: chat title (truncated if needed) + close X
@@ -66,7 +70,7 @@ Six icon+label navigation items:
 8. 📌 (pin window toggle, C23)
 9. ⋯ (three-dot menu): Clear Conversation, Export Chat, Duplicate Chat, Chat Tree, Edit System Message, Summarize Chat, Make Temporary
 
-**Conversation View:**
+**Conversation View (WPF FlowDocument):**
 - Scrollable message history for the active ChatThread
 - Messages rendered per selected visual theme (A3): Classic, Compact, or Bubble
 - Each message shows:
@@ -76,74 +80,104 @@ Six icon+label navigation items:
   - Code blocks with syntax highlighting + copy button on hover (C3)
   - Streaming tokens during generation (C4)
   - **Thinking Block (when Thinking is enabled, E3):**
-    - Appears as a collapsible section within the assistant message, ABOVE the final response
-    - **During thinking (streaming):** Collapsed by default. Header shows "🧠 Thinking... [N]s" with a real-time second counter incrementing each second. Click to expand and see the streaming thinking process in real time. The thinking text renders as plain monospace text (no Markdown processing).
-    - **When thinking completes:** Header updates to "🧠 Thinking complete ([N]s)". The final response begins streaming below the thinking block. The thinking block remains collapsible — user can re-collapse to hide it.
-    - **After generation finishes:** Both thinking block and response are visible. Thinking block can be toggled collapsed/expanded. The completed thinking content is preserved as part of the message.
-    - **When Thinking is disabled (E3 off):** No thinking block appears — only the final response.
-    - **When model does not support thinking:** Thinking toggle is grayed out in toolbar with tooltip "This model does not support extended thinking." No thinking block ever appears.
+    - Collapsible section within the assistant message, ABOVE the final response
+    - **During thinking (streaming):** Collapsed by default. Header shows "🧠 Thinking... [N]s" with real-time second counter. Click to expand.
+    - **When thinking completes:** Header updates to "🧠 Thinking complete ([N]s)". Final response streams below.
+    - **When Thinking disabled (E3 off):** No thinking block.
   - Token count + estimated cost (C11)
   - Generation time on completion ("Generated in 3.2s")
 - Per-message action bar (visible on hover or always, per theme):
-  - ⭐ Star/Unstar (message favoriting, C33)
-  - 📋 Copy (Markdown + Rich Text to clipboard, C6)
+  - ⭐ Star/Unstar (C33)
+  - 📋 Copy (Markdown + Rich Text, C6)
   - ✏️ Edit (D1)
   - 🗑️ Delete (D2)
-  - 🔄 Regenerate (assistant messages only, C5)
+  - 🔄 Regenerate (assistant only, C5)
   - [Apply] (only for Tier 1 direct transformations, C5a)
   - 👍/👎 Thumbs up/down (D8)
 - Branch indicators on edited messages: "v2/3" with ← → arrows (D3)
 - "Continue" button when last message is from assistant (C8)
 - Message selection checkboxes on hover (C18)
-- Bulk actions bar when messages selected: "[N] selected — Copy | Delete | Quote"
+- Bulk actions bar: "[N] selected — Copy | Delete | Quote"
 - Floating "Scroll to bottom" button (C15)
 - "Auto-scroll paused" indicator when scrolled up during generation (C17)
 
+**Tool Call Messages (rendered inline):**
+- Tool call system messages shown as styled cards:
+  - **bash:** "🖥 bash: [command preview]"
+  - **text_editor:** "✏️ text_editor: [command] [path]"
+  - **web_search:** "🔍 Searching: [query]"
+  - **web_fetch:** "🌐 Fetching: [URL]"
+  - **memory:** "🧠 Memory: [store/retrieve] [key]"
+  - **wiki_search:** "📚 Wiki search: [query]"
+  - **skill_load:** "📚 Loaded skill: [name]"
+  - **ask_user_input:** "❓ Asking: [question]"
+  - **present_files:** "📄 Presented: [filename(s)]"
+- Tool results shown as collapsible result blocks
+- During streaming: tool calls appear progressively as model generates them
+
 **Message Input Area (bottom of main content):**
-- **Toolbar row (above textbox):**
-  - Persona selector dropdown (B4)
-  - Thinking toggle (E3)
-  - Mute notifications toggle (E4)
-  - Tools enable/disable toggle (H)
-  - Auto-approval per-chat override (H5)
-  - Memory toggle: "Memory: On/Off" (N12)
-  - Model Comparison button (⚖, C26)
-  - Prompt Library button (J1)
-  - Text Actions dropdown (K2)
-  - Microphone button (C21)
-  - Camera button (C22)
-  - Attach File button (📎, C9b)
-  - "Write to Wiki" button (N5)
-  - "Update Memory" button (N12)
-- **Textbox:** Multi-line, resizable. Spell check with red squiggly underlines (C34). Real-time token counter with pre-send warning when approaching context limit (C11).
-- **Attachment row (below textbox):** Thumbnails for pasted/dropped images and files (C9, C9a). Each with X to remove.
-- **Bottom row:** Send button (or Enter). Character/token count. "Stop" button (visible during generation, C5).
+
+**Toolbar row (above textbox) — left to right:**
+1. **Persona selector dropdown** (B4) — [Persona Name ▼]
+2. **Thinking toggle** (E3) — 🧠 icon, toggle on/off
+3. **Mute toggle** (E4) — 🔇 icon, toggle on/off
+4. **Tools dropdown** (H10) — 🔧 "Tools ▼" with checkboxes for: bash, text_editor, web_search, web_fetch, wiki_search, memory, skill_load, present_files. "All on/off" at top. Auto-approval submenu per tool.
+5. **Skills dropdown** (W6) — 📚 "Skills ▼" with checkboxes for each discovered skill + "All on/off"
+6. **Memory toggle** (W8) — 🧠 "Mem" toggle on/off
+7. 📎 Attach File button (C9b)
+8. ⚖ Model Comparison button (C26)
+9. 📋 Prompt Library button (J1)
+10. ✨ Text Actions dropdown (K2)
+11. 🎤 Microphone button (C21)
+12. 📷 Camera button (C22)
+13. 📝 "Write to Wiki" button (N5)
+
+**Textbox:** Multi-line, resizable. Spell check with red squiggly underlines (C34). Real-time token counter with pre-send warning when approaching context limit (C11).
+
+**Attachment row (below textbox):** Thumbnails for pasted/dropped images and files (C9, C9a). Each with X to remove.
+
+**Bottom row:** Send button (or Enter). Character/token count. "Stop" button (visible during generation, C5).
 
 ### Region 3: Right Panel (Collapsible)
+
 **Width:** Resizable, min 200px, max 50%. Default ~350px. Collapsible via toggle in chat header or divider.
 
-**Two tabs:**
+**Two vertically stacked sections:**
 
-**Artifacts Tab (F2):**
-- Lists all artifacts from current chat: name + type icon
-- Click to view content with syntax highlighting (F6)
-- Version dropdown per artifact (F3)
-- "Save to Disk" and "Save to Wiki" buttons (F6)
-- Empty state: "No artifacts in this chat yet."
+**Artifacts Panel (Top — WebView2-Powered):**
+- Embedded Microsoft Edge WebView2 control renders all artifact content
+- **Artifact List (WPF-native chrome):** Lists all presented artifacts from current chat: filename + type icon + version badge
+- Click artifact → WebView2 loads and renders content:
+  - Code files: syntax highlighting (200+ languages via Prism.js/highlight.js), line numbers, copy button
+  - Markdown: rendered via marked.js with proper typography
+  - Interactive HTML/React: full React app rendering for web-artifacts-builder output (F6)
+  - Diff view: side-by-side or unified via diff2html.js with change navigation (F4)
+  - SVG: scalable vector rendering
+  - PDF: browser-native PDF viewer
+  - Unknown types: plain text with monospace font
+- **Preview/Code toggle:** Switch between rendered view and raw source
+- **Version selector dropdown** (WPF-native): v1, v2, v3... with timestamps
+- **Action buttons** (WPF-native): "Save to Disk" and "Save to Wiki"
+- **Theme:** Dark/light injected via JavaScript bridge from WPF theme
+- **Empty state:** "No artifacts in this chat yet. The AI can create files and present them here."
+- **WebView2 unavailable:** "WebView2 runtime not available. Install Microsoft Edge WebView2 for full artifact rendering." Fallback to WPF-based rendering with limited highlighting.
 
-**Chat Nav Tab (D6):**
-- Scrollable list of all messages in current branch
+**Chat Nav Panel (Bottom — WPF-Native):**
+- Scrollable list of all messages in current branch (D6)
 - Each entry: message number (#1, #2...), role icon, first line preview
 - Active message highlighted
 - Click to scroll conversation to that message
 - "Favorited" filter (C33)
 
 ## Data Displayed
+
 - Chat list from [`data/chat-thread.md`](data/chat-thread.md)
 - Messages from [`data/message.md`](data/message.md)
 - Active Persona from [`data/persona.md`](data/persona.md)
 - Context/cost from [`data/usage-record.md`](data/usage-record.md)
 - Source context (HWND data) from ChatThread when applicable
+- Artifacts from [`data/artifact.md`](data/artifact.md)
+- Skills from in-memory discovery (not persisted)
 
 ## Actions (with behavioral tooltips)
 
@@ -155,58 +189,60 @@ Six icon+label navigation items:
 | 📄 Artifacts nav | Navigate to Artifacts Browser | "Would open the Global Artifacts Browser showing all code, documents, and config files from all chats." |
 | 📊 Usage nav | Navigate to Usage Dashboard | "Would open the Usage Dashboard with token usage charts, cost breakdowns, and budget alerts." |
 | ⚙️ Settings nav | Navigate to Settings | "Would open the Settings screen for API keys, Personas, appearance, hotkeys, and all other configuration." |
-| Search bar | Full-text search | "Would search all chat messages and display results grouped by chat. Click a result to open that chat and scroll to the matching message." |
-| + New Chat button | Create new chat | "Would open the Persona picker. Selecting a Persona creates a new chat tab with that Persona's system prompt, model, and mode." |
-| Chat tab + button | Create new chat | "Would open the Persona picker to create a new chat tab." |
-| Chat tab X button | Close chat tab | "Would close this chat tab. If unsaved, chat is preserved in sidebar. Ctrl+Shift+T to reopen." |
-| Persona name (header) | Edit system message | "Would open a popover showing the current system message for editing. Changes take effect for subsequent messages. 'Reset to Persona Default' available." |
+| Search bar | Full-text search | "Would search all chat messages and display results grouped by chat." |
+| + New Chat button | Create new chat | "Would open the Persona picker to create a new chat tab." |
+| Persona name (header) | Edit system message | "Would open a popover showing the current system message for editing." |
 | ⋯ three-dot menu | Context menu | "Would open menu: Clear Conversation, Export Chat, Duplicate Chat, Chat Tree, Edit System Message, Summarize Chat, Make Temporary." |
-| 📌 Pin toggle | Always on top | "Would pin this window to stay on top of other applications. State remembered across sessions." |
+| 📌 Pin toggle | Always on top | "Would pin this window to stay on top of other applications." |
 | ☀/🌙 Dark mode | Toggle theme | "Would instantly switch between dark mode and light mode for the entire application." |
-| A⁻ / A⁺ | Font size adjust | "Would decrease/increase chat message font size by 1px. Current size displayed between buttons. Range: 10-24px." |
-| ⭐ on message | Favorite message | "Would star this message for quick access. Favorited messages can be filtered in Chat Nav and global search." |
-| 📋 Copy | Copy message | "Would copy both raw Markdown and Rich Text (HTML/RTF) to clipboard. Destination app selects best format." |
-| ✏️ Edit | Edit message | "Would open message in editable mode. Choose 'Edit in Place' (overwrite) or 'Edit as Branch' (new version). AI sees updated history." |
-| 🗑️ Delete | Delete message | "Would remove this message from the current conversation history. Branch data preserved. Undo with Ctrl+Z." |
-| 🔄 Regenerate | Regenerate response | "Would replace this assistant response with a new AI generation. Old response preserved as a branch." |
-| [Apply] | Apply to source | "Would push this text back into the original source application. Uses HWND injection or clipboard fallback. Only available for Tier 1 elevated chats with live source window." |
-| 👍/👎 | Message feedback | "Would record your feedback on this AI response. Stored locally for your reference. Toggle to remove." |
-| Continue button | Continue generation | "Would send a continuation request to the AI, picking up where the last response left off. For models supporting assistant prefix continuation." |
-| ⚖ Compare | Model comparison | "Would open Model Comparison setup: select 2+ Personas, enter a prompt, and see responses side-by-side in real time." |
-| Send button | Send message | "Would validate token count against context limit. On success: sends message to AI. On warning: shows pre-send token warning if approaching limit." |
-| Stop button | Stop generation | "Would immediately stop the AI response generation. Partial response preserved in chat." |
-| 🎤 Microphone | Voice input | "Would start recording from your microphone. Click again to stop. Audio sent to configured STT provider. Transcribed text appears in textbox." |
-| 📷 Camera | Camera capture | "Would open webcam capture dialog. Take a photo to attach to the current message for vision-capable models." |
-| 📎 Attach File | Attach files | "Would open a file picker to attach images, PDFs, HTML, text files, code files, audio, or video. Supported file types depend on the active model. Unsupported files are attached as metadata only with a warning badge." |
-| Write to Wiki | Create wiki entry | "Would open the Write to Wiki dialog: create new or update existing wiki file from this conversation. AI generates polished summary with cross-links." |
-| Update Memory | Update AI memory | "Would trigger AI to read this chat and update _memory.md with new facts and preferences about you. You review changes via Diff Viewer before saving." |
-| Memory toggle | Memory aware | "Would toggle whether _memory.md content is injected into system context for this chat. When On, AI knows what it has learned about you." |
+| A⁻ / A⁺ | Font size adjust | "Would decrease/increase chat message font size by 1px. Range: 10-24px." |
+| 📋 Copy | Copy message | "Would copy both raw Markdown and Rich Text to clipboard." |
+| ✏️ Edit | Edit message | "Would open message in editable mode. 'Edit in Place' or 'Edit as Branch'." |
+| 🔄 Regenerate | Regenerate response | "Would replace this assistant response with a new AI generation." |
+| [Apply] | Apply to source | "Would push this text back into the original source application." |
+| 👍/👎 | Message feedback | "Would record your feedback on this AI response." |
+| Continue button | Continue generation | "Would send a continuation request to the AI." |
+| ⚖ Compare | Model comparison | "Would open Model Comparison setup: select 2+ Personas, side-by-side comparison." |
+| Send button | Send message | "Would validate token count against context limit and send message to AI." |
+| Stop button | Stop generation | "Would immediately stop AI response generation. Partial response preserved." |
+| 🔧 Tools ▼ | Tools config | "Would show checkboxes for each tool (bash, text_editor, web_search, web_fetch, wiki_search, memory, skill_load, present_files). Disabled tools are removed from the API call entirely. Auto-approval submenu per tool." |
+| 📚 Skills ▼ | Skills config | "Would show checkboxes for each installed skill. Disabled skills removed from catalog and skill_load enum. 'All on/off' at top." |
+| 🧠 Mem | Memory toggle | "Would toggle AI memory on/off for this chat. When on, AI can store and retrieve facts about you across conversations." |
+| 🎤 Microphone | Voice input | "Would start recording from your microphone. Audio sent to configured STT provider." |
+| 📷 Camera | Camera capture | "Would open webcam capture dialog for vision-capable models." |
+| 📎 Attach File | Attach files | "Would open a file picker to attach images, PDFs, text/code files, audio, or video." |
+| Write to Wiki | Create wiki entry | "Would open the Write to Wiki dialog to create or update a wiki file from this conversation." |
 | 🔒 Reveal Locked | Show locked chats | "Would prompt for password to reveal hidden locked chats in the sidebar." |
-| Chat context menu > Lock | Lock chat | "Would encrypt this chat with a password (or global default). Without password, chat becomes permanently inaccessible. Can be hidden from sidebar." |
-| Chat context menu > Make Temporary | Incognito mode | "Would mark this chat as temporary (IsTransient=true). Subject to 7-day auto-cleanup unless elevated by sending a reply." |
 
 ## Empty States
+
 - **No chats:** "No chats yet. Press Ctrl+N to start a new conversation."
 - **Cleared chat:** Shows Persona info card: "[Persona Name] — [System prompt preview]. Start typing below."
-- **No artifacts:** "No artifacts in this chat yet."
+- **No artifacts:** "No artifacts in this chat yet. The AI can create files and present them here."
 - **Chat Nav empty:** Only appears with messages in the chat.
 
 ## Loading States
+
 - **Chat list loading:** Skeleton placeholder entries (gray bars)
 - **Chat history loading:** Skeleton message placeholders (alternating wide/narrow bars)
 - **AI generating:** Streaming tokens, or "Generating..." spinner if streaming disabled (A4)
+- **WebView2 loading:** Brief spinner in artifacts panel while content renders
 - **Model comparison loading:** All panels show simultaneous spinners
 
 ## Error States
+
 - **API failure:** Red error banner on assistant message with specific error + [Retry]
 - **Chat not found:** "This chat no longer exists. It may have been deleted."
-- **Network offline:** Yellow banner below header: "You are offline. AI responses are unavailable." Status bar dot: red.
-- **Locked chat (no password):** Password prompt dialog. If wrong password: "Incorrect password. This chat is encrypted and cannot be accessed without the correct password."
+- **Network offline:** Yellow banner below header: "You are offline. AI responses are unavailable."
+- **Locked chat (no password):** Password prompt. Wrong password: "Incorrect password."
+- **WebView2 unavailable:** Warning in artifacts panel: "WebView2 runtime not available. Install Microsoft Edge WebView2 for full artifact rendering."
 
 ## Navigation
-- **Arrive from:** App launch (session restore or new chat), system tray → Open Studio, elevation from Tier 1 (Open in Studio) or Tier 2 (Open in Studio)
-- **Navigate to:** Wiki Browser (`wiki-browser.html`), Media Library (`media-library.html`), Artifacts Browser (`global-artifacts-browser.html`), Usage Dashboard (`usage-dashboard.html`), Settings (`settings.html`), Model Comparison (inline view, M), Onboarding Wizard (`onboarding-wizard.html` — on first launch)
+
+- **Arrive from:** App launch (session restore or new chat), system tray → Open Studio, elevation from Tier 1 or Tier 2
+- **Navigate to:** Wiki Browser, Media Library, Artifacts Browser, Usage Dashboard, Settings, Model Comparison (inline view), Onboarding Wizard (first launch)
 
 ## Cross-References
-- Displays data from: [`data/chat-thread.md`](data/chat-thread.md), [`data/message.md`](data/message.md), [`data/persona.md`](data/persona.md), [`data/usage-record.md`](data/usage-record.md)
-- Supports features: C (Studio Chat Workspace), D (Message Branching), E (Chat Modes), F (Artifacts), H (Tool Use), J (Prompt Library), K (Text Actions), L (Chat Organization), M (Model Comparison), N (Personal Wiki), C30-C35
+
+- Displays data from: [`data/chat-thread.md`](data/chat-thread.md), [`data/message.md`](data/message.md), [`data/persona.md`](data/persona.md), [`data/usage-record.md`](data/usage-record.md), [`data/artifact.md`](data/artifact.md)
+- Supports features: C (Studio Chat), D (Branching), E (Chat Modes), F (Artifacts, WebView2), H (Tool Use, 9 tools), J (Prompts), K (Text Actions), L (Organization), M (Comparison), N (Wiki), W (Skills, Memory)

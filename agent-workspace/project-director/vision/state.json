@@ -1,5 +1,6 @@
 {
   "app_name": "MySecondBrain",
+  "project_type": "gui",
   "current_phase": "complete",
   "phase_status": "complete",
   "completed": {
@@ -21,17 +22,17 @@
   "planned": {
     "screens": ["studio-chat", "settings", "wiki-browser", "usage-dashboard", "media-library", "global-artifacts-browser", "onboarding-wizard", "model-comparison"],
     "flows": ["first-launch-onboarding", "tier1-hotkey-rewrite", "tier2-command-bar-query", "write-to-wiki", "deep-research", "elevate-transient-to-permanent", "import-chatgpt", "model-comparison-flow"],
-    "features": ["settings-configuration", "model-configurations-personas", "studio-chat-workspace", "message-manipulation-branching", "chat-modes-controls", "artifacts-side-panel", "media-library", "tool-use-agents", "import-export", "prompt-library", "text-actions-three-tier", "chat-organization-search", "model-comparison", "personal-wiki", "data-model-lifecycle", "windows-os-integration", "language-rtl", "backup-recovery", "usage-pricing-dashboard", "nice-to-have-future", "soft-delete-trash", "diagnostics-debug-logging"],
-    "data_entities": ["chat-thread", "message", "persona", "model-configuration", "api-key", "text-action", "artifact", "media-item", "wiki-file", "prompt-template", "usage-record", "backup-snapshot", "wiki-version-snapshot"]
+    "features": ["settings-configuration", "model-configurations-personas", "studio-chat-workspace", "message-manipulation-branching", "chat-modes-controls", "artifacts-side-panel", "media-library", "tool-use-agents", "import-export", "prompt-library", "text-actions-three-tier", "chat-organization-search", "model-comparison", "personal-wiki", "data-model-lifecycle", "windows-os-integration", "language-rtl", "backup-recovery", "usage-pricing-dashboard", "nice-to-have-future", "soft-delete-trash", "diagnostics-debug-logging", "agent-skills"],
+    "data_entities": ["chat-thread", "message", "persona", "model-configuration", "api-key", "text-action", "artifact", "media-item", "wiki-file", "prompt-template", "usage-record", "backup-snapshot", "wiki-version-snapshot", "memory-entry", "skill"]
   },
-  "last_context": "Vision update: Added Diagnostics & Debug Logging feature (V) — 8 logging categories with per-category toggles, log level selector, Open Logs Folder + Clear Logs buttons. New feature spec at features/diagnostics-debug-logging.md. Updated settings-configuration.md (A11), screens/settings.md + .html, edge-cases.md, vision-summary.md.",
+  "last_context": "Architecture evolution update (2026-06-24): Added W. Agent Skills (11 built-in + community, progressive disclosure, skill_load). Redesigned tool surface to 9 tools matching Anthropic schemas (bash workspace-isolated, text_editor with view/create/str_replace/insert, web_search, web_fetch, memory SQLite-backed, wiki_search, skill_load, ask_user_input, present_files). WebView2 artifacts panel (separate from WPF chat). present_files bridges workspace to artifacts. Deep Research as skill. Memory tool replaces N12 _memory.md. Per-chat toolbar: Skills dropdown, Memory toggle, 9-tool configuration. Updated: feature-inventory.md, features/agent-skills.md (new), features/tool-use-agents.md, features/artifacts-side-panel.md, features/personal-wiki.md, features/windows-os-integration.md, features/settings-configuration.md, data/memory-entry.md (new), data/skill.md (new), data/artifact.md, screens/studio-chat.md, screens/settings.md, edge-cases.md, vision-summary.md.",
   "metrics": {
     "features_documented": 23,
     "screens_designed": 8,
-    "data_entities": 13,
+    "data_entities": 15,
     "flows_documented": 8,
-    "flagged_concerns": ["Auto-Summarize context overflow requires separate API call costing tokens", "Text completion APIs being deprecated by some providers", "Artifact generation mechanism needs architectural decision", "Terminal execution security model needs review", "WebSocket server security model needs review", "Global keyboard hooks may trigger antivirus false positives", "VACUUM requires temporary free disk space equal to database size", "Rich text bidirectional text rendering complexity", "Google Cloud Storage dependency for backups", "Locked chat encryption — permanent lockout risk must be communicated", "Git wiki version control — GitHub token storage requires DPAPI encryption", "Model comparison — per-panel multi-turn conversations = N independent API streams", "Model comparison M spec simplified — Accept auto-saves branches, per-panel mini-chats", "Language & RTL (Q) feature may be out of scope — user chose English-only", "TextAction entity (TextAction.cs) needs captureScope and applyMode columns added to match updated vision spec — code entity predates this vision update"]
+    "flagged_concerns": ["Auto-Summarize context overflow requires separate API call costing tokens", "Text completion APIs being deprecated by some providers", "WebView2 runtime dependency adds ~100MB to install size", "bash tool security — workspace isolation is app-enforced, not OS-level sandbox", "WebSocket server security model needs review", "Global keyboard hooks may trigger antivirus false positives", "VACUUM requires temporary free disk space equal to database size", "Rich text bidirectional text rendering complexity", "Google Cloud Storage dependency for backups", "Locked chat encryption — permanent lockout risk must be communicated", "Git wiki version control — GitHub token storage requires DPAPI encryption", "Model comparison — per-panel multi-turn conversations = N independent API streams", "Skill dependency management — 11 skills require Python/Node.js/LibreOffice none bundled", "Workspace isolation is app-enforced not OS sandbox", "present_files auto-copy from workspace may cause UI pauses for large files", "Memory tool separate from wiki — two knowledge persistence mechanisms risk of user confusion"]
   },
-  "spawn_count": 3,
+  "spawn_count": 4,
   "last_commit": "89f5b11"
 }

@@ -1,9 +1,11 @@
 # Personal Wiki / Second Brain — Feature Spec
 
 ## What the User Accomplishes
-The user builds and maintains a personal knowledge base of .md files on their own disk. AI assists by generating polished summaries from chat conversations ("Write to Wiki"), suggesting cross-links between files, and searching the wiki. Every change follows a "discuss then confirm" model — AI proposes, user reviews and approves.
+
+The user builds and maintains a personal knowledge base of `.md` files on their own disk. AI assists by generating polished summaries from chat conversations ("Write to Wiki"), suggesting cross-links between files, and searching the wiki. Every change follows a "discuss then confirm" model — AI proposes, user reviews and approves.
 
 ## Trigger
+
 - "Write to Wiki" button in Studio chat textbox toolbar
 - "Write to Wiki" option in sidebar chat right-click context menu (L12)
 - "Save to Wiki" button on artifacts (F6)
@@ -13,26 +15,30 @@ The user builds and maintains a personal knowledge base of .md files on their ow
 ## Detailed Behavior
 
 ### N1. Wiki Directory Configuration
+
 - User selects a directory on disk via folder picker dialog
 - App verifies directory exists and is readable/writable
 - File system watcher monitors for external changes (files added/edited/deleted outside the app)
-- Wiki directory is plain .md files — no database, no proprietary format
+- Wiki directory is plain `.md` files — no database, no proprietary format
 
 ### N2. Wiki Indexing
+
 On startup and on file change (detected via file system watcher):
-- Scans all .md files in the wiki directory
+- Scans all `.md` files in the wiki directory
 - Extracts: filename, H1/H2/H3 headings and their text, full file content
-- Builds in-memory and/or SQLite full-text search index
+- Builds in-memory and SQLite full-text search index (FTS5)
 - Index updates are incremental when possible (single file change), full re-index on app startup
 - Zero API cost — purely local computation
 
 ### N3. Wiki Search
+
 - **Access:** Dedicated search scope (separate from chat search L3). Accessed from Studio sidebar or Wiki Browser.
-- **Results:** Matching .md filenames, matching headings (with level indicator), content snippets with highlighted terms
+- **Results:** Matching `.md` filenames, matching headings (with level indicator), content snippets with highlighted terms
 - **Click:** Opens file in Wiki Browser (N4), scrolled to matching section
 - **Empty State:** "No wiki files found matching [query]"
 
 ### N4. Wiki Browser
+
 Three-region split layout:
 
 **Left — File Tree:**
@@ -42,8 +48,8 @@ Three-region split layout:
 - Files with unsaved external changes show a dot indicator
 
 **Center — Markdown Viewer:**
-- Renders selected .md file with full formatting (headings, bold, italic, code blocks, lists, links, tables)
-- "Open in External Editor" button launches file in system default .md editor (e.g., VS Code)
+- Renders selected `.md` file with full formatting (headings, bold, italic, code blocks, lists, links, tables)
+- "Open in External Editor" button launches file in system default `.md` editor (e.g., VS Code)
 - Rendered links to other wiki files are clickable (navigates within Wiki Browser)
 - External links open in default browser
 
@@ -53,6 +59,7 @@ Three-region split layout:
 3. **File Info tab:** Shows file metadata — word count, character count, creation date, last modified date, estimated reading time, number of headings, number of cross-links in/out. Word count and reading time update in real-time as the file is viewed.
 
 ### N5. Write to Wiki — Core Workflow
+
 The primary mechanism for creating and updating wiki content.
 
 **Step 1 — Trigger:**
@@ -67,7 +74,7 @@ The primary mechanism for creating and updating wiki content.
 - AI reads the full chat conversation
 - AI reads index.md (N11) for wiki structure awareness
 - AI runs cross-linking pipeline (N10) to identify relevant existing sections
-- AI generates polished .md summary
+- AI generates polished `.md` summary
 
 **Step 4 — Preview Panel:**
 - Editable text area with AI-generated content
@@ -90,6 +97,7 @@ The primary mechanism for creating and updating wiki content.
 - index.md regenerates (N11)
 
 ### N6. Automatic Wiki Versioning
+
 - Every modification via N5 saves previous state as snapshot in SQLite
 - **Retention:** Max 30 snapshots per file (oldest auto-deleted when exceeded)
 - **Storage Cap:** Total snapshot storage capped at 50MB (oldest across all files deleted when exceeded)
@@ -97,20 +105,24 @@ The primary mechanism for creating and updating wiki content.
 - Restoring creates a new snapshot of current state first (restore is undoable)
 
 ### N7. @ Mentions for Wiki Files
+
 - In chat textbox, typing `@` opens quick-search dropdown
 - Real-time filtering as user types against wiki index (N2)
 - Each result shows: filename and H1 title
 - **Selecting a file:** Injects full content into chat context
 - **Content too large (>~8K tokens):** Injects summarized excerpt (H1 + all H2 headings + first paragraph of each section) with note: "[Full content available in Wiki Browser]"
-- AI can also autonomously query wiki via Wiki Search Tool (H7)
+- AI can also autonomously query wiki via [wiki_search tool (H6)](tool-use-agents.md)
 
 ### N8. AI Wiki Access Restrictions
+
 Hard-coded least-privilege rules enforced by the app (not by AI prompting):
 - **No Deletions:** AI tool-calls to delete wiki files are rejected. Only human can delete.
 - **No Renaming:** AI cannot rename wiki files (prevents breaking cross-links). AI can suggest renames.
-- **Write-to-Wiki Only:** AI can only write to wiki through explicit N5 workflow. Generic tool use (H3, H4) cannot target wiki directory.
+- **Write-to-Wiki Only:** AI can only write to wiki through explicit N5 workflow. Generic tool use (text_editor, bash) cannot target wiki directory. Wiki directory is read-only from bash (H1).
+- **Wiki is Read-Only from bash:** The bash tool cannot write to the wiki directory. Writes must go through `text_editor` + Write-to-Wiki pipeline.
 
 ### N9. Append-Only Mode
+
 - Toggle in N5 Preview Panel
 - When active: AI cannot modify existing text. New content appended under `## AI Addition — [YYYY-MM-DD]`
 - Diff Viewer shows only appended section (no red/removed text)
@@ -118,6 +130,7 @@ Hard-coded least-privilege rules enforced by the app (not by AI prompting):
 - Toggle state remembered per chat session
 
 ### N10. AI Cross-Linking (Forward + Backlinks)
+
 Tiered, cost-efficient pipeline for suggesting section-level cross-links.
 
 **Forward Links (New File → Existing Files):**
@@ -136,11 +149,12 @@ Tiered, cost-efficient pipeline for suggesting section-level cross-links.
 - If Append-Only Mode (N9) active for target file, backlinks appended under dated heading
 
 ### N11. Auto-Generated index.md
+
 Automatically maintained at wiki directory root. Regenerated after every wiki change.
 
 **Structure:**
 - Collapsible directory tree showing full wiki folder hierarchy
-- Per .md file: filename with link, H1 title, all H2/H3 headings with anchor links, creation date, last modified date, cross-links (links TO and FROM)
+- Per `.md` file: filename with link, H1 title, all H2/H3 headings with anchor links, creation date, last modified date, cross-links (links TO and FROM)
 - "Recently Modified" section: 10 most recently changed files
 - "Orphan Pages" section: files with zero inbound links
 
@@ -149,12 +163,14 @@ Automatically maintained at wiki directory root. Regenerated after every wiki ch
 **AI Usage:** During N10 step 1, AI reads index.md instead of querying database index. Gives complete wiki structure, all headings, all existing cross-links in one read. AI uses it to avoid suggesting duplicate cross-links.
 
 ## Data
-- [`data/wiki-file.md`](data/wiki-file.md), [`data/wiki-version-snapshot.md`](data/wiki-version-snapshot.md)
-- Wiki .md files: stored as plain files on disk (not in SQLite)
+
+- [`data/wiki-file.md`](../data/wiki-file.md), [`data/wiki-version-snapshot.md`](../data/wiki-version-snapshot.md)
+- Wiki `.md` files: stored as plain files on disk (not in SQLite)
 - Wiki index: stored in SQLite for fast search
 - Version snapshots: stored in SQLite
 
 ## Success/Failure States
+
 - **Success — New File Saved:** Toast: "Saved to Wiki: [filename].md" with Open/Open Externally buttons
 - **Success — File Updated:** Toast: "Updated: [filename].md" with View Diff button
 - **Failure — Directory Not Writable:** "Cannot write to wiki directory. Check folder permissions."
@@ -162,34 +178,34 @@ Automatically maintained at wiki directory root. Regenerated after every wiki ch
 - **Empty State — No Wiki Dir:** Wiki Browser shows: "No wiki directory configured. Go to Settings to select one."
 - **Empty State — Empty Wiki:** "Your wiki is empty. Start a chat and use 'Write to Wiki' to create your first note."
 
-### N12. AI Memory (Cross-Chat User Profile)
-- **Memory File:** A dedicated wiki file `_memory.md` at the wiki root. Plain .md file owned by the user.
-- **"Update Memory" Button:** In Studio chat textbox toolbar or three-dot menu. Triggers N5 Write to Wiki pipeline targeting `_memory.md`.
-- **Pipeline:** AI reads the current chat conversation → extracts facts, preferences, and context about the user → generates updated `_memory.md` content (adds, removes, condenses, reorganizes) → user reviews Diff → approves.
-- **Memory-Aware Toggle:** Per-chat toggle in textbox toolbar: "Memory: On/Off." Default: Off.
-- **When On:** `_memory.md` full content is injected into the system context for every message. Single API call (no extra calls).
-- **Token Cap:** Settings → Wiki → "Max memory tokens." Default: 2000 tokens. If `_memory.md` exceeds this, AI is instructed during updates to condense. If still over limit at send time, memory is truncated with "[Memory truncated to {N} tokens]" notice.
-- **First-Time:** If `_memory.md` doesn't exist, "Update Memory" creates it. If memory-aware chat is started but file doesn't exist, no memory is injected (no error).
-- **Privacy:** Memory file is just another wiki file. Can be viewed/edited/deleted like any other. AI Wiki restrictions (N8) apply.
+### N12. Find & Replace Across Wiki
 
-### N13. Find & Replace Across Wiki
 - **Access:** Wiki Browser toolbar → "Find & Replace" button (or Ctrl+Shift+H)
-- **Scope:** All .md files in the wiki directory
+- **Scope:** All `.md` files in the wiki directory
 - **Find:** Text input with regex toggle. Results show in a list: filename, matching line with highlight, line number. Click result opens file scrolled to match.
 - **Replace:** Text input for replacement. "Preview" button shows all changes across all files before applying (side-by-side or unified diff per file).
 - **Apply:** "Replace All" button (with confirmation: "Replace {N} occurrences across {M} files?"). Individual file checkboxes to include/exclude.
 - **Undo:** Since wiki version snapshots (N6) are taken before modification, each changed file gets a snapshot. User can restore via Version History.
 - **Empty Results:** "No matches found for '[query]'"
 
+### N13. Git Wiki Version Control
+
+- Initialize git repository in wiki directory. Auto-commit on file change (debounced).
+- Optional GitHub remote push with Personal Access Token (DPAPI-encrypted).
+- Configured in Onboarding Wizard Step 3 and Settings → Wiki.
+
 ## Permissions
+
 - Single-user app. Wiki directory ownership is the effective permission model.
 - AI restrictions (N8) are hard-coded, not permission-based.
 
 ## Interactions
+
 - N5 uses K5 (Studio Chat) as source material, F6 (artifact viewer) as alternative source
 - N2 powers N3 (wiki search), N4 (related sections/backlinks), N7 (@ mentions), N10 (cross-linking), N11 (index.md)
 - N4 uses N2 for file tree and rendering
 - N6 stores snapshots; O6 (database compaction) may reclaim space
-- N8 restricts H3, H4 (generic tool use) from targeting wiki directory
+- N8 restricts H1 (bash) and H2 (text_editor) from targeting wiki directory
 - N10 reads N11 (index.md); N11 is regenerated after N5 saves
-- H7 (Wiki Search Tool) queries N2 index for AI agent use
+- H6 (wiki_search tool) queries N2 index for AI agent use
+- AI Memory is now handled by the separate `memory` tool (H5, W8) backed by SQLite — NOT the `_memory.md` wiki file. The original N12 (AI Memory via `_memory.md`) has been replaced by this cleaner separation.

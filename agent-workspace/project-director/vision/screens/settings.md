@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The Settings screen provides a single, organized interface for configuring all global application settings. It uses a sidebar + content layout: a category sidebar on the left navigates between 16 setting categories; the selected category's settings appear in the content area on the right. All settings changes take effect immediately — there is no "Save" button.
+The Settings screen provides a single, organized interface for configuring all global application settings. It uses a sidebar + content layout: a category sidebar on the left navigates between 18 setting categories; the selected category's settings appear in the content area on the right. All settings changes take effect immediately — there is no "Save" button.
 
 ## Layout
 
@@ -30,14 +30,16 @@ Categories listed vertically:
 6. ⚡ Text Actions
 7. ⌨️ Hotkeys
 8. 🔧 Tools
-9. 🌐 Language
-10. 🔔 Notifications
-11. 🚀 Startup
-12. 🔄 Updates
-13. 💰 Pricing
-14. 🔒 Security
-15. 🛠️ Maintenance
-16. 🩺 Diagnostics
+9. 📚 Skills
+10. 🧠 Memory
+11. 🌐 Language
+12. 🔔 Notifications
+13. 🚀 Startup
+14. 🔄 Updates
+15. 💰 Pricing
+16. 🔒 Security
+17. 🛠️ Maintenance
+18. 🩺 Diagnostics
 
 Active category highlighted. Clicking a category changes the content area.
 
@@ -87,35 +89,39 @@ Scrollable area showing the active category's settings. Each category section ha
 
 ### ⚡ Text Actions
 - **Text Actions Table:** All defined Text Actions. Columns: Name, System Prompt (truncated first line), Capture Scope (flags as badges), Apply Mode, Model Config, Hotkey. Actions: Edit, Duplicate, Delete.
-- **"New Text Action" button:** Opens Text Action creation form with:
-  - **Display Name:** Text input (max 100 chars, required)
-  - **System Prompt:** Multi-line text area (max ~8K chars, required)
-  - **Model Configuration:** Dropdown of all Model Configurations (required)
-  - **Capture Scope:** Multi-select checkboxes. Options: `selection`, `focusedElement`, `surroundingContext`, `fullDocument`, `screenshot`. Any combination valid. Default: `selection`.
-  - **Apply Mode:** Radio button group. Options: `replaceSelection`, `insertAtCursor`, `replaceFocusedElement`, `appendToFocusedElement`, `prependToFocusedElement`, `clipboardOnly`, `showOnly`. Default: `replaceSelection`.
-  - **Hotkey:** Optional. "Assign Hotkey" button opens key recorder overlay.
-  - **[Save]** and **[Cancel]** buttons.
-- **Edit:** Opens same form pre-filled. Changes take effect immediately.
-- **Delete:** Confirmation dialog: "Delete '[Action Name]'? If a hotkey is assigned, it will be unassigned."
+- **"New Text Action" button:** Opens Text Action creation form with: Display Name, System Prompt, Model Config dropdown, Capture Scope checkboxes, Apply Mode radio buttons, optional Hotkey assigner.
 - Built-in defaults (isBuiltIn=true): Rewrite, Summarize, Explain, Translate, Fix Grammar, Enhance Prompt, Continue Writing, Improve Flow, Summarize Page, Explain Screen. User can edit or delete them.
 
 ### ⌨️ Hotkeys
 - **Hotkey Table:** Lists all Text Actions and Command Bar with their assigned hotkeys. Columns: Action Name, Capture Scope, Apply Mode, Hotkey, [Change] button.
-- Defaults:
-  | Action | Hotkey | Capture Scope | Apply Mode |
-  |--------|--------|---------------|------------|
-  | Rewrite | Alt+Q | selection | replaceSelection |
-  | Summarize | Alt+W | selection | showOnly |
-  | Explain | Alt+E | selection | showOnly |
-  | Translate | Alt+R | selection | replaceSelection |
-  | Continue Writing | Alt+C | focusedElement | insertAtCursor |
-  | Command Bar | Alt+Space | — | — |
-- Actions without assigned hotkeys listed with blank hotkey column and "Assign" button.
+- Defaults: Rewrite (Alt+Q), Summarize (Alt+W), Explain (Alt+E), Translate (Alt+R), Continue Writing (Alt+C), Command Bar (Alt+Space).
 - "Change" opens key recorder overlay. "Reset to Defaults" link.
 
 ### 🔧 Tools
-- **Tool Auto-Approval Defaults (H5):** Per-tool toggles: Browser Search, Terminal/Script, File Generation, File Editing. Each: Ask (default) | Auto-Approve | Disabled.
+- **Tool Enable/Disable Defaults (H10):** Per-tool toggles for all 9 tools:
+  - bash, text_editor, web_search, web_fetch, wiki_search, memory, skill_load, ask_user_input, present_files
+  - Each toggle: ON/OFF. OFF = tool removed from API tools array for new chats.
+  - Note: `ask_user_input` cannot be disabled (needed for confirmations).
+- **Tool Auto-Approval Defaults (H10):** Per-tool: Auto-Approve | Ask | Disabled. Overridden by hard-coded rules (bash outside workspace + text_editor deletes ALWAYS ask).
 - **STT Provider (A10):** Provider dropdown, Model field, API Key, "Test Microphone" button.
+
+### 📚 Skills (A12)
+- **Built-in Skills List:** 11 Anthropic skills with individual enable/disable toggles:
+  - xlsx, docx, pdf, pptx (document skills)
+  - algorithmic-art, canvas-design, frontend-design, theme-factory (creative skills)
+  - web-artifacts-builder, webapp-testing, skill-creator (dev & meta)
+  - Each shows: name, description, source badge (built-in), dependency status indicators (Python ✓/✕, Node.js ✓/✕)
+- **Community Skills:** Skills discovered at `%LOCALAPPDATA%/MySecondBrain/skills/` and cross-client paths. Listed with `source: community` or `source: cross-client` annotation.
+- **"Enable All" / "Disable All"** quick actions at top.
+- **Skills Count:** "11 built-in, [N] community — [M] enabled."
+- **Inheritance:** New chats inherit these defaults. Per-chat toolbar overrides are temporary.
+
+### 🧠 Memory (A13)
+- **Memory List:** Scrollable list of all AI-stored memories. Each entry: key, value (truncated if long), source chat (clickable link), timestamp. Actions: Edit (inline), Delete (X button).
+- **"Clear All Memories" Button:** "Delete all [N] memories? This cannot be undone." → confirmation dialog.
+- **Storage Size:** "Memory storage: [size] across [N] entries."
+- **Per-Chat Default:** Toggle: "Enable memory for new chats by default." (Default: OFF). Controls initial state of textbox toolbar "🧠 Mem" toggle.
+- **Empty State:** "No memories stored yet. AI will extract facts about you as you chat, when memory is enabled."
 
 ### 🌐 Language
 - **Auto-detect RTL:** Toggle. When ON, messages with >30% Hebrew characters (Unicode range U+0590–U+05FF) render right-to-left. Default: ON. This is a rendering behavior setting only — the app UI is always in English.
@@ -151,19 +157,10 @@ Scrollable area showing the active category's settings. Each category section ha
 - **Last Compaction:** Date/time.
 
 ### 🩺 Diagnostics
-- **Log Level (A11a):** Dropdown: Information (default), Debug, Verbose. Applies globally to all enabled categories. Changes take effect immediately.
-- **Per-Category Toggles (A11b):** Eight checkboxes with labels and descriptions:
-  1. ☑ **LLM API Calls** — Full request/response payloads, token counts, latency, HTTP errors. API keys redacted. (Default: ON)
-  2. ☑ **Tier 1 Hotkey Pipeline** — Hotkey detected → TextAction loaded → capture scope → UIA pattern → content captured → AI call → apply mode outcome. (Default: ON)
-  3. ☑ **Tier 2 Command Bar** — Trigger, query text, AI call, state transitions, dismissal. (Default: ON)
-  4. ☐ **Database** — Slow queries (>100ms), migration execution, VACUUM, FTS5 searches. (Default: OFF)
-  5. ☐ **Wiki & File System** — File watcher events, indexing runs, git auto-commit, backup operations. (Default: OFF)
-  6. ☐ **WebSocket** — Client connections/disconnections, message counts, auth attempts (token redacted). (Default: OFF)
-  7. ☐ **Startup & Shutdown** — DI container build, migration application, service initialization timing, shutdown sequence. (Default: OFF)
-  8. ☐ **System Integration** — Hotkey registration, system tray, clipboard, DPI changes, screenshots. (Default: OFF)
-- **"Open Logs Folder" Button (A11c):** Opens `%LOCALAPPDATA%\MySecondBrain\logs\` in Windows Explorer. Creates folder if it doesn't exist.
-- **"Clear Logs" Button (A11d):** Deletes all log files with confirmation: "Delete all log files? This cannot be undone." On confirm: all files deleted, toast: "All log files cleared."
-- Full behavioral spec: [`features/diagnostics-debug-logging.md`](../features/diagnostics-debug-logging.md)
+- **Log Level (A11a):** Dropdown: Information (default), Debug, Verbose.
+- **Per-Category Toggles (A11b):** Eight checkboxes: LLM API Calls, Tier 1 Hotkey Pipeline, Tier 2 Command Bar, Database, Wiki & File System, WebSocket, Startup & Shutdown, System Integration.
+- **"Open Logs Folder" Button (A11c):** Opens `%LOCALAPPDATA%\MySecondBrain\logs\` in Windows Explorer.
+- **"Clear Logs" Button (A11d):** Deletes all log files with confirmation.
 
 ## Data Displayed
 
@@ -171,6 +168,8 @@ Scrollable area showing the active category's settings. Each category section ha
 - Personas: [`data/persona.md`](../data/persona.md)
 - Model Configurations: [`data/model-configuration.md`](../data/model-configuration.md)
 - Text Actions: [`data/text-action.md`](../data/text-action.md)
+- Memory entries: [`data/memory-entry.md`](../data/memory-entry.md)
+- Skills: in-memory (not persisted — re-discovered each launch)
 - Settings stored in SQLite database
 
 ## Actions
@@ -183,9 +182,12 @@ Scrollable area showing the active category's settings. Each category section ha
 | Test API Key | "Test Key" button | Validates against provider API. |
 | New Persona / Model Config | Button | Opens creation form. |
 | Edit / Delete Persona or Config | Table action | Opens edit form or confirmation dialog. |
-| New Text Action | "+ New Text Action" button | Opens creation form with: name, system prompt, model config dropdown, capture scope checkboxes, apply mode radio buttons, optional hotkey assigner. |
-| Edit Text Action | "Edit" in table row | Opens same form pre-filled. Changes take effect immediately. |
-| Delete Text Action | "Delete" in table row | Confirmation dialog. If hotkey assigned, it becomes unassigned. |
+| New Text Action | "+ New Text Action" button | Opens creation form. |
+| Enable/Disable Skill | Toggle in Skills category | Immediately updates skill catalog. Next new chat inherits. |
+| Enable All / Disable All Skills | Quick action buttons | Batch toggle all skills. |
+| Edit Memory | Click memory entry | Inline edit key + value. Save/Cancel. |
+| Delete Memory | X button per entry | Confirmation: "Delete this memory?" |
+| Clear All Memories | "Clear All Memories" button | Confirmation: "Delete all [N] memories?" |
 | Change Wiki Directory | "Change" button | Opens folder picker. |
 | Re-index Wiki | "Re-index Now" button | Rebuilds wiki index. Shows progress. |
 | Backup Now | Button | Triggers immediate GCS backup. |
@@ -204,6 +206,8 @@ Scrollable area showing the active category's settings. Each category section ha
 | No Model Configs | "No Model Configurations. Create one to use with a Persona." |
 | Wiki not configured | "No wiki directory selected. Choose a folder of .md files." |
 | Backup not configured | "Google Cloud Storage not configured. Set up backup to protect your data." |
+| No community skills | Only built-in skills listed. |
+| No memories | "No memories stored yet. AI will extract facts about you as you chat." |
 
 ## Loading States
 
@@ -223,6 +227,7 @@ Scrollable area showing the active category's settings. Each category section ha
 | Hotkey conflict | Warning: "This hotkey is already assigned to [action]." |
 | VACUUM fails | "Compaction failed. Check available disk space." |
 | Backup fails | "Backup failed: [reason]. Check your Google Cloud Storage configuration." |
+| Memory edit invalid | "Key must be under 200 characters. Value must be under 10KB." |
 
 ## Navigation
 
@@ -237,13 +242,14 @@ Scrollable area showing the active category's settings. Each category section ha
 
 ## Cross-References
 
-- Feature spec: [`features/settings-configuration.md`](../features/settings-configuration.md) A1-A11
+- Feature spec: [`features/settings-configuration.md`](../features/settings-configuration.md) A1-A13
+- Skills: [`features/agent-skills.md`](../features/agent-skills.md) W
+- Memory: [`features/agent-skills.md`](../features/agent-skills.md) §W8
 - API keys: [`features/model-configurations-personas.md`](../features/model-configurations-personas.md) B1
 - Personas/Models: [`features/model-configurations-personas.md`](../features/model-configurations-personas.md) B2, B3
 - Text Actions: [`features/text-actions-three-tier.md`](../features/text-actions-three-tier.md) K1
 - Wiki: [`features/personal-wiki.md`](../features/personal-wiki.md) N1
 - Backup: [`features/backup-recovery.md`](../features/backup-recovery.md) R1-R4
 - Hotkeys: [`features/windows-os-integration.md`](../features/windows-os-integration.md) P1
-- Tools: [`features/tool-use-agents.md`](../features/tool-use-agents.md) H5
-- Git wiki: [`features/personal-wiki.md`](../features/personal-wiki.md) N11
-- Data entity: [`data/text-action.md`](../data/text-action.md) — TextAction attributes
+- Tools: [`features/tool-use-agents.md`](../features/tool-use-agents.md) H1-H10
+- Data entity: [`data/memory-entry.md`](../data/memory-entry.md), [`data/text-action.md`](../data/text-action.md)

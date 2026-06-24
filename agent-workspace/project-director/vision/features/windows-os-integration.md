@@ -1,18 +1,23 @@
 # Windows OS Integration — Feature Spec
 
 ## What the User Accomplishes
-The app deeply integrates with Windows to provide system-wide hotkeys, spatial anchoring (pushing AI-generated text back into the original application), clipboard format preservation, a local WebSocket server for external integrations, system tray access, and per-monitor DPI awareness.
+
+The app deeply integrates with Windows to provide system-wide hotkeys, spatial anchoring (pushing AI-generated text back into the original application), clipboard format preservation, a local WebSocket server for external integrations, system tray access, per-monitor DPI awareness, bash tool adaptation for Windows, and workspace isolation for safe AI command execution.
 
 ## Trigger
+
 - App startup (registers global hotkeys, starts WebSocket server, enables file watcher)
 - User presses global hotkey (Tier 1)
 - User presses Alt+Space (Tier 2)
 - External application connects to WebSocket (P5)
 - User minimizes app (system tray P6)
+- AI calls bash tool (P9)
+- AI writes files in workspace (P10)
 
 ## Detailed Behavior
 
 ### P1. Global Keyboard Hooks
+
 - System-wide keyboard hooks detect hotkey combinations regardless of focused application
 - Hotkeys registered on app startup
 - Hotkey assignments configurable in Settings → Hotkeys
@@ -21,11 +26,13 @@ The app deeply integrates with Windows to provide system-wide hotkeys, spatial a
 - ⚠️ FLAGGED: Global keyboard hooks may trigger antivirus false positives. Code signing recommended.
 
 ### P2. HWND Capture
+
 - Before drawing any overlay UI (Tier 1 or Tier 2), app captures the currently active window handle (HWND)
 - Prevents focus-stealing race conditions: the overlay does not change which window is "active"
 - Captured HWND stored with ChatThread for spatial anchoring (P3)
 
 ### P3. Spatial Anchoring
+
 When a Tier 1 hotkey action captures content from a source application, the app saves:
 - Captured HWND
 - Source application name (e.g., "Word", "VS Code")
@@ -54,12 +61,14 @@ When a Tier 1 hotkey action captures content from a source application, the app 
 - Chats elevated from Tier 2 (Command Bar) or created directly in Studio: no source indicator or [Apply] buttons
 
 ### P4. Clipboard Format Preservation
+
 - During hotkey capture: app checks clipboard DataFormats
 - If source placed rich-text formats (HTML, RTF) on clipboard, AI returns response in corresponding format
 - On [Apply]: result placed on clipboard in all supported formats; destination app selects best format on paste
 - Supported formats: Plain Text, HTML, RTF
 
 ### P5. Local WebSocket Server
+
 - Hosts WebSocket server on localhost (127.0.0.1)
 - Port configurable in Settings (default: random available port, displayed in Settings)
 - Enables direct integrations (e.g., Microsoft Word Add-in pipeline for creative writing)
@@ -68,6 +77,7 @@ When a Tier 1 hotkey action captures content from a source application, the app 
 - **Startup:** Starts with app, stops on app exit (or continues if minimize-to-tray)
 
 ### P6. System Tray
+
 - App minimizes to Windows system tray (notification area)
 - **Tray Icon:** App icon. Visual indicator when AI is generating (pulsing or colored dot).
 - **Left-Click:** Restores Studio window (or opens if closed)
@@ -82,6 +92,7 @@ When a Tier 1 hotkey action captures content from a source application, the app 
   - **Exit** — Fully closes app (including background tasks: WebSocket, file watcher). Confirmation if AI generating (C20).
 
 ### P7. Session Restore
+
 - On launch, if A6 (Restore Last Session) enabled:
   - Reopens all ChatThreads that were open in tabs
   - Restores tab order
@@ -90,10 +101,12 @@ When a Tier 1 hotkey action captures content from a source application, the app 
 - If disabled: opens with single new chat tab
 
 ### P8. Per-Monitor DPI Awareness
+
 - App is fully per-monitor DPI aware
 - All UI renders crisply at any DPI scaling (100%, 125%, 150%, 200%, etc.)
 - Adapts when window moved between monitors with different DPI settings
 - No blurry text or misaligned elements
+- WebView2 artifacts panel respects DPI awareness
 
 ### P9. UIA-Based Context Capture
 
@@ -105,63 +118,90 @@ The UIA (UI Automation) context capture system powers Tier 1 Text Action capture
    - App uses UIA TextPattern to read currently highlighted/selected text in the focused element.
    - Works with any UIA-compatible application (most Windows apps: Word, VS Code, browsers, Notepad, etc.).
    - Fallback: if UIA TextPattern is unavailable, app reads clipboard after simulating Ctrl+C (clipboard fallback restores original clipboard content afterward).
-   - This is the existing Tier 1 capture behavior.
 
 2. **ValuePattern — Focused Element Capture (`focusedElement` flag):**
    - App identifies the currently focused element via UIA FocusedElement.
    - Reads the element's entire text content via UIA ValuePattern.
    - Captures full textbox/editor content even when nothing is highlighted.
-   - Typical use: "Continue Writing" action captures the entire textbox to understand context and continues from where the text ends.
 
 3. **TreeWalker — Surrounding Context Capture (`surroundingContext` flag):**
    - Starting from the focused element, app navigates the UIA tree using TreeWalker.
    - Captures: the focused element's content + its parent element's content + its immediate sibling elements' content.
-   - Provides structural context (e.g., surrounding paragraphs, nearby form fields with labels, adjacent code blocks).
    - Navigation depth: up to 2 levels up (parent + grandparent) and all immediate siblings at the focused element's level.
 
 4. **DocumentRange — Full Document Capture (`fullDocument` flag):**
-   - App requests the full document text range via UIA DocumentRange (if supported by the target application).
+   - App requests the full document text range via UIA DocumentRange.
    - If DocumentRange is not supported, app traverses the entire UIA tree from the root element, collecting all accessible text content.
-   - Captures the maximum available text context from the active window.
-   - Typical use: "Summarize Page" captures all visible and accessible text on a web page or document.
 
 5. **Screenshot Capture (`screenshot` flag):**
    - App captures a visual screenshot of the active window (client area) using Win32 PrintWindow or BitBlt.
-   - This is the last resort for content that cannot be captured as text (images, diagrams, charts, UI layouts, non-UIA-compatible applications).
    - The screenshot is included as a vision attachment alongside any captured text when sent to the AI.
-   - Can be combined with any text scope flags (e.g., `fullDocument + screenshot` sends both full text and a visual capture).
-   - Screenshot capture respects window visibility — minimized or fully occluded windows produce a note: "⚠️ Screenshot may be incomplete — window was [minimized/partially obscured]."
 
 **Capture Fallback Logic:**
-
 For each Text Action, the capture pipeline runs all flags that are set. The pipeline is additive — flags are processed in order, and each successful capture adds to the total captured content.
 
-| Scenario | Behavior |
-|----------|----------|
-| `selection` succeeds, others not set | Captures highlighted text only (existing behavior) |
-| `selection` set but nothing highlighted, `focusedElement` set | Skips selection (empty), captures full focused element |
-| `screenshot` set, `fullDocument` set | Captures both full text + visual screenshot |
-| `screenshot` only, no text scopes | Captures visual only. AI prompt should account for vision-only input |
-| All flags produce empty content | Capture fails → "No capturable content found" (see K3 Empty State) |
-| `screenshot` fails, text scopes succeed | Action proceeds with text content only; warning shown in popup |
-
-**UIA Permission Requirements:**
-- UIA access is standard for desktop applications — no special permissions required.
-- Some applications (legacy Win32, custom-drawn UI) may not expose full UIA patterns. The graduated fallback handles this: if TextPattern fails, clipboard fallback; if ValuePattern fails, skip that flag.
-- Screenshot capture uses standard Win32 GDI calls — no special permissions.
-
 **Clipboard Restoration:**
-- When the clipboard fallback is used (simulating Ctrl+C), the app MUST restore the original clipboard content after capture.
-- Clipboard content and format information is saved before capture begins and restored after text is read.
-- This prevents the user's clipboard from being overwritten by the capture mechanism.
+When the clipboard fallback is used (simulating Ctrl+C), the app MUST restore the original clipboard content after capture.
+
+### P10. bash Tool — Windows Adaptation
+
+The `bash` tool is named to match Anthropic's `bash_20250124` trained-in schema but executes via Windows shells:
+
+```
+bash tool receives command
+    │
+    ├── Is it a .sh script?
+    │   ├── Try: "C:\Program Files\Git\bin\bash.exe" script.sh
+    │   ├── Try: wsl bash -c "script.sh"
+    │   └── Neither? → Error: "bash or WSL required for .sh scripts"
+    │
+    ├── Contains heredoc (cat > file << 'EOF')?
+    │   └── Redirect: use text_editor tool instead
+    │
+    └── Everything else → cmd.exe /c "command"
+         (python, pip, npm, pandoc — cross-platform, no translation needed)
+```
+
+**Bash detection at startup:**
+- Check `C:\Program Files\Git\bin\bash.exe` (Git for Windows)
+- Check `wsl --status` (Windows Subsystem for Linux)
+- Store availability in tool description for model awareness
+- If neither available: model adapts — uses text_editor for file writes, skips `.sh` scripts
+
+**System prompt context:**
+```
+You are running on Windows. Shell commands use Command Prompt (cmd.exe).
+- python, pip, npm work as expected
+- .sh scripts require Git Bash or WSL
+- File paths use backslashes: C:\Users\...
+- The workspace is at %WORKSPACE%
+- For multi-line file writing, prefer the text_editor tool over heredocs
+```
+
+### P11. Workspace Isolation
+
+All `bash` commands execute inside `%LOCALAPPDATA%/MySecondBrain/workspace/`:
+
+- **Working directory:** Set to workspace path via `Process.StartInfo.WorkingDirectory` before each command
+- **Path blocking:** Absolute paths outside workspace detected (scan for `C:\`, `%`, `~`) and blocked pre-execution
+- **Wiki access:** Wiki directory is read-only from bash. Writes to wiki blocked — must go through `text_editor` + Write-to-Wiki pipeline (N8)
+- **Cleanup:** Workspace files older than 24h removed on app startup
+- **Two-zone model:**
+  - **Workspace** (`%LOCALAPPDATA%/MySecondBrain/workspace/`) — bash execution, temp files, intermediate work. 24h auto-cleanup. Equivalent to Claude's `/home/claude/`.
+  - **Artifacts directory** — final deliverables. Model calls `present_files` to copy from workspace to artifacts. Persisted with chat. Equivalent to Claude's `/mnt/user-data/outputs/`.
+- **`present_files` bridge:** Model creates in workspace, calls `present_files(["file"])` to surface as artifact. Without `present_files`, workspace files remain invisible to user.
+- **Skills integration:** Skills' bundled scripts are copied to workspace so both bash and skills can reference them. Shared scripts (e.g., `scripts/office/` used by both docx and xlsx) are accessible to both skills.
 
 ## Data
+
 - Hotkey assignments stored in SQLite settings
 - WebSocket token stored in SQLite
 - Session state (open tabs, window position) stored in SQLite
 - TextAction captureScope and applyMode stored in SQLite (see [`data/text-action.md`](../data/text-action.md))
+- Workspace files are temporary — not backed up, not persisted across app restarts
 
 ## Success/Failure States
+
 - **HWND Injection Success:** Text appears in source app. Toast confirms.
 - **HWND Injection Failure:** Falls back to clipboard + Ctrl+V. Toast: "Applied via clipboard."
 - **Source Window Missing:** [Apply] grayed out with tooltip.
@@ -170,14 +210,20 @@ For each Text Action, the capture pipeline runs all flags that are set. The pipe
 - **UIA Capture Partial:** Some capture scope flags fail but others succeed → action proceeds. Warning in popup.
 - **UIA Capture Total Failure:** All capture flags produce no content → "No capturable content found" (K3 Empty State).
 - **Screenshot Capture Failure:** Window minimized or occluded → warning in popup header.
+- **bash blocked (outside workspace):** "Cannot access path outside workspace: [path]."
+- **bash requires shell not available:** "This command requires Git Bash or WSL. Install Git for Windows or enable WSL."
+- **Workspace not writable:** "Cannot write to workspace directory. Check disk space and permissions."
 
 ## Permissions
+
 - Global keyboard hooks may require running as administrator on first launch (to register hooks)
 - Clipboard access is standard Windows capability
 - WebSocket server bound to localhost only (no external network access)
 - UIA access is standard Windows desktop application capability — no elevation required
+- Workspace isolation is app-enforced, not OS-level sandboxing
 
 ## Interactions
+
 - P1 enables K3 (Tier 1 hotkeys) and K4 (Tier 2 Command Bar)
 - P2/P3 enable C5a (conditional [Apply] in Studio)
 - P4 preserves formatting for K3 Phase 3 (apply) and C6 (copy)
@@ -185,3 +231,6 @@ For each Text Action, the capture pipeline runs all flags that are set. The pipe
 - P6 provides system-level access to all tiers
 - P7 uses A6 (startup behavior setting)
 - P9 powers K3 Phase 1 capture scope (graduated UIA pipeline per TextAction.captureScope flags)
+- P10 (bash on Windows) serves H1 (bash tool)
+- P11 (workspace isolation) contains H1 execution, bridges to F1 (present_files → artifacts)
+- P11 wiki read-only restriction enforces N8 (wiki access restrictions)

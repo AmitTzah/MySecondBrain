@@ -409,6 +409,37 @@ For every feature group in [`feature-inventory.md`](feature-inventory.md), edge 
 
 ---
 
+### W. Agent Skills
+
+- **Skill load fails (missing dependency):** Model attempts skill → bash tool reports missing package. "The xlsx skill needs openpyxl. Run: pip install openpyxl." Model guides user to install.
+- **Skill YAML unparseable:** Error at startup: "⚠️ Skill 'my-skill' at [path] has invalid SKILL.md: [parse error]. This skill has been disabled."
+- **Skill description missing from frontmatter:** Skill skipped at startup. "⚠️ Skill at [path] has no description — required for disclosure. Skipping."
+- **Skill name collision:** User skill overrides built-in. Cross-client overrides user. Warning logged: "⚠️ Skill 'xlsx' in [path] overrides built-in skill. User override active."
+- **All skills disabled in chat:** Catalog block not in system prompt. `skill_load` tool not in tools array. Model operates without skill awareness.
+- **Skill re-activated in same session:** Deduplication kicks in — re-injection skipped. Model proceeds with existing context.
+- **Community skill directory contains non-SKILL.md files:** Ignored. Only subdirectories with `SKILL.md` are treated as skills.
+- **Cross-client skill path inaccessible:** Graceful skip with log warning. "⚠️ Cannot access cross-client skill path [path]: [error]."
+- **WebView2 runtime not installed (Windows 10):** Artifacts panel shows: "WebView2 runtime not available. Install Microsoft Edge WebView2 for full artifact rendering." Fallback to WPF-based rendering with limited syntax highlighting via AvalonEdit.
+- **WebView2 crashes or hangs:** Artifacts panel shows error state: "Artifact viewer encountered an error. [Reload]." Reload button re-initializes WebView2 control.
+- **Artifact file exceeds WebView2 memory limit:** Large files (>50MB) show warning: "This file is too large to preview. [Save to Disk] to view locally."
+- **present_files called with empty array:** Error returned: "No files specified. Provide at least one file path."
+- **present_files called for non-existent workspace file:** "Cannot present '[filename]': file not found in workspace."
+- **present_files tool disabled in chat:** Tool not in tools array. Model cannot call it. Artifacts can still be created if model writes directly to artifacts directory via text_editor.
+- **Workspace cleanup during active bash execution:** Cleanup skips files currently open (locked by running processes). Only idle files >24h are removed.
+- **bash tries to access path outside workspace:** Blocked pre-execution. "Cannot access path outside workspace: [path]. Use text_editor to save files to user-chosen destinations."
+- **bash .sh script requires Git Bash or WSL but neither available:** "This command requires Git Bash or WSL. Install Git for Windows or enable WSL."
+- **Workspace disk full:** bash commands fail with "No space left on device." Workspace cleanup runs immediately to free space. Notification to user: "Workspace disk is full. Old workspace files have been cleaned up."
+- **Memory tool — duplicate key storage:** Model stores a key that already exists → overwrites previous value (upsert). UpdatedAt refreshed. No duplicate entries.
+- **Memory tool — model tries to store oversized value (>10KB):** Value truncated to 10KB with notice: "[value truncated to 10KB]"
+- **Memory tool — "Clear All Memories" while model is actively using memory:** Model's in-flight memory retrieval may return empty results after clear. This is acceptable — the model adapts.
+- **Memory tool disabled mid-chat:** Model's existing memory context remains for current conversation turn. Subsequent turns: memory tool unavailable.
+- **Deep Research as skill — research takes too long:** User clicks Stop. Partial findings preserved in conversation. Partial report (if written via text_editor) remains in workspace.
+- **Deep Research — web_search API key exhausted:** "Web search failed: API quota exceeded. Check your search API key in Settings."
+
+**Affected screens:** [`screens/studio-chat.html`](screens/studio-chat.html) (artifacts panel, toolbar, chat), [`screens/settings.html`](screens/settings.html) (Skills, Memory categories)
+
+---
+
 ### T. Nice-to-Have Features (Future)
 
 Edge cases for deferred features (T1-T6) will be documented when these features are designed. These features are out of scope for the initial release. See [`features/nice-to-have-future.md`](features/nice-to-have-future.md).

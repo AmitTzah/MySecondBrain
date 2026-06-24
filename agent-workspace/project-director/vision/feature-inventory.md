@@ -7,7 +7,7 @@ Features without which the app has no reason to exist. These MUST be present in 
 ### A. Settings & Configuration
 **Spec:** [`features/settings-configuration.md`](features/settings-configuration.md)
 
-- **A1. Global Settings Screen:** A dedicated settings screen with all global configuration options organized into 16 categories (Providers, Profiles, Appearance, Wiki, Backup, Text Actions, Hotkeys, Tools, Language, Notifications, Startup, Updates, Diagnostics, Pricing, Security, Maintenance).
+- **A1. Global Settings Screen:** A dedicated settings screen with all global configuration options organized into 18 categories (Providers, Profiles, Appearance, Wiki, Backup, Text Actions, Hotkeys, Tools, Skills, Memory, Language, Notifications, Startup, Updates, Diagnostics, Pricing, Security, Maintenance).
 - **A2. Default Profile Selection:** User selects which model profile is auto-assigned when creating a new chat.
 - **A3. Appearance Settings:** At least three visual themes for chat view (Classic, Compact, Bubble). Customizable font family, size, and weight for messages.
 - **A4. Notification Settings:** Toggle sound on assistant completion. Option to disable streaming entirely. Per-chat mute toggle.
@@ -18,6 +18,8 @@ Features without which the app has no reason to exist. These MUST be present in 
 - **A9. Database Maintenance:** "Compact Database" button runs SQLite VACUUM. Displays size before/after.
 - **A10. Speech-to-Text (STT) Provider:** Configure dedicated STT provider and model for voice dictation (separate from text-generation configs). Supports OpenAI Whisper API, local Whisper, OpenAI-compatible STT endpoints.
 - **A11. Diagnostics & Debug Logging:** Structured diagnostic logging via Serilog to rolling JSON files. Log level selector (Information/Debug/Verbose). Eight per-category toggle checkboxes: LLM API Calls, Tier 1 Hotkey Pipeline, Tier 2 Command Bar, Database, Wiki & File System, WebSocket, Startup & Shutdown, System Integration. "Open Logs Folder" and "Clear Logs" buttons. API keys MUST be redacted in all log output. Full spec: [`features/diagnostics-debug-logging.md`](features/diagnostics-debug-logging.md).
+- **A12. Skills Defaults:** Global defaults for which skills are enabled in new chats. Built-in skills list with individual toggles. Community skills discovered at `%LOCALAPPDATA%/MySecondBrain/skills/` also listed. "Enable All" / "Disable All" quick actions. Full spec: [`features/agent-skills.md`](features/agent-skills.md).
+- **A13. Memory Management:** View all stored memories (AI-extracted facts). Edit or delete individual memory entries. "Clear All Memories" with confirmation. Memory storage size displayed. Full spec: [`features/agent-skills.md`](features/agent-skills.md) §Memory Tool.
 
 ### B. Model Configurations & Personas
 **Spec:** [`features/model-configurations-personas.md`](features/model-configurations-personas.md)
@@ -50,7 +52,7 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **C10. Multiple Chat Tabs:** Open multiple chats in tabs. Reorder by drag-drop. Close, reopen from sidebar.
 - **C11. Token Usage & Context Display:** Per-message token count + cost. Chat header shows context size vs max window and cumulative cost. Local tokenizer for real-time feedback.
 - **C12. Keyboard Shortcuts (Studio):** Ctrl+N (new), Ctrl+W (close tab), Ctrl+Shift+T (reopen), Ctrl+Tab/Shift+Tab (next/prev tab), Ctrl+F (search in chat), Ctrl+Shift+F (global search), Ctrl+S (export). Ctrl+/ for shortcut reference.
-- **C13. Resizable Panels:** Sidebar, artifact panel, chat nav bar all resizable. Min/max enforced. Sizes remembered.
+- **C13. Resizable Panels:** Sidebar, artifact panel (WebView2), chat nav bar all resizable. Min/max enforced. Sizes remembered.
 - **C14. Error Handling & Retry:** Specific error message + Retry button on API failure. Escalating message on consecutive failures.
 - **C15. Scroll-to-Bottom Button:** Floating button when scrolled up during streaming. Smooth scroll to latest.
 - **C16. Clear Conversation:** Clear all messages, preserve chat. Accessible from chat header three-dot (⋯) menu. Confirmation dialog. Undo via toast or Ctrl+Z.
@@ -75,7 +77,7 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **C34. Spell Check in Textbox:** Red squiggly underline for misspelled words. Right-click suggestions. Toggle in Settings.
 - **C35. Cross-Tab Completion Alert:** Pulsing green dot on inactive tab when generation completes. Sound + brief "✓" in tab title. Configurable in Settings.
 - **C36. Auto-Save Message Drafts:** Textbox content auto-saves every 5 seconds. Recover unsent drafts after crash or accidental tab close. "Restore draft?" dialog.
-- **C37. Right Panel Layout:** Two vertically stacked resizable sections: Artifacts (top) + Chat Nav (bottom). Divider for resizing. Both collapsible. No tabs — both visible simultaneously.
+- **C37. Right Panel Layout:** Two vertically stacked resizable sections: Artifacts (top, WebView2-powered) + Chat Nav (bottom). Divider for resizing. Both collapsible. No tabs — both visible simultaneously.
 
 ### D. Message Manipulation & Branching
 **Spec:** [`features/message-manipulation-branching.md`](features/message-manipulation-branching.md)
@@ -99,15 +101,15 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **E4. Mute Notifications Toggle:** Per-chat mute for sound notifications.
 - **E5. Dynamic System Message Editing:** View/edit system message anytime from chat header or nav bar. Takes effect for subsequent messages.
 
-### F. Artifacts & Side Panel File Editing
+### F. Artifacts & Side Panel
 **Spec:** [`features/artifacts-side-panel.md`](features/artifacts-side-panel.md)
 
-- **F1. AI-Generated Artifacts:** Named artifacts (code, docs, config files) with type inferred from language/extension.
-- **F2. Side Panel:** Resizable panel right of chat. Lists all artifacts by name. Click to view content.
-- **F3. Version History:** Each artifact maintains versions (v1, v2, v3...). AI produces new versions on changes.
-- **F4. Diff View:** Side-by-side or unified diff between any two versions.
-- **F5. Version Switching:** Switch active version. Reverting + changes = new branch.
-- **F6. Artifact Viewer:** Syntax highlighting for code, rendered view for Markdown. "Save to Disk" and "Save to Wiki" buttons (Save to Wiki launches N5 pipeline).
+- **F1. Workspace-to-Artifact Pipeline:** Model creates files in workspace (`%LOCALAPPDATA%/MySecondBrain/workspace/`) using `bash` or `text_editor`. Model calls `present_files` tool with file paths to surface them as artifacts. App copies files to artifacts directory and displays them in the side panel. Same filename within chat = new version (app auto-tracks). Different filename = new artifact.
+- **F2. Side Panel (WebView2):** Resizable panel right of chat, powered by embedded Edge WebView2 control. Lists all presented artifacts by name. Click to view content with browser-native syntax highlighting (200+ languages), Markdown rendering, and diff views. Interactive React/Tailwind artifacts from web-artifacts-builder skill render natively.
+- **F3. Version History:** Each artifact maintains versions (v1, v2, v3...). Entirely app-side — the app tracks every file write within a chat by filename. Version selector dropdown in the side panel. AI's text_editor `str_replace` commands on the same filename automatically create new versions.
+- **F4. Diff View:** Select any two versions → side-by-side or unified diff. Red = removed, Green = added. Diff computation is app-side (C#), rendering is WebView2-native (using browser diff libraries). Navigation: "Previous Change" / "Next Change."
+- **F5. Version Switching:** Switch which version is "active" (displayed in viewer). Active version is what new AI changes are based on. Reverting to older version + requesting changes = new branch from that version.
+- **F6. Artifact Viewer (WebView2):** Browser-native syntax highlighting for code, rendered Markdown, interactive HTML/React for web-artifacts-builder output. "Save to Disk" and "Save to Wiki" buttons. Save to Wiki launches N5 pipeline.
 - **F7. Global Artifacts Browser:** Lists all artifacts from all chats. Search, sort, filter. Opens in side panel.
 
 ### G. Media Library & Multi-Modal Generation
@@ -123,13 +125,21 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 ### H. Tool Use (Agent Capabilities)
 **Spec:** [`features/tool-use-agents.md`](features/tool-use-agents.md)
 
-- **H1. Browser Search:** AI requests web search. App executes, feeds results back.
-- **H2. Terminal/Script Execution:** AI requests shell command. ALWAYS requires explicit user confirmation. Command displayed before approval.
-- **H3. File Generation:** AI creates new files on disk. User approves target path.
-- **H4. File Editing:** AI modifies existing files. User approves and can review.
-- **H5. Tool Auto-Approval:** Global defaults + per-chat overrides for which tools auto-execute.
-- **H6. Deep Research:** Autonomous multi-step research: plan → multiple searches → read sources → synthesize → structured report with citations. Real-time progress display.
-- **H7. Wiki Search Tool:** AI queries local wiki index to find relevant .md files. Incorporates into responses.
+The model uses 9 tools matching Anthropic's trained-in schemas where possible. All tools are additively assembled per chat — disabled tools are completely removed from the API call.
+
+- **H1. bash:** Anthropic `bash_20250124` schema. Executes commands in workspace-isolated `%LOCALAPPDATA%/MySecondBrain/workspace/`. cmd.exe on Windows with Git Bash/WSL fallback for `.sh` scripts. Absolute paths outside workspace blocked pre-execution. Writes outside workspace require explicit user confirmation. Wiki directory is read-only from bash.
+- **H2. text_editor:** Anthropic `text_editor_20250728` schema. Commands: `view` (read file), `create` (new file — FAILS if path exists, forcing `str_replace` for updates), `str_replace` (patch file — exact match required), `insert` (append to file). Replaces the original separate `file_generate` and `file_edit` tools.
+- **H3. web_search:** Google Custom Search or Bing API. Anthropic server schema reimplemented as client tool with identical interface. Model autonomously searches web for information.
+- **H4. web_fetch:** HttpClient GET fetches URL content. Read-only. Used by Deep Research and general web page reading.
+- **H5. memory:** Anthropic `memory_20250818` schema wrapping SQLite memory store. Model stores/retrieves discrete facts about the user. Separate from the wiki. Per-chat toggle in toolbar. User can view/edit/delete memories in Settings → Memory. Full spec: [`features/agent-skills.md`](features/agent-skills.md) §Memory Tool.
+- **H6. wiki_search:** Queries local SQLite FTS5 wiki index. Returns matching filenames, headings, and content snippets. Read-only. Zero API cost. Model uses to incorporate the user's personal knowledge base into responses.
+- **H7. skill_load:** Activates an Agent Skill by loading its full `SKILL.md` instructions into context. Structured XML wrapping for context management. Deduplicated — if already activated in session, re-injection skipped. Full spec: [`features/agent-skills.md`](features/agent-skills.md).
+- **H8. ask_user_input:** Structured WPF confirmation dialogs instead of prose-based confirmations. Pattern from claude.ai. Used for dangerous operations (bash writes outside workspace, file deletions).
+- **H9. present_files:** Model signals "these workspace files are done — surface them as artifacts." App copies files from workspace to artifacts directory, renders in WebView2 side panel. First path in array shown first. Auto-copies from non-artifacts paths.
+
+**Tool Auto-Approval (H10):** Global defaults + per-chat overrides for which tools auto-execute. `bash` writes outside workspace and `text_editor` deletes ALWAYS require confirmation. Other tools configurable: Auto-Approve / Ask / Disabled.
+
+**Deep Research:** Now a skill rather than a custom state machine. Model follows research protocol using `web_search` + `web_fetch` + `bash` tools. Progress visible naturally as tool calls stream in chat. Full spec: [`features/agent-skills.md`](features/agent-skills.md) §Deep Research.
 
 ### I. Import & Export
 **Spec:** [`features/import-export.md`](features/import-export.md)
@@ -147,7 +157,7 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 **Spec:** [`features/text-actions-three-tier.md`](features/text-actions-three-tier.md)
 
 - **K1. Text Actions (Unified):** Named text transformation actions with three independent dimensions: capture scope (what to grab — selection, focused element, surrounding context, full document, screenshot), transform (system prompt + Model Configuration), apply mode (where to put result — replace, insert, append, prepend, clipboard, show only). Built-in defaults: Rewrite, Summarize, Explain, Translate, Fix Grammar, Enhance Prompt, Continue Writing, Improve Flow, Summarize Page, Explain Screen. Custom actions with any combination supported. Available as hotkeys (Tier 1) and toolbar dropdown (Studio).
-- **K2. Textbox Toolbar:** Controls above chat input: Persona selector, thinking toggle, mute toggle, tools toggle, auto-approval override, prompt library, Text Actions dropdown.
+- **K2. Textbox Toolbar:** Controls above chat input: Persona selector, thinking toggle, mute toggle, tools dropdown, skills dropdown, memory toggle, prompt library, Text Actions dropdown.
 - **K3. Tier 1 — Global Hotkey Text Actions:** Three phases: Capture (graduated UIA pipeline per capture scope flags + HWND + "Thinking..." overlay), Result Popup (editable AI output + Accept/Discard/Open in Studio/Save to Wiki/Retry + Additional Instructions field), Apply (per apply mode: HWND injection, UIA insertion, clipboard-only, or show-only + fallbacks + confirmation toast + Undo).
 - **K4. Tier 2 — Command Bar (Alt+Space):** Spotlight-style overlay. Inline state: input field, Q&A display, Pop-out/Close/Copy controls. Popped-out state: floating resizable mini-window with Open in Studio, Pin, Minimize, Close. Elevation to Studio. Dismissal saves as transient thread.
 - **K5. Tier 3 — Studio Chat:** Full chat workspace (Section C). Opened via main window, tray icon, or elevation.
@@ -192,9 +202,8 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **N9. Append-Only Mode:** Toggle in Preview Panel. AI appends under dated heading. Diff shows append only.
 - **N10. AI Cross-Linking (Forward + Backlinks):** Tiered pipeline: AI reads index.md → selects candidates → requests full content → generates draft with suggested links → user reviews/accepts. Backlinks suggested after save.
 - **N11. Auto-Generated index.md:** Maintained at wiki root. Directory tree, all headings with links, cross-links, recently modified, orphan pages. Generated from local index. AI reads for cross-linking.
-- **N12. AI Memory:** `_memory.md` wiki file. "Update Memory" button triggers N5 pipeline. Memory-aware toggle per chat injects full file into context. Optional max token cap. Single API call per message.
-- **N13. Find & Replace Across Wiki:** Search and replace across all wiki files with preview of changes. Wiki snapshots (N6) provide undo. Regex support.
-- **N14. Git Wiki Version Control:** Initialize git repository in wiki directory. Auto-commit on file change (debounced). Optional GitHub remote push with Personal Access Token (DPAPI-encrypted). Configured in Onboarding Wizard Step 3 and Settings → Wiki.
+- **N12. Find & Replace Across Wiki:** Search and replace across all wiki files with preview of changes. Wiki snapshots (N6) provide undo. Regex support.
+- **N13. Git Wiki Version Control:** Initialize git repository in wiki directory. Auto-commit on file change (debounced). Optional GitHub remote push with Personal Access Token (DPAPI-encrypted). Configured in Onboarding Wizard Step 3 and Settings → Wiki.
 
 ### O. Data Model & Lifecycle
 **Spec:** [`features/data-model-lifecycle.md`](features/data-model-lifecycle.md)
@@ -217,6 +226,8 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **P6. System Tray:** Minimize to tray. Left-click restores. Right-click menu: New Chat, Open Studio, Command Bar, Recent Chats, Settings, Exit.
 - **P7. Session Restore:** Restore previous session's chats and tabs on launch (if A6 enabled).
 - **P8. Per-Monitor DPI Awareness:** Full per-monitor DPI awareness. Crisp rendering at any scaling.
+- **P9. bash Tool — Windows Adaptation:** bash tool named to match Anthropic schema but executes via `cmd.exe`. `.sh` scripts use Git Bash or WSL fallback. Heredocs redirected to `text_editor`. Cross-platform commands (python, pip, npm) work without translation. bash availability detected at startup and communicated to model via system prompt.
+- **P10. Workspace Isolation:** All bash commands execute in `%LOCALAPPDATA%/MySecondBrain/workspace/`. Working directory locked to workspace. Absolute paths outside workspace blocked pre-execution. Wiki directory is read-only from bash. Workspace cleaned up periodically (files older than 24h). The `text_editor` tool bridges workspace to artifacts directory. The `present_files` tool signals finished deliverables.
 
 ### Q. Language & RTL Support
 **Spec:** [`features/language-rtl.md`](features/language-rtl.md)
@@ -253,6 +264,28 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **U5. Permanent Delete from Trash:** Explicit permanent deletion with confirmation. Follows O5 garbage collection.
 - **U6. Empty Trash:** Bulk permanent delete of all items in Trash with confirmation.
 
+### V. Diagnostics & Debug Logging
+**Spec:** [`features/diagnostics-debug-logging.md`](features/diagnostics-debug-logging.md)
+
+- **V1-V4:** (A11a-A11d) — Log level selector, 8 per-category toggles, Open Logs Folder, Clear Logs. Full spec in [`features/diagnostics-debug-logging.md`](features/diagnostics-debug-logging.md).
+
+### W. Agent Skills
+**Spec:** [`features/agent-skills.md`](features/agent-skills.md)
+
+Skills are Markdown instruction files (`SKILL.md`) that encode domain-specific procedural knowledge. The model reads the instructions and uses existing tools (`bash`, `text_editor`, `web_search`, `web_fetch`) to produce output. Skills are NOT executable code.
+
+- **W1. Built-in Skill Set (11 Anthropic Skills):** xlsx, docx, pdf, pptx (document creation); algorithmic-art, canvas-design, frontend-design, theme-factory (creative work); web-artifacts-builder, webapp-testing (development); skill-creator (meta). Shipped as embedded resources, updated with app updates.
+- **W2. Progressive Disclosure:** Three-tier loading: (1) Skill catalog (name + description, ~80 tokens each) in system prompt. (2) Full SKILL.md loaded on demand via `skill_load` tool. (3) Bundled scripts/resources accessed via `bash` when instructions reference them. 11 skills = ~880 token catalog upfront, not 11 full instruction sets.
+- **W3. skill_load Tool:** Model calls `skill_load("xlsx")` to activate a skill. App returns structured XML-wrapped SKILL.md body with resource listing. Deduplicated — re-activation in same session skipped.
+- **W4. Skill Discovery:** Four locations scanned at startup: (a) Embedded `Skills/anthropic/` — 11 built-in skills. (b) `%LOCALAPPDATA%/MySecondBrain/skills/` — user-added community skills. (c) `%USERPROFILE%/.agents/skills/` — cross-client from Claude Code, Cursor, etc. (d) `%USERPROFILE%/.claude/skills/` — pragmatic Claude Code compatibility. User skills override built-in. Cross-client overrides user.
+- **W5. Community Skills:** Users add skills from community repos by copying to `%LOCALAPPDATA%/MySecondBrain/skills/`. Discovered alongside built-in skills at startup. Listed in catalog with `source: community` annotation. Never overwritten by app updates. `skill-creator` meta-skill enables users to create their own.
+- **W6. Per-Chat Skills Toggle:** Textbox toolbar "📚 Skills ▼" dropdown with individual skill checkboxes + "All on/off." Disabled skills removed from catalog and `skill_load` tool's enum. New chats inherit global defaults from Settings → Skills (A12).
+- **W7. System Prompt Construction:** Additive assembly. Skill catalog appears only if ≥1 skill enabled. `skill_load` tool appears only if ≥1 skill enabled. Empty persona + everything disabled = no system prompt, empty tools array.
+- **W8. Memory Tool:** SQLite-backed memory store with Anthropic `memory_20250818` schema. Discrete fact entries: key, value, source chat, timestamp. Relevance-based retrieval. Separate from wiki (wiki = user-authored knowledge, memory = AI-extracted facts). Per-chat toggle in toolbar. User can view/edit/delete memories in Settings → Memory (A13).
+- **W9. Deep Research as Skill:** Deep Research is a skill rather than a custom state machine. Model follows research protocol using `web_search` + `web_fetch` + `bash` tools. Progress visible naturally as tool calls stream in chat. No custom progress UI needed.
+- **W10. Skill Context Protection:** Skill content tagged with `<skill_content>` wrappers exempt from context compaction pruning. Losing skill instructions mid-conversation silently degrades behavior.
+- **W11. Dependency Detection:** Skills declare dependencies (Python packages, system tools, Node.js). Model checks availability at runtime and guides user to install missing dependencies. None bundled with the app.
+
 ### T. Nice-to-Have Features
 **Spec:** [`features/nice-to-have-future.md`](features/nice-to-have-future.md)
 
@@ -267,7 +300,7 @@ Features that are part of the long-term vision but can wait indefinitely. Archit
 
 ## Secondary Features
 
-Not applicable — all features in Sections A through V (excluding T, Nice-to-Have) are considered core and required for the complete initial vision. The Nice-to-Have section (T) captures future features.
+Not applicable — all features in Sections A through W (excluding T, Nice-to-Have) are considered core and required for the complete initial vision. The Nice-to-Have section (T) captures future features.
 
 ## Explicitly Out of Scope
 
@@ -279,3 +312,4 @@ Features we are consciously NOT building. These will not be part of the app — 
 - **Built-in API Proxy Service:** The app does not proxy API calls through a third-party service. API keys are used directly by the app to call provider APIs from the user's machine.
 - **Cloud Sync (Beyond Backup):** The app does not synchronize data across multiple devices. Backup to Google Cloud Storage is for disaster recovery only.
 - **Built-in Provider Accounts:** The app does not create or manage accounts with AI providers. The user brings their own API keys.
+- **Inline Widgets (read_me / show_widget):** Claude.ai's inline widget system for ephemeral SVG/HTML in chat messages is not replicated. MySecondBrain uses the file-based artifact pipeline (F1) for all non-trivial visual output.

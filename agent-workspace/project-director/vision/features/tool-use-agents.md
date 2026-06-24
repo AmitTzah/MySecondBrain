@@ -1,94 +1,187 @@
 # Tool Use (Agent Capabilities) — Feature Spec
 
 ## What the User Accomplishes
-The AI can act as an agent: performing web searches, executing terminal commands (with mandatory user approval), creating/editing files on disk, and conducting multi-step deep research. The user controls which tools auto-approve and which require confirmation.
+
+The AI can act as an agent using 9 tools matching Anthropic's trained-in schemas where possible. The model autonomously searches the web, executes shell commands in a workspace-isolated environment, creates/edits files, manages persistent memory, loads skill instructions, queries the personal wiki, presents deliverable files as artifacts, and requests structured user confirmations. The user controls which tools are enabled globally and per-chat — disabled tools are completely removed from the API call, not hidden.
 
 ## Trigger
+
 - AI requests tool use during conversation
-- User explicitly asks AI to use a tool ("Search the web for...")
-- User invokes Deep Research (H6)
+- User explicitly asks AI to use a tool ("Search the web for...", "Create an Excel file...")
+- User loads a skill that triggers tool usage (W)
+- User enables/disables tools in Settings → Tools or per-chat toolbar
 
 ## Detailed Behavior
 
-### H1. Browser Search
-- AI requests web search → app executes search → feeds results back to AI
-- User sees what search was performed (search query displayed as system message)
-- **Implementation Options (Architect decision):**
-  - Opens default browser with search query
-  - Uses search API (e.g., Bing, Google)
-  - ⚠️ FLAGGED: Search implementation approach needs architectural decision.
+### H1. bash
 
-### H2. Terminal/Script Execution
-- AI requests execution of shell command or script
-- **ALWAYS requires explicit user confirmation** — cannot be auto-approved (overrides H5)
-- Confirmation dialog shows: exact command to be executed, working directory, risk level
-- User clicks "Approve" → command runs in terminal → output captured → fed back to AI
-- User clicks "Deny" → AI notified that execution was denied
-- **Security:** Commands run with user's permissions. No sandboxing (Architect decision).
-- ⚠️ FLAGGED: Terminal execution security model. Running arbitrary AI-suggested commands is high-risk. Consider sandboxing, command allowlisting, or dry-run preview.
+Anthropic `bash_20250124` schema. Model executes shell commands in a workspace-isolated environment.
 
-### H3. File Generation
-- AI creates new files on disk
-- User specifies or approves target path via save dialog
-- AI provides file content; app writes to disk
-- **Restriction:** Cannot target wiki directory (N8)
+- **Execution:** `cmd.exe` on Windows. `.sh` scripts use Git Bash (`C:\Program Files\Git\bin\bash.exe`) or WSL (`wsl bash -c`) fallback. Heredocs redirected to `text_editor` tool instead.
+- **Workspace:** All commands run in `%LOCALAPPDATA%/MySecondBrain/workspace/`. Working directory locked to workspace before execution. Absolute paths outside workspace detected and blocked pre-execution.
+- **Safety:** Writes outside workspace require explicit user confirmation via `ask_user_input` (H8). Wiki directory is read-only from bash. Workspace cleaned up periodically — files older than 24h removed on app startup.
+- **bash availability:** Detected at startup. Communicated to model via system prompt: "You are running on Windows. Shell commands use cmd.exe. Python, pip, npm work as expected. .sh scripts require Git Bash or WSL."
+- **Skills integration:** Skills' bundled scripts (Python, Node.js) run via bash. Model follows skill instructions, writes code, executes it, verifies output.
 
-### H4. File Editing
-- AI modifies existing files on disk
-- User approves target file (file picker)
-- User can review changes before applying
-- **Restriction:** Cannot target wiki directory (N8)
+### H2. text_editor
 
-### H5. Tool Auto-Approval
-- **Global Defaults:** Settings → Tools. Configure which tool types auto-execute:
-  - Browser Search: Auto-Approve / Ask / Disabled
-  - File Generation: Auto-Approve / Ask / Disabled
-  - File Editing: Auto-Approve / Ask / Disabled
-  - Terminal Execution: ALWAYS Ask (cannot auto-approve, H2 overrides)
-- **Per-Chat Override:** Textbox toolbar dropdown. Overrides global defaults for current chat.
-- **Auto-Approve Indicator:** When tools auto-approved, subtle indicator in chat: "Tools: Auto" vs "Tools: Ask"
+Anthropic `text_editor_20250728` schema. Replaces the original separate `file_generate` and `file_edit` tools.
 
-### H6. Deep Research
-- Invoked by user request in chat (e.g., "Do deep research on...")
-- **Process:**
-  1. AI formulates research plan (displayed to user)
-  2. AI performs multiple web searches
-  3. AI reads and extracts information from source pages
-  4. AI synthesizes findings
-  5. AI produces structured report with inline citations
-- **Progress Display:** Real-time status updates in chat:
-  - "Searching..." (spinner)
-  - "Reading 3 of 8 sources..." (progress bar)
-  - "Synthesizing..." (spinner)
-- **Final Output:** Report appears as chat message with clickable citations
-- **Duration:** May take several minutes
-- **Cancellation:** User can cancel at any point; partial findings preserved
+**Commands:**
 
-### H7. Wiki Search Tool
-- AI can query user's local wiki index (N2) to find relevant .md files
-- AI sees matching file names, headings, and content snippets
-- AI incorporates findings into responses
-- **Trigger:** AI autonomously decides to search wiki, OR user asks "What did I write about X?"
-- **Zero API Cost:** Wiki search is purely local (queries the local index)
-- **Restrictions:** AI can only READ wiki content, not modify (N8)
+| Command | Purpose | Safety |
+|---------|---------|--------|
+| `view` | Read file or directory contents | Regular (read-only) |
+| `create` | Create a new file with content. **FAILS if path already exists** — forces use of `str_replace` for updates, preventing accidental overwrites. | Low-Medium |
+| `str_replace` | Replace text in an existing file. `old_str` must match exactly (byte-for-byte) and appear exactly once. Omit `new_str` to delete matched text. | Low-Medium (explicit for delete) |
+| `insert` | Append text to end of file | Low |
+
+**Critical rules:**
+- `old_str` must be unique and match byte-for-byte including whitespace
+- Always `view` the file immediately before `str_replace`
+- After any `str_replace`, all prior `view` output for that file is stale — re-view
+- `create` fails if path exists — prevents accidental overwrites, forces intentional updates
+- The app tracks every file write within a chat by filename for automatic version history (F3)
+
+**File paths:** `text_editor` can write to the workspace or directly to the artifacts directory. Files written to artifacts directory are auto-surfaced. Files written to workspace for intermediate work stay hidden until `present_files` (H9) is called.
+
+### H3. web_search
+
+Anthropic server schema reimplemented as client tool with identical interface. Model autonomously searches the web for information.
+
+- **Backend:** Google Custom Search API or Bing Web Search API (configurable in Settings). User brings own API key.
+- **Results:** Title, URL, snippet, display URL returned for each result. Max results configurable per call.
+- **Cost:** API call cost billed to user's search API key (not AI provider). Zero AI token cost for the search itself.
+- **Visibility:** Search query and results displayed as tool-call system messages in chat.
+- **Usage:** Model autonomously decides when to search. Used by Deep Research skill (W9) for multi-source research.
+
+### H4. web_fetch
+
+Read-only HttpClient GET fetcher. Model fetches URL content for deeper reading.
+
+- **Usage:** Model fetches promising sources discovered via `web_search`. Also used for general web page reading.
+- **Output:** Page content (text extracted, HTML stripped). Limited to reasonable size (truncated if >100KB).
+- **Cost:** Zero AI token cost for the fetch itself. Page content consumes context tokens when fed back to model.
+- **Visibility:** URL and truncated content shown as tool-call system messages.
+
+### H5. memory
+
+Anthropic `memory_20250818` schema wrapping a SQLite-backed memory store. **Separate from the wiki** — wiki is user-authored knowledge, memory is AI-extracted discrete facts about the user.
+
+- **Storage:** SQLite entries: key (fact identifier), value (fact content), source chat ID, timestamp.
+- **Store:** Model calls memory tool to persist facts: "User prefers TypeScript over JavaScript."
+- **Retrieve:** Model calls memory tool with relevance-based query: "What do I know about this user's preferences?"
+- **Persistence:** Memories survive across all chats. Not per-chat.
+- **Per-Chat Toggle:** "🧠 Mem" in textbox toolbar. OFF = memory tool removed from tools array.
+- **User Management:** View, edit, delete memories in Settings → Memory (A13). "Clear All Memories" with confirmation.
+- **No `_memory.md`:** The original `_memory.md` wiki file approach (former N12) has been replaced by the SQLite memory tool. This is a cleaner separation — the wiki is for user-authored knowledge, memory is for AI-extracted facts.
+
+### H6. wiki_search
+
+Queries the local SQLite FTS5 wiki index to find relevant `.md` files.
+
+- **Query:** Model sends search query → app queries FTS5 wiki index → returns matching filenames, headings, and content snippets.
+- **Cost:** Zero API cost — purely local FTS5 query.
+- **Visibility:** Query and results shown as tool-call system messages.
+- **Usage:** Model autonomously decides to search wiki when it needs the user's personal knowledge. Also triggered by user: "What did I write about X?"
+- **Restrictions:** Read-only. AI cannot modify wiki files through this tool (N8).
+
+### H7. skill_load
+
+Activates an Agent Skill by loading its full `SKILL.md` instructions into context. Full spec: [`features/agent-skills.md`](agent-skills.md) §W3.
+
+- **Deduplication:** If skill already activated in current session, re-injection skipped.
+- **Wrapping:** Skill content returned in `<skill_content>` XML tags with resource listing.
+- **Enum constraint:** Tool schema includes `enum` of valid skill names — prevents hallucination of non-existent skills.
+- **Availability:** Tool only registered if ≥1 skill enabled.
+
+### H8. ask_user_input
+
+Structured WPF confirmation dialogs instead of prose-based confirmation prompts. Pattern from claude.ai consumer experience.
+
+- **Usage:** Model calls this tool when it needs user confirmation for dangerous operations (bash writes outside workspace, text_editor deletes, file overwrites).
+- **Dialog types:** Confirm/Cancel, Multiple choice selection, Text input.
+- **Result:** User's choice returned to model as tool result.
+- **Always available:** This tool is always in the tools array regardless of other tool toggles — confirmations are non-optional for dangerous operations.
+
+### H9. present_files
+
+Model signals "these workspace files are done — surface them as artifacts in the side panel."
+
+- **Schema:**
+```json
+{
+  "name": "present_files",
+  "description": "Present files to the user as artifacts in the side panel. Use after writing deliverable files. The first file in the array is shown first.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "filepaths": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Array of file paths to present. Files are copied from workspace to artifacts directory. First path shown first in side panel."
+      }
+    },
+    "required": ["filepaths"]
+  }
+}
+```
+
+- **Auto-copy:** If a path is not already in the artifacts directory, the app copies it there automatically before surfacing.
+- **Order:** First path in array is shown first in the side panel.
+- **Version tracking:** If a file with the same name was previously presented in the same chat, the app creates a new version (F3) rather than a new artifact.
+- **Multiple files:** `present_files` accepts an array — multiple files can be presented in one call.
+- **Visibility:** Tool call shown as system message: "📄 Presented: budget.xlsx, chart.html"
+
+### H10. Tool Auto-Approval
+
+- **Global Defaults:** Settings → Tools. Configure which tools auto-execute:
+  - bash: Auto-Approve / Ask / Disabled
+  - text_editor: Auto-Approve / Ask / Disabled
+  - web_search: Auto-Approve / Ask / Disabled
+  - web_fetch: Auto-Approve / Ask / Disabled
+  - memory: Auto-Approve / Ask / Disabled
+  - wiki_search: Auto-Approve / Ask / Disabled
+  - present_files: Auto-Approve / Ask / Disabled
+  - skill_load: Auto-Approve / Ask / Disabled
+- **Hard-Coded Overrides (cannot be auto-approved):**
+  - bash writes outside workspace → ALWAYS ask
+  - text_editor deletes (omit new_str in str_replace) → ALWAYS ask
+- **Per-Chat Override:** Textbox toolbar "🔧 Tools ▼" dropdown. Overrides global defaults for current chat.
+- **Auto-Approve Indicator:** When any tool is set to Auto-Approve, subtle indicator in chat: "Tools: Auto" vs "Tools: Ask"
 
 ## Data
-- Tool call records stored with Messages (what tool was called, parameters, result)
-- Deep Research: research plan + intermediate findings stored
+
+- Tool call records stored with Messages (tool name, parameters, result)
+- Memory entries stored in SQLite: [`data/memory-entry.md`](../data/memory-entry.md)
+- Workspace files are temporary (24h cleanup) unless presented via `present_files`
 
 ## Success/Failure States
-- **Terminal Denied:** AI notified: "Command execution was denied by the user."
-- **Terminal Failed:** Output with error code shown to AI: "Command failed with exit code [N]. Output: [stderr]"
-- **Search Failed:** "Web search failed. [error]"
-- **File Write Failed:** "Could not write to [path]. Check permissions."
-- **Deep Research Timeout:** User can set max duration. If exceeded: "Research paused after [N] minutes. [N] of [M] sources processed."
+
+- **bash execution failed:** "Command failed with exit code [N]. Output: [stderr]"
+- **bash blocked (outside workspace):** "Cannot access path outside workspace: [path]. Use text_editor to save files to user-chosen destinations."
+- **text_editor create failed (file exists):** "File already exists. Use str_replace to modify or create with a different name."
+- **text_editor str_replace failed (no match):** "old_str not found in file. The file may have changed — use view to re-read it."
+- **web_search failed:** "Web search failed: [error message]. Check your search API key in Settings."
+- **web_fetch failed:** "Could not fetch [URL]: [HTTP status / error]"
+- **memory store failed:** "Could not store memory: [error]"
+- **present_files failed:** "Could not present [path]: file not found in workspace."
+- **skill_load failed:** "Skill '[name]' is not available."
+- **Tool denied by user:** "Tool execution was denied by the user."
 
 ## Permissions
-- H2 (terminal) ALWAYS requires confirmation — hard-coded rule
-- H5 (auto-approval) configurable globally and per-chat
-- H3/H4 restricted from wiki directory (N8)
+
+- bash writes outside workspace + text_editor deletes ALWAYS require confirmation — hard-coded rules (H10 override)
+- All other tools configurable via global defaults + per-chat overrides (H10)
+- Wiki directory is read-only from bash; file tools restricted by N8
 
 ## Interactions
-- H7 queries N2 (wiki index)
-- H3/H4 restricted by N8 (wiki access restrictions)
-- H5 settings stored with Persona/chat preferences
+
+- H1 (bash) uses P9 (bash on Windows adaptation), P10 (workspace isolation)
+- H2 (text_editor) creates artifacts → F1 (workspace-to-artifact pipeline)
+- H5 (memory) stores in SQLite → W8 (Memory Tool management in Settings)
+- H6 (wiki_search) queries N2 (wiki index)
+- H7 (skill_load) activates W3 (skill instructions)
+- H9 (present_files) triggers F1 (artifact surfacing), F3 (version tracking)
+- W9 (Deep Research skill) uses H3 + H4 + H1 + H9
+- Tools restricted by N8 (wiki access restrictions)
