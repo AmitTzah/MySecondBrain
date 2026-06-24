@@ -40,15 +40,16 @@ The user has full freedom to create ANY combination across all three dimensions.
 - **Hotkey Assignment:** Each Text Action can be assigned a global hotkey (Settings → Hotkeys)
 
 ### K2. Textbox Toolbar
-Row of controls above/beside chat message input in Studio:
+Row of controls above/beside chat message input in Studio (left to right):
 
-- **Persona Selector:** Dropdown. Shows active Persona. Switch anytime.
-- **Thinking Toggle:** On/Off for extended reasoning (E3)
-- **Mute Toggle:** Per-chat sound notification mute (E4)
-- **Tools Toggle:** Enable/disable AI tool use for this chat (H)
-- **Auto-Approval Override:** Per-chat override for tool auto-approval (H5)
+- **Persona Selector:** Dropdown. Shows active Persona. Switch anytime. (B4)
+- **Thinking Toggle (🧠):** On/Off for extended reasoning (E3)
+- **Mute Toggle (🔇):** Per-chat sound notification mute (E4)
+- **Tools Dropdown (🔧):** Checkboxes for all 10 tools (bash, text_editor, web_search, web_fetch, image_search, memory, wiki_search, skill_load, ask_user_input, present_files). "All on/off" at top. Auto-approval submenu per tool. Disabled tools removed from API call entirely. (H11)
+- **Skills Dropdown (📚):** Checkboxes for each discovered skill + "All on/off." Disabled skills removed from system prompt catalog and skill_load enum. (W6)
+- **Memory Toggle (🧠 Mem):** On/Off. Controls SQLite-backed memory tool availability for this chat. (W8)
 - **Prompt Library Button:** Opens prompt library (J1)
-- **Text Actions Dropdown:** Select a Text Action → transforms current textbox content → preview popup → accept/discard/edit
+- **Text Actions Dropdown:** Select a Text Action → transforms current textbox content → preview popup → accept/discard/edit. (K1)
   - **Preview Popup:** Shows original text (left) and AI-transformed text (right, editable). Buttons: [Accept] (replaces textbox content), [Discard], [Edit More] (type additional instructions and re-run).
 
 ### K3. Tier 1 — Global Hotkey Text Actions

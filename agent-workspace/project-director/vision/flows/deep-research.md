@@ -1,218 +1,129 @@
-# Deep Research — User Flow
+# Deep Research — User Flow (Skill-Based)
 
 ## Persona
-**The Hybrid Developer / Knowledge Worker / Creative Writer** — needs comprehensive, well-researched answers that go beyond a single AI response. Wants the AI to autonomously search the web, read multiple sources, and synthesize findings into a structured report with citations — all while showing real-time progress.
+**The Hybrid Developer / Knowledge Worker / Creative Writer** — needs comprehensive, well-researched answers that go beyond a single AI response. Wants the AI to autonomously search the web, read multiple sources, and synthesize findings into a structured report with citations.
 
 ## Goal
-Ask the AI to conduct deep research on a topic. The AI autonomously plans, searches, reads, and synthesizes — producing a structured report with inline citations. The user watches progress in real-time and can cancel at any point.
+Ask the AI to conduct deep research on a topic. The AI follows a skill-based research protocol using `web_search`, `web_fetch`, and `bash` tools. Progress is visible naturally as tool calls stream in chat — no custom state machine or progress UI. The final output is a structured report with inline citations, optionally presented as an artifact via `present_files`.
 
 ## Starting Point
-The user is in an active Studio chat ([`screens/studio-chat.html`](../screens/studio-chat.html)). They have a research question that requires multiple sources and synthesis. Tool use is enabled (Tools toggle ON in the textbox toolbar).
+The user is in an active Studio chat ([`screens/studio-chat.html`](../screens/studio-chat.html)). They have a research question that requires multiple sources and synthesis. The Deep Research skill is enabled in the Skills dropdown, and web_search + web_fetch tools are enabled in the Tools dropdown.
 
 ---
 
 ## Happy Path (Complete Research → Report)
 
 ### Step 1: Trigger
-**Trigger:** The user types a research request in the Studio chat textbox. This can be:
+**Trigger:** The user types a research request in the Studio chat textbox:
 - Explicit: "Do deep research on the current state of fusion energy commercialization"
-- Implicit: "Research the best Python libraries for real-time audio processing and compare them" — AI autonomously decides to use Deep Research
+- Implicit: "Research the best Python libraries for real-time audio processing and compare them"
 
-The user presses Enter to send the message.
+The model recognizes the research task matches the Deep Research skill description → calls `skill_load("deep-research")` → the skill's instructions enter context.
 
-### Step 2: Research Plan Formulation
-The AI processes the request and formulates a research plan. This plan is displayed as a system message in the chat:
+**No custom progress UI.** The user sees the skill_load tool call appear: "📚 Loaded skill: deep-research."
 
-**Plan display:**
+### Step 2: Research Plan
+The model formulates a research plan (following the skill's instructions) and communicates it transparently:
+> "I'll research fusion energy commercialization. Plan: (1) search for recent breakthroughs, (2) identify major companies and funding, (3) read key articles, (4) synthesize findings into a report with citations."
+
+### Step 3: Multi-Source Search
+The model calls `web_search` multiple times with different query angles to gather diverse sources:
+- `web_search("fusion energy breakthroughs 2025")` → 10 results appear as tool call
+- `web_search("private fusion investment funding 2025")` → 10 results
+- `web_search("ITER project progress timeline")` → 10 results
+
+The user sees each search query and result count in real-time as tool calls stream.
+
+### Step 4: Source Reading
+The model selects the most promising URLs from search results and calls `web_fetch` on each. Per the URL constraint (H4), it can only fetch URLs seen in prior search results.
+
+- `web_fetch("https://iter.org/fusion-outlook-2025")` → page content extracted
+- `web_fetch("https://techcrunch.com/fusion-investment-6b")` → page content extracted
+- `web_fetch("https://nature.com/fusion-milestones-2025")` → page content extracted
+
+The user sees each fetch with a brief status indicator.
+
+### Step 5: Synthesis
+The model synthesizes all gathered information into a structured report with inline citations. It writes the report to the workspace using `text_editor.create`:
+- `text_editor.create("fusion-energy-research.md", "[Report content with [1], [2], [3] citations]")`
+
+### Step 6: Present Report
+The model calls `present_files(["fusion-energy-research.md"])` → the report appears in the WebView2 artifacts side panel with:
+
+- Full Markdown rendering
+- Clickable citation markers that scroll to the Sources section
+- "Save to Disk" and "Save to Wiki" buttons
+- Syntax-highlighted code blocks (if any)
+- Rendered tables, lists, and formatted text
+
+The Sources section at the bottom of the report lists each citation with title, domain, and date-accessed:
 ```
-📋 Research Plan: "Current State of Fusion Energy Commercialization"
-
-1. Search: "fusion energy commercial projects 2025 2026"
-2. Search: "ITER progress timeline latest"
-3. Search: "private fusion companies funding breakthroughs"
-4. Search: "fusion energy timeline to grid"
-5. Search: "fusion energy challenges remaining"
-6-8. Read and extract from top sources
-9. Synthesize findings
-10. Produce report with citations
-```
-
-The user can see the plan before research begins. The AI starts executing immediately unless the user interrupts.
-
-### Step 3: Execution — Search Phase
-The AI begins executing the plan. Progress updates appear as system messages in real-time:
-
-**Search progress:**
-```
-🔍 Searching: "fusion energy commercial projects 2025 2026" ... ✓ (4 results)
-🔍 Searching: "ITER progress timeline latest" ... ✓ (6 results)
-🔍 Searching: "private fusion companies funding breakthroughs" ... ✓ (5 results)
-🔍 Searching: "fusion energy timeline to grid" ... ✓ (3 results)
-🔍 Searching: "fusion energy challenges remaining" ... ✓ (7 results)
-```
-
-Each search result shows the query and number of results found. The user sees these appear one by one.
-
-### Step 4: Execution — Reading Phase
-The AI reads the top search results to extract relevant information:
-
-**Reading progress:**
-```
-📖 Reading sources... [████████░░░░░░░░] 4 of 8
-  ✓ "Fusion Energy Outlook 2025" — iter.org
-  ✓ "Private Fusion Investment Hits $6B" — techcrunch.com
-  → Reading: "When Will Fusion Power the Grid?" — scientificamerican.com
-  ...
-```
-
-A progress bar shows overall reading progress. Each source shows its title and domain as it's read.
-
-**If a source is inaccessible or requires authentication:** The AI skips it with annotation: "⚠️ Skipped: paywall — sciencejournal.com"
-
-### Step 5: Execution — Synthesis Phase
-After reading all sources, the AI synthesizes findings:
-
-```
-🧠 Synthesizing findings...
-```
-
-The AI integrates information from all sources, identifies consensus, notes disagreements, and structures the report.
-
-### Step 6: Final Output — Structured Report
-The AI produces the final report as a chat message. The report includes:
-
-**Report structure:**
-```markdown
-# Deep Research: Current State of Fusion Energy Commercialization
-
-## Executive Summary
-[2-3 paragraph synthesis of key findings]
-
-## Key Findings
-
-### 1. Private Investment Surge
-Private fusion companies have raised over $6B in total funding as of 2025... [1][2]
-
-### 2. ITER Timeline
-The ITER project has announced first plasma targeted for... [3]
-
-### 3. Remaining Technical Challenges
-Several key challenges remain before commercial fusion... [4][5]
-
-## Source Analysis
-
-### Areas of Consensus
-- All sources agree that [X]...
-- Timeline estimates converge around [Y]...
-
-### Areas of Disagreement
-- Source [1] claims [A], while source [6] argues [B]...
-
 ## Sources
-1. "Fusion Energy Outlook 2025" — iter.org
-2. "Private Fusion Investment Hits $6B" — techcrunch.com
-3. ...
+[^1]: "Fusion Energy Outlook 2025" — iter.org — accessed 2026-06-15
+[^2]: "Private Fusion Investment Hits $6B" — techcrunch.com — accessed 2026-06-15
+[^3]: "Fusion Milestones 2025" — nature.com — accessed 2026-06-15
 ```
 
-**Citations** are inline clickable links (e.g., [1]) that scroll to the Sources section. Each source shows title and domain. Actual URLs are included where available.
-
-### Step 7: Post-Report Actions
-The report appears as a standard assistant message with all normal message actions:
-- **Copy MD** / **Copy Rich** — copy the report
-- **⭐ Star** — favorite the message
-- **Write to Wiki** — save report as a wiki file (N5)
-- **Export** — export the chat with the report (I1)
-- **Continue conversation** — ask follow-up questions about the report
+### Step 7: Iteration (Optional)
+User can request refinements: "Add a section on regulatory challenges." The model uses `text_editor.str_replace` on the same file → `present_files` again → the app creates v2 of the artifact.
 
 ---
 
 ## Alternative Paths
 
-### Path B: User Cancels Mid-Research
-The user clicks the **Stop** button (visible during generation) or sends a new message:
+### Quick Research (Simple Question)
+For simple factual questions, the model may skip the full research protocol and just do one `web_search` + direct answer. The skill instructions guide the model on when to use full protocol vs. quick search.
 
-1. Research stops at the current step
-2. Partial findings are preserved as system messages in the chat
-3. A summary message appears: "Research paused after [N] minutes. [X] of [Y] sources processed. Partial findings are preserved above."
-4. The user can:
-   - Ask the AI to continue: "Continue the research from where you left off"
-   - Ask a specific question about partial findings
-   - Move on to a different topic
+### Research Without Artifact
+If the research is conversational and the user doesn't need a saved report, the model may present findings directly in chat without creating a file artifact. The skill instructions let the model decide based on context.
 
-### Path C: AI Requests Clarification
-Before formulating the plan, the AI may ask a clarifying question:
-
-**AI:** "To focus my research, should I prioritize: (1) technical feasibility, (2) investment/funding landscape, or (3) regulatory/policy developments? Or cover all three broadly?"
-
-User responds → AI adjusts the plan accordingly.
-
-### Path D: Deep Research with Tool Auto-Approval
-If Browser Search is set to "Auto-Approve" (H5), searches execute without user confirmation. If set to "Ask," each search requires user approval. Deep Research always runs with auto-approval for search operations during the research phase — the plan itself is the approval. Individual searches within the plan are auto-approved.
-
-### Path E: Research with Wiki Integration
-If the user has a personal wiki, the AI can also query the wiki (H7) as part of research:
-
-1. AI searches wiki for "fusion energy" → finds relevant `.md` files
-2. Wiki findings are incorporated alongside web search results
-3. Wiki sources are cited with `[wiki: filename.md]` format
-4. The user benefits from their own prior research being included
-
-### Path F: Follow-Up Deep Research
-After receiving a report, the user asks a follow-up:
-
-**User:** "Now research the specific plasma confinement approaches and compare tokamak vs stellarator"
-
-The AI conducts a new deep research cycle focused on the follow-up question, building on the previous report's context.
+### Research Into Existing Wiki File
+If the user says "Research X and add it to my existing Y.md wiki file," the model:
+1. Conducts research (search + fetch)
+2. Synthesizes findings
+3. Uses the Write to Wiki pipeline (N5) instead of `present_files`
+4. The existing wiki file is updated with new research content
 
 ---
 
 ## Failure Points
 
-| Failure | Handling |
+| Failure | Behavior |
 |---------|----------|
-| All searches return no results | "No search results found for the research queries. Try rephrasing the question or broadening the search terms." |
-| All sources inaccessible (paywalls, errors) | "Could not access any sources. [N] sources were attempted but all were inaccessible (paywalls, timeouts, or errors). Try a different topic or check your internet connection." |
-| AI call fails mid-research (API error) | Research stops. Partial findings preserved. Error message with **[Retry]**. |
-| Network error during research | Research pauses. "Network error. Research paused after processing [X]/[Y] sources. Restore connection and click Retry to continue." **[Retry]** button. |
-| Research exceeds max duration | User can set max duration in Settings → Tools. If exceeded: "Research paused after [N] minutes (limit reached). [X] of [Y] sources processed. Increase limit in Settings → Tools or continue." |
-| Context window fills during research | The context overflow strategy (B8) of the active Model Configuration applies. Research continues but older chat messages may be summarized or dropped. |
+| **web_search API key exhausted** | "Web search failed: API quota exceeded. Check your search API key in Settings." Model offers to continue with whatever sources were gathered. |
+| **web_fetch timeout on source page** | "Could not fetch [URL]: Request timed out." Model skips that source and continues with others. |
+| **User cancels mid-research (Stop button)** | Model stops all in-progress tool calls. Partial findings preserved in conversation. If partial report was written to workspace, it remains but is not presented. |
+| **No relevant search results found** | "Search for '[query]' returned no relevant results." Model suggests broader search terms or alternative approaches. |
+| **Deep Research skill not enabled** | Model cannot load skill instructions. May still do basic web_search but won't follow the research protocol. Quality may be lower. |
+| **All web_fetch calls fail** | Model reports: "I was unable to access any of the source pages. Here's what I found from search snippets alone..." |
+| **Context window fills during research** | Context compaction triggers. Skill content blocks are protected from pruning (W10). Older search results may be summarized. Research continues. |
 
 ---
 
-## Edge Cases
+## Screens Involved
 
-1. **Very broad research question ("Research everything about AI"):** The AI narrows the scope in the plan: "This is a very broad topic. I'll focus on: (1) current state of AI in 2025, (2) major model providers, (3) key trends and challenges. Is this scope appropriate?" User can adjust.
-
-2. **Research question that's a simple factual query:** The AI may respond: "This is a factual question that doesn't require deep research. [Direct answer]. Would you still like me to do a comprehensive research dive on related aspects?"
-
-3. **Multiple concurrent deep research requests:** If the user sends a second research request while the first is still running, the second is queued. A message: "A research task is already in progress. Your new request will begin after the current one completes."
-
-4. **Deep Research from a Tier 1 or Tier 2 interaction:** Not supported. Deep Research is only available in Tier 3 (Studio). If the user types "do deep research on X" in the Command Bar, the AI responds normally (not using the deep research pipeline).
-
-5. **Research cites a source that later becomes unavailable:** The report includes the source title, domain, and date accessed. The content is preserved in the report. If the user clicks a citation link and the source is gone, their browser shows the standard 404 — the app can't prevent source link rot.
-
-6. **User edits the research request after sending:** Standard message editing (D1). If edited while research is in progress, the current research is stopped and restarted with the edited request.
-
-7. **Research produces a very long report (10,000+ words):** The report renders as a normal message with full Markdown. The user can scroll, use Chat Nav (D6) to navigate, or export the report (I1).
+| Step | Screen | What User Sees |
+|------|--------|---------------|
+| 1 | [`studio-chat.html`](../screens/studio-chat.html) | User types research request in textbox |
+| 2 | [`studio-chat.html`](../screens/studio-chat.html) | `skill_load` tool call: "📚 Loaded skill: deep-research" |
+| 3 | [`studio-chat.html`](../screens/studio-chat.html) | `web_search` tool calls with query and result count, streaming in real-time |
+| 4 | [`studio-chat.html`](../screens/studio-chat.html) | `web_fetch` tool calls with URL and content preview |
+| 5 | [`studio-chat.html`](../screens/studio-chat.html) | `text_editor.create` tool call: "✏️ text_editor: create fusion-energy-research.md" |
+| 6 | [`studio-chat.html`](../screens/studio-chat.html) | `present_files` tool call: "📄 Presented: fusion-energy-research.md." Artifact appears in WebView2 side panel. |
+| 7 | [`studio-chat.html`](../screens/studio-chat.html) | Refinement iterations via `text_editor.str_replace` + `present_files` |
 
 ---
 
-## Completion
-The user has a comprehensive, cited research report directly in their chat. The report is a standard chat message — it can be copied, exported, saved to wiki, or used as the basis for further conversation. The entire research process (plan, searches, reading, synthesis) is documented in the chat as system messages, so the user can trace how the AI arrived at its conclusions.
+## Data Involved
 
-**Typical duration:** 1-5 minutes depending on the number of sources and the AI model's speed.
-
-**The user's primary benefit:** Autonomous multi-step research that would take a human 30-60 minutes (searching, reading, synthesizing) is completed in minutes with full traceability.
-
----
+- [`data/chat-thread.md`](../data/chat-thread.md) — the chat conversation
+- [`data/message.md`](../data/message.md) — tool call messages (web_search, web_fetch, text_editor, present_files)
+- [`data/artifact.md`](../data/artifact.md) — the presented research report with version history
+- No custom data entities needed — research is built entirely on existing tool infrastructure
 
 ## Cross-References
-- Feature spec: [`features/tool-use-agents.md`](../features/tool-use-agents.md) H6 — Deep Research
-- Feature spec: [`features/tool-use-agents.md`](../features/tool-use-agents.md) H1 — Browser Search
-- Feature spec: [`features/tool-use-agents.md`](../features/tool-use-agents.md) H7 — Wiki Search Tool
-- Feature spec: [`features/tool-use-agents.md`](../features/tool-use-agents.md) H5 — Tool Auto-Approval
-- Feature spec: [`features/personal-wiki.md`](../features/personal-wiki.md) N2 — Wiki Index (for H7)
-- Feature spec: [`features/model-configurations-personas.md`](../features/model-configurations-personas.md) B8 — Context Overflow Strategy
-- Feature spec: [`features/studio-chat-workspace.md`](../features/studio-chat-workspace.md) C5 — Stop generation
-- Feature spec: [`features/message-manipulation-branching.md`](../features/message-manipulation-branching.md) D1 — Edit messages
-- Screen: [`screens/studio-chat.md`](../screens/studio-chat.md) — Source and destination
+
+- Tool specs: [`features/tool-use-agents.md`](../features/tool-use-agents.md) §H3 (web_search), §H4 (web_fetch), §H1 (bash), §H2 (text_editor), §H9 (present_files), §H7 (skill_load)
+- Skill spec: [`features/agent-skills.md`](../features/agent-skills.md) §W9 (Deep Research as Skill)
+- Artifacts: [`features/artifacts-side-panel.md`](../features/artifacts-side-panel.md) §F1 (workspace-to-artifact pipeline)
+- Citation rendering: [`planning/abstractions.md`](../../planning/abstractions.md) §CitationRenderer
