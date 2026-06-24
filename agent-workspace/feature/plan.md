@@ -145,7 +145,7 @@ src/
 
 ---
 
-### [ ] Step 4: Add MemoryEntry EF Core Entity + Migration
+### [x] Step 4: Add MemoryEntry EF Core Entity + Migration
 
 - **Goal:** Add `MemoryEntry` entity to the Data project with EF Core configuration and database migration.
 - **Actions:**
