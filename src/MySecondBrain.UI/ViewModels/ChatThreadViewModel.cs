@@ -15,6 +15,7 @@ public partial class ChatThreadViewModel : ObservableObject
     private readonly IModelConfigurationRepository _modelConfigRepo;
     private readonly ISettingsRepository _settingsRepo;
     private readonly ISkillService _skillService;
+    private readonly SystemPromptCoordinator _systemPromptCoordinator;
     private readonly ILogger<ChatThreadViewModel> _logger;
 
     private const string RecentPersonaIdsKey = "RecentPersonaIds";
@@ -40,6 +41,7 @@ public partial class ChatThreadViewModel : ObservableObject
         _modelConfigRepo = modelConfigRepo;
         _settingsRepo = settingsRepo;
         _skillService = skillService;
+        _systemPromptCoordinator = new SystemPromptCoordinator(skillService);
         _logger = logger;
 
         // Initialize per-chat tool/skill/memory toggles with global defaults
@@ -380,56 +382,48 @@ public partial class ChatThreadViewModel : ObservableObject
 
     /// <summary>
     /// Resolves {{variables}} in a system prompt template.
-    /// Delegates to SystemPromptBuilder for variable replacement.
+    /// Delegates to <see cref="SystemPromptCoordinator.ResolveSystemPrompt"/> for variable replacement.
     /// Supported: {{date}}, {{time}}, {{user_name}}.
     /// </summary>
     public static string ResolveSystemPrompt(string template)
     {
-        return SystemPromptBuilder.ResolveSystemPromptVariables(template);
+        return SystemPromptCoordinator.ResolveSystemPrompt(template);
     }
 
     // ================================================================
-    // Additive system prompt assembly
+    // Additive system prompt assembly — delegated to SystemPromptCoordinator
     // ================================================================
 
     /// <summary>
     /// Build the additive system prompt for the current chat state.
-    /// Uses the active persona's system message, enabled tool/skill toggles,
-    /// skill catalog, workspace path, and bash availability.
-    /// Returns null when everything is disabled (plain chat with no capabilities).
+    /// Delegates to <see cref="SystemPromptCoordinator"/>.
     /// </summary>
     public string? GetSystemPrompt(string workspacePath)
     {
-        return SystemPromptBuilder.BuildSystemPrompt(
+        return _systemPromptCoordinator.GetSystemPrompt(
             ActivePersona?.SystemPrompt,
             EnabledToolNames,
             EnabledSkillNames,
-            _skillService.GetCatalog(),
-            workspacePath,
-            SystemPromptBuilder.DetectBashAvailable());
+            workspacePath);
     }
 
     /// <summary>
     /// Build the filtered list of tool names for the API tools array.
-    /// ask_user_input is always present. skill_load only when ≥1 skill enabled.
-    /// Returns empty array when everything is disabled.
+    /// Delegates to <see cref="SystemPromptCoordinator"/>.
     /// </summary>
     public IReadOnlyList<string> GetFilteredToolNames()
     {
-        return SystemPromptBuilder.BuildFilteredToolNames(
+        return SystemPromptCoordinator.GetFilteredToolNames(
             EnabledToolNames,
             EnabledSkillNames.Count);
     }
 
     /// <summary>
     /// Build the skill catalog XML block for the system prompt.
-    /// Only includes skills that are currently enabled for this chat.
-    /// Returns empty string when no skills are enabled.
+    /// Delegates to <see cref="SystemPromptCoordinator"/>.
     /// </summary>
     public string GetSkillCatalogXml()
     {
-        return SystemPromptBuilder.BuildSkillCatalogXml(
-            _skillService.GetCatalog(),
-            EnabledSkillNames);
+        return _systemPromptCoordinator.GetSkillCatalogXml(EnabledSkillNames);
     }
 }
