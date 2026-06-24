@@ -47,16 +47,22 @@ public class SettingsWikiUsageRepositoryTests : DataLayerTestBase
         using (db)
         using (connection)
         {
-            db.Settings.Add(new AppSetting { Key = "tool_settings", Value = "{\"AutoApproveWebSearch\":true,\"AutoApproveFileGenerate\":false,\"AutoApproveFileEdit\":true,\"AutoApproveWikiSearch\":false,\"MaxConsecutiveAutoApprovals\":5}" });
+            db.Settings.Add(new AppSetting { Key = "tool_settings", Value = "{\"AutoApproveBash\":false,\"AutoApproveTextEditor\":true,\"AutoApproveWebSearch\":true,\"AutoApproveWebFetch\":false,\"AutoApproveWikiSearch\":false,\"AutoApproveMemory\":false,\"AutoApproveSkillLoad\":false,\"AutoApproveAskUserInput\":false,\"AutoApprovePresentFiles\":false,\"AutoApproveImageSearch\":false,\"MaxConsecutiveAutoApprovals\":5}" });
             await db.SaveChangesAsync();
 
             var repo = new SettingsRepository(db);
             var result = await repo.GetAsync<CoreModels.ToolAutoApprovalSettings>("tool_settings");
             Assert.NotNull(result);
             Assert.True(result!.AutoApproveWebSearch);
-            Assert.False(result.AutoApproveFileGenerate);
-            Assert.True(result.AutoApproveFileEdit);
+            Assert.False(result.AutoApproveBash);
+            Assert.True(result.AutoApproveTextEditor);
+            Assert.False(result.AutoApproveWebFetch);
             Assert.False(result.AutoApproveWikiSearch);
+            Assert.False(result.AutoApproveMemory);
+            Assert.False(result.AutoApproveSkillLoad);
+            Assert.False(result.AutoApproveAskUserInput);
+            Assert.False(result.AutoApprovePresentFiles);
+            Assert.False(result.AutoApproveImageSearch);
             Assert.Equal(5, result.MaxConsecutiveAutoApprovals);
         }
     }
@@ -102,10 +108,16 @@ public class SettingsWikiUsageRepositoryTests : DataLayerTestBase
             var repo = new SettingsRepository(db);
             var settings = new CoreModels.ToolAutoApprovalSettings
             {
+                AutoApproveBash = false,
+                AutoApproveTextEditor = true,
                 AutoApproveWebSearch = true,
-                AutoApproveFileGenerate = false,
-                AutoApproveFileEdit = true,
+                AutoApproveWebFetch = false,
                 AutoApproveWikiSearch = false,
+                AutoApproveMemory = false,
+                AutoApproveSkillLoad = false,
+                AutoApproveAskUserInput = false,
+                AutoApprovePresentFiles = false,
+                AutoApproveImageSearch = false,
                 MaxConsecutiveAutoApprovals = 10
             };
             await repo.SetAsync("typed_key", settings);
@@ -113,9 +125,15 @@ public class SettingsWikiUsageRepositoryTests : DataLayerTestBase
             var result = await repo.GetAsync<CoreModels.ToolAutoApprovalSettings>("typed_key");
             Assert.NotNull(result);
             Assert.True(result!.AutoApproveWebSearch);
-            Assert.False(result.AutoApproveFileGenerate);
-            Assert.True(result.AutoApproveFileEdit);
+            Assert.False(result.AutoApproveBash);
+            Assert.True(result.AutoApproveTextEditor);
+            Assert.False(result.AutoApproveWebFetch);
             Assert.False(result.AutoApproveWikiSearch);
+            Assert.False(result.AutoApproveMemory);
+            Assert.False(result.AutoApproveSkillLoad);
+            Assert.False(result.AutoApproveAskUserInput);
+            Assert.False(result.AutoApprovePresentFiles);
+            Assert.False(result.AutoApproveImageSearch);
             Assert.Equal(10, result.MaxConsecutiveAutoApprovals);
         }
     }

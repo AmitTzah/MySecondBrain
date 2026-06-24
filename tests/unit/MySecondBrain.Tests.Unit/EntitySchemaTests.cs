@@ -337,6 +337,90 @@ public class EntitySchemaTests : DataLayerTestBase
         }
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // MemoryEntry domain model tests
+    // ════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void MemoryEntry_ValidationConstants_AreDefined()
+    {
+        Assert.Equal(200, CoreModels.MemoryEntry.KeyMaxLength);
+        Assert.Equal(10240, CoreModels.MemoryEntry.ValueMaxLength);
+    }
+
+    [Fact]
+    public void MemoryEntry_DefaultValues_AreCorrect()
+    {
+        var entry = new CoreModels.MemoryEntry();
+        Assert.NotEmpty(entry.Id);
+        Assert.Equal(string.Empty, entry.Key);
+        Assert.Equal(string.Empty, entry.Value);
+        Assert.Null(entry.SourceThreadId);
+        Assert.True(entry.CreatedAt <= DateTimeOffset.UtcNow);
+        Assert.True(entry.UpdatedAt <= DateTimeOffset.UtcNow);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // ToolAutoApprovalSettings domain model tests
+    // ════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ToolAutoApprovalSettings_HasTenToolFields()
+    {
+        var expectedToolProperties = new[]
+        {
+            "AutoApproveBash",
+            "AutoApproveTextEditor",
+            "AutoApproveWebSearch",
+            "AutoApproveWebFetch",
+            "AutoApproveWikiSearch",
+            "AutoApproveMemory",
+            "AutoApproveSkillLoad",
+            "AutoApproveAskUserInput",
+            "AutoApprovePresentFiles",
+            "AutoApproveImageSearch"
+        };
+
+        var props = typeof(CoreModels.ToolAutoApprovalSettings)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Select(p => p.Name)
+            .ToHashSet();
+
+        foreach (var expected in expectedToolProperties)
+        {
+            Assert.True(props.Contains(expected),
+                $"ToolAutoApprovalSettings should have property '{expected}' but it was not found.");
+        }
+
+        // Verify MaxConsecutiveAutoApprovals still exists
+        Assert.True(props.Contains("MaxConsecutiveAutoApprovals"),
+            "ToolAutoApprovalSettings should have MaxConsecutiveAutoApprovals property.");
+
+        // Verify removed fields are gone
+        Assert.DoesNotContain("AutoApproveFileGenerate", props);
+        Assert.DoesNotContain("AutoApproveFileEdit", props);
+
+        // Total: 10 booleans + 1 int = 11 declared properties
+        Assert.Equal(11, props.Count);
+    }
+
+    [Fact]
+    public void ToolAutoApprovalSettings_DefaultValues_AreCorrect()
+    {
+        var settings = new CoreModels.ToolAutoApprovalSettings();
+        Assert.False(settings.AutoApproveBash);
+        Assert.False(settings.AutoApproveTextEditor);
+        Assert.False(settings.AutoApproveWebSearch);
+        Assert.False(settings.AutoApproveWebFetch);
+        Assert.False(settings.AutoApproveWikiSearch);
+        Assert.False(settings.AutoApproveMemory);
+        Assert.False(settings.AutoApproveSkillLoad);
+        Assert.False(settings.AutoApproveAskUserInput);
+        Assert.False(settings.AutoApprovePresentFiles);
+        Assert.False(settings.AutoApproveImageSearch);
+        Assert.Equal(10, settings.MaxConsecutiveAutoApprovals);
+    }
+
     [Fact]
     public async Task PersonaRepository_UpdateAsync_UpdatesDefaultModelConfigIdAndChatMode()
     {

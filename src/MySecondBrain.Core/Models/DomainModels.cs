@@ -120,10 +120,16 @@ public class UsageRecord
 /// </summary>
 public class ToolAutoApprovalSettings
 {
+    public bool AutoApproveBash { get; set; }
+    public bool AutoApproveTextEditor { get; set; }
     public bool AutoApproveWebSearch { get; set; }
-    public bool AutoApproveFileGenerate { get; set; }
-    public bool AutoApproveFileEdit { get; set; }
+    public bool AutoApproveWebFetch { get; set; }
     public bool AutoApproveWikiSearch { get; set; }
+    public bool AutoApproveMemory { get; set; }
+    public bool AutoApproveSkillLoad { get; set; }
+    public bool AutoApproveAskUserInput { get; set; }
+    public bool AutoApprovePresentFiles { get; set; }
+    public bool AutoApproveImageSearch { get; set; }
     public int MaxConsecutiveAutoApprovals { get; set; } = 10;
 }
 
@@ -139,4 +145,24 @@ public class TextAction
     public bool IsBuiltIn { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+}
+
+/// <summary>
+/// A key-value memory entry using Anthropic's memory_20250818 schema.
+/// Thread-scoped; persisted to SQLite via the MemoryEntryEntity.
+/// </summary>
+public class MemoryEntry
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string Key { get; set; } = string.Empty;
+    public string Value { get; set; } = string.Empty;
+    public string? SourceThreadId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>Maximum length for the Key property (200 characters).</summary>
+    public const int KeyMaxLength = 200;
+
+    /// <summary>Maximum length for the Value property (10,240 characters, ~10KB for ASCII content).</summary>
+    public const int ValueMaxLength = 10240;
 }
