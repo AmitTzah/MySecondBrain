@@ -98,11 +98,11 @@ Scrollable area showing the active category's settings. Each category section ha
 - "Change" opens key recorder overlay. "Reset to Defaults" link.
 
 ### 🔧 Tools
-- **Tool Enable/Disable Defaults (H10):** Per-tool toggles for all 9 tools:
-  - bash, text_editor, web_search, web_fetch, wiki_search, memory, skill_load, ask_user_input, present_files
+- **Tool Enable/Disable Defaults (H11):** Per-tool toggles for all 10 tools:
+  - bash, text_editor, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files
   - Each toggle: ON/OFF. OFF = tool removed from API tools array for new chats.
   - Note: `ask_user_input` cannot be disabled (needed for confirmations).
-- **Tool Auto-Approval Defaults (H10):** Per-tool: Auto-Approve | Ask | Disabled. Overridden by hard-coded rules (bash outside workspace + text_editor deletes ALWAYS ask).
+- **Tool Auto-Approval Defaults (H11):** Per-tool: Auto-Approve | Ask | Disabled. Overridden by hard-coded rules (bash outside workspace + text_editor deletes ALWAYS ask).
 - **STT Provider (A10):** Provider dropdown, Model field, API Key, "Test Microphone" button.
 
 ### 📚 Skills (A12)

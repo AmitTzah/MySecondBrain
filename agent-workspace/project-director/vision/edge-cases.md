@@ -323,8 +323,8 @@ For every feature group in [`feature-inventory.md`](feature-inventory.md), edge 
 - **Write to Wiki (N5) triggered from a chat with no conversation (empty chat):** AI generates a generic template. Preview shows minimal content. User can cancel.
 - **Write to Wiki (N5) update on a file that changed externally during the AI generation:** On save, the Diff Viewer shows changes against the CURRENT file content (including external edits). The AI-generated update is applied on top of the latest version.
 - **@ Mention (N7) a wiki file that is deleted mid-conversation:** The injected content remains in the chat history (it was injected when @ was typed). Future @ mentions won't find the file.
-- **AI Memory (_memory.md) grows very large (>10,000 tokens):** Token cap setting (N12) limits injection. AI is instructed to condense during updates. If still over limit: "[Memory truncated to [N] tokens]" notice.
-- **Find & Replace (N13) with regex that matches thousands of occurrences:** Preview shows all matches. "Replace All" may take time for many files. Undo via N6 snapshots.
+- **Memory tool — SQLite database grows very large (>10,000 entries):** Settings → Memory shows storage size. "Clear All Memories" available. Model stores discrete facts rather than large text blocks — typical entries are under 200 bytes each.
+- **Find & Replace (N12) with regex that matches thousands of occurrences:** Preview shows all matches. "Replace All" may take time for many files. Undo via N6 snapshots.
 - **index.md (N11) becomes very large (100KB+):** Generated from local index — pure computation, no AI. AI reads it for cross-linking (N10). Large index.md increases token cost of cross-linking step. Architect should consider summarizing index.md for AI consumption.
 - **Git version control (onboarding Step 3) auto-commit fails (e.g., network down for push):** Local commit succeeds. Push fails with error logged. Next auto-commit will attempt push again.
 - **GitHub token expires or is revoked:** Push fails. Settings → Wiki shows "⚠️ GitHub connection failed. Token may have expired." User must update token.

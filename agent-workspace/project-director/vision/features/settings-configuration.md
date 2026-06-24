@@ -20,7 +20,7 @@ A dedicated screen containing all global configuration options, organized into 1
 - **Backup:** Google Cloud Storage config, schedule (R)
 - **Text Actions:** Create, edit, delete, reorder Text Actions with capture scope and apply mode (K1). Hotkey assignment table (K, P1).
 - **Hotkeys:** Global hotkey assignments for Text Actions and Command Bar (K, P1)
-- **Tools:** Tool enable/disable defaults and auto-approval for 9 tools: bash, text_editor, web_search, web_fetch, wiki_search, memory, skill_load, ask_user_input, present_files (H10)
+- **Tools:** Tool enable/disable defaults and auto-approval for 10 tools: bash, text_editor, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files (H11)
 - **Skills:** Built-in skills list with individual enable/disable toggles + community skills discovered at `%LOCALAPPDATA%/MySecondBrain/skills/` (A12, W)
 - **Memory:** View, edit, delete AI-stored memories. "Clear All Memories." Memory storage size displayed (A13, W8)
 - **Language:** UI language preferences (Q)
@@ -171,4 +171,4 @@ Manages AI-stored memories (SQLite-backed, Anthropic `memory_20250818` schema). 
 - A10 feeds into C21 (voice dictation)
 - A12 feeds into W6 (per-chat skills toggle), W7 (system prompt construction)
 - A13 manages W8 (memory tool storage)
-- Tools section (renamed) controls H10 (tool auto-approval defaults for 9 tools)
+- Tools section controls H11 (tool auto-approval defaults for 10 tools)

@@ -121,7 +121,7 @@ Seven icon+label navigation items:
 1. **Persona selector dropdown** (B4) — [Persona Name ▼]
 2. **Thinking toggle** (E3) — 🧠 icon, toggle on/off
 3. **Mute toggle** (E4) — 🔇 icon, toggle on/off
-4. **Tools dropdown** (H10) — 🔧 "Tools ▼" with checkboxes for: bash, text_editor, web_search, web_fetch, wiki_search, memory, skill_load, present_files. "All on/off" at top. Auto-approval submenu per tool.
+4. **Tools dropdown** (H11) — 🔧 "Tools ▼" with checkboxes for all 10 tools (bash, text_editor, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files). "All on/off" at top. Auto-approval submenu per tool.
 5. **Skills dropdown** (W6) — 📚 "Skills ▼" with checkboxes for each discovered skill + "All on/off"
 6. **Memory toggle** (W8) — 🧠 "Mem" toggle on/off
 7. 📎 Attach File button (C9b)
@@ -245,4 +245,4 @@ Seven icon+label navigation items:
 ## Cross-References
 
 - Displays data from: [`data/chat-thread.md`](data/chat-thread.md), [`data/message.md`](data/message.md), [`data/persona.md`](data/persona.md), [`data/usage-record.md`](data/usage-record.md), [`data/artifact.md`](data/artifact.md)
-- Supports features: C (Studio Chat), D (Branching), E (Chat Modes), F (Artifacts, WebView2), H (Tool Use, 9 tools), J (Prompts), K (Text Actions), L (Organization), M (Comparison), N (Wiki), W (Skills, Memory)
+- Supports features: C (Studio Chat), D (Branching), E (Chat Modes), F (Artifacts, WebView2), H (Tool Use, 10 tools), J (Prompts), K (Text Actions), L (Organization), M (Comparison), N (Wiki), W (Skills, Memory)

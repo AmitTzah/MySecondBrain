@@ -185,8 +185,8 @@ Google Image Search or Bing Image Search API. Separate from `web_search` — ded
 
 ## Permissions
 
-- bash writes outside workspace + text_editor deletes ALWAYS require confirmation — hard-coded rules (H10 override)
-- All other tools configurable via global defaults + per-chat overrides (H10)
+- bash writes outside workspace + text_editor deletes ALWAYS require confirmation — hard-coded rules (H11 override)
+- All other tools configurable via global defaults + per-chat overrides (H11)
 - Wiki directory is read-only from bash; file tools restricted by N8
 
 ## Interactions

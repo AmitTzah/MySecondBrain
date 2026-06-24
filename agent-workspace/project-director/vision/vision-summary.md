@@ -4,7 +4,7 @@
 
 MySecondBrain is a native Windows desktop application that serves as the user's sole interface for all AI language model interactions — a unified, provider-agnostic chat hub that replaces ChatGPT.com, Claude.ai, and all other LLM chat platforms. It operates across three interaction tiers: ephemeral hotkey-triggered text transformations (Tier 1), a Spotlight-style command bar with mini-chat (Tier 2), and a full Studio chat workspace (Tier 3). Beyond chat, it functions as a personal wiki / second-brain: an indexed, searchable knowledge base of user-owned `.md` files on disk, where an AI agent can read a conversation and produce polished, permanent summary notes — turning every AI discussion into lasting knowledge.
 
-The app includes 11 built-in Agent Skills (Anthropic skills for document creation, creative work, and web development) plus community skill support. The AI uses 9 tools matching Anthropic's trained-in schemas — including a workspace-isolated bash executor, text editor, web search/fetch, SQLite-backed persistent memory, wiki search, skill loader, structured confirmations, and file presentation for artifacts. Artifacts render in a WebView2-powered side panel with browser-native syntax highlighting, diff views, and interactive React app support.
+The app includes 11 built-in Agent Skills (Anthropic skills for document creation, creative work, and web development) plus community skill support. The AI uses 10 tools matching Anthropic's trained-in schemas — including a workspace-isolated bash executor, text editor, web search, image search, web fetch, SQLite-backed persistent memory, wiki search, skill loader, structured confirmations, and file presentation for artifacts. Artifacts render in a WebView2-powered side panel with browser-native syntax highlighting, diff views, and interactive React app support.
 
 ---
 
@@ -56,7 +56,7 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | **E. Chat Modes & Controls** (E1-E5) | Core | Studio Chat | persona, model-configuration |
 | **F. Artifacts & Side Panel** (F1-F7) | Core | Studio Chat, Global Artifacts Browser | artifact |
 | **G. Media Library & Multi-Modal** (G1-G6) | Core | Media Library, Studio Chat | media-item |
-| **H. Tool Use / Agent Capabilities** (H1-H10) | Core | Studio Chat | chat-thread, message, memory-entry |
+| **H. Tool Use / Agent Capabilities** (H1-H11) | Core | Studio Chat | chat-thread, message, memory-entry |
 | **I. Import & Export** (I1-I2) | Core | Studio Chat, Settings, Onboarding Wizard | chat-thread, message |
 | **J. Prompt Library** (J1-J2) | Core | Studio Chat | prompt-template |
 | **K. Text Actions & Three-Tier** (K1-K5) | Core | Tier 1/2 overlays, Studio Chat, Settings | text-action, chat-thread, message |
