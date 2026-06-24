@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
+using MySecondBrain.Services;
 
 namespace MySecondBrain.UI.ViewModels;
 
@@ -13,6 +14,7 @@ public partial class ChatThreadViewModel : ObservableObject
     private readonly IPersonaRepository _personaRepo;
     private readonly IModelConfigurationRepository _modelConfigRepo;
     private readonly ISettingsRepository _settingsRepo;
+    private readonly ISkillService _skillService;
     private readonly ILogger<ChatThreadViewModel> _logger;
 
     private const string RecentPersonaIdsKey = "RecentPersonaIds";
@@ -30,12 +32,14 @@ public partial class ChatThreadViewModel : ObservableObject
         IPersonaRepository personaRepo,
         IModelConfigurationRepository modelConfigRepo,
         ISettingsRepository settingsRepo,
+        ISkillService skillService,
         ILogger<ChatThreadViewModel> logger)
     {
         _chatService = chatService;
         _personaRepo = personaRepo;
         _modelConfigRepo = modelConfigRepo;
         _settingsRepo = settingsRepo;
+        _skillService = skillService;
         _logger = logger;
 
         // Initialize per-chat tool/skill/memory toggles with global defaults
@@ -376,17 +380,56 @@ public partial class ChatThreadViewModel : ObservableObject
 
     /// <summary>
     /// Resolves {{variables}} in a system prompt template.
-    /// Placeholder resolution for this step; {{date}}, {{time}}, {{user_name}} are supported.
+    /// Delegates to SystemPromptBuilder for variable replacement.
+    /// Supported: {{date}}, {{time}}, {{user_name}}.
     /// </summary>
     public static string ResolveSystemPrompt(string template)
     {
-        if (string.IsNullOrEmpty(template))
-            return template;
+        return SystemPromptBuilder.ResolveSystemPromptVariables(template);
+    }
 
-        var now = DateTime.Now;
-        return template
-            .Replace("{{date}}", now.ToString("yyyy-MM-dd"))
-            .Replace("{{time}}", now.ToString("HH:mm:ss"))
-            .Replace("{{user_name}}", Environment.UserName);
+    // ================================================================
+    // Additive system prompt assembly
+    // ================================================================
+
+    /// <summary>
+    /// Build the additive system prompt for the current chat state.
+    /// Uses the active persona's system message, enabled tool/skill toggles,
+    /// skill catalog, workspace path, and bash availability.
+    /// Returns null when everything is disabled (plain chat with no capabilities).
+    /// </summary>
+    public string? GetSystemPrompt(string workspacePath)
+    {
+        return SystemPromptBuilder.BuildSystemPrompt(
+            ActivePersona?.SystemPrompt,
+            EnabledToolNames,
+            EnabledSkillNames,
+            _skillService.GetCatalog(),
+            workspacePath,
+            SystemPromptBuilder.DetectBashAvailable());
+    }
+
+    /// <summary>
+    /// Build the filtered list of tool names for the API tools array.
+    /// ask_user_input is always present. skill_load only when ≥1 skill enabled.
+    /// Returns empty array when everything is disabled.
+    /// </summary>
+    public IReadOnlyList<string> GetFilteredToolNames()
+    {
+        return SystemPromptBuilder.BuildFilteredToolNames(
+            EnabledToolNames,
+            EnabledSkillNames.Count);
+    }
+
+    /// <summary>
+    /// Build the skill catalog XML block for the system prompt.
+    /// Only includes skills that are currently enabled for this chat.
+    /// Returns empty string when no skills are enabled.
+    /// </summary>
+    public string GetSkillCatalogXml()
+    {
+        return SystemPromptBuilder.BuildSkillCatalogXml(
+            _skillService.GetCatalog(),
+            EnabledSkillNames);
     }
 }

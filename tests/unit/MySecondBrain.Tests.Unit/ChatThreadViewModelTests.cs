@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
+using MySecondBrain.Services;
 using MySecondBrain.UI.ViewModels;
 
 // ReSharper disable PossibleNullReferenceException
@@ -14,6 +15,7 @@ public class ChatThreadViewModelTests
     private readonly Mock<IPersonaRepository> _personaRepoMock = new();
     private readonly Mock<IModelConfigurationRepository> _modelConfigRepoMock = new();
     private readonly Mock<ISettingsRepository> _settingsRepoMock = new();
+    private readonly Mock<ISkillService> _skillServiceMock = new();
     private readonly Mock<ILogger<ChatThreadViewModel>> _loggerMock = new();
 
     private readonly Persona _generalAssistant = new()
@@ -77,6 +79,7 @@ public class ChatThreadViewModelTests
             _personaRepoMock.Object,
             _modelConfigRepoMock.Object,
             _settingsRepoMock.Object,
+            _skillServiceMock.Object,
             _loggerMock.Object);
     }
 
@@ -598,5 +601,258 @@ public class ChatThreadViewModelTests
 
         Assert.Contains(nameof(vm.MemoryEnabled), changedProperties);
         Assert.True(vm.MemoryEnabled);
+    }
+
+    // ================================================================
+    // Additive system prompt assembly
+    // ================================================================
+
+    [Fact]
+    public void GetFilteredToolNames_AllEnabled_IncludesAskUserInput()
+    {
+        var vm = CreateViewModel();
+
+        // All tools default to enabled (10 tools). No skills enabled,
+        // so skill_load is removed from the array. Result = 9.
+        var tools = vm.GetFilteredToolNames();
+
+        Assert.Contains("ask_user_input", tools);
+        Assert.DoesNotContain("skill_load", tools);
+        Assert.Equal(9, tools.Count);
+    }
+
+    [Fact]
+    public void GetFilteredToolNames_AllToolsDisabled_NoSkills_ReturnsEmpty()
+    {
+        var vm = CreateViewModel();
+
+        // Disable all tools
+        foreach (var tool in vm.ToolToggles)
+            tool.IsEnabled = false;
+
+        var tools = vm.GetFilteredToolNames();
+
+        Assert.Empty(tools);
+    }
+
+    [Fact]
+    public void GetFilteredToolNames_AllToolsDisabled_WithSkills_IncludesAskUserInputAndSkillLoad()
+    {
+        var vm = CreateViewModel();
+
+        // Disable all tools
+        foreach (var tool in vm.ToolToggles)
+            tool.IsEnabled = false;
+
+        // Add some skills (simulate enabled skills without populating toggles)
+        // Since EnabledSkillNames depends on SkillToggles, we need to populate those
+        vm.PopulateSkillToggles(new List<SkillMetadata>
+        {
+            new("xlsx", "Spreadsheet skill", "embedded", "Skills/anthropic/xlsx"),
+        });
+
+        var tools = vm.GetFilteredToolNames();
+
+        // ask_user_input is always present
+        Assert.Contains("ask_user_input", tools);
+        // skill_load present because ≥1 skill enabled
+        Assert.Contains("skill_load", tools);
+        // No other tools
+        Assert.Equal(2, tools.Count);
+    }
+
+    [Fact]
+    public void GetFilteredToolNames_SkillLoadRemovedWhenNoSkills()
+    {
+        var vm = CreateViewModel();
+
+        // skill_load defaults to enabled, but no skills are populated
+        vm.ToolToggles.First(t => t.Name == "skill_load").IsEnabled = false;
+
+        var tools = vm.GetFilteredToolNames();
+
+        Assert.DoesNotContain("skill_load", tools);
+    }
+
+    [Fact]
+    public void GetSystemPrompt_AllEnabled_ContainsAllSections()
+    {
+        var vm = CreateViewModel();
+        vm.ActivePersona = _generalAssistant;
+        vm.PopulateSkillToggles(new List<SkillMetadata>
+        {
+            new("xlsx", "Spreadsheet creation skill", "embedded", "path"),
+        });
+
+        _skillServiceMock.Setup(s => s.GetCatalog()).Returns(new List<SkillMetadata>
+        {
+            new("xlsx", "Spreadsheet creation skill", "embedded", "path"),
+        });
+
+        var prompt = vm.GetSystemPrompt(@"C:\Users\test\workspace");
+
+        Assert.NotNull(prompt);
+        Assert.Contains("You are a helpful, thoughtful assistant.", prompt);
+        Assert.Contains("Tools are called via function calling.", prompt);
+        Assert.Contains("Current date:", prompt);
+        Assert.Contains("You are running on Windows.", prompt);
+        Assert.Contains("workspace is at", prompt);
+        Assert.Contains("<available_skills>", prompt);
+        Assert.Contains("<name>xlsx</name>", prompt);
+    }
+
+    [Fact]
+    public void GetSystemPrompt_EmptyPersonaNoSkillsWithTools_ReturnsNotNull()
+    {
+        var vm = CreateViewModel();
+        vm.ActivePersona = new Persona
+        {
+            Id = "empty",
+            DisplayName = "Empty",
+            SystemPrompt = string.Empty,
+            IsBuiltIn = true,
+            DefaultChatMode = "Standard",
+        };
+
+        _skillServiceMock.Setup(s => s.GetCatalog()).Returns(new List<SkillMetadata>());
+
+        var prompt = vm.GetSystemPrompt(@"C:\workspace");
+
+        // Empty persona + no skills, but tools are still enabled.
+        // Behavioral instructions, date/time, and platform context are always present.
+        Assert.NotNull(prompt);
+        Assert.Contains("Tools are called via function calling.", prompt);
+        Assert.Contains("Current date:", prompt);
+        Assert.Contains("You are running on Windows.", prompt);
+        Assert.DoesNotContain("<available_skills>", prompt);
+    }
+
+    [Fact]
+    public void GetSystemPrompt_EmptyPersonaEverythingDisabled_ReturnsNull()
+    {
+        var vm = CreateViewModel();
+        vm.ActivePersona = new Persona
+        {
+            Id = "empty",
+            DisplayName = "Empty",
+            SystemPrompt = string.Empty,
+            IsBuiltIn = true,
+            DefaultChatMode = "Standard",
+        };
+
+        // Disable all tools
+        foreach (var tool in vm.ToolToggles)
+            tool.IsEnabled = false;
+
+        _skillServiceMock.Setup(s => s.GetCatalog()).Returns(new List<SkillMetadata>());
+
+        var prompt = vm.GetSystemPrompt(@"C:\workspace");
+
+        // Edge case: empty persona + everything disabled = no system prompt
+        Assert.Null(prompt);
+    }
+
+    [Fact]
+    public void GetSkillCatalogXml_WithEnabledSkills_ReturnsXml()
+    {
+        var vm = CreateViewModel();
+        var skills = new List<SkillMetadata>
+        {
+            new("xlsx", "Create/edit Excel spreadsheets", "embedded", "Skills/anthropic/xlsx"),
+            new("docx", "Create/edit Word documents", "embedded", "Skills/anthropic/docx"),
+        };
+
+        vm.PopulateSkillToggles(skills);
+        _skillServiceMock.Setup(s => s.GetCatalog()).Returns(skills);
+
+        var xml = vm.GetSkillCatalogXml();
+
+        Assert.Contains("<available_skills>", xml);
+        Assert.Contains("<name>xlsx</name>", xml);
+        Assert.Contains("<description>Create/edit Excel spreadsheets</description>", xml);
+        Assert.Contains("<name>docx</name>", xml);
+        Assert.Contains("</available_skills>", xml);
+    }
+
+    [Fact]
+    public void GetSkillCatalogXml_NoSkills_ReturnsEmpty()
+    {
+        var vm = CreateViewModel();
+        _skillServiceMock.Setup(s => s.GetCatalog()).Returns(new List<SkillMetadata>());
+
+        var xml = vm.GetSkillCatalogXml();
+
+        Assert.Equal(string.Empty, xml);
+    }
+
+    [Fact]
+    public void GetSkillCatalogXml_SomeSkillsDisabled_ExcludesDisabled()
+    {
+        var vm = CreateViewModel();
+        var skills = new List<SkillMetadata>
+        {
+            new("xlsx", "Spreadsheet", "embedded", "path"),
+            new("docx", "Document", "embedded", "path"),
+            new("pdf", "PDF", "embedded", "path"),
+        };
+
+        vm.PopulateSkillToggles(skills);
+        vm.SkillToggles[1].IsEnabled = false; // Disable docx
+
+        _skillServiceMock.Setup(s => s.GetCatalog()).Returns(skills);
+
+        var xml = vm.GetSkillCatalogXml();
+
+        Assert.Contains("<name>xlsx</name>", xml);
+        Assert.DoesNotContain("<name>docx</name>", xml);
+        Assert.Contains("<name>pdf</name>", xml);
+    }
+
+    [Fact]
+    public void GetSkillCatalogXml_EscapesXmlEntitiesInDescriptions()
+    {
+        var vm = CreateViewModel();
+        // Build the description with special XML chars that need entity escaping.
+        // Use string concatenation to avoid HTML entity decoding by source tooling.
+        var desc = "Search " + '\u0026' + " Rescue: x " + '\u003C' + " y, a " + '\u003E' + " b, \"quoted\", 'single'";
+        var skills = new List<SkillMetadata>
+        {
+            new("special", desc, "embedded", "path"),
+        };
+
+        vm.PopulateSkillToggles(skills);
+        _skillServiceMock.Setup(s => s.GetCatalog()).Returns(skills);
+
+        var xml = vm.GetSkillCatalogXml();
+
+        var amp = '\u0026'; // & character
+        Assert.Contains(amp + "amp;", xml);
+        Assert.Contains(amp + "lt;", xml);
+        Assert.Contains(amp + "gt;", xml);
+        Assert.Contains(amp + "quot;", xml);
+        Assert.Contains(amp + "apos;", xml);
+    }
+
+    [Fact]
+    public void GetSystemPrompt_NullActivePersonaWithTools_ReturnsPrompt()
+    {
+        var vm = CreateViewModel();
+        // ActivePersona is null by default (not initialized)
+        _skillServiceMock.Setup(s => s.GetCatalog()).Returns(new List<SkillMetadata>());
+
+        var prompt = vm.GetSystemPrompt(@"C:\workspace");
+
+        // Null persona → no persona message. Tools enabled → behavioral/date/platform present.
+        Assert.NotNull(prompt);
+        Assert.Contains("Tools are called via function calling.", prompt);
+        Assert.Contains("Current date:", prompt);
+        Assert.Contains("You are running on Windows.", prompt);
+        Assert.DoesNotContain("assistant", prompt); // No persona message
+    }
+
+    [Fact]
+    public void ResolveSystemPrompt_NullInput_ReturnsEmpty()
+    {
+        Assert.Equal(string.Empty, SystemPromptBuilder.ResolveSystemPromptVariables(null));
     }
 }
