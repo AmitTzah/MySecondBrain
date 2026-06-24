@@ -43,6 +43,19 @@ public partial class ChatView : UserControl
         InputBindings.Add(openPickerBinding);
     }
 
+    /// <summary>
+    /// Toggles all skills on/off in the Skills dropdown.
+    /// </summary>
+    private void ToggleAllSkills_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null)
+            return;
+
+        // Determine the new state: if any skill is off, turn all on; otherwise turn all off.
+        var anyDisabled = _viewModel.SkillToggles.Any(s => !s.IsEnabled);
+        _viewModel.SetAllSkillsEnabled(anyDisabled);
+    }
+
     private void ShowPersonaPickerDialog()
     {
         if (_viewModel is null)

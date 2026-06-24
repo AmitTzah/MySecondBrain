@@ -4,6 +4,8 @@ using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 using MySecondBrain.UI.ViewModels;
 
+// ReSharper disable PossibleNullReferenceException
+
 namespace MySecondBrain.Tests.Unit;
 
 public class ChatThreadViewModelTests
@@ -437,4 +439,164 @@ public class ChatThreadViewModelTests
         Assert.Equal(string.Empty, ChatThreadViewModel.ResolveSystemPrompt(string.Empty));
     }
 
+    // ================================================================
+    // Per-chat toolbar toggles
+    // ================================================================
+
+    [Fact]
+    public void Constructor_InitializesAllTenToolsEnabled()
+    {
+        var vm = CreateViewModel();
+
+        Assert.Equal(10, vm.ToolToggles.Count);
+        Assert.Contains(vm.ToolToggles, t => t.Name == "bash" && t.DisplayName == "Bash" && t.IsEnabled);
+        Assert.Contains(vm.ToolToggles, t => t.Name == "text_editor" && t.DisplayName == "Text Editor" && t.IsEnabled);
+        Assert.Contains(vm.ToolToggles, t => t.Name == "web_search" && t.DisplayName == "Web Search" && t.IsEnabled);
+        Assert.Contains(vm.ToolToggles, t => t.Name == "web_fetch" && t.DisplayName == "Web Fetch" && t.IsEnabled);
+        Assert.Contains(vm.ToolToggles, t => t.Name == "wiki_search" && t.DisplayName == "Wiki Search" && t.IsEnabled);
+        Assert.Contains(vm.ToolToggles, t => t.Name == "memory" && t.DisplayName == "Memory" && t.IsEnabled);
+        Assert.Contains(vm.ToolToggles, t => t.Name == "skill_load" && t.DisplayName == "Skill Load" && t.IsEnabled);
+        Assert.Contains(vm.ToolToggles, t => t.Name == "ask_user_input" && t.DisplayName == "Ask User Input" && t.IsEnabled);
+        Assert.Contains(vm.ToolToggles, t => t.Name == "present_files" && t.DisplayName == "Present Files" && t.IsEnabled);
+        Assert.Contains(vm.ToolToggles, t => t.Name == "image_search" && t.DisplayName == "Image Search" && t.IsEnabled);
+    }
+
+    [Fact]
+    public void Constructor_InitializesSkillsEmpty()
+    {
+        var vm = CreateViewModel();
+
+        Assert.Empty(vm.SkillToggles);
+    }
+
+    [Fact]
+    public void Constructor_MemoryDefaultsToOff()
+    {
+        var vm = CreateViewModel();
+
+        Assert.False(vm.MemoryEnabled);
+    }
+
+    [Fact]
+    public void PopulateSkillToggles_CreatesToggleForEachSkill()
+    {
+        var vm = CreateViewModel();
+        var skills = new List<SkillMetadata>
+        {
+            new("xlsx", "Spreadsheet creation", "embedded", "Skills/anthropic/xlsx"),
+            new("docx", "Document creation", "embedded", "Skills/anthropic/docx"),
+            new("pdf", "PDF manipulation", "embedded", "Skills/anthropic/pdf"),
+        };
+
+        vm.PopulateSkillToggles(skills);
+
+        Assert.Equal(3, vm.SkillToggles.Count);
+        Assert.Contains(vm.SkillToggles, s => s.Name == "xlsx" && s.Description == "Spreadsheet creation" && s.IsEnabled);
+        Assert.Contains(vm.SkillToggles, s => s.Name == "docx" && s.Description == "Document creation" && s.IsEnabled);
+        Assert.Contains(vm.SkillToggles, s => s.Name == "pdf" && s.Description == "PDF manipulation" && s.IsEnabled);
+    }
+
+    [Fact]
+    public void PopulateSkillToggles_EmptyList_ClearsCollection()
+    {
+        var vm = CreateViewModel();
+        vm.PopulateSkillToggles(new List<SkillMetadata>());
+
+        Assert.Empty(vm.SkillToggles);
+    }
+
+    [Fact]
+    public void SetAllSkillsEnabled_True_EnablesAllSkills()
+    {
+        var vm = CreateViewModel();
+        vm.PopulateSkillToggles(new List<SkillMetadata>
+        {
+            new("xlsx", "Test", "embedded", "path"),
+            new("docx", "Test", "embedded", "path"),
+        });
+
+        // Disable one first
+        vm.SkillToggles[0].IsEnabled = false;
+
+        vm.SetAllSkillsEnabled(true);
+
+        Assert.True(vm.SkillToggles[0].IsEnabled);
+        Assert.True(vm.SkillToggles[1].IsEnabled);
+    }
+
+    [Fact]
+    public void SetAllSkillsEnabled_False_DisablesAllSkills()
+    {
+        var vm = CreateViewModel();
+        vm.PopulateSkillToggles(new List<SkillMetadata>
+        {
+            new("xlsx", "Test", "embedded", "path"),
+            new("docx", "Test", "embedded", "path"),
+        });
+
+        vm.SetAllSkillsEnabled(false);
+
+        Assert.False(vm.SkillToggles[0].IsEnabled);
+        Assert.False(vm.SkillToggles[1].IsEnabled);
+    }
+
+    [Fact]
+    public void EnabledToolNames_ReturnsOnlyEnabledToolNames()
+    {
+        var vm = CreateViewModel();
+
+        // Disable one tool
+        vm.ToolToggles.First(t => t.Name == "memory").IsEnabled = false;
+
+        var enabled = vm.EnabledToolNames;
+
+        Assert.DoesNotContain("memory", enabled);
+        Assert.Contains("bash", enabled);
+        Assert.Equal(9, enabled.Count);
+    }
+
+    [Fact]
+    public void EnabledToolNames_AllDisabled_ReturnsEmpty()
+    {
+        var vm = CreateViewModel();
+
+        foreach (var tool in vm.ToolToggles)
+            tool.IsEnabled = false;
+
+        Assert.Empty(vm.EnabledToolNames);
+    }
+
+    [Fact]
+    public void EnabledSkillNames_ReturnsOnlyEnabledSkillNames()
+    {
+        var vm = CreateViewModel();
+        vm.PopulateSkillToggles(new List<SkillMetadata>
+        {
+            new("xlsx", "Test", "embedded", "path"),
+            new("docx", "Test", "embedded", "path"),
+            new("pdf", "Test", "embedded", "path"),
+        });
+
+        vm.SkillToggles[1].IsEnabled = false;
+
+        var enabled = vm.EnabledSkillNames;
+
+        Assert.Contains("xlsx", enabled);
+        Assert.DoesNotContain("docx", enabled);
+        Assert.Contains("pdf", enabled);
+        Assert.Equal(2, enabled.Count);
+    }
+
+    [Fact]
+    public void ToggleMemoryEnabled_RaisesPropertyChanged()
+    {
+        var vm = CreateViewModel();
+        var changedProperties = new List<string?>();
+        vm.PropertyChanged += (_, e) => changedProperties.Add(e.PropertyName);
+
+        vm.MemoryEnabled = true;
+
+        Assert.Contains(nameof(vm.MemoryEnabled), changedProperties);
+        Assert.True(vm.MemoryEnabled);
+    }
 }

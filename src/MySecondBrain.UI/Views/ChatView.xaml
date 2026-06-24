@@ -115,22 +115,141 @@
                     <Button Content="🧠 Thinking" FontSize="10"
                             Background="Transparent" BorderBrush="{DynamicResource AccentBrush}"
                             BorderThickness="1" Foreground="{DynamicResource AccentBrush}"
-                            Padding="6,3" Margin="2"/>
+                            Padding="6,3" Margin="2"
+                            AutomationProperties.AutomationId="ThinkingToggleBtn"/>
                     <Button Content="🔇 Mute" FontSize="10"
                             Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
-                            Padding="6,3" Margin="2"/>
-                    <Button Content="🔧 Tools" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
-                            Padding="6,3" Margin="2"/>
+                            Padding="6,3" Margin="2"
+                            AutomationProperties.AutomationId="MuteToggleBtn"/>
+
+                    <!-- 🔧 Tools Dropdown -->
+                    <ToggleButton x:Name="ToolsDropdownBtn" Content="🔧 Tools ▼" FontSize="10"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            Padding="6,3" Margin="2"
+                            IsChecked="False"
+                            AutomationProperties.AutomationId="ToolsDropdownBtn">
+                        <ToggleButton.Style>
+                            <Style TargetType="ToggleButton">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentForeground}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ToggleButton.Style>
+                    </ToggleButton>
+                    <Popup IsOpen="{Binding IsChecked, ElementName=ToolsDropdownBtn}"
+                           StaysOpen="False"
+                           PlacementTarget="{Binding ElementName=ToolsDropdownBtn}"
+                           Placement="Bottom">
+                        <Border Background="{DynamicResource ContentBackground}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                MinWidth="160"
+                                MaxHeight="300">
+                            <ScrollViewer>
+                                <ItemsControl ItemsSource="{Binding ToolToggles}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Content="{Binding DisplayName}"
+                                                      IsChecked="{Binding IsEnabled}"
+                                                      Margin="6,3"
+                                                      FontSize="11"
+                                                      Foreground="{DynamicResource ContentForeground}"
+                                                      AutomationProperties.AutomationId="{Binding Name, StringFormat='Tool_{0}'}"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+                    </Popup>
+
+                    <!-- 📚 Skills Dropdown -->
+                    <ToggleButton x:Name="SkillsDropdownBtn" Content="📚 Skills ▼" FontSize="10"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            Padding="6,3" Margin="2"
+                            IsChecked="False"
+                            AutomationProperties.AutomationId="SkillsDropdownBtn">
+                        <ToggleButton.Style>
+                            <Style TargetType="ToggleButton">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentForeground}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ToggleButton.Style>
+                    </ToggleButton>
+                    <Popup IsOpen="{Binding IsChecked, ElementName=SkillsDropdownBtn}"
+                           StaysOpen="False"
+                           PlacementTarget="{Binding ElementName=SkillsDropdownBtn}"
+                           Placement="Bottom">
+                        <Border Background="{DynamicResource ContentBackground}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                MinWidth="160"
+                                MaxHeight="300">
+                            <ScrollViewer>
+                                <StackPanel>
+                                    <!-- All on/off toggle -->
+                                    <Button Content="All On/Off" FontSize="10"
+                                            Background="Transparent"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="0,0,0,1"
+                                            Foreground="{DynamicResource AccentBrush}"
+                                            Padding="6,4"
+                                            Click="ToggleAllSkills_Click"
+                                            AutomationProperties.AutomationId="SkillsAllToggleBtn"/>
+                                    <ItemsControl ItemsSource="{Binding SkillToggles}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox Content="{Binding Name}"
+                                                          IsChecked="{Binding IsEnabled}"
+                                                          Margin="6,3"
+                                                          FontSize="11"
+                                                          Foreground="{DynamicResource ContentForeground}"
+                                                          AutomationProperties.AutomationId="{Binding Name, StringFormat='Skill_{0}'}"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+                    </Popup>
+
+                    <!-- 🧠 Mem Toggle -->
+                    <ToggleButton x:Name="MemoryToggleBtn" Content="🧠 Mem" FontSize="10"
+                            Background="Transparent"
+                            BorderThickness="1"
+                            Padding="6,3" Margin="2"
+                            IsChecked="{Binding MemoryEnabled}"
+                            AutomationProperties.AutomationId="MemoryToggleBtn">
+                        <ToggleButton.Style>
+                            <Style TargetType="ToggleButton">
+                                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ToggleButton.Style>
+                    </ToggleButton>
+
                     <Button Content="⚡ Auto-Approve" FontSize="10"
                             Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
-                            Padding="6,3" Margin="2"/>
-                    <Button Content="🧠 Memory: On" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource AccentBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource AccentBrush}"
                             Padding="6,3" Margin="2"/>
                     <Button Content="⚖ Compare" FontSize="10"
                             Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"

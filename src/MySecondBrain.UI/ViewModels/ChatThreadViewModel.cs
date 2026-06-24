@@ -37,6 +37,123 @@ public partial class ChatThreadViewModel : ObservableObject
         _modelConfigRepo = modelConfigRepo;
         _settingsRepo = settingsRepo;
         _logger = logger;
+
+        // Initialize per-chat tool/skill/memory toggles with global defaults
+        InitializeToolToggles();
+        InitializeSkillToggles();
+        InitializeMemoryToggle();
+    }
+
+    // ================================================================
+    // Per-chat toolbar toggle state
+    // ================================================================
+
+    /// <summary>Tools dropdown checkbox items.</summary>
+    [ObservableProperty]
+    private ObservableCollection<ToolToggleItem> _toolToggles = [];
+
+    /// <summary>Skills dropdown checkbox items.</summary>
+    [ObservableProperty]
+    private ObservableCollection<SkillToggleItem> _skillToggles = [];
+
+    /// <summary>Memory tool toggle (default OFF).</summary>
+    [ObservableProperty]
+    private bool _memoryEnabled;
+
+    /// <summary>
+    /// Returns the set of tool names that are currently enabled for this chat.
+    /// Used by system prompt construction to filter the tools array.
+    /// </summary>
+    public IReadOnlySet<string> EnabledToolNames =>
+        ToolToggles
+            .Where(t => t.IsEnabled)
+            .Select(t => t.Name)
+            .ToHashSet();
+
+    /// <summary>
+    /// Returns the set of skill names that are currently enabled for this chat.
+    /// Used by system prompt construction to filter the skill catalog.
+    /// </summary>
+    public IReadOnlySet<string> EnabledSkillNames =>
+        SkillToggles
+            .Where(s => s.IsEnabled)
+            .Select(s => s.Name)
+            .ToHashSet();
+
+    /// <summary>
+    /// Toggle all skills on or off.
+    /// </summary>
+    public void SetAllSkillsEnabled(bool enabled)
+    {
+        foreach (var skill in SkillToggles)
+        {
+            skill.IsEnabled = enabled;
+        }
+    }
+
+    private void InitializeToolToggles()
+    {
+        // Global defaults are stored in Settings by key; load them if set.
+        // All tools default to enabled when no global default exists.
+        var tools = new (string name, string displayName)[]
+        {
+            ("bash", "Bash"),
+            ("text_editor", "Text Editor"),
+            ("web_search", "Web Search"),
+            ("web_fetch", "Web Fetch"),
+            ("wiki_search", "Wiki Search"),
+            ("memory", "Memory"),
+            ("skill_load", "Skill Load"),
+            ("ask_user_input", "Ask User Input"),
+            ("present_files", "Present Files"),
+            ("image_search", "Image Search"),
+        };
+
+        var items = new List<ToolToggleItem>(tools.Length);
+        foreach (var (name, displayName) in tools)
+        {
+            items.Add(new ToolToggleItem
+            {
+                Name = name,
+                DisplayName = displayName,
+                IsEnabled = true, // default: enabled; global override can be loaded later
+            });
+        }
+
+        ToolToggles = new ObservableCollection<ToolToggleItem>(items);
+    }
+
+    private void InitializeSkillToggles()
+    {
+        // Skills are loaded from the skill service at chat initialization.
+        // For now, initialize empty; skills will be populated when ISkillService
+        // is available and discovery completes.
+        SkillToggles = [];
+    }
+
+    /// <summary>
+    /// Populate the skill toggle list from the discovered skill catalog.
+    /// Called after skill discovery completes (e.g., during chat initialization).
+    /// </summary>
+    public void PopulateSkillToggles(IReadOnlyList<SkillMetadata> discoveredSkills)
+    {
+        var items = discoveredSkills
+            .Select(s => new SkillToggleItem
+            {
+                Name = s.Name,
+                Description = s.Description,
+                IsEnabled = true, // default: enabled
+            })
+            .ToList();
+
+        SkillToggles = new ObservableCollection<SkillToggleItem>(items);
+    }
+
+    private void InitializeMemoryToggle()
+    {
+        // Memory defaults to OFF per spec.
+        // Global default can be loaded from settings later.
+        MemoryEnabled = false;
     }
 
     // ================================================================
