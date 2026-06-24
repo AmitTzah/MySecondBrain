@@ -79,7 +79,8 @@ public record RenderContext(
     Message Message,
     IThemeProvider Theme,
     bool IsStreaming,
-    double AvailableWidth
+    double AvailableWidth,
+    string? ArtifactDirectory = null
 );
 
 // === Import DTOs ===

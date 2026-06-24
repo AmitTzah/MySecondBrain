@@ -17,6 +17,7 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.*" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.*" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.*" />
     <PackageReference Include="WeCantSpell.Hunspell" Version="4.*" />
     <PackageReference Include="Autoupdater.NET.Official" Version="1.*" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.*">
