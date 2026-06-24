@@ -75,7 +75,7 @@ This file is the index of the `planning/` directory. It is what the Feature Deve
 | `ISearchProvider` | GoogleCustomSearchProvider, BingSearchProvider | Web search for AI tool-use |
 | `ITokenizer` / `ITokenizerFactory` | SharpTokenTokenizer, FallbackTokenizer | Real-time token counting |
 | `IChatImporter` | ChatGPTImporter, ClaudeImporter | Chat history import |
-| `IToolExecutor` | WebSearchToolExecutor, TerminalToolExecutor, FileGenerateToolExecutor, FileEditToolExecutor, WikiSearchToolExecutor | Tool execution for AI agents |
+| `IToolExecutor` | BashToolExecutor, TextEditorToolExecutor, WebSearchToolExecutor, WebFetchToolExecutor, MemoryToolExecutor, WikiSearchToolExecutor, SkillLoadToolExecutor, AskUserInputToolExecutor, PresentFilesToolExecutor, ImageSearchToolExecutor | Tool execution for AI agents (10 tools) |
 | `IToolOrchestrator` | ToolOrchestrator | Function-calling loop |
 | `IContentBlockRenderer` | MarkdownTextRenderer, CodeBlockRenderer, ArtifactReferenceRenderer, CitationRenderer, ImageRenderer, MediaRenderer, ThinkingRenderer, ToolCallRenderer | Markdig AST → WPF elements |
 | `IThemeProvider` | WpfThemeProvider | Dark/light + chat themes |
@@ -101,7 +101,7 @@ This file is the index of the `planning/` directory. It is what the Feature Deve
 | `IChatSearchService` | Fts5ChatSearchService | Full-text chat search (FTS5) |
 | `IAutoCleanupService` | PeriodicAutoCleanupService | Transient/trash auto-purge |
 
-### Data Entities List (13)
+### Data Entities List (15)
 
 | Entity | Primary FK | Key Relationships |
 |--------|-----------|------------------|
@@ -117,6 +117,8 @@ This file is the index of the `planning/` directory. It is what the Feature Deve
 | UsageRecord | → Message, → ChatThread, → Persona?, → ModelConfiguration | append-only |
 | WikiFile | — (index, not source of truth) | has many WikiVersionSnapshot |
 | WikiVersionSnapshot | → WikiFile | retention: 30/file, 50MB cap |
+| MemoryEntry | → ChatThread (optional) | AI-extracted facts (SQLite, Anthropic schema) |
+| Skill | — (in-memory metadata) | Agent Skill discovery metadata |
 | BackupSnapshot | — | standalone |
 
 ### External Integrations List (23)
@@ -224,6 +226,7 @@ Every vision feature group (A-U) is addressed in the planning documents:
 | S. Usage Dashboard | IUsageRepository | LiveCharts2, SQLite aggregation | UsageRecord | IUsageRepository |
 | U. Soft-Delete Trash | AutoCleanupService | SQLite | ChatThread (isDeleted, deletedAt) | IChatThreadRepository |
 | **V. Diagnostics & Debug Logging** | Serilog destructuring policy, Settings → Diagnostics UI | Serilog (Feature 3), ISettingsRepository | AppSetting (9 key-value pairs) | ILogger\<T\>, ISettingsRepository, IDestructuringPolicy |
+| **W. Agent Skills** | ISkillService, ISkillLoader, skill_load tool, progressive disclosure | Embedded resources, WebView2, bash/cmd.exe | MemoryEntry, Skill (in-memory) | ISkillService, ISkillLoader, IToolExecutor (SkillLoadToolExecutor) |
 | T. Nice-to-Have | Architecture accommodates | (deferred) | (deferred) | (deferred) |
 
 ---

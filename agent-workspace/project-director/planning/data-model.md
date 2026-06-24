@@ -2,7 +2,7 @@
 
 ## Overview
 
-All 13 data entities are stored in a single SQLite database via Entity Framework Core. The model is relational with foreign keys, cascading rules, and soft-delete. Wiki files are **not** stored in SQLite — the `.md` files on disk are the source of truth; the database holds a read-optimized **index**.
+All 15 data entities are stored in a single SQLite database via Entity Framework Core. The model is relational with foreign keys, cascading rules, and soft-delete. Wiki files are **not** stored in SQLite — the `.md` files on disk are the source of truth; the database holds a read-optimized **index**. Skills are in-memory metadata (not persisted to SQLite). Memory entries use SQLite with Anthropic's `memory_20250818` schema.
 
 > **Note:** The `AppSetting` key-value table (already part of the EF Core model) stores application settings including 9 diagnostics log settings (V). No new entity is required for the Diagnostics feature — see [AppSetting Keys for Diagnostics](#appsetting-keys-for-diagnostics-v) below.
 
@@ -387,6 +387,47 @@ All 13 data entities are stored in a single SQLite database via Entity Framework
 - Standalone entity. Not linked to other data entities.
 
 **Consumed by feature groups:** R
+
+---
+
+### 14. MemoryEntry
+**Description:** AI-extracted discrete fact about the user, stored in SQLite with Anthropic's `memory_20250818` schema. Separate from wiki — wiki is user-authored knowledge, memory is AI-extracted facts. Persists across all chats.
+
+Key Attribute | Type | Notes |
+|---------------|------|-------|
+| id | UUID (PK) | Primary identifier |
+| key | string (≤200) | Fact identifier (e.g., "user_prefers_typescript") |
+| value | string (≤10KB) | Fact content |
+| sourceThreadId | UUID? (FK) | ChatThread where this memory was extracted |
+| createdAt | datetime | Auto-set on creation |
+| updatedAt | datetime | Auto-updated on modification |
+
+**Relationships:**
+- `optionally belongs to` → ChatThread (via sourceThreadId)
+- `managed by` → Settings → Memory (A13) — view, edit, delete, clear all
+
+**Consumed by feature groups:** H5, W8, A13
+
+---
+
+### 15. Skill (In-Memory Metadata)
+**Description:** Agent Skill metadata discovered at startup. NOT persisted to SQLite — re-discovered each launch from embedded resources and filesystem paths. Stored in-memory for the skill catalog, `skill_load` tool schema, and per-chat toggles.
+
+Key Attribute | Type | Notes |
+|---------------|------|-------|
+| name | string | Kebab-case identifier (e.g., "xlsx", "web-artifacts-builder") |
+| description | string | When to trigger, what it does (~80 tokens for catalog) |
+| source | enum | built-in, user, cross-client |
+| location | string | Path to SKILL.md directory |
+| isEnabled | boolean | Per-chat toggle; defaults from global settings |
+
+**Relationships:**
+- Independent (in-memory). Does not persist to SQLite.
+- `loaded by` → `skill_load` tool (H7)
+- `configured in` → Settings → Skills (A12) for global defaults
+- `toggled per-chat` → Textbox toolbar Skills dropdown (W6)
+
+**Consumed by feature groups:** W, H7
 
 ---
 

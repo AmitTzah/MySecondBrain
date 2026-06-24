@@ -201,6 +201,8 @@ The full tool surface includes 10 tools. Tools are named to match Anthropic's tr
 | **`wiki_search`** | Query local SQLite FTS5 wiki index | Regular (read-only, local only) |
 | **`skill_load`** | Activate a skill (load full instructions) | Regular |
 | **`ask_user_input`** | Present structured questions to the user | Regular |
+| **`present_files`** | Signal workspace files as deliverable artifacts; copies to artifacts directory, renders in WebView2 panel | Regular (non-destructive) |
+| **`image_search`** | Search for images via Google/Bing Image Search API (separate from web_search) | Regular |
 
 ### Why Anthropic schemas?
 
@@ -210,16 +212,16 @@ From [Anthropic's tool use documentation](https://docs.anthropic.com/en/docs/age
 
 By matching Anthropic's tool names and schemas, models (Claude, GPT-4, Gemini) already know how to use them from training. Skills written for Anthropic's tool surface work without modification.
 
-### Why skills only need 8 of 10 tools
+### Why skills only need 2 of 10 tools
 
-Every skill uses only `bash` + `text_editor`. The other tools support the broader application:
+Every skill uses only `bash` + `text_editor`. The other 8 tools support the broader application:
 - `web_search` + `web_fetch` → Deep Research and general web access
+- `image_search` → image finding (separate from text search)
 - `memory` → persistent facts across sessions
 - `wiki_search` → personal wiki queries
 - `skill_load` → skill activation
 - `ask_user_input` → structured confirmations
 - `present_files` → artifact surfacing (used by web-artifacts-builder skill)
-- `image_search` → image finding (not directly used by skills)
 
 ---
 
@@ -338,9 +340,11 @@ System prompt =
     [text_editor schema]               ← only if enabled
     [web_search schema]                ← only if enabled
     [web_fetch schema]                 ← only if enabled
+    [image_search schema]              ← only if enabled
     [wiki_search schema]               ← only if enabled
     [memory schema]                    ← only if enabled
     [ask_user_input schema]            ← always (needed for confirmations)
+    [present_files schema]             ← only if enabled
     [skill_load schema]                ← only if ≥1 skill enabled
 ```
 

@@ -115,17 +115,18 @@ The system is organized into six major component groups. Arrows indicate depende
 
 | Component | Description | Sourcing Ref |
 |-----------|-------------|-------------|
-| **ToolOrchestrator** | Implements the function-calling loop: AI requests tool → orchestrator validates → executes (or prompts user confirmation) → captures result → feeds back to AI. Tools: WebSearch, Terminal, FileGenerate, FileEdit, WikiSearch. | [tech-sourcing #19](../tech-sourcing.md#19-deep-research-orchestration-h6) |
-| **WebSearchTool** | Executes web search via Google Custom Search API or Bing Web Search API (user's own API key). Returns structured results. | [tech-sourcing #16](../tech-sourcing.md#16-web-search-integration-tool-use-h1) |
-| **TerminalTool** | Executes shell commands via `System.Diagnostics.Process`. ALWAYS requires explicit user confirmation. Displays command, working directory, risk level (detects dangerous commands). Captures stdout/stderr. | [tech-sourcing #17](../tech-sourcing.md#17-terminal--shell-execution-tool-use-h2) |
-| **FileTool** | File generation (save dialog → AI generates → preview → confirm) and file editing (file picker → AI suggests changes → diff preview via DiffPlex → confirm). Enforces wiki directory exclusion. | [tech-sourcing #18](../tech-sourcing.md#18-file-generation--editing-tool-use-h3-h4) |
-| **DeepResearchOrchestrator** | Custom state machine (Plan → Search → Read → Synthesize → Report) driven by tool-use conversation loop with specialized "deep research" system prompt. Real-time progress display via system messages. | [tech-sourcing #19](../tech-sourcing.md#19-deep-research-orchestration-h6) |
+| **ToolOrchestrator** | Implements the function-calling loop: AI requests tool → orchestrator validates → executes (or prompts user confirmation) → captures result → feeds back to AI. Manages 10 tools: bash, text_editor, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files. | [tech-sourcing #38](../tech-sourcing.md#38-anthropic-tool-schema-adoption) |
+| **BashToolExecutor** | Executes shell commands via `cmd.exe` (with Git Bash/WSL fallback) in workspace-isolated `%LOCALAPPDATA%/MySecondBrain/workspace/`. Writes outside workspace require user confirmation. Wiki directory read-only. | [tech-sourcing #17](../tech-sourcing.md#17-terminal--shell-execution-tool-use-h2) |
+| **TextEditorToolExecutor** | Anthropic `text_editor_20250728` schema. Commands: view, create, str_replace, insert. Replaces separate file_generate and file_edit tools. App-side version tracking per filename. | [tech-sourcing #18](../tech-sourcing.md#18-file-generation--editing-tool-use-h3-h4) |
+| **WebSearchToolExecutor** | Executes web search via Google Custom Search API or Bing Web Search API (user's own API key). Returns structured results. | [tech-sourcing #16](../tech-sourcing.md#16-web-search-integration-tool-use-h1) |
+| **WebFetchToolExecutor** | Read-only HttpClient GET fetcher. URL must be from prior web_search results. Returns page content. | [tech-sourcing #38](../tech-sourcing.md#38-anthropic-tool-schema-adoption) |
+| **Deep Research (skill-based)** | Deep Research is a skill, not a custom state machine. Model follows research protocol via web_search + web_fetch + bash tools. Progress visible naturally as tool calls stream in chat. | [skills-integration.md](skills-integration.md) |
 
 ### 6. SQLite Data Layer
 
 | Component | Description | Sourcing Ref |
 |-----------|-------------|-------------|
-| **Entity Framework Core** | ORM for all data entities (13 entities: ChatThread, Message, Persona, ModelConfiguration, ApiKey, Artifact, MediaItem, PromptTemplate, TextAction, UsageRecord, WikiFile, WikiVersionSnapshot, BackupSnapshot). Migrations for schema evolution across auto-updates. | [tech-sourcing #2](../tech-sourcing.md#2-local-database--sqlite) |
+| **Entity Framework Core** | ORM for all data entities (15 entities: ChatThread, Message, Persona, ModelConfiguration, ApiKey, Artifact, MediaItem, PromptTemplate, TextAction, UsageRecord, WikiFile, WikiVersionSnapshot, BackupSnapshot, MemoryEntry, Skill). Migrations for schema evolution across auto-updates. | [tech-sourcing #2](../tech-sourcing.md#2-local-database--sqlite) |
 | **SQLite FTS5** | Full-text search virtual tables on chat message content and wiki file content. Ranked search, snippet extraction, highlight markup. | [tech-sourcing #11](../tech-sourcing.md#11-full-text-search) |
 | **DPAPI Encryption** | `System.Security.Cryptography.ProtectedData` for API key encryption at rest (tied to Windows user account). `AesGcm` (.NET 8+) for locked chat encryption (PBKDF2 key derivation). | [tech-sourcing #30](../tech-sourcing.md#30-encryption--api-keys--chat-locking) |
 

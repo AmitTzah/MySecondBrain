@@ -111,7 +111,89 @@ Dependencies: 4, 5, 6, 7, 8. (Tests all Wave 2-3 features F5-F8.)
 E2E: Run `dotnet test tests/e2e/MySecondBrain.Tests.E2E --configuration Debug` and verify exit code 0 with all tests passing. After suite completion, verify the test database (`e2e-test.db`) contains zero user-created entities (no stale API keys, model configs, personas, or chat threads). Verify the test suite runs in a single app launch — only one `[FIXTURE] Launching app` log line and one `[FIXTURE] Cleaning up` log line in the output. Verify the E2E authoring guide exists at the expected path and covers all required sections (fixture pattern, test database, self-cleaning tests, no-dead-time, selector strategy, helper conventions, onboarding wizard testing, MessageBox handling).
 Vision groups: none (cross-cutting testing infrastructure — enables quality for all future features).
 
-### Feature 10 — Studio Chat — Core Workspace
+### Feature 10 — Codebase Realignment (Architecture Evolution)
+
+Align the existing codebase (Features 1-9 built with legacy tool names, 5-tool surface, no skills, WPF-only artifacts) with the updated vision's 10-tool surface, Agent Skills subsystem, WebView2 artifacts panel, and SQLite memory. This is a non-user-facing infrastructure feature — the app should behave identically after completion, but the internal architecture matches the evolved vision.
+
+**Tool Renames & New Executors:**
+- Rename `TerminalToolExecutor` → `BashToolExecutor` (Anthropic `bash_20250124` schema, workspace-isolated in `%LOCALAPPDATA%/MySecondBrain/workspace/`)
+- Merge `FileGenerateToolExecutor` + `FileEditToolExecutor` → `TextEditorToolExecutor` (Anthropic `text_editor_20250728` schema: view/create/str_replace/insert)
+- Add `WebFetchToolExecutor` (read-only HttpClient GET, URL must come from prior web_search results)
+- Add `MemoryToolExecutor` (SQLite-backed, Anthropic `memory_20250818` schema)
+- Add `SkillLoadToolExecutor` (reads SKILL.md from embedded resources/user dirs, structured XML wrapping with deduplication)
+- Add `AskUserInputToolExecutor` (structured WPF confirmation dialogs)
+- Add `PresentFilesToolExecutor` (copies workspace files to artifacts directory, triggers WebView2 panel refresh)
+- Add `ImageSearchToolExecutor` (Google/Bing Image Search API via ISearchProvider, separate from web_search)
+- Keep existing `WebSearchToolExecutor` and `WikiSearchToolExecutor` (already built, no rename needed)
+- `ISearchProvider` extended with image search support
+- 10 total `IToolExecutor` implementations registered in DI
+
+**Agent Skills Subsystem:**
+- Add `ISkillService` interface (discovery, catalog, load, resource listing, activation tracking, dependency detection)
+- Add `ISkillLoader` interface (skill_load tool schema, structured XML wrapping, deduplication)
+- Implement `AgentSkillService` — scans 4 locations (embedded resources + %LOCALAPPDATA% + .agents/skills/ + .claude/skills/), parses YAML frontmatter
+- Implement `StructuredSkillLoader` — reads SKILL.md, strips frontmatter, wraps in `<skill_content>` tags with `<skill_resources>` listing
+- Skill discovery at startup (embedded `Skills/anthropic/` in MySecondBrain.UI.dll + filesystem paths)
+- Name collision resolution: user overrides built-in, cross-client overrides user
+
+**WebView2 Artifacts Panel:**
+- Add `Microsoft.Web.WebView2.Wpf` NuGet package to MySecondBrain.UI.csproj
+- Create `ArtifactsWebView2Host` WPF control wrapping WebView2 with theme bridge (dark/light CSS toggle via JS)
+- Browser-native rendering: Prism.js (syntax highlighting), marked.js (Markdown), diff2html.js (diffs)
+- Workspace-to-artifact pipeline: model writes to workspace → calls present_files → app copies to artifacts dir → WebView2 renders
+- Existing WPF artifact placeholders replaced with WebView2 host
+- Fallback to WPF rendering if WebView2 runtime unavailable
+
+**Per-Chat Toolbar Toggles:**
+- Add Tools dropdown (🔧) with per-tool enable/disable + auto-approval (Auto-Approve/Ask/Disabled)
+- Add Skills dropdown (📚) with per-skill checkboxes + "All on/off"
+- Add Memory toggle (🧠 Mem) — default OFF, enables memory tool
+- New chats inherit global defaults from Settings
+
+**System Prompt Construction:**
+- Additive assembly: persona.system_message + behavioral_instructions + date_time_context + platform_context + available_skills block + skill_usage_instructions
+- Tools array assembled additively per enabled tools
+- Empty persona + everything disabled = no system prompt, empty tools array
+- Platform context includes bash availability (Git Bash/WSL detected at startup)
+
+**Workspace Isolation:**
+- All bash commands execute in `%LOCALAPPDATA%/MySecondBrain/workspace/`
+- Working directory locked to workspace via `Process.StartInfo.WorkingDirectory`
+- Absolute paths outside workspace blocked pre-execution (scan for `C:\`, `%`, `~`)
+- Wiki directory read-only from bash
+- 24h auto-cleanup of workspace files on app startup
+
+**Data Model:**
+- Add `MemoryEntry` entity to AppDbContext (SQLite table with Anthropic memory_20250818 schema)
+- Add `Skill` metadata record (in-memory only, not persisted to SQLite)
+- Entity count: 13 → 15 (MemoryEntry + Skill)
+- EF Core migration for MemoryEntry table
+
+**DI Registrations:**
+- Register all 10 IToolExecutor implementations
+- Register ISkillService (AgentSkillService) as singleton
+- Register ISkillLoader (StructuredSkillLoader) as singleton
+- Update IToolOrchestrator to manage 10 tools
+- Register WebView2 host control in DI
+
+**Unit Tests:**
+- Update tests for renamed tool executors (BashToolExecutor, TextEditorToolExecutor)
+- Add tests for new tool executors (WebFetch, Memory, SkillLoad, AskUserInput, PresentFiles, ImageSearch)
+- Add tests for ISkillService (discovery, catalog, deduplication)
+- Add tests for ISkillLoader (wrapping, enum constraint)
+- Update DI resolution tests for 10 IToolExecutor implementations
+
+**Knowledge Files:**
+- Update `agent-workspace/knowledge/architecture.md` with 10-tool surface, skills subsystem, WebView2
+- Update `agent-workspace/knowledge/database.md` with MemoryEntry entity
+- Update `agent-workspace/knowledge/frontend-ui.md` with WebView2 artifacts panel, per-chat toolbar toggles
+- Update `agent-workspace/knowledge/api-routes.md` with skill_load tool schema
+
+Dependencies: 4, 5, 6, 7, 8, 9.
+E2E: Not applicable — infrastructure realignment with no user-facing behavior changes. Verified via existing E2E test suite (all 70+ tests continue to pass) + new/updated unit tests for renamed and added tool executors, skill service, and DI registrations.
+Vision groups: H, W, F (infrastructure — aligns codebase with updated vision before building new user-facing features).
+
+### Feature 11 — Studio Chat — Core Workspace (formerly F10)
 
 Conversation view with VirtualizingStackPanel. Full Markdown rendering (Markdig → WPF FlowDocument — headings, bold, italic, code blocks with AvalonEdit syntax highlighting for 100+ languages, lists, links, tables, blockquotes). Streaming token-by-token progressive rendering with auto-scroll management. Message actions (Send/Stop with partial response preservation, Regenerate, Continue Generation). Copy MD and Copy Rich per message. Auto-generated chat titling via AI. Error handling with specific messages and Retry. Scroll-to-bottom floating button. Clear conversation with undo. Chat header three-dot menu (⋯). Message selection mode with bulk actions. Offline/network status indicator. Close confirmation during active generation. Pin window / Always on top. Dark/Light quick toggle. Font size quick adjust. Chat header full layout (Persona name, context bar, cost, source banner, font size, dark mode, pin, ⋯ menu). Incognito/temporary chat toggle. Locked chats (AES-256-GCM, password-protected). Chat summarization via AI. Message favoriting (★). Cross-tab completion alert (green dot). Right panel layout (Artifacts panel top + Chat Nav bottom, resizable divider). [Apply] button shell in chat header (grayed-out validation deferred to Feature 19).
 
@@ -125,7 +207,7 @@ Dependencies: 4, 5, 7.
 E2E: Create a new chat with a persona that has a configured API key. Type a message requesting code generation and press Enter. Verify streaming response begins token-by-token with progressive Markdown rendering including a fenced code block with syntax highlighting and a Copy button on hover. Verify Stop button is visible during generation. After completion, verify message footer shows generation time. Click Copy MD on the assistant message, paste into Notepad, verify raw Markdown was copied. Click Copy Rich and verify formatted content on clipboard. Click Regenerate and verify a new response replaces the old one with the original preserved as a branch. Verify chat header shows auto-generated title, persona name, and context window bar. Open the ⋯ menu and verify Clear Conversation, Export Chat, Duplicate Chat, Chat Tree, and Edit System Message options are present.
 Vision groups: C (core messaging/rendering), E, Q.
 
-### Feature 11 — Studio Chat — Input, Media & Prompts
+### Feature 12 — Studio Chat — Input, Media & Prompts
 
 Drag & drop files/media into textbox. Paste image from clipboard (Ctrl+V) with thumbnail preview. **Attach File button (📎) in textbox toolbar** — opens standard Windows file picker, multi-select, displays selected files as attachment cards below textbox. **Model-aware file type compatibility** — checks active Model Configuration's provider/model capabilities; warns if attached file types are unsupported (e.g., "⚠️ [Model] does not support [file type]. Attached as metadata only."). Audio input via microphone (NAudio → configured STT provider). Camera capture (webcam photo for vision models). Spell check with Hunspell (red squiggly, right-click suggestions, custom dictionary). Multiple chat tabs (drag-drop reorder, close, reopen). Token usage and context display (real-time local tokenizer, color gradient bar). Keyboard shortcuts (Ctrl+N/W/Tab/F/S). Resizable panels (sidebar, right panel). Textbox toolbar with Persona selector, thinking toggle, mute toggle, tools toggle, and prompt library access. Auto-save drafts every 5 seconds with crash recovery. Textbox input direction auto-detection based on first strong directional character typed (Hebrew → RTL, English → LTR).
 
@@ -171,13 +253,19 @@ Dependencies: 4, 5, 10.
 E2E: Trigger an AI generation that produces an artifact (e.g., "Create a Python Flask app in an artifact"). Verify the artifact appears in the right panel under 📄 Artifacts with its name and type. Click the artifact to view its content with syntax highlighting. Request a change and verify version v2 is created. Open version history, select v1 and v2, click Compare, and verify DiffPlex side-by-side diff shows red/green changes. Click Save to Disk and verify the file is written. Navigate to Global Artifacts Browser via sidebar, verify all artifacts across chats are listed with name, type, parent chat, date, and version count, and filter by type. Navigate to Media Library screen, verify a gallery grid of all media items with filtering by type, click an image to view full resolution, and verify View in Library navigates to the source chat.
 Vision groups: F, G.
 
-### Feature 15 — Tool Use & Agent Capabilities
+### Feature 15 — Tool Use, Agent Capabilities & Skills
 
-Web search tool (AI requests web search via Google Custom Search or Bing API → app executes → results fed back to AI). Terminal/shell execution (ALWAYS requires explicit user confirmation, command displayed with risk-level detection, stdout/stderr captured and returned). File generation (save dialog → AI generates → preview → user confirms). File editing (file picker → AI suggests changes → DiffPlex preview → user confirms). Wiki directory excluded from all file operations. Tool auto-approval settings (global defaults in Settings + per-chat overrides in textbox toolbar). Deep Research — autonomous multi-step research (Plan → Search → Read → Synthesize → Report state machine, real-time progress display, cancelable, cited output). Wiki search tool (AI queries local FTS5 wiki index, incorporates results into responses).
+10-tool agent surface matching Anthropic's trained-in schemas: bash (workspace-isolated cmd.exe with Git Bash/WSL fallback), text_editor (Anthropic text_editor_20250728 schema — view/create/str_replace/insert, replaces file_generate + file_edit), web_search (Google Custom Search / Bing API), web_fetch (read-only HttpClient GET, URL must come from prior search results), image_search (Google/Bing Image Search API, separate from text web_search), memory (SQLite-backed, Anthropic memory_20250818 schema, per-chat toggle), wiki_search (local SQLite FTS5, read-only, zero API cost), skill_load (activates Agent Skills with enum-constrained schema and structured XML wrapping), ask_user_input (structured WPF confirmation dialogs), present_files (bridges workspace to WebView2 artifacts panel). Tool auto-approval settings (global defaults in Settings → Tools + per-chat overrides in textbox toolbar: Auto-Approve / Ask / Disabled). Hard-coded overrides: bash writes outside workspace and text_editor deletes ALWAYS require confirmation.
 
-Dependencies: 4, 5, 10.
-E2E: In Studio Chat with tools enabled, send a message requesting a web search. Verify the tool call appears as a styled system message showing the search query, results feed back to the AI, and a summarized response appears. Request file generation, verify a save dialog appears, the AI generates content, a DiffPlex preview shows the content, and confirming writes the file with a success toast. Request terminal execution, verify a confirmation dialog appears showing the exact command, working directory, and risk level. Click Deny and verify AI is notified execution was denied. Click Approve on a subsequent attempt and verify stdout is captured and displayed. Trigger Deep Research with a query, verify the Plan→Search→Read→Synthesize→Report state machine displays real-time progress with Searching, Reading N of M sources, and Synthesizing status messages, and the final report appears with clickable inline citations.
-Vision groups: H.
+Skills subsystem: 11 built-in Anthropic skills (xlsx, docx, pdf, pptx, algorithmic-art, canvas-design, frontend-design, theme-factory, web-artifacts-builder, webapp-testing, skill-creator) shipped as embedded resources. Progressive disclosure: catalog (~80 tokens/skill) in system prompt → full SKILL.md on skill_load → resources on demand. Skill discovery from 4 locations: embedded resources + %LOCALAPPDATA%/MySecondBrain/skills/ + %USERPROFILE%/.agents/skills/ + %USERPROFILE%/.claude/skills/. Community skills with source annotation. Per-chat Skills dropdown with individual toggles. skill-creator meta-skill for user-created skills. Deep Research as skill (not custom state machine) — model follows research protocol using web_search + web_fetch + bash, progress visible naturally as tool calls stream. Memory tool — SQLite-backed discrete fact entries, per-chat toggle, user management in Settings → Memory. Per-chat toolbar: Tools dropdown (🔧), Skills dropdown (📚), Memory toggle (🧠 Mem).
+
+WebView2 artifacts panel: embedded Microsoft Edge WebView2 control for browser-native rendering (syntax highlighting via Prism.js/highlight.js, Markdown via marked.js, diff views via diff2html.js, interactive React/Tailwind artifacts from web-artifacts-builder skill). Workspace-to-artifact pipeline: model creates files in workspace via bash/text_editor → calls present_files → app copies to artifacts directory → renders in WebView2 panel. Version tracking by filename within chat. Chat conversation stays WPF-native (FlowDocument + ContentBlockRenderers).
+
+System prompt additive assembly: persona.system_message + behavioral_instructions + date_time_context + platform_context + available_skills block (only if ≥1 skill enabled) + skill_usage_instructions. Tools array additively assembled per enabled tools. Empty persona + everything disabled = no system prompt, empty tools array.
+
+Dependencies: 4, 5, 7, 10.
+E2E: In Studio Chat with tools enabled, send a message requesting a web search. Verify the tool call appears as a styled system message showing the search query, results feed back to the AI, and a summarized response appears. Request the AI to create an Excel file (triggering the xlsx skill), verify skill_load tool call appears, then bash and text_editor tool calls create the file. Click present_files and verify the artifact appears in the WebView2 side panel with syntax highlighting. Send a message requesting image search, verify image results appear with thumbnails. Toggle the Memory toggle on, ask the AI to remember a fact, verify memory tool call stores it, then ask the AI what it knows about you and verify it retrieves the fact. Toggle Skills dropdown to disable xlsx, send a spreadsheet request, verify the skill catalog does not include xlsx and skill_load enum does not list it. Trigger Deep Research with a query, verify the research protocol runs via web_search → web_fetch → bash tool calls with natural progress visibility (no custom state machine UI), and the final cited report appears as an artifact in the WebView2 panel.
+Vision groups: H, W, F (artifacts panel).
 
 ### Feature 16 — Text Actions & Three-Tier System
 
@@ -203,11 +291,11 @@ Wiki directory configuration (user selects directory of .md files, FileSystemWat
 
 **Versioning & Git:** Automatic pre-modification snapshots (max 30 per file, 50MB total cap, recoverable from Wiki Browser). Optional git version control — initialize git repo from Onboarding Wizard or Settings, auto-commit on file change with 30-second debounce, optional GitHub remote push with DPAPI-encrypted personal access token. Snapshots and git coexist (snapshots for instant undo, git for cross-session history).
 
-**Knowledge Features:** @ mentions for wiki files (type @ in textbox → quick-search dropdown → inject full content or summarized excerpt if >8K tokens). AI wiki access restrictions (no deletions, no renaming, write only via N5 pipeline). AI cross-linking — tiered pipeline: AI reads auto-generated index.md → selects candidates → requests full content → generates draft with suggested links → user reviews and accepts. Backlinks suggested after save. Auto-generated index.md at wiki root (directory tree, all headings with links, cross-links, recently modified, orphan pages). AI memory (`_memory.md` wiki file, "Update Memory" button triggers Write to Wiki pipeline, memory-aware toggle per chat injects full file into context with optional token cap). Find and replace across all wiki files with preview of changes and regex support (snapshots provide undo).
+**Knowledge Features:** @ mentions for wiki files (type @ in textbox → quick-search dropdown → inject full content or summarized excerpt if >8K tokens). AI wiki access restrictions (no deletions, no renaming, write only via N5 pipeline). wiki_search tool (H6) queries local SQLite FTS5 wiki index for AI agent use. AI cross-linking — tiered pipeline: AI reads auto-generated index.md → selects candidates → requests full content → generates draft with suggested links → user reviews and accepts. Backlinks suggested after save. Auto-generated index.md at wiki root (directory tree, all headings with links, cross-links, recently modified, orphan pages). AI memory is handled by the separate `memory` tool (SQLite-backed, Anthropic schema) — NOT `_memory.md` wiki file. Find and replace across all wiki files with preview of changes and regex support (snapshots provide undo).
 
 HTML mock reference: [`vision/screens/wiki-browser.html`](vision/screens/wiki-browser.html).
 
-Dependencies: 4, 5.
+Dependencies: 4, 5, 10.
 E2E: In Settings → Wiki, select a wiki directory containing .md files and verify the path displays. Navigate to Wiki Browser via sidebar, verify the three-region split: left file tree, center Markdown viewer rendering the selected file with headings/links/code blocks, right info panel with Related Sections, Backlinks, and File Info tabs. Click a file in the tree and verify File Info tab shows word count, reading time, and heading count. Click Open in External Editor and verify the file opens in the system default .md editor. Click 💬 Discuss with AI and verify a new Studio chat opens with the file's content pre-loaded as context. In Studio, have a conversation, click Write to Wiki, choose Create new wiki file, enter a filename, and verify AI generates a polished .md summary with suggested cross-links highlighted. Review and edit in the Preview Panel, click Save to Wiki, and verify the file is written with a confirmation toast. For an update to an existing file, verify the mandatory Diff Viewer appears before Commit to Wiki is clickable.
 Vision groups: N.
 
@@ -225,7 +313,7 @@ Features that span across vertical slices. Smaller independent features combined
 
 HTML mock reference: [`vision/screens/model-comparison.html`](vision/screens/model-comparison.html).
 
-Dependencies: 4, 5, 7, 10.
+Dependencies: 4, 5, 7, 11.
 E2E: In Studio Chat, click the ⚖ Compare button in the textbox toolbar. Select 2-3 Personas via checkboxes (verify Start Comparison is disabled until ≥2 selected), enter a prompt, choose horizontal layout, and click Start Comparison. Verify side-by-side panels stream responses independently with persona name, model name, and real-time metrics. Toggle 🔗 Broadcast mode on and verify per-panel inputs are replaced by a single centered broadcast input. Send a follow-up and verify it goes to all panels. Click Accept on one panel and verify the accepted conversation is appended to the originating chat with other conversations auto-saved as branches, confirmed by toast. Navigate to Settings → Backup, configure a local folder backup destination, click Backup Now, verify progress bar completes with a confirmation toast. Set backup schedule to Daily. Click Restore from Backup, verify available backups are listed with dates and sizes, select one, confirm the warning dialog, and verify restore completes.
 Vision groups: M, R.
 
@@ -273,9 +361,9 @@ Vision groups: cross-cutting (affects all screens).
 |------|-------------|----------|
 | Wave 1 | Foundation — Infrastructure, data model, abstractions | 4 (built) |
 | Wave 2 | Skeleton — App shell, navigation, theming, Windows infrastructure, design system | 3 |
-| Wave 3 | Vertical Slices — All user-facing features (DB → service → UI) | 11 |
+| Wave 3 | Vertical Slices — All user-facing features (DB → service → UI) + Codebase Realignment | 12 |
 | Wave 4 | Cross-Cutting + Polish — Smaller features, optimization, hardening, polish, motion | 4 |
-| **Total** | | **22** |
+| **Total** | | **23** |
 
 ---
 
@@ -298,36 +386,38 @@ Wave 2: Skeleton + Design System (3)
     │
     ├──────────┬──────────┬──────────┬──────────┬──────────┬──────────┬──────────┐
     ▼          ▼          ▼          ▼          ▼          ▼          ▼          ▼
-Wave 3: Vertical Slices (11)
+Wave 3: Vertical Slices + Codebase Realignment (12)
   F7 ─── Model Configs, API Keys & Personas (B + A2 + A10)
   │
-  ├── F8 ─── Settings, Onboarding & Diagnostics (A + A8 + V) [soft dep on 19]
+  ├── F8 ─── Settings, Onboarding & Diagnostics (A + A8 + V) [soft dep on 20]
   │
   ├── F9 ─── E2E Test Suite Rewrite & Authoring Guide (tests F5-F8)
   │
-  ├── F10 ── Studio Chat — Core Workspace (C + E)
+  ├── F10 ── Codebase Realignment (H + W + F infrastructure) [depends on F4-F9]
+  │
+  ├── F11 ── Studio Chat — Core Workspace (C + E)
   │     │
-  │     ├── F11 ── Studio Chat — Input, Media & Prompts (C + J)
+  │     ├── F12 ── Studio Chat — Input, Media & Prompts (C + J)
   │     │
-  │     ├── F12 ── Message Branching & Chat Organization (D + L)
+  │     ├── F13 ── Message Branching & Chat Organization (D + L)
   │     │     │
-  │     │     └── F13 ── Data Lifecycle & Soft-Delete Trash (O + U)
+  │     │     └── F14 ── Data Lifecycle & Soft-Delete Trash (O + U)
   │     │
-  │     ├── F14 ── Artifacts & Media Library (F + G)
+  │     ├── F15 ── Artifacts & Media Library (F + G)
   │     │
-  │     └── F15 ── Tool Use & Agent Capabilities (H)
+  │     └── F16 ── Tool Use, Agent Capabilities & Skills (H + W + F)
   │
-  ├── F16 ── Text Actions & Three-Tier System (K + P9)
+  ├── F17 ── Text Actions & Three-Tier System (K + P9)
   │
-  └── F17 ── Personal Wiki / Second Brain (N)
+  └── F18 ── Personal Wiki / Second Brain (N)
     │
     ├──────────┬──────────┬──────────┐
     ▼          ▼          ▼          ▼
 Wave 4: Cross-Cutting + Polish (4)
-  F18 ── Model Comparison, Backup & Recovery (M + R)
-  F19 ── Data Portability, Analytics, Localization & Hardening (I + S + Q + P refinements + testing)
-  F20 ── UI Polish: All Screens Visual Refinement Pass
-  F21 ── UI Polish: Micro-interactions & Motion Design
+  F19 ── Model Comparison, Backup & Recovery (M + R)
+  F20 ── Data Portability, Analytics, Localization & Hardening (I + S + Q + P refinements + testing)
+  F21 ── UI Polish: All Screens Visual Refinement Pass
+  F22 ── UI Polish: Micro-interactions & Motion Design
 ```
 
 ---
