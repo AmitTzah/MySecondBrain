@@ -21,6 +21,7 @@ public class AppDbContext : DbContext
     public DbSet<UsageRecord> UsageRecords => Set<UsageRecord>();
     public DbSet<WikiFile> WikiFiles => Set<WikiFile>();
     public DbSet<WikiVersionSnapshot> WikiVersionSnapshots => Set<WikiVersionSnapshot>();
+    public DbSet<MemoryEntryEntity> MemoryEntries => Set<MemoryEntryEntity>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -204,6 +205,17 @@ public class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         // ────────────────────────────────────────────────────────────
+        // MemoryEntry → ChatThread (SetNull)
+        // ────────────────────────────────────────────────────────────
+
+        modelBuilder.Entity<MemoryEntryEntity>()
+            .HasOne(me => me.SourceThread)
+            .WithMany(t => t.MemoryEntries)
+            .HasForeignKey(me => me.SourceThreadId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        // ────────────────────────────────────────────────────────────
         // Indexes
         // ────────────────────────────────────────────────────────────
 
@@ -221,6 +233,12 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<ChatThread>()
             .HasIndex(t => t.IsDeleted);
+
+        modelBuilder.Entity<MemoryEntryEntity>()
+            .HasIndex(me => me.Key);
+
+        modelBuilder.Entity<MemoryEntryEntity>()
+            .HasIndex(me => me.CreatedAt);
 
         // ────────────────────────────────────────────────────────────
         // Seed data — built-in Personas and TextActions

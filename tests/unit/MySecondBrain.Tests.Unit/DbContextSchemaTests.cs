@@ -30,9 +30,9 @@ public class DbContextSchemaTests : DataLayerTestBase
         {
             db.Database.EnsureCreated();
 
-            // Verify all 14 entity types are mapped (BackupSnapshot deferred to W3.16)
+            // Verify all 15 entity types are mapped (BackupSnapshot deferred to W3.16)
             var entityTypes = db.Model.GetEntityTypes().ToList();
-            Assert.Equal(14, entityTypes.Count);
+            Assert.Equal(15, entityTypes.Count);
         }
     }
 
@@ -45,7 +45,7 @@ public class DbContextSchemaTests : DataLayerTestBase
         var expectedDbSets = new[]
         {
             "ApiKeys", "Settings", "Artifacts", "ChatThreads", "MediaItems",
-            "Messages", "MessageDrafts", "ModelConfigurations", "Personas",
+            "Messages", "MessageDrafts", "MemoryEntries", "ModelConfigurations", "Personas",
             "PromptTemplates", "TextActions", "UsageRecords",
             "WikiFiles", "WikiVersionSnapshots"
         };
@@ -57,7 +57,7 @@ public class DbContextSchemaTests : DataLayerTestBase
             .Select(p => p.Name)
             .ToHashSet();
 
-        Assert.Equal(14, dbSetProperties.Count);
+        Assert.Equal(15, dbSetProperties.Count);
 
         foreach (var expected in expectedDbSets)
         {
@@ -155,11 +155,15 @@ public class DbContextSchemaTests : DataLayerTestBase
             Assert.Equal(DeleteBehavior.Cascade,
                 GetDeleteBehavior(typeof(WikiVersionSnapshot), nameof(WikiVersionSnapshot.WikiFilePath)));
 
+            // MemoryEntry → ChatThread: SetNull
+            Assert.Equal(DeleteBehavior.SetNull,
+                GetDeleteBehavior(typeof(MemoryEntryEntity), nameof(MemoryEntryEntity.SourceThreadId)));
+
             // Verify total FK count across all entities
             var totalFks = model.GetEntityTypes()
                 .SelectMany(e => e.GetForeignKeys())
                 .Count();
-            Assert.Equal(17, totalFks);
+            Assert.Equal(18, totalFks);
         }
     }
 
@@ -200,6 +204,17 @@ public class DbContextSchemaTests : DataLayerTestBase
             var isDeletedIndex = chatThreadEntity.GetIndexes()
                 .Any(i => i.Properties.Any(p => p.Name == nameof(ChatThread.IsDeleted)));
             Assert.True(isDeletedIndex, "Expected index on ChatThread.IsDeleted");
+
+            // MemoryEntry indexes
+            var memoryEntryEntity = model.FindEntityType(typeof(MemoryEntryEntity))!;
+
+            var keyIndex = memoryEntryEntity.GetIndexes()
+                .Any(i => i.Properties.Any(p => p.Name == nameof(MemoryEntryEntity.Key)));
+            Assert.True(keyIndex, "Expected index on MemoryEntryEntity.Key");
+
+            var memoryCreatedAtIndex = memoryEntryEntity.GetIndexes()
+                .Any(i => i.Properties.Any(p => p.Name == nameof(MemoryEntryEntity.CreatedAt)));
+            Assert.True(memoryCreatedAtIndex, "Expected index on MemoryEntryEntity.CreatedAt");
         }
     }
 
@@ -350,6 +365,7 @@ public class DbContextSchemaTests : DataLayerTestBase
             Assert.Contains("UsageRecords", tables);
             Assert.Contains("WikiFiles", tables);
             Assert.Contains("WikiVersionSnapshots", tables);
+            Assert.Contains("MemoryEntries", tables);
             Assert.Contains("MessageFts", tables);
             Assert.Contains("WikiFileFts", tables);
         }
@@ -686,6 +702,23 @@ public class DbContextSchemaTests : DataLayerTestBase
         {
             using var cmd = connection.CreateCommand();
             cmd.CommandText = "SELECT COUNT(*) FROM __EFMigrationsHistory WHERE MigrationId = '20260618101823_InitialCreate'";
+            var count = (long)cmd.ExecuteScalar()!;
+            Assert.Equal(1, count);
+        }
+    }
+
+    /// <summary>
+    /// Verifies that the migration history table contains the AddMemoryEntry entry.
+    /// </summary>
+    [Fact]
+    public void Migration_HistoryTable_HasAddMemoryEntry()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM __EFMigrationsHistory WHERE MigrationId LIKE '%AddMemoryEntry'";
             var count = (long)cmd.ExecuteScalar()!;
             Assert.Equal(1, count);
         }

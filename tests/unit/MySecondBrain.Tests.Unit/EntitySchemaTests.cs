@@ -35,6 +35,7 @@ public class EntitySchemaTests : DataLayerTestBase
             [typeof(WikiVersionSnapshot)] = 5,   // Id, WikiFilePath, Content, Source, CreatedAt
             [typeof(MessageDrafts)] = 4,         // ThreadId, Content, CursorPosition, SavedAt
             [typeof(AppSetting)] = 4,            // Key, Value, ValueType, UpdatedAt
+            [typeof(MemoryEntryEntity)] = 6,     // Id, Key, Value, SourceThreadId?, CreatedAt, UpdatedAt
         };
 
         foreach (var (entityType, expectedCount) in expectations)
@@ -64,7 +65,8 @@ public class EntitySchemaTests : DataLayerTestBase
             typeof(Message), typeof(ModelConfiguration), typeof(Persona),
             typeof(PromptTemplate), typeof(TextAction), typeof(UsageRecord),
             typeof(WikiFile), typeof(WikiVersionSnapshot),
-            typeof(MessageDrafts), typeof(AppSetting)
+            typeof(MessageDrafts), typeof(AppSetting),
+            typeof(MemoryEntryEntity)
         };
 
         foreach (var entityType in entitiesWithStringPk)
@@ -171,6 +173,14 @@ public class EntitySchemaTests : DataLayerTestBase
         Assert.Equal("selection", textAction.CaptureScope);
         Assert.Equal("replaceSelection", textAction.ApplyMode);
         Assert.Equal(string.Empty, textAction.SystemPrompt);
+
+        var memoryEntry = new MemoryEntryEntity();
+        Assert.NotEmpty(memoryEntry.Id);
+        Assert.Equal(string.Empty, memoryEntry.Key);
+        Assert.Equal(string.Empty, memoryEntry.Value);
+        Assert.Null(memoryEntry.SourceThreadId);
+        Assert.True(memoryEntry.CreatedAt <= DateTimeOffset.UtcNow);
+        Assert.True(memoryEntry.UpdatedAt <= DateTimeOffset.UtcNow);
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -358,6 +368,150 @@ public class EntitySchemaTests : DataLayerTestBase
         Assert.Null(entry.SourceThreadId);
         Assert.True(entry.CreatedAt <= DateTimeOffset.UtcNow);
         Assert.True(entry.UpdatedAt <= DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>
+    /// Validates MemoryEntryEntity CRUD operations via the DbContext.
+    /// </summary>
+    [Fact]
+    public async Task MemoryEntryEntity_Crud_WithInMemoryDb()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            // Create a ChatThread to satisfy the optional FK
+            var thread = new ChatThread
+            {
+                Id = "test-thread-for-memory",
+                Title = "Memory Test Thread"
+            };
+            db.ChatThreads.Add(thread);
+            await db.SaveChangesAsync();
+
+            // Create
+            var entry = new MemoryEntryEntity
+            {
+                Key = "user-name",
+                Value = "Alice",
+                SourceThreadId = thread.Id
+            };
+            db.MemoryEntries.Add(entry);
+            await db.SaveChangesAsync();
+            Assert.NotEmpty(entry.Id);
+
+            // Read
+            var retrieved = await db.MemoryEntries.FindAsync(entry.Id);
+            Assert.NotNull(retrieved);
+            Assert.Equal("user-name", retrieved!.Key);
+            Assert.Equal("Alice", retrieved.Value);
+            Assert.Equal(thread.Id, retrieved.SourceThreadId);
+
+            // Update
+            retrieved.Value = "Bob";
+            retrieved.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync();
+
+            var updated = await db.MemoryEntries.FindAsync(entry.Id);
+            Assert.NotNull(updated);
+            Assert.Equal("Bob", updated!.Value);
+
+            // Delete
+            db.MemoryEntries.Remove(updated);
+            await db.SaveChangesAsync();
+
+            var deleted = await db.MemoryEntries.FindAsync(entry.Id);
+            Assert.Null(deleted);
+        }
+    }
+
+    /// <summary>
+    /// Validates that MemoryEntry can be retrieved by its indexed Key column.
+    /// </summary>
+    [Fact]
+    public async Task MemoryEntryEntity_CanBeRetrievedByKey()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var entry = new MemoryEntryEntity
+            {
+                Key = "user-email",
+                Value = "alice@example.com"
+            };
+            db.MemoryEntries.Add(entry);
+            await db.SaveChangesAsync();
+
+            var retrieved = db.MemoryEntries.Single(e => e.Key == "user-email");
+            Assert.NotNull(retrieved);
+            Assert.Equal("alice@example.com", retrieved.Value);
+        }
+    }
+
+    /// <summary>
+    /// Validates that deleting a ChatThread nullifies SourceThreadId
+    /// (SetNull delete behavior) rather than cascading deletion.
+    /// </summary>
+    [Fact]
+    public async Task MemoryEntryEntity_DeletingSourceThread_SetsSourceThreadIdNull()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var thread = new ChatThread
+            {
+                Id = "thread-to-delete",
+                Title = "Delete Test Thread"
+            };
+            db.ChatThreads.Add(thread);
+            await db.SaveChangesAsync();
+
+            var entry = new MemoryEntryEntity
+            {
+                Key = "delete-test",
+                Value = "test-value",
+                SourceThreadId = thread.Id
+            };
+            db.MemoryEntries.Add(entry);
+            await db.SaveChangesAsync();
+
+            // Delete the ChatThread — MemoryEntry should survive with null SourceThreadId
+            db.ChatThreads.Remove(thread);
+            await db.SaveChangesAsync();
+
+            var retrieved = await db.MemoryEntries.FindAsync(entry.Id);
+            Assert.NotNull(retrieved);
+            Assert.Null(retrieved!.SourceThreadId);
+            Assert.Equal("test-value", retrieved.Value);
+        }
+    }
+
+    /// <summary>
+    /// Validates that MemoryEntryEntity without a SourceThreadId can be persisted.
+    /// </summary>
+    [Fact]
+    public async Task MemoryEntryEntity_CanBeOrphaned()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var entry = new MemoryEntryEntity
+            {
+                Key = "standalone-key",
+                Value = "standalone-value"
+            };
+            db.MemoryEntries.Add(entry);
+            await db.SaveChangesAsync();
+
+            var retrieved = await db.MemoryEntries.FindAsync(entry.Id);
+            Assert.NotNull(retrieved);
+            Assert.Null(retrieved!.SourceThreadId);
+            Assert.Equal("standalone-key", retrieved.Key);
+            Assert.Equal("standalone-value", retrieved.Value);
+        }
     }
 
     // ════════════════════════════════════════════════════════════════

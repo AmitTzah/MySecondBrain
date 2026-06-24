@@ -160,9 +160,11 @@ public class MemoryEntry
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
-    /// <summary>Maximum length for the Key property (200 characters).</summary>
+    /// <summary>Maximum length for the Key property (200 characters).
+    /// MUST be kept in sync with MemoryEntryEntityConsts.KeyMaxLength in the Data project.</summary>
     public const int KeyMaxLength = 200;
 
-    /// <summary>Maximum length for the Value property (10,240 characters, ~10KB for ASCII content).</summary>
+    /// <summary>Maximum length for the Value property (10,240 characters, ~10KB for ASCII content).
+    /// MUST be kept in sync with MemoryEntryEntityConsts.ValueMaxLength in the Data project.</summary>
     public const int ValueMaxLength = 10240;
 }

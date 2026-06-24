@@ -106,4 +106,6 @@ public class ChatThread
     public ICollection<MediaItem> MediaItems { get; set; } = new List<MediaItem>();
 
     public ICollection<UsageRecord> UsageRecords { get; set; } = new List<UsageRecord>();
+
+    public ICollection<MemoryEntryEntity> MemoryEntries { get; set; } = new List<MemoryEntryEntity>();
 }
