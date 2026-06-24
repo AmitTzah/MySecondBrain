@@ -318,24 +318,24 @@ public record ImportValidationResult(bool IsValid, string? ErrorMessage, int Est
 ## 7. Tool Executor
 
 ### `IToolExecutor`
-Abstraction for individual tool execution within the Tool Use Orchestrator. Each tool type has its own executor implementation.
+Abstraction for individual tool execution within the Tool Use Orchestrator. Each tool type has its own executor implementation. Tools match Anthropic's trained-in schemas where applicable — the model has been optimized on thousands of trajectories using these exact signatures.
 
 ```csharp
 public interface IToolExecutor
 {
-    string ToolName { get; }                                          // "web_search", "terminal", "file_generate", "file_edit", "wiki_search"
-    bool RequiresUserConfirmation { get; }                            // Terminal: always true; others: configurable
-    ToolRiskLevel RiskLevel { get; }                                  // Low, Medium, High
-    bool CanAutoApprove { get; }                                      // False for terminal (H2 override)
+   string ToolName { get; }                                          // "bash", "text_editor", "web_search", "web_fetch", "wiki_search", "memory", "skill_load", "ask_user_input"
+   bool RequiresUserConfirmation { get; }                            // bash: true for writes outside workspace; text_editor: true for delete; others: false
+   ToolRiskLevel RiskLevel { get; }                                  // Low, Medium, High
+   bool CanAutoApprove { get; }                                      // False for bash writes and text_editor deletes
 
-    // Validate tool parameters before execution
-    Task<ToolValidationResult> ValidateAsync(ToolCall toolCall, CancellationToken ct);
+   // Validate tool parameters before execution
+   Task<ToolValidationResult> ValidateAsync(ToolCall toolCall, CancellationToken ct);
 
-    // Execute the tool
-    Task<ToolResult> ExecuteAsync(ToolCall toolCall, CancellationToken ct);
+   // Execute the tool
+   Task<ToolResult> ExecuteAsync(ToolCall toolCall, CancellationToken ct);
 
-    // Get a user-facing description of what will happen (for confirmation dialog)
-    string GetConfirmationDescription(ToolCall toolCall);
+   // Get a user-facing description of what will happen (for confirmation dialog)
+   string GetConfirmationDescription(ToolCall toolCall);
 }
 
 public record ToolValidationResult(bool IsValid, string? ErrorMessage, ToolRiskLevel AssessedRisk);
@@ -343,17 +343,33 @@ public record ToolResult(bool Success, string Content, string? ErrorMessage);
 public enum ToolRiskLevel { Low, Medium, High }
 ```
 
-**Concrete implementations:**
+### Anthropic-matched tools (trained-in schemas)
+
+| Implementation | Tool | Anthropic Schema | Execution Mechanism | Risk |
+|---------------|------|-----------------|---------------------|------|
+| `BashToolExecutor` | `bash` | `bash_20250124` | `cmd.exe` with bash.exe/WSL fallback; workspace-isolated | Medium (explicit permission for writes) |
+| `TextEditorToolExecutor` | `text_editor` | `text_editor_20250728` | `System.IO` for create/view; DiffPlex for diffs; commands: view/create/str_replace/insert | Low-Medium (explicit for delete) |
+| `WebSearchToolExecutor` | `web_search` | `web_search_*` (client-reimplemented) | Google Custom Search / Bing API via `ISearchProvider` | Low |
+| `WebFetchToolExecutor` | `web_fetch` | `web_fetch_*` (client-reimplemented) | `HttpClient` GET request, returns page content | Low (read-only) |
+| `MemoryToolExecutor` | `memory` | `memory_20250818` | SQLite-backed memory store (separate from wiki) | Low |
+
+### Custom tools (no Anthropic equivalent)
 
 | Implementation | Tool | Execution Mechanism | Risk |
 |---------------|------|---------------------|------|
-| `WebSearchToolExecutor` | `web_search` | Google/Bing API via `ISearchProvider` | Low |
-| `TerminalToolExecutor` | `terminal` | `System.Diagnostics.Process` | High (always requires confirmation) |
-| `FileGenerateToolExecutor` | `file_generate` | `System.IO.File.WriteAllText` + save dialog | Low-Medium |
-| `FileEditToolExecutor` | `file_edit` | `System.IO` + DiffPlex diff preview | Low-Medium |
 | `WikiSearchToolExecutor` | `wiki_search` | Local SQLite FTS5 query | Low (read-only) |
+| `SkillLoadToolExecutor` | `skill_load` | Reads SKILL.md from embedded resources or user directory; returns structured wrapped content | Low |
+| `AskUserInputToolExecutor` | `ask_user_input` | Shows native WPF dialog with structured options; returns user selection | Low |
 
-**Ref:** [tech-sourcing #16-19](../tech-sourcing.md#16-web-search-integration-tool-use-h1)
+**Key design decisions:**
+- Matching Anthropic's schemas means models (Claude, GPT-4, Gemini) already know how to use these tools from training
+- `bash` replaces the original `terminal` executor; `text_editor` merges `file_generate` + `file_edit`
+- `web_search` and `web_fetch` are server tools in Anthropic's ecosystem, reimplemented as client tools with identical interfaces
+- `memory` wraps a SQLite store (not the flat-file `_memory.md` from the original N12 spec)
+- `skill_load` is the skill activation mechanism per the Agent Skills standard
+- `ask_user_input` replaces prose-based confirmations with structured WPF dialogs (pattern from claude.ai consumer)
+
+**Ref:** [tech-sourcing #38](../tech-sourcing.md#38-anthropic-tool-schema-adoption), [skills-integration.md](skills-integration.md#5-tool-surface-8-tools)
 
 ---
 
@@ -379,6 +395,92 @@ public interface IToolOrchestrator
     ToolAutoApprovalSettings GetAutoApprovalSettings();
 }
 ```
+
+---
+
+### `ISkillService`
+Central service for skill discovery, loading, and lifecycle management. Implements the Agent Skills open standard.
+
+```csharp
+public interface ISkillService
+{
+    // Discovery — scans all configured locations at startup
+    Task<IReadOnlyList<SkillMetadata>> DiscoverAsync(CancellationToken ct);
+
+    // Get metadata for the skill catalog (system prompt)
+    IReadOnlyList<SkillMetadata> GetCatalog();
+
+    // Load full skill content (tier 2 activation)
+    Task<SkillContent> LoadAsync(string skillName, CancellationToken ct);
+
+    // List bundled resources for a skill (scripts, references, assets)
+    Task<IReadOnlyList<string>> ListResourcesAsync(string skillName, CancellationToken ct);
+
+    // Check if a skill has been activated in this session
+    bool IsActivated(string skillName);
+
+    // Mark a skill as activated (for deduplication)
+    void MarkActivated(string skillName);
+
+    // Reset activation tracking (new chat session)
+    void ResetActivationTracking();
+
+    // Get skill dependency requirements
+    SkillDependencies? GetDependencies(string skillName);
+}
+
+public record SkillMetadata(
+    string Name,
+    string Description,
+    string Source,          // "built-in", "user", "cross-client"
+    string Location         // Path to SKILL.md
+);
+
+public record SkillContent(
+    string Name,
+    string Body,            // SKILL.md body (frontmatter stripped)
+    IReadOnlyList<string> Resources  // Bundled scripts, references, assets
+);
+
+public record SkillDependencies(
+    IReadOnlyList<string> Tools,        // e.g., ["bash", "text_editor"]
+    IReadOnlyList<string> Packages,     // e.g., ["python", "openpyxl"]
+    IReadOnlyList<string> System        // e.g., ["libreoffice"]
+);
+```
+
+**Implementation:** `AgentSkillService` — scans embedded resources + `%LOCALAPPDATA%/MySecondBrain/skills/` + `~/.agents/skills/` + `~/.claude/skills/`. Parses YAML frontmatter. Returns structured wrapped content on activation. Tracks activation state per session.
+
+**Ref:** [skills-integration.md](skills-integration.md#4-skill-activation-skill_load-tool)
+
+---
+
+### `ISkillLoader`
+Handles the `skill_load` tool invocation. Wraps skill content in structured XML tags for context management.
+
+```csharp
+public interface ISkillLoader
+{
+    // Load a skill and return structured wrapped content
+    Task<SkillActivationResult> ActivateSkillAsync(string skillName, CancellationToken ct);
+
+    // Get the skill_load tool schema for the API tools array
+    ToolDefinition GetToolDefinition(IReadOnlyList<string> enabledSkillNames);
+
+    // Check if a skill name is valid
+    bool IsValidSkill(string skillName);
+}
+
+public record SkillActivationResult(
+    bool Success,
+    string? Content,        // Structured wrapped XML content, or null if already activated
+    string? ErrorMessage    // Null on success
+);
+```
+
+**Implementation:** `StructuredSkillLoader` — reads SKILL.md via `ISkillService`, strips YAML frontmatter, wraps body in `<skill_content name="xlsx">...</skill_content>` tags with `<skill_resources>` listing. Returns `SkillActivationResult` with deduplication check.
+
+**Ref:** [skills-integration.md](skills-integration.md#4-skill-activation-skill_load-tool)
 
 ---
 
@@ -1266,13 +1368,25 @@ UI Layer (Tier1Overlay, Tier2CommandBar, MainWindow)
     │       └── IWikiGitService → LibGit2Sharp
     │
     ├── IToolOrchestrator
-    │       ├── IToolExecutor × 5
-    │       │       ├── ISearchProvider (web_search)
-    │       │       └── System.Diagnostics.Process (terminal)
+    │       ├── IToolExecutor × 8
+    │       │       ├── BashToolExecutor (bash) → cmd.exe / bash.exe / WSL
+    │       │       ├── TextEditorToolExecutor (text_editor) → System.IO + DiffPlex
+    │       │       ├── WebSearchToolExecutor (web_search) → ISearchProvider
+    │       │       ├── WebFetchToolExecutor (web_fetch) → HttpClient
+    │       │       ├── MemoryToolExecutor (memory) → SQLite memory store
+    │       │       ├── WikiSearchToolExecutor (wiki_search) → SQLite FTS5
+    │       │       ├── SkillLoadToolExecutor (skill_load) → ISkillService
+    │       │       └── AskUserInputToolExecutor (ask_user_input) → WPF dialog
     │       └── ISearchProvider
     │
+    ├── ISkillService
+    │       └── Embedded resources + %LOCALAPPDATA% + ~/.agents/skills/
+    │
+    ├── ISkillLoader
+    │       └── ISkillService (reads SKILL.md, wraps in <skill_content>)
+    │
     ├── IThemeProvider
-    ├── IContentRendererRegistry → IContentBlockRenderer × 8
+    ├── IContentRendererRegistry → IContentBlockRenderer × 7 (ArtifactReferenceRenderer → WebView2 host)
     ├── ISTTProvider
     ├── IBackupProvider
     ├── IUpdateChecker
@@ -1300,4 +1414,4 @@ UI Layer (Tier1Overlay, Tier2CommandBar, MainWindow)
 
 ---
 
-*Abstractions document — Batch 1 of planning/ directory. See also: [`architecture.md`](architecture.md), [`tech-stack.md`](tech-stack.md).*
+*Abstractions document — updated 2026-06-24. Tool surface simplified from 5 custom executors to 8 tools (5 matching Anthropic schemas + 3 custom). Added ISkillService and ISkillLoader for Agent Skills integration. Artifacts rendering shifted from 8 WPF renderers to hybrid WPF chat + WebView2 artifacts panel. See also: [`architecture.md`](architecture.md), [`tech-stack.md`](tech-stack.md), [`skills-integration.md`](skills-integration.md).*

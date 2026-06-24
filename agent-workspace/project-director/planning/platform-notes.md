@@ -655,4 +655,97 @@ WPF `MessageBox.Show()` creates a separate top-level window. Use `_fixture.Autom
 
 ---
 
-*Platform notes document — Batch 2 of planning/ directory. See also: [`architecture.md`](architecture.md), [`tech-stack.md`](tech-stack.md).*
+## 4. Agent Skills Platform Adaptation
+
+### bash Tool on Windows
+
+The `bash` tool is named to match Anthropic's `bash_20250124` trained-in schema but executes via Windows shells:
+
+```
+bash tool receives command
+    │
+    ├── Is it a .sh script?
+    │   ├── Try: "C:\Program Files\Git\bin\bash.exe" script.sh
+    │   ├── Try: wsl bash -c "script.sh"
+    │   └── Neither? → Error: "bash or WSL required for .sh scripts"
+    │
+    ├── Contains heredoc (cat > file << 'EOF')?
+    │   └── Redirect: write file via text_editor tool instead
+    │
+    └── Everything else → cmd.exe /c "command"
+         (python, pip, npm, pandoc — cross-platform, no translation needed)
+```
+
+**Bash detection at startup:**
+- Check `C:\Program Files\Git\bin\bash.exe` (Git for Windows)
+- Check `wsl --status` (Windows Subsystem for Linux)
+- Store availability in tool description for model awareness
+- If neither available: model adapts — uses text_editor for file writes, skips .sh scripts
+
+**Shared scripts between skills:** The `scripts/office/` directory is identical in both docx and xlsx skills. At runtime, the skill loader copies bundled scripts to the workspace so both skills can reference them.
+
+### Workspace Isolation
+
+All `bash` commands execute in `%LOCALAPPDATA%/MySecondBrain/workspace/`:
+
+- Working directory set to workspace path via `Process.StartInfo.WorkingDirectory`
+- Absolute paths outside workspace detected and blocked pre-execution (scan for `C:\`, `%`, `~`)
+- Wiki directory symlinked read-only into workspace for reference
+- Wiki writes blocked from bash; must go through `text_editor` + Write-to-Wiki pipeline
+- Workspace cleaned up periodically (files older than 24h removed on app startup)
+
+### WebView2 for Artifacts Panel
+
+The artifacts panel uses an embedded Microsoft Edge WebView2 control:
+
+- **Integration:** `Microsoft.Web.WebView2.Wpf` NuGet package
+- **Runtime:** Edge WebView2 Runtime (pre-installed on Windows 11, auto-installed on Windows 10 via app installer)
+- **Theme bridge:** WPF theme changes (dark/light) injected into WebView2 via `CoreWebView2.ExecuteScriptAsync()` to toggle CSS classes
+- **File access:** Artifacts loaded via `file:///` URLs pointing to the artifacts directory
+- **Security:** WebView2 runs in isolated context. No access to app filesystem beyond artifacts directory.
+- **DPI:** WebView2 respects WPF's PerMonitorV2 DPI awareness. Test at 100%, 125%, 150%, 200% scaling.
+
+### Skill Discovery on Windows
+
+Skills are discovered from four locations on Windows:
+
+| Location | Path | Purpose |
+|----------|------|---------|
+| Built-in | Embedded resources in `MySecondBrain.UI.dll` | 11 Anthropic skills, updated with app |
+| User | `%LOCALAPPDATA%/MySecondBrain/skills/` | User-created or downloaded |
+| Cross-client (agents) | `%USERPROFILE%/.agents/skills/` | From Claude Code, Cursor, etc. |
+| Cross-client (claude) | `%USERPROFILE%/.claude/skills/` | Pragmatic Claude Code compatibility |
+
+The skill loader scans each directory for subdirectories containing `SKILL.md`. Built-in skills are read from embedded resources via `Assembly.GetManifestResourceStream()`.
+
+### Embedded Resource Configuration
+
+Skills in `src/MySecondBrain.UI/Skills/anthropic/` must be marked as embedded resources in the `.csproj`:
+
+```xml
+<ItemGroup>
+  <EmbeddedResource Include="Skills\anthropic\**\*" />
+</ItemGroup>
+```
+
+At runtime, the skill loader accesses them via:
+```csharp
+var assembly = Assembly.GetExecutingAssembly();
+var resourceName = $"MySecondBrain.UI.Skills.anthropic.xlsx.SKILL.md";
+using var stream = assembly.GetManifestResourceStream(resourceName);
+```
+
+### System Prompt Construction on Windows
+
+The system prompt includes platform context for the model:
+```
+You are running on Windows. Shell commands use Command Prompt (cmd.exe).
+- python, pip, npm work as expected
+- .sh scripts require Git Bash or WSL
+- File paths use backslashes: C:\Users\...
+- The workspace is at %WORKSPACE%
+```
+
+---
+
+*Platform notes updated 2026-06-24. Added bash-on-Windows adaptation, workspace isolation, WebView2 artifacts panel integration, skill discovery paths, and embedded resource configuration.*

@@ -637,9 +637,74 @@ Every component above is analyzed in detail in the sections below, including alt
 
 ---
 
+### 37. Agent Skills Integration — Architectural Pattern
+
+- **Vision Requirement:** Extensible domain-specific capabilities (document creation, creative work, testing) without per-capability custom tool implementations.
+- **Sourcing Recommendation:** Open Standard adoption.
+- **Recommended Approach:** Adopt the [Agent Skills](https://agentskills.io) open standard — the same pattern used by Claude Code, Cursor, and other AI tools. Skills are Markdown instruction files (`SKILL.md`) with YAML frontmatter that encode domain-specific procedural knowledge. The model reads instructions and uses existing tools (`bash`, `text_editor`, `web_search`) to produce output. Progressive disclosure: catalog (name + description) in system prompt → full body loaded on demand via `skill_load` tool → bundled scripts/references loaded as needed.
+- **Rationale:** Skills are the standard pattern for extending AI agent capabilities. Anthropic publishes 17 production-grade skills (11 useful for MySecondBrain). Community repositories (alirezarezvani/claude-skills) provide 345+ additional skills. The open standard means skills are portable across tools. The progressive disclosure model keeps base context small (~80 tokens per skill) while providing deep domain knowledge on demand. Skills replace the need for custom `IToolExecutor` implementations for document generation and creative work.
+- **Alternatives Considered:**
+  - **Custom tool executors for each capability:** Would require building ExcelGeneratorToolExecutor, DocxGeneratorToolExecutor, etc. Massive development effort for capabilities that skills provide for free. Rejected.
+  - **LangChain/Semantic Kernel agent frameworks:** Python/web-focused, add framework complexity. The vision's agent needs are bounded. Rejected for initial implementation.
+  - **MCP (Model Context Protocol) integration:** Would externalize tool execution to separate servers. Adds process management complexity. Not used by any Anthropic skill. Deferred for future evaluation.
+- **Tradeoffs:** Gain: 11 production-grade skills with zero custom tool code, community ecosystem, user extensibility via skill-creator. Lose: Skills require system dependencies (Python, Node.js, LibreOffice) installed on the user's machine — these are not bundled.
+- **Risk Level:** Low. The Agent Skills standard is stable and adopted by multiple tools. Anthropic's skills are production-tested (power Claude.ai and Claude Code). Community ecosystem is active.
+
+---
+
+### 38. Anthropic Tool Schema Adoption
+
+- **Vision Requirement:** Tool surface that supports all 11 built-in skills and the agentic loop.
+- **Sourcing Recommendation:** Open Standard adoption.
+- **Recommended Approach:** Match Anthropic's trained-in tool schemas for core tools. The model has been optimized on thousands of trajectories using these exact signatures. Tools:
+  - `bash_20250124` — Client-executed shell commands (replaces custom `terminal` executor). Workspace-isolated on Windows via cmd.exe with bash.exe/WSL fallback for .sh scripts.
+  - `text_editor_20250728` — Client-executed file operations (replaces custom `file_generate` + `file_edit` executors). Commands: view, create, str_replace, insert.
+  - `web_search_*` — Server schema, client-reimplemented via `ISearchProvider` (Google Custom Search / Bing API). Model uses same `tool_use` format; we execute locally.
+  - `web_fetch_*` — Server schema, client-reimplemented via HttpClient. Fetches full page content for Deep Research.
+  - `memory_20250818` — Client schema, wraps SQLite-backed memory store (replaces flat-file `_memory.md`).
+  - `wiki_search` — Custom tool (no Anthropic equivalent). Queries local SQLite FTS5 wiki index.
+  - `skill_load` — Custom tool for skill activation per Agent Skills standard.
+  - `ask_user_input` — Custom tool for structured user confirmations (from claude.ai consumer pattern).
+- **Rationale:** From Anthropic's documentation: "These schemas are trained-in. Claude has been optimized on thousands of successful trajectories that use these exact tool signatures, so it calls them more reliably and recovers from errors more gracefully than it would with a custom tool that does the same thing." Matching schemas means skills work without modification and the model already knows how to use each tool.
+- **Alternatives Considered:**
+  - **Keep custom tool names (terminal, file_generate, etc.):** Would require rewriting skill instructions. Model not optimized for custom names. Rejected.
+  - **Implement all Anthropic tools (code_execution, computer_use, mcp_toolset):** Unnecessary for skills. code_execution is server-side sandbox (replaced by workspace-isolated bash). Rejected.
+- **Tradeoffs:** Gain: Trained-in schemas = more reliable tool calls. Skills work verbatim. Lose: Tool names are Anthropic-specific — if Anthropic deprecated a schema, we'd need to update. Minor risk.
+- **Risk Level:** Low. Anthropic's client-tool schemas are GA (bash_20250124, text_editor_20250728, memory_20250818). Server-tool schemas reimplemented as client tools with identical interfaces.
+
+---
+
+### 39. WebView2 for Artifacts Panel
+
+- **Vision Requirement:** Render AI-generated artifacts (code, documents, dashboards) with syntax highlighting, markdown, and interactive content. Support version history with diff views.
+- **Sourcing Recommendation:** Platform feature (WebView2) + Open Standard (Agent Skills).
+- **Recommended Approach:** Use Microsoft Edge WebView2 control embedded in the WPF artifacts panel. The `web-artifacts-builder` skill produces bundled HTML files (React + Tailwind + shadcn/ui). WebView2 renders them natively. Browser-native libraries provide syntax highlighting (highlight.js, 200+ languages), markdown rendering (marked.js), and diff views (diff2html) with zero custom WPF rendering code. Dark/light theme injection via JavaScript bridge.
+- **Rationale:** The original plan required 8 custom `IContentBlockRenderer` WPF implementations (~2600 lines) for syntax highlighting, markdown, diff views, and version history UI. WebView2 reduces this to a ~150-line host control. The `web-artifacts-builder` skill provides the artifact creation pipeline (init, build, bundle). WebView2 is the same Chromium engine used by VS Code for its editor surface — a proven pattern for desktop apps.
+- **Alternatives Considered:**
+  - **WPF-native rendering (original plan):** Full control, native feel, but ~2600 lines of complex rendering code. AvalonEdit covers ~100 languages vs. highlight.js covering 200+. Custom WPF diff viewer is significant effort. Rejected for artifacts panel specifically.
+  - **Full app in WebView2:** Would lose WPF-native text rendering (ClearType), RTL support (FlowDocument BiDi), and streaming performance. Rejected for primary chat UI.
+- **Tradeoffs:** Gain: Browser-native rendering (syntax highlighting, markdown, diff views, interactive React artifacts). ~2500 lines saved. web-artifacts-builder skill works directly. Lose: +100MB install size (Edge WebView2 runtime). Browser-native scrolling/text selection feel (not WPF-native). The tradeoff is accepted because the artifacts panel is a secondary viewing area, not the primary chat interface.
+- **Risk Level:** Medium. WebView2 adds install size and has DPI scaling considerations. Mitigated by restricting to the artifacts panel only — the primary chat UI remains WPF-native.
+
+---
+
+### 40. Deep Research — Skill-Based Implementation
+
+- **Vision Requirement:** Autonomous multi-step research: plan → multiple web searches → read sources → synthesize → cited report. Real-time progress display.
+- **Sourcing Recommendation:** Custom Build (skill file) on existing tool infrastructure.
+- **Recommended Approach:** Implement Deep Research as a skill file rather than a custom state machine. The skill contains the research protocol (plan → search → fetch → read → synthesize → report). The model follows the protocol using `web_search`, `web_fetch`, and `bash` tools. Progress is reported via system messages. This replaces the originally planned custom state machine (#19) with a simpler, skill-based approach.
+- **Rationale:** The tool surface already provides everything needed for research (web_search finds sources, web_fetch reads them, bash processes data). The skill provides the protocol. A custom state machine would duplicate what the model can already do via tool-use orchestration. The skill approach is consistent with the rest of the architecture.
+- **Alternatives Considered:**
+  - **Custom state machine (original plan #19):** More control over the loop, but duplicates model capabilities. Rejected in favor of skill-based approach.
+  - **LangChain/LangGraph agent loop:** Python frameworks, wrong platform. Rejected.
+- **Tradeoffs:** Gain: Consistent with skills architecture. Less custom code. Model drives the loop autonomously. Lose: Less explicit control over each research phase. Depends on model's ability to follow the protocol.
+- **Risk Level:** Medium. Depends on model adherence to the research protocol. Prompt engineering is the key mitigation. Downgraded from original Medium-High because the skill approach has been validated by Claude Code's usage patterns.
+
+---
+
 ## Reference Implementation Analyses
 
-The following reference implementations were studied for specific components. Detailed analyses are saved to `agent-workspace/external-docs/`.
+ The following reference implementations were studied for specific components. Detailed analyses are saved to `agent-workspace/external-docs/`.
 
 | Reference | Studied For | File |
 |-----------|-------------|------|
@@ -674,7 +739,7 @@ The following reference implementations were studied for specific components. De
 | 16 | Web Search Integration | SaaS | Google Custom Search API or Bing API | Low |
 | 17 | Terminal / Shell Execution | Custom (.NET) | System.Diagnostics.Process | High |
 | 18 | File Generation & Editing | Custom (.NET) | System.IO + diff preview | Low |
-| 19 | Deep Research Orchestration | Custom | Tool-use conversation loop | Medium |
+| 19 | Deep Research Orchestration | Custom | ~~Tool-use conversation loop~~ → Replaced by #40 (Skill-Based) | ~~Medium~~ |
 | 20 | PDF Export | Open-Source | QuestPDF (preferred) or wkhtmltopdf | Low-Med |
 | 21 | Speech-to-Text (STT) | SaaS + Open-Source | OpenAI Whisper API + Whisper.net | Low |
 | 22 | Audio Recording & Playback | Open-Source | NAudio | Low |
@@ -692,26 +757,31 @@ The following reference implementations were studied for specific components. De
 | 34 | Bidirectional Text (RTL) | Platform (WPF) | FlowDocument BiDi with per-block direction | Medium |
 | 35 | Auto-Save Drafts | Custom | Timer + SQLite draft table | Low |
 | 36 | Per-Monitor DPI Awareness | Platform (WPF) | PerMonitorV2 app.manifest | Low |
+| 37 | Agent Skills Integration | Open Standard | Agent Skills spec + 11 Anthropic skills + community ecosystem | Low |
+| 38 | Anthropic Tool Schema Adoption | Open Standard | bash_20250124, text_editor_20250728, web_search_*, web_fetch_*, memory_20250818 | Low |
+| 39 | WebView2 for Artifacts Panel | Platform (WebView2) | Embedded Edge WebView2 + browser-native rendering libraries | Medium |
+| 40 | Deep Research (Skill-Based) | Custom (Skill File) | Skill file on top of web_search + web_fetch + bash | Medium |
 
 ### Categorical Distribution
 
 | Category | Count | Components |
 |----------|-------|------------|
-| **Custom Build** | 12 | Global Hooks, HWND Injection, Clipboard, System Tray, File Watcher, Wiki Indexing, Deep Research, File I/O, Chat Import, Branching Model, Three-Tier, Theming |
+| **Custom Build** | 12 | Global Hooks, HWND Injection, Clipboard, System Tray, File Watcher, Wiki Indexing, File I/O, Chat Import, Branching Model, Three-Tier, Theming, Deep Research (Skill) |
 | **Open-Source Library** | 13 | SQLite, LLM SDKs, Markdig, SharpToken, DiffPlex, Charts, NAudio, AForge, Hunspell, QuestPDF, AutoUpdate, LibGit2Sharp, PDF |
+| **Open Standard** | 2 | Agent Skills integration, Anthropic tool schemas |
 | **Platform (.NET/WPF)** | 7 | WPF UI, Kestrel, FTS5, Encryption, MediaElement, BiDi, DPI |
+| **Platform (WebView2)** | 1 | WebView2 for artifacts panel |
 | **SaaS / Cloud** | 2 | Web Search API, GCS Backup |
 | **Custom + Open-Source hybrid** | 2 | STT (Whisper API + Whisper.net), Wiki Index (Markdig + Custom) |
 
 ### Risk Concentration
 
-- **High Risk (1):** Terminal Execution
+- **High Risk (0):** None (Terminal Execution downgraded — workspace isolation mitigates risk)
 - **Medium-High Risk (2):** HWND Capture & Text Injection, Three-Tier Interaction Architecture
-- **Medium-High Risk (1):** Three-Tier Interaction Architecture  
-- **Medium Risk (8):** Markdown Rendering, Global Hooks, Git Integration, Deep Research, Branching Model, BiDi Text, GCS Backup, PDF Export
+- **Medium Risk (9):** Markdown Rendering, Global Hooks, Git Integration, Deep Research (Skill), Branching Model, BiDi Text, GCS Backup, PDF Export, WebView2 Artifacts
 - **Low-Medium Risk (4):** LLM Providers, File Watcher, Chat Import, Encryption UX
-- **Low Risk (21):** All other components
+- **Low Risk (23):** All other components
 
 ---
 
-*Technology sourcing completed 2026-06-17. This document should be reviewed and updated when new vision features are added or when selected libraries require version updates.*
+*Technology sourcing updated 2026-06-24. Added Agent Skills integration, Anthropic tool schemas, WebView2 for artifacts, and skill-based Deep Research (replaces component #19). Terminal Execution risk downgraded due to workspace isolation.*

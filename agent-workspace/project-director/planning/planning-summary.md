@@ -6,18 +6,19 @@ This file is the index of the `planning/` directory. It is what the Feature Deve
 
 ---
 
-## Directory Map — All 7 Planning Files
+## Directory Map — All 8 Planning Files
 
 | # | File | Batch | Summary |
 |---|------|-------|---------|
 | 1 | [`tech-stack.md`](tech-stack.md) | 1 | Complete technology stack: 15 OSS libraries, 12 custom builds, 10 platform features, 2 SaaS services. Every runtime dependency with version, sizing, and sourcing rationale. |
 | 2 | [`architecture.md`](architecture.md) | 1 | System design: component diagram (6 groups), data flow (message lifecycle, Tier 1 hotkey flow), architectural patterns (MVVM, Provider/Adapter, Repository, Plugin/Registry), deployment model, cross-cutting concerns. |
-| 3 | [`abstractions.md`](abstractions.md) | 1 | All C# interfaces and contracts: 12 service abstractions (ILLMProvider, ISTTProvider, IBackupProvider, ISearchProvider, ITokenizer, IChatImporter, IToolExecutor, IContentBlockRenderer, IThemeProvider, IUpdateChecker), 8 repository interfaces, 2 service interfaces, 13 platform service interfaces, and a dependency map. |
+| 3 | [`abstractions.md`](abstractions.md) | 1 | All C# interfaces and contracts: 8 tool executors (bash, text_editor, web_search, web_fetch, memory, wiki_search, skill_load, ask_user_input), ISkillService, ISkillLoader, plus LLM/STT/backup/search/tokenizer/importer/renderer/theme/update/platform interfaces. Dependency map updated for skills architecture. |
 | 4 | [`data-model.md`](data-model.md) | 2 | 13 data entities with attributes, relationships, feature-group mapping, ASCII ER diagram, and special modeling notes: message branching (version-chain), transient vs. permanent threads, soft-delete, wiki index tables, usage aggregation, cascading delete rules. |
 | 5 | [`integration-points.md`](integration-points.md) | 2 | 24 integration points: 8 SaaS/cloud (OpenAI, Anthropic, Google Gemini, OpenAI-Compatible, GCS, Web Search, GitHub, Auto-Update) + 16 platform (DPAPI, AES-GCM, Clipboard, FileSystemWatcher, Kestrel, System Tray, Global Hooks, HWND/UIA, SharpToken, STT, Audio, Webcam, Video, SpellCheck, Git, Serilog Destructuring). Each with abstraction, fallback, config. |
 | 6 | [`platform-notes.md`](platform-notes.md) | 2 | WPF-specific implementation guidance: MVVM with CommunityToolkit.Mvvm, XAML DataTemplate patterns (chat messages, wiki browser, code blocks, BiDi), DI lifetimes, three-tier window management (WS_EX_NOACTIVATE, overlay positioning, focus), system tray, global hotkeys (RegisterHotKey), PerMonitorV2 DPI, MSIX packaging, auto-update, and 10 known WPF pitfalls with workarounds. |
-| 7 | **`planning-summary.md`** | 2 | **This file.** Index and quick reference for the entire planning directory. Architecture decision log. |
-| — | [`tech-sourcing.md`](../tech-sourcing.md) | 0 | Upstream: 36 technology sourcing decisions with alternatives analysis and risk levels. The foundation upon which Batch 1 and 2 planning files are built. |
+| 7 | [**`skills-integration.md`**](skills-integration.md) | 3 | **Agent Skills integration**: what skills are, progressive disclosure, 11 built-in Anthropic skills, skill activation via skill_load, 8-tool surface matching Anthropic schemas, agentic loop with skills (full API trace), skill discovery (4 locations), system prompt construction, per-chat controls, platform adaptation, context management, memory tool, community skills. |
+| 8 | **`planning-summary.md`** | 2 | **This file.** Index and quick reference for the entire planning directory. Architecture decision log. |
+| — | [`tech-sourcing.md`](../tech-sourcing.md) | 0 | Upstream: 40 technology sourcing decisions with alternatives analysis and risk levels. Updated with Agent Skills, Anthropic tool schemas, WebView2, and skill-based Deep Research. |
 | — | [**`e2e-authoring-guide.md`**](e2e-authoring-guide.md) | — | **E2E test authoring conventions**: fixture pattern (ICollectionFixture), test database isolation (MSB_DB_PATH), self-cleaning tests (create→verify→delete via 🗑️), no-dead-time rules (3s max timeout, 500ms max sleep), selector strategy (AutomationId > Name > ControlType), helper conventions (E2eTestBase), onboarding wizard testing, MessageBox handling, XAML naming conventions, test class organization. |
 
 ---
@@ -56,6 +57,12 @@ This file is the index of the `planning/` directory. It is what the Feature Deve
 | WebSocket | ASP.NET Core Kestrel | Platform |
 | Backup | Google.Cloud.Storage.V1 | SaaS/OSS |
 | Web Search | Google Custom Search / Bing API | SaaS |
+| Web Fetch | HttpClient | Custom |
+| Agent Skills | Agent Skills open standard + 11 Anthropic skills | Open Standard |
+| Bash Tool | Anthropic bash_20250124 schema, cmd.exe + bash.exe/WSL fallback | Open Standard |
+| Text Editor | Anthropic text_editor_20250728 schema | Open Standard |
+| Artifacts Panel | WebView2 + highlight.js + marked.js + diff2html | Platform |
+| Memory Tool | Anthropic memory_20250818 schema, SQLite-backed | Open Standard |
 
 ### Key Abstractions List
 
