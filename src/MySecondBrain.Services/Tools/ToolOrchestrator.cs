@@ -23,8 +23,18 @@ public class ToolOrchestrator : IToolOrchestrator
         CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<ToolResult>>(Array.Empty<ToolResult>());
 
-    public IReadOnlyList<ToolDefinition> GetAvailableToolDefinitions() =>
-        Array.Empty<ToolDefinition>();
+    public IReadOnlyList<ToolDefinition> GetAvailableToolDefinitions()
+    {
+        var definitions = new List<ToolDefinition>();
+        foreach (var executor in _executors)
+        {
+            definitions.Add(new ToolDefinition(
+                executor.ToolName,
+                executor.Description,
+                executor.ParametersJsonSchema));
+        }
+        return definitions.AsReadOnly();
+    }
 
     public bool IsToolEnabled(string toolName) => false;
 

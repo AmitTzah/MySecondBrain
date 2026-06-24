@@ -48,33 +48,259 @@ public class ToolExecutorTests
     }
 
     [Fact]
-    public async Task BashToolExecutor_ValidateAsync_ReturnsNull()
+    public async Task BashToolExecutor_ValidateAsync_WithValidCommand_ReturnsValid()
+    {
+        var executor = CreateBashExecutor();
+        var toolCall = new ToolCall("test-id", "bash", """{"command":"echo hello"}""");
+        var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task BashToolExecutor_ValidateAsync_MissingCommandField_ReturnsInvalid()
     {
         var executor = CreateBashExecutor();
         var toolCall = CreateToolCall("bash");
         var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.False(result.IsValid);
     }
 
     [Fact]
-    public async Task BashToolExecutor_ExecuteAsync_ReturnsNull()
+    public void BashToolExecutor_GetConfirmationDescription_ReturnsNonEmpty()
     {
         var executor = CreateBashExecutor();
-        var toolCall = CreateToolCall("bash");
-        var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
-
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public void BashToolExecutor_GetConfirmationDescription_ReturnsEmpty()
-    {
-        var executor = CreateBashExecutor();
-        var toolCall = CreateToolCall("bash");
+        var toolCall = new ToolCall("test-id", "bash", """{"command":"echo hello"}""");
         var description = executor.GetConfirmationDescription(toolCall);
 
-        Assert.Equal(string.Empty, description);
+        Assert.Equal("Execute: echo hello", description);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // BashToolExecutor — Workspace isolation tests
+    // ════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void BashToolExecutor_WorkspacePath_IsUnderLocalAppData()
+    {
+        var workspacePath = BashToolExecutor.WorkspacePath;
+        Assert.StartsWith(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            workspacePath);
+    }
+
+    [Fact]
+    public void BashToolExecutor_WorkspacePath_EndsWithMySecondBrainWorkspace()
+    {
+        var workspacePath = BashToolExecutor.WorkspacePath;
+        Assert.Contains("MySecondBrain", workspacePath, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("workspace", workspacePath, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void BashToolExecutor_Description_IncludesWorkspacePath()
+    {
+        var executor = CreateBashExecutor();
+        var desc = executor.Description;
+        Assert.Contains(BashToolExecutor.WorkspacePath, desc, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void BashToolExecutor_Description_IncludesCmdExe()
+    {
+        var executor = CreateBashExecutor();
+        var desc = executor.Description;
+        Assert.Contains("cmd.exe", desc, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void BashToolExecutor_ContainsBlockedPath_DetectsDriveLetter()
+    {
+        Assert.True(BashToolExecutor.ContainsBlockedPath(@"type D:\config.json"));
+    }
+
+    [Fact]
+    public void BashToolExecutor_ContainsBlockedPath_DetectsDriveLetterWithForwardSlash()
+    {
+        Assert.True(BashToolExecutor.ContainsBlockedPath(@"type D:/config.json"));
+    }
+
+    [Fact]
+    public void BashToolExecutor_ContainsBlockedPath_DetectsPercentEnvVar()
+    {
+        Assert.True(BashToolExecutor.ContainsBlockedPath(@"echo %TEMP%\file.txt"));
+    }
+
+    [Fact]
+    public void BashToolExecutor_ContainsBlockedPath_DetectsTilde()
+    {
+        Assert.True(BashToolExecutor.ContainsBlockedPath(@"ls ~/Documents"));
+    }
+
+    [Fact]
+    public void BashToolExecutor_ContainsBlockedPath_SimpleCommand_ReturnsFalse()
+    {
+        Assert.False(BashToolExecutor.ContainsBlockedPath("echo hello"));
+        Assert.False(BashToolExecutor.ContainsBlockedPath("python script.py"));
+        Assert.False(BashToolExecutor.ContainsBlockedPath("npm install"));
+    }
+
+    [Fact]
+    public void BashToolExecutor_ContainsBlockedPath_WorkspaceDrivePath_NowBlocked()
+    {
+        // All absolute drive letter paths are blocked, even on the workspace drive
+        // The model must use relative paths for workspace files
+        Assert.True(BashToolExecutor.ContainsBlockedPath(@"type C:\Windows\system.ini"));
+    }
+
+    [Fact]
+    public void BashToolExecutor_ContainsBlockedPath_AllowsLocalAppDataVar()
+    {
+        // LOCALAPPDATA is explicitly allowed (resolves to workspace path chain)
+        Assert.False(BashToolExecutor.ContainsBlockedPath(@"echo %LOCALAPPDATA%\MySecondBrain\workspace\test.txt"));
+    }
+
+    [Fact]
+    public void BashToolExecutor_ContainsBlockedPath_AllowsUserProfileVar()
+    {
+        // USERPROFILE is explicitly allowed
+        Assert.False(BashToolExecutor.ContainsBlockedPath(@"echo %USERPROFILE%\MySecondBrain\workspace\test.txt"));
+    }
+
+    [Fact]
+    public void BashToolExecutor_ContainsBlockedPath_EmptyStringReturnsFalse()
+    {
+        Assert.False(BashToolExecutor.ContainsBlockedPath(string.Empty));
+    }
+
+    [Fact]
+    public async Task BashToolExecutor_ValidateAsync_BlocksDriveLetterPaths()
+    {
+        var executor = CreateBashExecutor();
+        var toolCall = new ToolCall("test", "bash", """{"command":"type D:\\config.json"}""");
+        var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
+        Assert.NotNull(result);
+        Assert.False(result.IsValid);
+        Assert.Contains("absolute path", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task BashToolExecutor_ValidateAsync_BlocksHeredocSyntax()
+    {
+        var executor = CreateBashExecutor();
+        var toolCall = new ToolCall("test", "bash", """{"command":"cat > file.txt << 'EOF'\nline1\nEOF"}""");
+        var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
+        Assert.NotNull(result);
+        Assert.False(result.IsValid);
+        Assert.Contains("heredoc", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task BashToolExecutor_ValidateAsync_PassesSimpleCommand()
+    {
+        var executor = CreateBashExecutor();
+        var toolCall = new ToolCall("test", "bash", """{"command":"echo hello"}""");
+        var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
+        Assert.NotNull(result);
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task BashToolExecutor_ValidateAsync_BlocksWikiDirectoryWrites()
+    {
+        // Wiki path nested under workspace so relative paths resolve correctly
+        var wikiPath = Path.Combine(BashToolExecutor.WorkspacePath, "wiki");
+        var executor = CreateBashExecutor(wikiPath);
+        var toolCall = new ToolCall("test", "bash",
+            """{"command":"echo test > wiki/test.md"}""");
+        var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
+        Assert.NotNull(result);
+        Assert.False(result.IsValid);
+        Assert.Contains("wiki", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task BashToolExecutor_ValidateAsync_BlocksWikiDirectoryWrites_WithAppendRedirect()
+    {
+        var wikiPath = Path.Combine(BashToolExecutor.WorkspacePath, "wiki");
+        var executor = CreateBashExecutor(wikiPath);
+        var toolCall = new ToolCall("test", "bash",
+            """{"command":"echo test >> wiki/test.md"}""");
+        var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
+        Assert.NotNull(result);
+        Assert.False(result.IsValid);
+        Assert.Contains("wiki", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void BashToolExecutor_ParametersJsonSchema_IsValidJson()
+    {
+        var executor = CreateBashExecutor();
+        var schema = executor.ParametersJsonSchema;
+        Assert.NotNull(schema);
+        Assert.Contains("command", schema);
+        // Verify it parses
+        using var doc = System.Text.Json.JsonDocument.Parse(schema);
+        Assert.NotNull(doc);
+    }
+
+    [Fact]
+    public async Task BashToolExecutor_ValidateAsync_NullArguments_ReturnsInvalid()
+    {
+        var executor = CreateBashExecutor();
+        var toolCall = new ToolCall("test", "bash", "{}");
+        var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
+        Assert.NotNull(result);
+        Assert.False(result.IsValid);
+    }
+
+    [Fact]
+    public void BashToolExecutor_GetConfirmationDescription_IncludesCommand()
+    {
+        var executor = CreateBashExecutor();
+        var toolCall = new ToolCall("test", "bash", """{"command":"pip install requests"}""");
+        var desc = executor.GetConfirmationDescription(toolCall);
+        Assert.Contains("pip install", desc);
+    }
+
+    [Fact]
+    public void BashToolExecutor_GetConfirmationDescription_TruncatesLongCommands()
+    {
+        var executor = CreateBashExecutor();
+        var longCmd = new string('x', 500);
+        var toolCall = new ToolCall("test", "bash", $"{{\"command\":\"{longCmd}\"}}");
+        var desc = executor.GetConfirmationDescription(toolCall);
+        Assert.Contains("...", desc);
+    }
+
+    [Fact]
+    public void BashToolExecutor_StartupCleanup_CreatesWorkspaceDirectory()
+    {
+        // Reset static cleanup flag so PerformStartupCleanup runs again
+        var field = typeof(BashToolExecutor).GetField("_cleanupPerformed",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        field?.SetValue(null, false);
+
+        var workspacePath = BashToolExecutor.WorkspacePath;
+        try
+        {
+            if (Directory.Exists(workspacePath))
+                Directory.Delete(workspacePath, recursive: true);
+
+            BashToolExecutor.PerformStartupCleanup();
+            Assert.True(Directory.Exists(workspacePath));
+        }
+        finally
+        {
+            if (Directory.Exists(workspacePath))
+                Directory.Delete(workspacePath, recursive: true);
+
+            // Reset cleanup flag back for subsequent tests
+            field?.SetValue(null, false);
+        }
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -567,10 +793,10 @@ public class ToolExecutorTests
     private static ToolCall CreateToolCall(string toolName) =>
         new("test-id", toolName, "{}");
 
-    private static BashToolExecutor CreateBashExecutor()
+    private static BashToolExecutor CreateBashExecutor(string? wikiDirectoryPath = null)
     {
         var loggerMock = new Mock<ILogger<BashToolExecutor>>();
-        return new BashToolExecutor(loggerMock.Object);
+        return new BashToolExecutor(loggerMock.Object, wikiDirectoryPath);
     }
 
     private static TextEditorToolExecutor CreateTextEditorExecutor()

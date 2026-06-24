@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 using MySecondBrain.Services.LLM;
+using MySecondBrain.Services.Tools;
 
 namespace MySecondBrain.Tests.Integration;
 
@@ -400,5 +401,168 @@ public class ProviderIntegrationTests
             if (Directory.Exists(tempDir))
                 Directory.Delete(tempDir, recursive: true);
         }
+    }
+
+    // ================================================================
+    // Bash Tool Workspace Isolation — Real filesystem integration tests
+    // These tests execute real Process.Start calls in the workspace.
+    // ================================================================
+
+    [Fact]
+    public async Task BashToolExecutor_ExecutesCommandInWorkspace()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<BashToolExecutor>>();
+        var executor = new BashToolExecutor(loggerMock.Object);
+
+        // Reset workspace cleanup flag for test isolation
+        var workspacePath = BashToolExecutor.WorkspacePath;
+
+        try
+        {
+            // Clean workspace before test
+            if (Directory.Exists(workspacePath))
+                Directory.Delete(workspacePath, recursive: true);
+
+            // Act: create a file in the workspace to verify working directory
+            var toolCall = new ToolCall("test", "bash", """{"command":"echo workspace_test > test_workspace_file.txt"}""");
+            var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
+
+            // Assert
+            Assert.True(result.Success, $"Command failed: {result.ErrorMessage}");
+            Assert.True(Directory.Exists(workspacePath), "Workspace directory should exist after execution");
+
+            var outputFile = Path.Combine(workspacePath, "test_workspace_file.txt");
+            Assert.True(File.Exists(outputFile), "File should be created in workspace directory");
+            var content = await File.ReadAllTextAsync(outputFile);
+            Assert.Contains("workspace_test", content);
+        }
+        finally
+        {
+            // Cleanup test artifacts
+            var testFile = Path.Combine(workspacePath, "test_workspace_file.txt");
+            if (File.Exists(testFile)) File.Delete(testFile);
+            if (Directory.Exists(workspacePath))
+                Directory.Delete(workspacePath, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task BashToolExecutor_WorkspaceDirectoryCreatedOnFirstUse()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<BashToolExecutor>>();
+        var executor = new BashToolExecutor(loggerMock.Object);
+        var workspacePath = BashToolExecutor.WorkspacePath;
+
+        try
+        {
+            // Ensure workspace doesn't exist
+            if (Directory.Exists(workspacePath))
+                Directory.Delete(workspacePath, recursive: true);
+
+            Assert.False(Directory.Exists(workspacePath), "Workspace should not exist before first use");
+
+            // Act
+            var toolCall = new ToolCall("test", "bash", """{"command":"echo test > first_use_test.txt"}""");
+            var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
+
+            // Assert
+            Assert.True(result.Success, $"Command failed: {result.ErrorMessage}");
+            Assert.True(Directory.Exists(workspacePath), "Workspace directory should be created on first use");
+        }
+        finally
+        {
+            var testFile = Path.Combine(workspacePath, "first_use_test.txt");
+            if (File.Exists(testFile)) File.Delete(testFile);
+            if (Directory.Exists(workspacePath))
+                Directory.Delete(workspacePath, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task BashToolExecutor_InvalidatesAbsolutePathCommand()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<BashToolExecutor>>();
+        var executor = new BashToolExecutor(loggerMock.Object);
+
+        // Act: validate a command with an absolute path
+        var toolCall = new ToolCall("test", "bash", """{"command":"type D:\\config.json"}""");
+        var validationResult = await executor.ValidateAsync(toolCall, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(validationResult);
+        Assert.False(validationResult.IsValid);
+        Assert.Contains("absolute path", validationResult.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task BashToolExecutor_ExecuteAsync_ReturnsOutputContent()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<BashToolExecutor>>();
+        var executor = new BashToolExecutor(loggerMock.Object);
+        var workspacePath = BashToolExecutor.WorkspacePath;
+
+        try
+        {
+            if (Directory.Exists(workspacePath))
+                Directory.Delete(workspacePath, recursive: true);
+
+            // Act
+            var toolCall = new ToolCall("test", "bash", """{"command":"echo Hello World"}""");
+            var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
+
+            // Assert
+            Assert.True(result.Success, $"Command should succeed: {result.ErrorMessage}");
+            Assert.Contains("Hello World", result.Content);
+        }
+        finally
+        {
+            if (Directory.Exists(workspacePath))
+                Directory.Delete(workspacePath, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task BashToolExecutor_ExecuteAsync_InvalidCommandReturnsError()
+    {
+        // Arrange
+        var loggerMock = new Mock<ILogger<BashToolExecutor>>();
+        var executor = new BashToolExecutor(loggerMock.Object);
+        var workspacePath = BashToolExecutor.WorkspacePath;
+
+        try
+        {
+            if (Directory.Exists(workspacePath))
+                Directory.Delete(workspacePath, recursive: true);
+
+            // Act: execute a command that will fail
+            var toolCall = new ToolCall("test", "bash", """{"command":"invalid_command_xyz_123"}""");
+            var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
+
+            // Assert
+            Assert.False(result.Success, "Invalid command should fail");
+            Assert.NotNull(result.ErrorMessage);
+        }
+        finally
+        {
+            if (Directory.Exists(workspacePath))
+                Directory.Delete(workspacePath, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void BashToolExecutor_GetToolDefinition_ReturnsBashSchema()
+    {
+        var loggerMock = new Mock<ILogger<BashToolExecutor>>();
+        var executor = new BashToolExecutor(loggerMock.Object);
+
+        Assert.Equal("bash", executor.ToolName);
+        Assert.NotNull(executor.Description);
+        Assert.Contains("workspace", executor.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(executor.ParametersJsonSchema);
+        Assert.Contains("command", executor.ParametersJsonSchema);
     }
 }
