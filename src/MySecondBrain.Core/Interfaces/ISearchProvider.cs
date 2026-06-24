@@ -9,5 +9,7 @@ public interface ISearchProvider
 
     Task<SearchResults> SearchAsync(string query, int maxResults, CancellationToken ct);
 
+    Task<ImageSearchResults> ImageSearchAsync(string query, int maxResults, CancellationToken ct);
+
     Task<bool> IsAvailableAsync(CancellationToken ct);
 }

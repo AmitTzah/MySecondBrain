@@ -102,3 +102,23 @@ public record ContextOverflowResult(
     int NewMessageTokens,
     ContextOverflowStrategy RecommendedStrategy
 );
+
+/// <summary>
+/// A single image result from an image search query.
+/// </summary>
+public record ImageSearchResultItem(
+    string Title,
+    string ThumbnailUrl,
+    string SourceUrl,
+    int Width,
+    int Height
+);
+
+/// <summary>
+/// Results returned by an image search query.
+/// </summary>
+public record ImageSearchResults(
+    string Query,
+    IReadOnlyList<ImageSearchResultItem> Items,
+    int TotalEstimatedResults
+);

@@ -27,6 +27,9 @@ public class BingSearchProvider : ISearchProvider
     public Task<SearchResults> SearchAsync(string query, int maxResults, CancellationToken ct) =>
         Task.FromResult<SearchResults>(default!);
 
+    public Task<ImageSearchResults> ImageSearchAsync(string query, int maxResults, CancellationToken ct) =>
+        throw new NotImplementedException("Image search not yet implemented — deferred to Feature 16");
+
     public Task<bool> IsAvailableAsync(CancellationToken ct) =>
         Task.FromResult(false);
 }
