@@ -167,7 +167,7 @@ src/
 
 ---
 
-### [ ] Step 5: Rename Tool Executors (Terminal→Bash, FileGenerate+FileEdit→TextEditor)
+### [x] Step 5: Rename Tool Executors (Terminal→Bash, FileGenerate+FileEdit→TextEditor)
 
 - **Goal:** Rename `TerminalToolExecutor` to `BashToolExecutor`, merge `FileGenerateToolExecutor` + `FileEditToolExecutor` into `TextEditorToolExecutor`.
 - **Actions:**
