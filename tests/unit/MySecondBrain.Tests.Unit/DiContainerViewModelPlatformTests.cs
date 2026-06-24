@@ -91,13 +91,13 @@ public class DiContainerViewModelPlatformTests : IDisposable
         Assert.NotNull(autoUpdater.CurrentVersion);
         Assert.NotEqual(new Version(0, 0, 0), autoUpdater.CurrentVersion);
 
-        // IContentBlockRenderer: 7 implementations
+        // IContentBlockRenderer: 8 implementations
         var renderers = _provider.GetServices<IContentBlockRenderer>().ToList();
-        Assert.Equal(7, renderers.Count);
+        Assert.Equal(8, renderers.Count);
     }
 
     [Fact]
-    public void ContentRendererRegistry_ResolvesAllSevenRenderersInCorrectPriorityOrder()
+    public void ContentRendererRegistry_ResolvesAllEightRenderersInCorrectPriorityOrder()
     {
         // Arrange
         var registry = _provider.GetRequiredService<IContentRendererRegistry>();
@@ -106,21 +106,23 @@ public class DiContainerViewModelPlatformTests : IDisposable
         var renderers = registry.GetRenderers();
 
         // Assert
-        Assert.Equal(7, renderers.Count);
+        Assert.Equal(8, renderers.Count);
         Assert.Equal("MarkdownText", renderers[0].RendererName);
         Assert.Equal(100, renderers[0].Priority);
         Assert.Equal("CodeBlock", renderers[1].RendererName);
         Assert.Equal(200, renderers[1].Priority);
         Assert.Equal("ArtifactReference", renderers[2].RendererName);
         Assert.Equal(300, renderers[2].Priority);
-        Assert.Equal("Image", renderers[3].RendererName);
-        Assert.Equal(400, renderers[3].Priority);
-        Assert.Equal("Media", renderers[4].RendererName);
-        Assert.Equal(500, renderers[4].Priority);
-        Assert.Equal("Thinking", renderers[5].RendererName);
-        Assert.Equal(600, renderers[5].Priority);
-        Assert.Equal("ToolCall", renderers[6].RendererName);
-        Assert.Equal(700, renderers[6].Priority);
+        Assert.Equal("Citation", renderers[3].RendererName);
+        Assert.Equal(350, renderers[3].Priority);
+        Assert.Equal("Image", renderers[4].RendererName);
+        Assert.Equal(400, renderers[4].Priority);
+        Assert.Equal("Media", renderers[5].RendererName);
+        Assert.Equal(500, renderers[5].Priority);
+        Assert.Equal("Thinking", renderers[6].RendererName);
+        Assert.Equal(600, renderers[6].Priority);
+        Assert.Equal("ToolCall", renderers[7].RendererName);
+        Assert.Equal(700, renderers[7].Priority);
     }
 
     [StaFact]

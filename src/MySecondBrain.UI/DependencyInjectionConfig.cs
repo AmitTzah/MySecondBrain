@@ -142,6 +142,7 @@ public static class DependencyInjectionConfig
         services.AddSingleton<IContentBlockRenderer, MarkdownTextRenderer>();
         services.AddSingleton<IContentBlockRenderer, CodeBlockRenderer>();
         services.AddSingleton<IContentBlockRenderer, ArtifactReferenceRenderer>();
+        services.AddSingleton<IContentBlockRenderer, CitationRenderer>();
         services.AddSingleton<IContentBlockRenderer, ImageRenderer>();
         services.AddSingleton<IContentBlockRenderer, MediaRenderer>();
         services.AddSingleton<IContentBlockRenderer, ThinkingRenderer>();

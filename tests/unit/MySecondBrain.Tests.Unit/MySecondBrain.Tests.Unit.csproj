@@ -5,6 +5,7 @@
     <AssemblyName>MySecondBrain.Tests.Unit</AssemblyName>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <WindowsSdkPackageVersion>10.0.17763.56</WindowsSdkPackageVersion>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
