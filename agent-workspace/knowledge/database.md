@@ -24,7 +24,7 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    // 14 DbSet<T> properties — one per entity
+    // 15 DbSet<T> properties — one per entity
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<AppSetting> Settings => Set<AppSetting>();
     public DbSet<Artifact> Artifacts => Set<Artifact>();
@@ -81,11 +81,12 @@ public class AppDbContext : DbContext
 
 ---
 
-## 3. Entity Catalog — 14 Entities, 17 FK Relationships
+## 3. Entity Catalog — 15 Entities, 18 FK Relationships
 
-All entities are defined in `MySecondBrain.Data/Entities/` as EF Core entity classes. Each uses `[Key]` attribute on its primary key and `string` GUIDs for PKs (see §3.1). The `InitialCreate` migration creates all 14 tables plus 2 FTS5 virtual tables.
+All entities are defined in `MySecondBrain.Data/Entities/` as EF Core entity classes. Each uses `[Key]` attribute on its primary key and `string` GUIDs for PKs (see §3.1). The `InitialCreate` migration created the original 14 tables plus 2 FTS5 virtual tables. A subsequent migration `AddMemoryEntry` added the 15th entity.
 
 | # | Entity | PK | FK Relationships | Notes |
+|--|--------|----|-----------------|-------|
 |---|--------|----|-----------------|-------|
 | 1 | `ApiKey` | `Id` (string GUID) | ← referenced by `ModelConfiguration.ApiKeyId` | CreatedAt timestamp. KeyValue stored encrypted (encryption is service-layer). |
 | 2 | `AppSetting` | `Key` (string, MaxLength 256) | — (standalone key-value) | Backs `SettingsRepository`. Value column holds plain strings or JSON-serialized objects. |
@@ -101,12 +102,13 @@ All entities are defined in `MySecondBrain.Data/Entities/` as EF Core entity cla
 | 12 | `UsageRecord` | `Id` (string GUID) | `MessageId` → `Message.Id` (required, Cascade); `ThreadId` → `ChatThread.Id` (required, Cascade); `PersonaId` → `Persona.Id` (optional, SetNull); `ModelConfigId` → `ModelConfiguration.Id` (optional, SetNull) | Token/cost tracking per message. |
 | 13 | `WikiFile` | `FilePath` (string — natural key) | — (referenced by WikiVersionSnapshot) | Content, headings, cross-links. FTS5-indexed for full-text search. |
 | 14 | `WikiVersionSnapshot` | `Id` (string GUID) | `WikiFilePath` → `WikiFile.FilePath` (HasPrincipalKey, Cascade) | Snapshot pruning: 30-per-file, 50MB global cap. |
+| 15 | **`MemoryEntryEntity`** | `Id` (string GUID) | `SourceThreadId` → `ChatThread.Id` (optional, SetNull) | Key-value memory store. `Key` indexed. `CreatedAt` indexed. Added in migration `AddMemoryEntry`. |
 
-> **Note:** `BackupSnapshot` is planned for W3.16 (Backup & Recovery) and is not yet implemented. It will be a standalone entity (no FK relationships).
+> **Note:** `BackupSnapshot` is planned for W3.16 (Backup & Recovery) and is not yet implemented. It will be a standalone entity (no FK relationships). A future `Skill` entity may be added when skills need persisted configuration.
 
-### FK Relationship Count: 17
+### FK Relationship Count: 18
 
-The 17 foreign key relationships are configured in `OnModelCreating` via Fluent API. See §8 for the complete OnDelete behavior reference.
+The 18 foreign key relationships are configured in `OnModelCreating` via Fluent API. See §8 for the complete OnDelete behavior reference. MemoryEntryEntity.SourceThreadId → ChatThread adds the 18th FK.
 
 ### 3.1 Primary Key Convention: String GUIDs
 
@@ -210,7 +212,7 @@ MySecondBrain.Data/
 ├── MySecondBrain.Data.csproj    # EF Core + SQLite NuGet refs, ProjectRef→Core
 ├── GlobalUsings.cs
 ├── AppDbContext.cs               # DbContext with OnConfiguring fallback
-├── Entities/                     # EF Core entity classes (12 entities)
+├── Entities/                     # EF Core entity classes (15 entities)
 ├── Configurations/               # IEntityTypeConfiguration<T> classes
 ├── Repositories/                 # Repository implementations
 └── Migrations/                   # EF Core migrations (auto-generated)
@@ -1238,3 +1240,99 @@ else CurrentStep = -1; // Welcome (all steps done but Onboarding_Completed not s
 | **Skip = completed** | Skipping a step means the user is OK with defaults for that step. It should not re-prompt on next launch. |
 | **Separate `Onboarding_Completed` flag** | Allows re-running the wizard from Settings even though all step flags are `"true"`. The wizard checks individual step flags for resume, not the aggregate `Onboarding_Completed`. |
 | **Null = not done, "true" = done** | Consistent with other boolean settings. `null` is the initial state (key doesn't exist). `"false"` is never set — a step is either done or not done. |
+
+---
+
+## 27. MemoryEntry Entity — Key-Value Memory Store
+
+`MemoryEntryEntity` (`Data/Entities/MemoryEntryEntity.cs`) is the 15th entity, added by the `AddMemoryEntry` migration. It implements a simple key-value store for thread-scoped persistent memory, following Anthropic's `memory_20250818` schema.
+
+### 27.1 Entity Schema
+
+```csharp
+public class MemoryEntryEntity
+{
+    [Key]
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+    [MaxLength(200)]
+    public string Key { get; set; } = string.Empty;
+
+    [MaxLength(10240)]
+    public string Value { get; set; } = string.Empty;
+
+    public string? SourceThreadId { get; set; }      // Optional FK → ChatThread
+
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    [ForeignKey(nameof(SourceThreadId))]
+    public ChatThread? SourceThread { get; set; }
+}
+```
+
+### 27.2 Database Configuration
+
+| Property | Value |
+|----------|-------|
+| **Table** | `MemoryEntries` |
+| **PK** | `Id` (string, GUID, 32-char hex `"N"` format) |
+| **Index on `Key`** | Fast lookup by memory key |
+| **Index on `CreatedAt`** | Time-based queries and cleanup |
+| **FK** | `SourceThreadId` → `ChatThread.Id`, optional, `OnDelete(DeleteBehavior.SetNull)` |
+| **Key max length** | 200 characters (`MemoryEntryEntityConsts.KeyMaxLength`) |
+| **Value max length** | 10,240 characters (~10KB, `MemoryEntryEntityConsts.ValueMaxLength`) |
+
+### 27.3 DbContext Registration
+
+```csharp
+public DbSet<MemoryEntryEntity> MemoryEntries => Set<MemoryEntryEntity>();
+```
+
+### 27.4 Entity vs. Domain Model
+
+| Layer | Type | Location |
+|-------|------|----------|
+| Data (EF Core) | `MemoryEntryEntity` | `Data/Entities/MemoryEntryEntity.cs` |
+| Core (DTO) | `MemoryEntry` | `Core/Models/DomainModels.cs` |
+
+Both carry the same fields. `MemoryEntry.KeyMaxLength` and `MemoryEntry.ValueMaxLength` constants in Core must be kept in sync with `MemoryEntryEntityConsts.KeyMaxLength`/`ValueMaxLength` in Data.
+
+### 27.5 Migration
+
+Created via: `dotnet ef migrations add AddMemoryEntry --project src/MySecondBrain.Data --startup-project src/MySecondBrain.UI`
+
+---
+
+## 28. ToolAutoApprovalSettings — 10 Tool-Specific Auto-Approval Flags
+
+`ToolAutoApprovalSettings` (in `Core/Models/DomainModels.cs`) controls which tools can execute without user confirmation. Each tool has its own boolean flag:
+
+```csharp
+public class ToolAutoApprovalSettings
+{
+    public bool AutoApproveBash { get; set; }
+    public bool AutoApproveTextEditor { get; set; }
+    public bool AutoApproveWebSearch { get; set; }
+    public bool AutoApproveWebFetch { get; set; }
+    public bool AutoApproveWikiSearch { get; set; }
+    public bool AutoApproveMemory { get; set; }
+    public bool AutoApproveSkillLoad { get; set; }
+    public bool AutoApproveAskUserInput { get; set; }
+    public bool AutoApprovePresentFiles { get; set; }
+    public bool AutoApproveImageSearch { get; set; }
+    public int MaxConsecutiveAutoApprovals { get; set; } = 10;
+}
+```
+
+### 28.1 Default Behavior
+
+By default, all `AutoApprove*` properties are `false` (no tool auto-approved without explicit user opt-in). The `MaxConsecutiveAutoApprovals` cap defaults to 10 to prevent runaway tool execution loops even when auto-approval is enabled.
+
+### 28.2 Persistence
+
+The settings are persisted via `ISettingsRepository` (key-value in `AppSetting` table). The keys follow the pattern `AutoApprove_{ToolName}` (e.g., `AutoApprove_Bash`, `AutoApprove_TextEditor`). The settings UI (Settings → Tools category) binds checkboxes to these values.
+
+### 28.3 Usage
+
+The orchestrator (`ToolOrchestrator.GetAutoApprovalSettings()`) returns the current settings. Tool executors check `CanAutoApprove` (per-executor capability) AND the corresponding `AutoApprove{Name}` flag (user preference) before executing without confirmation.

@@ -2024,3 +2024,331 @@ public async Task Onboarding_ShouldNotAppearAfterCompletion()
 | **Auto-dismiss in fixture, not individual tests** | All ~54 non-onboarding tests need the wizard dismissed. Doing it once in the fixture saves ~54 × (skip clicks + waits). |
 | **Static flag for ordering** | xUnit runs tests within a class in declaration order by default. The static flag provides an explicit guard against runner reordering. |
 | **Skip, don't complete** | Skipping each step is faster than filling forms. The wizard is tested separately in dedicated onboarding tests. |
+
+---
+
+## 41. 10-Tool Execution Surface
+
+The tool system provides 10 tool executors that the LLM can invoke during a chat session. Each tool is registered as a singleton `IToolExecutor` in DI and auto-discovered by `ToolOrchestrator` via `IEnumerable<IToolExecutor>`.
+
+### 41.1 Tool Registry
+
+# | Tool Name | Risk Level | Can Auto-Approve | Schema Origin | Executor Class | Location |
+|---|-----------|-----------|-----------------|---------------|----------------|----------|
+1 | `bash` | Medium | No | Anthropic `bash_20250124` | `BashToolExecutor` | `Services/Tools/BashToolExecutor.cs` |
+2 | `text_editor` | Low | Yes | Anthropic `text_editor_20250728` | `TextEditorToolExecutor` | `Services/Tools/TextEditorToolExecutor.cs` |
+3 | `web_search` | Low | Yes | Custom (Anthropic-compatible) | `WebSearchToolExecutor` | `Services/Tools/WebSearchToolExecutor.cs` |
+4 | `web_fetch` | Low | Yes | Custom | `WebFetchToolExecutor` | `Services/Tools/WebFetchToolExecutor.cs` |
+5 | `wiki_search` | Low | Yes | Custom | `WikiSearchToolExecutor` | `Services/Tools/WikiSearchToolExecutor.cs` |
+6 | `memory` | Low | Yes | Anthropic `memory_20250818` | `MemoryToolExecutor` | `Services/Tools/MemoryToolExecutor.cs` |
+7 | `skill_load` | Low | Yes | Custom | `SkillLoadToolExecutor` | `Services/Tools/SkillLoadToolExecutor.cs` |
+8 | `ask_user_input` | Low | Yes | Custom | `AskUserInputToolExecutor` | `Services/Tools/AskUserInputToolExecutor.cs` |
+9 | `present_files` | Low | Yes | Custom | `PresentFilesToolExecutor` | `Services/Tools/PresentFilesToolExecutor.cs` |
+10 | `image_search` | Low | Yes | Custom | `ImageSearchToolExecutor` | `Services/Tools/ImageSearchToolExecutor.cs` |
+
+### 41.2 IToolExecutor Interface
+
+Defined in [`MySecondBrain.Core/Interfaces/IToolExecutor.cs`](../../src/MySecondBrain.Core/Interfaces/IToolExecutor.cs):
+
+```csharp
+public interface IToolExecutor
+{
+    string ToolName { get; }
+    string Description => string.Empty;                   // Default: empty
+    string ParametersJsonSchema => """{"type":"object","properties":{},"required":[]}""";  // Default: empty schema
+    bool RequiresUserConfirmation { get; }
+    ToolRiskLevel RiskLevel { get; }
+    bool CanAutoApprove { get; }
+    Task<ToolValidationResult> ValidateAsync(ToolCall toolCall, CancellationToken ct);
+    Task<ToolResult> ExecuteAsync(ToolCall toolCall, CancellationToken ct);
+    string GetConfirmationDescription(ToolCall toolCall);
+}
+```
+
+`Description` and `ParametersJsonSchema` use C# default interface methods — executors only override when they have non-empty schemas. The orchestrator calls `GetAvailableToolDefinitions()` to construct the tools array for the LLM API.
+
+### 41.3 Tool Orchestration
+
+`ToolOrchestrator` (`Services/Tools/ToolOrchestrator.cs`) implements `IToolOrchestrator` and receives all 10 tool executors via `IEnumerable<IToolExecutor>` DI injection:
+
+Method | Purpose |
+|--------|---------|
+`ProcessToolCallsAsync(toolCalls, settings, ct)` | Routes tool calls to matching executor (stub — returns empty results) |
+`GetAvailableToolDefinitions()` | Builds `ToolDefinition` list from all executors' `ToolName` + `Description` + `ParametersJsonSchema` |
+`IsToolEnabled(toolName)` | Placeholder — currently returns `false` |
+`GetAutoApprovalSettings()` | Returns default `ToolAutoApprovalSettings` |
+
+### 41.4 Auto-Approval Settings
+
+`ToolAutoApprovalSettings` (in `Core/Models/DomainModels.cs`) has one boolean per tool plus a global cap:
+
+```csharp
+public class ToolAutoApprovalSettings
+{
+    public bool AutoApproveBash { get; set; }
+    public bool AutoApproveTextEditor { get; set; }
+    public bool AutoApproveWebSearch { get; set; }
+    public bool AutoApproveWebFetch { get; set; }
+    public bool AutoApproveWikiSearch { get; set; }
+    public bool AutoApproveMemory { get; set; }
+    public bool AutoApproveSkillLoad { get; set; }
+    public bool AutoApproveAskUserInput { get; set; }
+    public bool AutoApprovePresentFiles { get; set; }
+    public bool AutoApproveImageSearch { get; set; }
+    public int MaxConsecutiveAutoApprovals { get; set; } = 10;
+}
+```
+
+---
+
+## 42. Agent Skills Subsystem
+
+Skills are reusable, loadable instruction bundles that teach the model domain-specific capabilities. They are discovered at startup from embedded resources and filesystem paths, then activated on demand via the `skill_load` tool.
+
+### 42.1 Architecture
+
+```mermaid
+graph TD
+    SkillService[AgentSkillService\nISkillService]
+    SkillLoader[StructuredSkillLoader\nISkillLoader]
+    SkillLoadExec[SkillLoadToolExecutor\nIToolExecutor]
+    SkillsDir["Skills/anthropic/\n(SKILL.md files)"]
+    UserSkills["%LOCALAPPDATA%/MySecondBrain/skills/\n(user overrides)"]
+    CrossClient1["%USERPROFILE%/.agents/skills/\n(cross-client)"]
+    CrossClient2["%USERPROFILE%/.claude/skills/\n(cross-client)"]
+    
+    SkillService --> SkillLoader
+    SkillLoadExec --> SkillService
+    SkillLoader --> SkillsDir
+    SkillLoader --> UserSkills
+    SkillLoader --> CrossClient1
+    SkillLoader --> CrossClient2
+```
+
+### 42.2 Key Interfaces
+
+**`ISkillService`** — Manages the skill lifecycle:
+- `DiscoverAsync()` — scans all discovery paths for SKILL.md files
+- `GetCatalog()` — returns `IReadOnlyList<SkillMetadata>` of discovered skills
+- `LoadAsync(name)` — loads and returns `SkillContent` for a named skill
+- `ListResourcesAsync(name)` — returns skill resource file paths
+- `IsActivated(name)` / `MarkActivated(name)` — tracks per-session activation
+- `GetDependencies(name)` — returns `SkillDependencies` declared by the skill
+
+**`ISkillLoader`** — Handles low-level skill file parsing:
+- `ActivateSkillAsync(name)` — parses YAML frontmatter and returns `SkillActivationResult` with XML-wrapped content
+- `GetToolDefinition(name)` — returns `ToolDefinition` for the `skill_load` schema
+- `IsValidSkill(name)` — validates skill exists and is loadable
+
+### 42.3 Skill Models (Core/Models/SkillModels.cs)
+
+```csharp
+public record SkillMetadata(string Name, string Description, string Source, string Location);
+public record SkillContent(string Name, string Body, IReadOnlyList<string> Resources);
+public record SkillDependencies(IReadOnlyList<string>? Tools, IReadOnlyList<string>? Packages, IReadOnlyList<string>? System);
+public record SkillActivationResult(bool Success, string? Content, string? ErrorMessage);
+```
+
+Skills are **in-memory only** — not persisted to SQLite. Re-discovered each launch.
+
+### 42.4 Discovery Paths (Priority Order)
+
+Priority | Path | Description |
+|----------|------|-------------|
+1 (highest) | Embedded resources: `Skills/anthropic/` in `MySecondBrain.UI.dll` | Built-in skills shipped with the app |
+2 | `%LOCALAPPDATA%/MySecondBrain/skills/` | User-installed skills |
+3 | `%USERPROFILE%/.agents/skills/` | Cross-client skill directory |
+4 (lowest) | `%USERPROFILE%/.claude/skills/` | Cross-client Claude skills |
+
+Later paths override earlier ones with the same name (user skills shadow built-in skills).
+
+### 42.5 Progressive Disclosure
+
+Skills follow a two-phase activation:
+
+1. **Discovery**: At chat start, `SkillService.GetCatalog()` returns metadata (name + description) for all discovered skills. The catalog is injected into the system prompt as `<available_skills>` XML when at least one skill is enabled.
+2. **Activation**: When the model matches a task to a skill description, it calls `skill_load` with the skill's name. `StructuredSkillLoader` parses the SKILL.md file, strips YAML frontmatter, wraps the body in `<skill_content>` XML, and returns full instructions.
+
+This prevents bloating the context window with every skill's full content — only metadata is present until the model chooses to activate a skill.
+
+### 42.6 DI Registrations
+
+```csharp
+services.AddSingleton<ISkillService, AgentSkillService>();
+services.AddSingleton<ISkillLoader, StructuredSkillLoader>();
+```
+
+Both registered in `DependencyInjectionConfig.cs`.
+
+---
+
+## 43. Additive System Prompt Assembly
+
+The system prompt is assembled additively from six ordered layers by `SystemPromptBuilder` (`Services/SystemPromptBuilder.cs`). Disabled items are removed entirely (not hidden or commented out).
+
+### 43.1 Assembly Order
+
+Layer | Content | Always Present? |
+|-------|---------|-----------------|
+1. Persona | User's selected persona system message (after `{{variable}}` resolution) | Only if persona has a non-empty message |
+2. Behavioral instructions | Tool usage guidance (workspace safety, parallel execution rules) | Always |
+3. Date/time context | `Current date: {date}\nCurrent time: {time}` | Always |
+4. Platform context | Windows OS info, workspace path, cmd.exe guidance | Always |
+5. Skill catalog XML | `<available_skills>` with enabled skills' name + description | Only when ≥1 skill enabled |
+6. Skill usage instructions | "When a task matches a skill's description, call skill_load..." | Only when ≥1 skill enabled |
+
+### 43.2 `SystemPromptCoordinator` (UI/ViewModels)
+
+The coordinator bridges toolbar toggle state with `SystemPromptBuilder`:
+
+```csharp
+public class SystemPromptCoordinator
+{
+    // Builds the full additive system prompt for the current chat state
+    public string? GetSystemPrompt(
+        string? personaSystemMessage,
+        IReadOnlySet<string> enabledToolNames,
+        IReadOnlySet<string> enabledSkillNames,
+        string workspacePath);
+
+    // Builds the filtered tool names array for the API
+    // - ask_user_input always present (needed for confirmations)
+    // - skill_load only when ≥1 skill enabled
+    // - All other tools respect toggle state
+    public static IReadOnlyList<string> GetFilteredToolNames(
+        IReadOnlySet<string> enabledToolNames,
+        int enabledSkillCount);
+
+    // Builds the skill catalog XML block for enabled skills
+    public string GetSkillCatalogXml(IReadOnlySet<string> enabledSkillNames);
+
+    // Resolves {{variables}} in a system prompt template
+    public static string ResolveSystemPrompt(string template);
+}
+```
+
+### 43.3 Tool Name Filtering Rules
+
+`BuildFilteredToolNames` applies these rules:
+- `ask_user_input` is always included (required for user confirmation dialogs, even when no tools are enabled)
+- `skill_load` is included only when ≥1 skill is enabled
+- All other tools are included based on the user's per-chat toggle state
+- Edge case: when no tools and no skills are enabled, returns empty array (the model has no capabilities)
+
+---
+
+## 44. Content Renderer Registry — Updated Priority Order
+
+The `ContentRendererRegistry` now registers 8 renderers (was 7). `CitationRenderer` was added at priority 350.
+
+### 44.1 Full Renderer Catalog (8 Renderers)
+
+Renderer | Priority | Handles | Added In |
+|----------|----------|---------|----------|
+`MarkdownTextRenderer` | 100 | Plain paragraphs, headings, lists, blockquotes, inline formatting | W1 |
+`CodeBlockRenderer` | 200 | Fenced code blocks with syntax highlighting | W1 |
+`ArtifactReferenceRenderer` | 300 | Inline artifact links/embeds | W1 |
+**`CitationRenderer`** | **350** | **Footnote links (`[N]` markers) and footnote definitions** | **F10** |
+`ImageRenderer` | 400 | Embedded images (base64 or file references) | W1 |
+`MediaRenderer` | 500 | Audio/video embeds with playback controls | W1 |
+`ThinkingRenderer` | 600 | Chain-of-thought/reasoning blocks (collapsible) | W1 |
+`ToolCallRenderer` | 700 | Tool call invocations and results (expandable JSON) | W1 |
+
+### 44.2 CitationRenderer Details
+
+`CitationRenderer` (`UI/Controls/CitationRenderer.cs`) handles Markdig `FootnoteLink` and `Footnote` nodes:
+
+Input | Output | Behavior |
+|-------|--------|----------|
+Inline `[N]` marker (`FootnoteLink`) | Clickable superscript `Hyperlink` with `[N]` label | Click calls `BringIntoView()` on the matching footnote definition |
+Footnote definition (`[^N]: text`) | Styled `Paragraph` with bold `[N]` index, linked title, domain, and "accessed {date}" | Graceful degradation: missing URL → plain text; missing footnote → plain text `[N]` |
+
+---
+
+## 45. WebView2 Artifacts Panel
+
+`ArtifactsWebView2Host` (`UI/Controls/ArtifactsWebView2Host.cs`) is a WPF `UserControl` that hosts a `Microsoft.Web.WebView2.Wpf.WebView2` for rendering artifact files (HTML, SVG, PDF, Markdown, diffs, code).
+
+### 45.1 Hybrid Rendering Architecture
+
+```mermaid
+graph TD
+    WPF["WPF UserControl\n(ArtifactsWebView2Host)"]
+    WV2["WebView2 Control\n(Microsoft.Web.WebView2.Wpf)"]
+    Fallback["Fallback TextBlock\n(WebView2 runtime missing)"]
+    ThemeBridge["Theme Bridge\nExecuteScriptAsync()"]
+    
+    WPF --> WV2
+    WPF --> Fallback
+    WV2 --> ThemeBridge
+```
+
+### 45.2 File Type Handling
+
+Extension | Rendering Method |
+|-----------|-----------------|
+`.html`, `.htm`, `.svg`, `.pdf` | Browser-native — direct file URI navigation |
+`.md`, `.markdown` | `marked.js` — CDN-loaded Markdown renderer |
+`.diff`, `.patch` | `diff2html.js` — diff visualization |
+Other (`.cs`, `.py`, `.json`, etc.) | `Prism.js` — syntax-highlighted code block |
+
+### 45.3 Theme Bridge
+
+The theme is bridged from WPF to WebView2 via JavaScript injection:
+
+```csharp
+public async Task SetThemeAsync(bool isDark)
+{
+    var theme = isDark ? "dark" : "light";
+    var script = $@"
+document.documentElement.setAttribute('data-theme', '{theme}');
+document.documentElement.classList.remove('dark', 'light');
+document.documentElement.classList.add('{theme}');";
+    await _webView.CoreWebView2.ExecuteScriptAsync(script);
+}
+```
+
+Theme is re-applied after each navigation via the `NavigationCompleted` event.
+
+### 45.4 WebView2 Runtime Fallback
+
+When the WebView2 runtime is unavailable, the control degrades gracefully to a `TextBlock` with a download link message. The runtime is pre-installed on Windows 11 and auto-updated on Windows 10.
+
+### 45.5 JavaScript Library Dependencies
+
+Library | CDN URL | Used For |
+|---------|---------|----------|
+marked.js | `cdn.jsdelivr.net/npm/marked/marked.min.js` | Markdown → HTML rendering |
+diff2html.js | `cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js` | Diff/patch visualization |
+Prism.js | `cdn.jsdelivr.net/npm/prismjs@1/` | Code syntax highlighting |
+
+All loaded from CDN at render time. No local bundling.
+
+---
+
+## 46. Workspace Isolation
+
+The bash workspace is isolated to prevent the LLM from accessing files outside the designated directory.
+
+### 46.1 Workspace Path
+
+```
+%LOCALAPPDATA%\MySecondBrain\workspace\
+```
+
+Resolved at runtime and injected into:
+- The system prompt (Platform context: "The workspace is at {0}")
+- The bash tool executor's working directory
+- File path validation in the text editor tool
+
+### 46.2 Path Blocking
+
+The bash and text_editor tool executors validate all file paths against the workspace root. Operations outside `%LOCALAPPDATA%\MySecondBrain\workspace\` require the model to call `ask_user_input` for user confirmation before proceeding. This prevents the LLM from reading/writing arbitrary system files.
+
+### 46.3 Cleanup
+
+Workspace content has a 24-hour retention policy:
+- Files with `LastModified` older than 24 hours are eligible for cleanup
+- Cleanup is triggered on app startup (not as a background timer)
+- Only files directly in the workspace (not subdirectories with user content) are automatically cleaned
+- Artifact files referenced in chat threads are excluded from cleanup

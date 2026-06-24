@@ -487,13 +487,14 @@ public class ContentRendererRegistry : IContentRendererRegistry
 }
 ```
 
-### 10.4 Renderer Catalog (7 Renderers)
+### 10.4 Renderer Catalog (8 Renderers)
 
 | Renderer | Priority | Handles |
 |----------|----------|---------|
 | `MarkdownTextRenderer` | 100 | Plain paragraphs, headings, lists, blockquotes, inline formatting |
 | `CodeBlockRenderer` | 200 | Fenced code blocks with language detection and syntax highlighting |
 | `ArtifactReferenceRenderer` | 300 | Inline artifact links/embeds (code, documents, diagrams) |
+| **`CitationRenderer`** | **350** | **Footnote links (`[N]` markers) and footnote definitions — clickable superscript, `BringIntoView()`** |
 | `ImageRenderer` | 400 | Embedded images (base64 or file references) |
 | `MediaRenderer` | 500 | Audio/video embeds with playback controls |
 | `ThinkingRenderer` | 600 | Chain-of-thought/reasoning blocks (collapsible, styled differently) |
@@ -2173,3 +2174,218 @@ The authoritative behavioral specification for all E2E testing conventions is th
 | §12 | Quick Reference Checklist | All 12 checks must pass |
 
 When the guide and implementation diverge, the guide is the source of truth. The guide must be audited after every E2E-related feature to ensure it matches the code.
+
+---
+
+## 40. Per-Chat Toolbar Toggles
+
+The chat input toolbar (in `ChatView.xaml`) provides per-chat toggle controls for tools, skills, and memory. These controls drive the additive system prompt construction — disabled items are excluded from the prompt entirely.
+
+### 40.1 Toolbar Layout
+
+The toolbar is a `WrapPanel` in the input area (Row 2 of ChatView). Toggles appear in this order:
+
+| Control | Type | Description | AutomationId |
+|---------|------|-------------|-------------|
+| Persona | `ComboBox` | Select active persona | `PersonaSelector` |
+| 🧠 Thinking | `Button` | Toggle extended thinking mode | `ThinkingToggleBtn` |
+| 🔇 Mute | `Button` | Mute audio output | `MuteToggleBtn` |
+| 🔧 Tools ▼ | `ToggleButton` + `Popup` | Tool checkboxes dropdown | `ToolsDropdownBtn` |
+| 📚 Skills ▼ | `ToggleButton` + `Popup` | Skill checkboxes dropdown + All On/Off | `SkillsDropdownBtn` |
+| 🧠 Mem | `ToggleButton` | Toggle memory on/off | `MemoryToggleBtn` |
+| ⚡ Auto-Approve | `Button` | Auto-approve toggle | — |
+| ⚖ Compare | `Button` | Model comparison | — |
+| 📋 Prompts | `Button` | Prompt templates | — |
+| ⚡ Actions ▾ | `Button` | Text actions dropdown | — |
+| 🎤 | `Button` | Voice input | — |
+| 📷 | `Button` | Camera input | — |
+| 📎 Attach | `Button` | File attachment | — |
+| 📝 Write to Wiki | `Button` | Write to wiki | — |
+| 🔄 Update Memory | `Button` | Update memory | — |
+
+### 40.2 Tools Dropdown
+
+The 🔧 Tools dropdown (`ToggleButton` + `Popup`) shows a scrollable list of `CheckBox` controls bound to `ToolToggles` (an `ObservableCollection<ToolToggleItem>`):
+
+```xml
+<Popup IsOpen="{Binding IsChecked, ElementName=ToolsDropdownBtn}" ...>
+    <ItemsControl ItemsSource="{Binding ToolToggles}">
+        <ItemsControl.ItemTemplate>
+            <DataTemplate>
+                <CheckBox Content="{Binding DisplayName}"
+                          IsChecked="{Binding IsEnabled}"
+                          AutomationProperties.AutomationId="{Binding Name, StringFormat='Tool_{0}'}"/>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</Popup>
+```
+
+`ToolToggleItem` (`ViewModels/ToolToggleItem.cs`) is an `ObservableObject` with:
+- `Name` (string) — internal tool name (e.g., "bash", "text_editor")
+- `DisplayName` (string) — human-readable (e.g., "Bash", "Text Editor")
+- `IsEnabled` (bool) — default `true`
+
+New chats inherit tool toggle state from global defaults (Settings → Tools category).
+
+### 40.3 Skills Dropdown
+
+The 📚 Skills dropdown mirrors the tools dropdown pattern but adds an "All On/Off" toggle button at the top:
+
+```csharp
+// Click handler in ChatView.xaml.cs
+private void ToggleAllSkills_Click(object sender, RoutedEventArgs e)
+{
+    var allEnabled = SkillToggles.Any(s => !s.IsEnabled);
+    foreach (var skill in SkillToggles)
+        skill.IsEnabled = allEnabled;
+}
+```
+
+`SkillToggleItem` (`ViewModels/SkillToggleItem.cs`) is an `ObservableObject` with:
+- `Name` (string) — skill identifier (e.g., "xlsx", "docx")
+- `Description` (string) — human-readable description
+- `IsEnabled` (bool) — default `true`
+
+### 40.4 Memory Toggle
+
+The 🧠 Mem toggle (`MemoryToggleBtn`) binds `IsChecked` to `MemoryEnabled` (bool property on the ViewModel). When enabled, the `memory` tool is added to the system prompt's tools array and the memory system prompt instructions are included.
+
+### 40.5 ViewModel Integration
+
+The `ChatThreadViewModel` (or equivalent chat-scoped ViewModel) exposes:
+- `ToolToggles` — `ObservableCollection<ToolToggleItem>`
+- `SkillToggles` — `ObservableCollection<SkillToggleItem>`
+- `MemoryEnabled` — `bool` property
+- `ActivePersona` — current persona selection
+
+State is passed to `SystemPromptCoordinator` for prompt assembly.
+
+---
+
+## 41. CitationRenderer — Footnote Rendering
+
+`CitationRenderer` (`Controls/CitationRenderer.cs`, `Priority = 350`) handles footnote citations in chat messages using Markdig's `Footnote` and `FootnoteLink` node types.
+
+### 41.1 Detection
+
+`CanRender()` returns `true` for `Markdig.Syntax.Inlines.FootnoteLink` (inline citation markers `[N]`) and `Markdig.Extensions.Footnotes.Footnote` (footnote definitions at the bottom of the message).
+
+### 41.2 Inline Marker Rendering
+
+| Input | Output | Behavior |
+|-------|--------|----------|
+| `[N]` reference | Clickable superscript `Hyperlink` with `[N]` label | `FontVariants.Superscript`, `FontSize = 10` |
+| Missing footnote reference | Plain text `[N]` (graceful degradation) | No hyperlink, no click handler |
+| Click on marker | `FrameworkElement.BringIntoView()` | Scrolls to the matching footnote definition paragraph |
+
+### 41.3 Footnote Definition Rendering
+
+Each footnote is rendered as a styled `Paragraph` with:
+- Bold `[N]` index label
+- Title text (linked if a valid absolute URL is present; plain text otherwise)
+- Domain name (extracted from URL text)
+- "Accessed {date}" text
+
+**Graceful degradation:** Missing URL → plain text title. Missing domain/date → omitted.
+
+### 41.4 Footnote Content Parsing
+
+`ParseFootnoteContent()` extracts up to 4 fields from Markdig's `Footnote` AST:
+1. **Title** — from first `LinkInline.Url` / `LinkInline.FirstChild`
+2. **URL** — from first `LinkInline.Url`
+3. **Domain** — parsed from text after the URL, split on `" — "`
+4. **Date accessed** — parsed from text matching `" — accessed {date}"`
+
+---
+
+## 42. WebView2 Artifacts Panel
+
+`ArtifactsWebView2Host` (`Controls/ArtifactsWebView2Host.cs`) provides a hybrid WPF+WebView2 rendering surface for artifact files in the right panel.
+
+### 42.1 Hybrid Architecture
+
+The control wraps a `Microsoft.Web.WebView2.Wpf.WebView2` inside a `Grid`. If the WebView2 runtime is unavailable, it falls back to a styled `TextBlock` with a download link:
+
+```csharp
+_fallback = new TextBlock
+{
+    Text = "Artifact preview requires the WebView2 runtime.\n" +
+           "Download from: https://go.microsoft.com/fwlink/p/?LinkId=2124703",
+    Visibility = Visibility.Collapsed  // Shown only when WebView2 init fails
+};
+```
+
+### 42.2 File Rendering
+
+| Extension | Method | Dependencies |
+|-----------|--------|-------------|
+| `.html`, `.htm`, `.svg`, `.pdf` | Direct file URI (`CoreWebView2.Navigate()`) | Browser-native rendering |
+| `.md`, `.markdown` | CDN-loaded `marked.js` | `cdn.jsdelivr.net/npm/marked/marked.min.js` |
+| `.diff`, `.patch` | CDN-loaded `diff2html.js` | `cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js` |
+| Other code files | CDN-loaded `Prism.js` | `cdn.jsdelivr.net/npm/prismjs@1/` |
+
+### 42.3 Theme Bridge
+
+Theme is bridged from WPF to WebView2 via `ExecuteScriptAsync()`:
+
+```csharp
+public async Task SetThemeAsync(bool isDark)
+{
+    var script = $@"
+document.documentElement.setAttribute('data-theme', '{theme}');
+document.documentElement.classList.remove('dark', 'light');
+document.documentElement.classList.add('{theme}');";
+    await _webView.CoreWebView2.ExecuteScriptAsync(script);
+}
+```
+
+Theme is re-applied on every `NavigationCompleted` event to handle SPA-style navigations.
+
+### 42.4 WebView2 Configuration
+
+```csharp
+_webView.CoreWebView2.Settings.IsScriptEnabled = true;
+_webView.CoreWebView2.Settings.AreDefaultScriptDialogsEnabled = false;
+_webView.CoreWebView2.Settings.IsWebMessageEnabled = false;
+_webView.CoreWebView2.Settings.IsBuiltInErrorPageEnabled = false;
+```
+
+### 42.5 NuGet Dependency
+
+`Microsoft.Web.WebView2.Wpf` (latest stable) added to `MySecondBrain.UI.csproj`. WebView2 runtime is pre-installed on Windows 11; auto-downloaded on Windows 10. Note: adds ~100MB to install size.
+
+---
+
+## 43. SystemPromptCoordinator — Bridging Toolbar State with SystemPromptBuilder
+
+`SystemPromptCoordinator` (`ViewModels/SystemPromptCoordinator.cs`) is a ViewModel-level service that bridges per-chat toolbar toggle state with the static `SystemPromptBuilder`.
+
+### 43.1 Responsibilities
+
+| Method | Input | Output |
+|--------|-------|--------|
+| `GetSystemPrompt()` | Persona message, enabled tool names, enabled skill names, workspace path | Full additive system prompt string (or `null` if everything disabled) |
+| `GetFilteredToolNames()` | Enabled tool names + enabled skill count | Filtered tool names array for the API |
+| `GetSkillCatalogXml()` | Enabled skill names | `<available_skills>` XML block |
+| `ResolveSystemPrompt()` | Template with `{{variables}}` | Resolved template |
+
+### 43.2 Tool Name Filtering Logic
+
+`GetFilteredToolNames()` delegates to `SystemPromptBuilder.BuildFilteredToolNames()`:
+
+- `ask_user_input` is **always** present (required for confirmation dialogs)
+- `skill_load` is present **only when ≥1 skill is enabled**
+- All other tools respect the per-chat toggle state
+- Edge case: if no tools and no skills are enabled, returns empty array (model has no capabilities)
+
+### 43.3 Integration Flow
+
+```
+User toggles checkbox in ChatView toolbar
+  → ToolToggleItem.IsEnabled changes
+  → ViewModel collects enabled tool/skill names
+  → Calls SystemPromptCoordinator.GetSystemPrompt(...)
+  → Coordinators delegates to SystemPromptBuilder static methods
+  → Returns assembled system prompt string → sent to LLM API
+```
