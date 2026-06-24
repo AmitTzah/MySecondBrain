@@ -91,7 +91,7 @@ src/
 
 ## 5. Execution Steps
 
-### [ ] Step 1: Add MemoryEntry Entity + Skill Models to Core
+### [x] Step 1: Add MemoryEntry Entity + Skill Models to Core
 
 - **Goal:** Add `MemoryEntry` domain model and `Skill` metadata records to Core, plus update `ToolAutoApprovalSettings`.
 - **Actions:**
@@ -457,6 +457,11 @@ src/
   - `DependencyInjectionConfig.cs` is the single source of truth for all DI registrations
   - `AppDbContext` at `src/MySecondBrain.Data/AppDbContext.cs` has Fluent API configuration in `OnModelCreating`
   - Content renderers are in `src/MySecondBrain.UI/Controls/` with priority ordering
+
+- **Step 1 — MemoryEntry & Skill Models (completed):**
+  - `MemoryEntry` in `DomainModels.cs`: Id (string GUID), Key (string ≤200), Value (string ≤10KB), SourceThreadId (string?), CreatedAt, UpdatedAt. Constants: KeyMaxLength=200, ValueMaxLength=10240.
+  - `SkillModels.cs`: `SkillMetadata(Name, Description, Source, Location)`, `SkillContent(Name, Body, Resources)`, `SkillDependencies(Tools?, Packages?, System?)`, `SkillActivationResult(Success, Content?, ErrorMessage?)` — all immutable records.
+  - `ToolAutoApprovalSettings`: 10 bool fields (AutoApproveBash, TextEditor, WebSearch, WebFetch, WikiSearch, Memory, SkillLoad, AskUserInput, PresentFiles, ImageSearch) + MaxConsecutiveAutoApprovals=10. Removed: AutoApproveFileGenerate, AutoApproveFileEdit.
 
 - **File Deletion Notes:**
   - `TerminalToolExecutor.cs` → DELETED (replaced by `BashToolExecutor.cs`)
