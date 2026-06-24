@@ -127,7 +127,7 @@ src/
 
 ---
 
-### [ ] Step 3: Add ISearchProvider Image Search Extension
+### [x] Step 3: Add ISearchProvider Image Search Extension
 
 - **Goal:** Extend `ISearchProvider` with image search capability for the `image_search` tool.
 - **Actions:**
