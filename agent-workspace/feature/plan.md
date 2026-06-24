@@ -245,7 +245,7 @@ src/
 
 ---
 
-### [ ] Step 8: Add CitationRenderer (Priority 350) and Register in DI
+### [x] Step 8: Add CitationRenderer (Priority 350) and Register in DI
 
 - **Goal:** Create `CitationRenderer` to handle inline citation markers (`[1]`, `[2]`) and footnote definitions (`[^1]:`), and register it in the DI container.
 - **Actions:**
