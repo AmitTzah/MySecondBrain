@@ -348,13 +348,14 @@ public sealed class AppShellNavigationThemingE2ETests : E2eTestBase
         var registry = _serviceProvider.Value.GetRequiredService<IContentRendererRegistry>();
         var renderers = registry.GetRenderers();
 
-        Assert.Equal(7, renderers.Count);
+        Assert.Equal(8, renderers.Count);
 
         var expected = new (string Name, int Priority)[]
         {
             ("MarkdownText", 100),
             ("CodeBlock", 200),
             ("ArtifactReference", 300),
+            ("Citation", 350),
             ("Image", 400),
             ("Media", 500),
             ("Thinking", 600),
@@ -375,6 +376,6 @@ public sealed class AppShellNavigationThemingE2ETests : E2eTestBase
                 $"which is not greater than previous {renderers[i - 1].RendererName}'s {renderers[i - 1].Priority}");
         }
 
-        _output.WriteLine("All 7 content renderers have correct ascending priorities.");
+        _output.WriteLine("All 8 content renderers have correct ascending priorities.");
     }
 }
