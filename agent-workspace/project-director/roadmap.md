@@ -76,12 +76,12 @@ Define a comprehensive design token system — color palette (brand, semantic, n
 HTML mock reference: (cross-cutting — applies to all 8 vision screens; tokens designed to match the visual language implied by [`vision/screens/studio-chat.html`](vision/screens/studio-chat.html) color scheme).
 
 Dependencies: 5.
-E2E: Not applicable — design tokens verified via visual regression tests planned within Feature 19.
+E2E: Not applicable — design tokens verified via visual regression tests planned within Feature 20.
 Vision groups: cross-cutting (affects all screens).
 
 ---
 
-## Wave 3: Vertical Slices — 11 Features
+## Wave 3: Vertical Slices — 12 Features
 
 End-to-end features spanning database → service → UI. Each feature adds new code to the Wave 1–2 foundation. Ordered by dependency chain.
 
@@ -95,11 +95,11 @@ Vision groups: B, A2, A10.
 
 ### Feature 8 — Settings, Onboarding & Diagnostics
 
-Full Settings screen with 16 categories (Providers, Profiles, Appearance, Wiki, Backup, Text Actions, Hotkeys, Tools, Language, Notifications, Startup, Updates, Pricing, Security, Diagnostics, Maintenance). Appearance settings (chat themes, font). Dark/Light mode toggle. Notification and streaming settings (sound, disable streaming, per-chat mute defaults). Startup behavior (launch on Windows startup, session restore). Auto-update settings. Database maintenance (VACUUM with before/after size display). Onboarding Wizard — five-step guided first-launch setup (Welcome → API Keys → Persona → Wiki Directory → Hotkeys → Finish), each step skippable, re-launchable from Settings. Onboarding Finish screen's "Import from ChatGPT or Claude" button is present but non-functional until Feature 18 builds the import infrastructure. Diagnostics & Debug Logging — global log level selector (Information/Debug/Verbose) and 8 per-category toggles (LLM API Calls, Tier 1 Hotkey Pipeline, Tier 2 Command Bar, Database, Wiki & File System, WebSocket, Startup & Shutdown, System Integration), "Open Logs Folder" and "Clear Logs" buttons, API key redaction via Serilog `IDestructuringPolicy`.
+Full Settings screen with 16 categories (Providers, Profiles, Appearance, Wiki, Backup, Text Actions, Hotkeys, Tools, Language, Notifications, Startup, Updates, Pricing, Security, Diagnostics, Maintenance). Appearance settings (chat themes, font). Dark/Light mode toggle. Notification and streaming settings (sound, disable streaming, per-chat mute defaults). Startup behavior (launch on Windows startup, session restore). Auto-update settings. Database maintenance (VACUUM with before/after size display). Onboarding Wizard — five-step guided first-launch setup (Welcome → API Keys → Persona → Wiki Directory → Hotkeys → Finish), each step skippable, re-launchable from Settings. Onboarding Finish screen's "Import from ChatGPT or Claude" button is present but non-functional until Feature 20 builds the import infrastructure. Diagnostics & Debug Logging — global log level selector (Information/Debug/Verbose) and 8 per-category toggles (LLM API Calls, Tier 1 Hotkey Pipeline, Tier 2 Command Bar, Database, Wiki & File System, WebSocket, Startup & Shutdown, System Integration), "Open Logs Folder" and "Clear Logs" buttons, API key redaction via Serilog `IDestructuringPolicy`.
 
 HTML mock references: [`vision/screens/settings.html`](vision/screens/settings.html), [`vision/screens/onboarding-wizard.html`](vision/screens/onboarding-wizard.html).
 
-Dependencies: 4, 5, 6, 7. (Soft dependency on 18 for onboarding import button functionality.)
+Dependencies: 4, 5, 6, 7. (Soft dependency on 20 for onboarding import button functionality.)
 E2E: Verify SettingsView loads with correct title. Verify all 16 settings category sidebar items are present (Providers, Profiles, Appearance, Wiki, Backup, Text Actions, Hotkeys, Tools, Language, Notifications, Startup, Updates, Pricing, Security, Diagnostics, Maintenance) and each shows correct header when selected. In Appearance section, verify Dark and Light theme RadioButtons exist and toggle between them. Verify "🔄 Re-run Onboarding Wizard" hyperlink exists in Settings sidebar. In Diagnostics section, verify log level ComboBox has Information/Debug/Verbose options, change log level between values with round-trip restore, toggle LLM API Calls category off then on, and verify "Open Logs Folder" and "Clear Logs" buttons exist in Log File Management section. Onboarding Wizard 5-step flow tested end-to-end with fresh test database (Feature 9): Welcome→API Keys→Persona→Wiki Directory→Hotkeys→Finish, each step skippable, re-launchable from Settings, wizard not shown after completion.
 Vision groups: A (A1, A3–A9, A11), A8, V.
 
@@ -219,7 +219,7 @@ Dependencies: 4, 5, 7, 10.
 E2E: In an active Studio Chat, click the 📎 Attach File button in the textbox toolbar, select a .txt file and a .png image from the file picker, and verify both appear as attachment cards below the textbox with filenames and remove buttons. Verify model-aware compatibility warnings appear on unsupported file types. Paste an image from clipboard via Ctrl+V and verify it appears as a thumbnail in the attachment row. Click the microphone button, verify recording indicator pulses red, click again to stop, and verify transcribed text appears in the textbox. Open the Prompt Library, select a saved template, and verify it inserts into the textbox with variables resolved. Verify the real-time token counter in the chat header updates as text is typed, showing a colored bar transitioning from green to yellow to red as the context limit approaches.
 Vision groups: C (input/media), J.
 
-### Feature 12 — Message Branching & Chat Organization
+### Feature 13 — Message Branching & Chat Organization
 
 Message Branching (D): Edit any past message (Edit in Place or Edit as Branch). **Quick Branch (↳ Branch) button** on each assistant message — creates a branch instantly without opening the editor, separate from the edit-then-branch flow. Delete any past message (branch data preserved). Branch navigation with indicator ("2/3") and cycle arrows. Chat tree visualization (nodes = messages, edges = parentMessageId). Quote from chat (selected text → quoted block in input). Chat navigation bar (collapsible scrollable message list, click to jump). Duplicate/Fork chat from any message point. Message feedback (thumbs-up/down). Undo/Redo message edits (Ctrl+Z/Y, per-chat stack, depth 50).
 
@@ -231,17 +231,17 @@ Dependencies: 4, 5, 10.
 E2E: In a chat with multiple messages, click the edit icon on a past user message, modify text, select Edit as Branch, and verify branch indicator "2/2" appears. Click the ↳ Branch button on an assistant message and verify a new branch is created instantly. Click branch navigation arrows to cycle between versions and verify subsequent messages re-render. Open the Chat Tree visualization, verify nodes represent messages, click a node to navigate to that branch point. Select text in a past message, click Quote, and verify the selected text is inserted as a Markdown blockquote in the textbox. In the sidebar, favorite a chat via star icon, assign tags, pin a chat to the top, and verify all persist. Press Ctrl+Shift+F to open global search, type a query, verify FTS5 results appear with highlighted snippets grouped by chat, click a result to navigate to the matching message.
 Vision groups: D, L.
 
-### Feature 13 — Data Lifecycle & Soft-Delete Trash
+### Feature 14 — Data Lifecycle & Soft-Delete Trash
 
 Data Lifecycle (O): Unified ChatThread model (Tier 1/2/3 all create identical ChatThread + Message data). IsTransient flagging. Chat elevation (sending reply in transient thread in Studio flips to permanent; elevation triggers on send action, even if API call fails). 7-day auto-cleanup of transient threads with exceptions (favorited, tagged, pinned, archived, has user replies or artifacts — auto-elevated). Garbage collection policy. Database compaction (VACUUM).
 
 Soft-Delete Trash (U): Soft-delete on chat deletion (30-day Trash). Trash view with Restore and Delete Permanently. 30-day auto-purge. Restore preserves folder, tags, pinned status. Permanent delete with garbage collection cascade. Empty Trash with confirmation.
 
-Dependencies: 4, 5, 12.
+Dependencies: 4, 5, 13.
 E2E: Right-click a chat in the sidebar and select Delete. Verify confirmation dialog warns about 30-day retention. Click Move to Trash and verify toast confirms the action. Navigate to 🗑️ Trash tab, verify the deleted chat appears with deletion date, Restore button, and Delete Permanently button. Click Restore and verify the chat reappears in the main list with its original folder, tags, and pinned status preserved. Delete another chat, navigate to Trash, click Delete Permanently, verify confirmation dialog warns about permanent data loss, confirm, and verify the chat is gone. Click Empty Trash, verify confirmation with item count, confirm, and verify all items are permanently removed.
 Vision groups: O, U.
 
-### Feature 14 — Artifacts & Media Library
+### Feature 15 — Artifacts & Media Library
 
 **Artifacts (F):** AI-generated named artifacts (code, docs, config files) with type inferred from language/extension. Side panel artifact list in right panel (click to view content). Version history per artifact (v1, v2, v3…). Diff view between any two versions (DiffPlex, side-by-side or unified). Version switching with branching on revert. Artifact viewer (syntax highlighting for code, rendered view for Markdown). "Save to Disk" and "Save to Wiki" buttons. Global Artifacts Browser screen (cross-chat listing with search, sort, and filter).
 
@@ -253,7 +253,7 @@ Dependencies: 4, 5, 10.
 E2E: Trigger an AI generation that produces an artifact (e.g., "Create a Python Flask app in an artifact"). Verify the artifact appears in the right panel under 📄 Artifacts with its name and type. Click the artifact to view its content with syntax highlighting. Request a change and verify version v2 is created. Open version history, select v1 and v2, click Compare, and verify DiffPlex side-by-side diff shows red/green changes. Click Save to Disk and verify the file is written. Navigate to Global Artifacts Browser via sidebar, verify all artifacts across chats are listed with name, type, parent chat, date, and version count, and filter by type. Navigate to Media Library screen, verify a gallery grid of all media items with filtering by type, click an image to view full resolution, and verify View in Library navigates to the source chat.
 Vision groups: F, G.
 
-### Feature 15 — Tool Use, Agent Capabilities & Skills
+### Feature 16 — Tool Use, Agent Capabilities & Skills
 
 10-tool agent surface matching Anthropic's trained-in schemas: bash (workspace-isolated cmd.exe with Git Bash/WSL fallback), text_editor (Anthropic text_editor_20250728 schema — view/create/str_replace/insert, replaces file_generate + file_edit), web_search (Google Custom Search / Bing API), web_fetch (read-only HttpClient GET, URL must come from prior search results), image_search (Google/Bing Image Search API, separate from text web_search), memory (SQLite-backed, Anthropic memory_20250818 schema, per-chat toggle), wiki_search (local SQLite FTS5, read-only, zero API cost), skill_load (activates Agent Skills with enum-constrained schema and structured XML wrapping), ask_user_input (structured WPF confirmation dialogs), present_files (bridges workspace to WebView2 artifacts panel). Tool auto-approval settings (global defaults in Settings → Tools + per-chat overrides in textbox toolbar: Auto-Approve / Ask / Disabled). Hard-coded overrides: bash writes outside workspace and text_editor deletes ALWAYS require confirmation.
 
@@ -267,7 +267,7 @@ Dependencies: 4, 5, 7, 10.
 E2E: In Studio Chat with tools enabled, send a message requesting a web search. Verify the tool call appears as a styled system message showing the search query, results feed back to the AI, and a summarized response appears. Request the AI to create an Excel file (triggering the xlsx skill), verify skill_load tool call appears, then bash and text_editor tool calls create the file. Click present_files and verify the artifact appears in the WebView2 side panel with syntax highlighting. Send a message requesting image search, verify image results appear with thumbnails. Toggle the Memory toggle on, ask the AI to remember a fact, verify memory tool call stores it, then ask the AI what it knows about you and verify it retrieves the fact. Toggle Skills dropdown to disable xlsx, send a spreadsheet request, verify the skill catalog does not include xlsx and skill_load enum does not list it. Trigger Deep Research with a query, verify the research protocol runs via web_search → web_fetch → bash tool calls with natural progress visibility (no custom state machine UI), and the final cited report appears as an artifact in the WebView2 panel.
 Vision groups: H, W, F (artifacts panel).
 
-### Feature 16 — Text Actions & Three-Tier System
+### Feature 17 — Text Actions & Three-Tier System
 
 Text Actions CRUD with three-dimensional configuration: capture scope (any combination of selection, focusedElement, surroundingContext, fullDocument, screenshot), system prompt + model config (the transform), and apply mode (replaceSelection, insertAtCursor, replaceFocusedElement, appendToFocusedElement, prependToFocusedElement, clipboardOnly, showOnly). Ten built-in defaults: Rewrite, Summarize, Explain, Translate, Fix Grammar, Enhance Prompt, Continue Writing, Improve Flow, Summarize Page, Explain Screen. Textbox toolbar with Text Actions dropdown and preview popup.
 
@@ -275,7 +275,7 @@ Text Actions CRUD with three-dimensional configuration: capture scope (any combi
 
 **Tier 2 — Command Bar (Alt+Space):** Spotlight-style centered overlay with inline state (input field + Q&A display + Pop-out/Close/Copy controls) and popped-out state (floating resizable mini-window with Open in Studio, Pin, Minimize, Close). Elevation to Studio creates permanent ChatThread. Dismissal saves as transient thread.
 
-**Tier 3 — Studio Chat:** Full workspace (built in Feature 10). All three tiers share the same ChatThreadService and data model. Elevation from Tier 1/2 flips IsTransient to false.
+**Tier 3 — Studio Chat:** Full workspace (built in Feature 11). All three tiers share the same ChatThreadService and data model. Elevation from Tier 1/2 flips IsTransient to false.
 
 HTML mock reference: (no dedicated screen mock — Tier 1/2 are overlay windows; Text Actions configuration lives in [`vision/screens/settings.html`](vision/screens/settings.html) categories ⚡ Text Actions and ⌨️ Hotkeys).
 
@@ -283,7 +283,7 @@ Dependencies: 4, 5, 6, 7, 10.
 E2E: Press Alt+Space to invoke Tier 2 Command Bar. Verify a centered overlay appears with placeholder "Ask anything…". Type a question, press Enter, and verify the bar expands with streaming compact Markdown response. Click the Pop-out button and verify the bar detaches into a floating resizable mini-window with Open in Studio, Pin, Minimize, and Close controls. Click Open in Studio and verify the conversation becomes a permanent ChatThread. Press Alt+Q (Rewrite) in a text editor with text selected, verify the Thinking… pill overlay appears near cursor, then the result popup shows the Text Action name, source application, editable transformed text, and Accept/Discard/Open in Studio/Save to Wiki/Retry buttons. Click Accept and verify the result applies to the source editor per the apply mode with a confirmation toast. Navigate to Settings → Text Actions, verify 10 built-in defaults are listed. Create a custom Text Action with capture scope fullDocument+screenshot and apply mode clipboardOnly, assign a hotkey, and verify it appears in the list.
 Vision groups: K, P9.
 
-### Feature 17 — Personal Wiki / Second Brain
+### Feature 18 — Personal Wiki / Second Brain
 
 Wiki directory configuration (user selects directory of .md files, FileSystemWatcher with 500ms debounce and polling fallback monitors external changes). Wiki indexing (Markdig AST walker extracts headings, cross-links, word count, plain text content; stored in SQLite wiki index tables with FTS5 for full-text search). Wiki search (dedicated scope with results showing filenames, headings, snippets; click opens in Wiki Browser). Wiki Browser screen — three-region split: file tree (collapsible directory tree), Markdown viewer (rendered content with "Open in External Editor" button), and info panel (Related Sections tab + Backlinks tab + File Info tab with word count, reading time, heading count). **💬 Discuss with AI button** in Wiki Browser — creates a new chat (or opens existing) with the current file's full content pre-loaded as context, enabling wiki→chat→Write to Wiki loop.
 
@@ -305,7 +305,7 @@ Vision groups: N.
 
 Features that span across vertical slices. Smaller independent features combined with optimization, hardening, polish, and motion design.
 
-### Feature 18 — Model Comparison, Backup & Recovery
+### Feature 19 — Model Comparison, Backup & Recovery
 
 **Model Comparison (M):** Send same prompt to 2–4 Personas simultaneously. Side-by-side comparison with independent streaming panels (horizontal or vertical layout). Each panel shows Persona name, response time, token count, and cost. Broadcast mode toggle (typing in one input sends to all). Accept result appends to permanent ChatThread; others saved as branches or discarded. "Accept All as Branches" option.
 
@@ -317,7 +317,7 @@ Dependencies: 4, 5, 7, 11.
 E2E: In Studio Chat, click the ⚖ Compare button in the textbox toolbar. Select 2-3 Personas via checkboxes (verify Start Comparison is disabled until ≥2 selected), enter a prompt, choose horizontal layout, and click Start Comparison. Verify side-by-side panels stream responses independently with persona name, model name, and real-time metrics. Toggle 🔗 Broadcast mode on and verify per-panel inputs are replaced by a single centered broadcast input. Send a follow-up and verify it goes to all panels. Click Accept on one panel and verify the accepted conversation is appended to the originating chat with other conversations auto-saved as branches, confirmed by toast. Navigate to Settings → Backup, configure a local folder backup destination, click Backup Now, verify progress bar completes with a confirmation toast. Set backup schedule to Daily. Click Restore from Backup, verify available backups are listed with dates and sizes, select one, confirm the warning dialog, and verify restore completes.
 Vision groups: M, R.
 
-### Feature 19 — Data Portability, Analytics, Localization & Hardening
+### Feature 20 — Data Portability, Analytics, Localization & Hardening
 
 **Import & Export (I):** Export chat as Markdown (QuestPDF for PDF, JSON). Import from ChatGPT export JSON and Claude export JSON with duplicate detection. Imported chats created as new ChatThreads.
 
@@ -333,7 +333,7 @@ Dependencies: all Wave 3 features.
 E2E: In a chat with multiple messages, press Ctrl+S, select Markdown format, pick a save location, and verify the exported .md file contains all messages with roles, timestamps, and code blocks. Export as PDF and verify the .pdf renders with formatting preserved. Navigate to Settings → Import, select a ChatGPT export JSON file, verify the preview shows chat title, message count, and date range, click Import, and verify a new ChatThread appears in the sidebar with messages and timestamps preserved. Repeat with a Claude export JSON. Navigate to Usage Dashboard, verify summary cards display total tokens, total cost, most used model, and most used Persona. Select This Month filter, verify line chart (tokens/time), bar chart (cost/time), and pie charts (by provider, by model) update. Click a row in the per-chat breakdown table to open that chat. Verify AI Feedback Summary shows approval percentages per Persona and Model with trend charts. Close and relaunch the app, verify session restore reopens all previously open chats and tabs when enabled in Settings → Startup. Verify the Tier 1 [Apply] button is grayed out with "Source application is no longer available" when the source window has been closed.
 Vision groups: I, S, P (P3, P4, P7 — platform refinements).
 
-### Feature 20 — UI Polish: All Screens Visual Refinement Pass
+### Feature 21 — UI Polish: All Screens Visual Refinement Pass
 
 Apply the Visual Design System (Feature 5b) consistently across all 8 screens. Implement proper spacing, typography, color application, empty state illustrations, and responsive panel behavior. Ensure every screen looks professional and polished — no placeholder gray-on-gray look. Addresses: card/panel elevation and borders, consistent header styling, focus indicators, scrollbar styling, and sidebar visual hierarchy. Includes visual regression test snapshots for all 8 screens in both Dark and Light themes.
 
@@ -343,7 +343,7 @@ Dependencies: all Wave 3 features, 5b.
 E2E: Not applicable — visual consistency verified via planned visual regression test snapshots for all 8 screens in Dark and Light themes.
 Vision groups: cross-cutting (affects all screens).
 
-### Feature 21 — UI Polish: Micro-interactions & Motion Design
+### Feature 22 — UI Polish: Micro-interactions & Motion Design
 
 Add subtle motion and interaction feedback throughout the app: hover transitions on buttons/list items (150ms color fade), smooth panel resize animations, tab open/close transitions, message appear/fade-in during streaming, scroll-to-bottom smooth behavior, toast notification slide-in/out, thinking block expand/collapse animation, sidebar collapse/expand transition, overlay fade-in for Tier 1 pill and Tier 2 command bar. All animations respect the Windows "Turn off all unnecessary animations" accessibility setting (`SystemParametersInfo` SPI_GETCLIENTAREAANIMATION).
 
