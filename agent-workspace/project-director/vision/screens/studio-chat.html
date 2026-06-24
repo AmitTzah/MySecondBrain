@@ -368,22 +368,21 @@
         <div class="draft-indicator" data-tooltip="Your message is auto-saved every 5 seconds. If the app closes unexpectedly, you'll be prompted to restore this draft.">💾 Draft saved</div>
         <div class="input-toolbar">
           <button class="toolbar-btn" data-tooltip="Would switch the active Persona for this chat. Changes system prompt and model for subsequent messages.">🤖 Python Expert ▾</button>
-          <button class="toolbar-btn active" data-tooltip="Would toggle extended reasoning (thinking) mode. When ON (active): AI shows its reasoning as an expandable '🧠 Thinking... [N]s' block above each response. Collapsed by default during streaming. Expand to see thinking in real time. When OFF: AI responds directly without showing reasoning. Only works with models that support extended thinking.">🧠 Thinking</button>
+          <button class="toolbar-btn active" data-tooltip="Would toggle extended reasoning (thinking) mode. When ON: AI shows its reasoning as an expandable block. Only works with models that support extended thinking.">🧠 Thinking</button>
           <button class="toolbar-btn" data-tooltip="Would mute sound notifications for this specific chat.">🔇 Mute</button>
-          <button class="toolbar-btn" data-tooltip="Would enable/disable AI tool use for this chat.">🔧 Tools</button>
-          <button class="toolbar-btn" data-tooltip="Would override global tool auto-approval settings for this chat.">⚡ Auto-Approve</button>
-          <button class="toolbar-btn active" data-tooltip="Would toggle _memory.md injection. When On, AI knows what it has learned about you.">🧠 Memory: On</button>
-          <a href="model-comparison.html" class="toolbar-btn" style="text-decoration:none" data-tooltip="Would open Model Comparison: select 2+ Personas, enter a prompt, and see responses side-by-side in real time. Drag Personas into slots, compare, accept the best response.">⚖ Compare</a>
+          <button class="toolbar-btn" data-tooltip="Would show checkboxes for all 10 tools (bash, text_editor, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files). Disabled tools are removed from the API call entirely. Auto-approval submenu per tool.">🔧 Tools ▾</button>
+          <button class="toolbar-btn" data-tooltip="Would show checkboxes for each installed skill (xlsx, docx, pdf, pptx, algorithmic-art, canvas-design, frontend-design, theme-factory, web-artifacts-builder, webapp-testing, skill-creator) + community skills. Disabled skills removed from catalog and skill_load enum.">📚 Skills ▾</button>
+          <button class="toolbar-btn active" data-tooltip="Would toggle AI memory on/off for this chat. When ON: AI can store and retrieve facts about you across conversations via SQLite-backed memory tool (Anthropic schema). Memories persist across all chats. Manage in Settings → Memory.">🧠 Mem</button>
+          <a href="model-comparison.html" class="toolbar-btn" style="text-decoration:none" data-tooltip="Would open Model Comparison: select 2+ Personas, see responses side-by-side in real time.">⚖ Compare</a>
           <span class="toolbar-separator"></span>
           <button class="toolbar-btn" data-tooltip="Would open the Prompt Library to insert a saved prompt.">📋 Prompts</button>
           <button class="toolbar-btn" data-tooltip="Would show Text Actions dropdown: Rewrite, Summarize, Explain, Translate, Fix Grammar, Enhance Prompt.">⚡ Actions ▾</button>
           <span class="toolbar-separator"></span>
           <button class="toolbar-btn" data-tooltip="Would start recording from microphone for voice dictation.">🎤</button>
           <button class="toolbar-btn" data-tooltip="Would open webcam capture dialog.">📷</button>
-          <button class="toolbar-btn" data-tooltip="Would open file picker to attach images, PDFs, HTML, text files, code files, audio, or video. Supported file types depend on the active model — unsupported files show a warning badge and are attached as metadata only.">📎 Attach</button>
+          <button class="toolbar-btn" data-tooltip="Would open file picker to attach images, PDFs, HTML, text files, code files, audio, or video.">📎 Attach</button>
           <span class="toolbar-separator"></span>
           <button class="toolbar-btn" data-tooltip="Would open Write to Wiki dialog: create new or update existing wiki file from this conversation.">📝 Write to Wiki</button>
-          <button class="toolbar-btn" data-tooltip="Would trigger AI to read this chat and update _memory.md with new facts about you. Review via Diff Viewer.">🔄 Update Memory</button>
         </div>
         <div class="attachment-row">
           <div class="attachment-thumb" data-tooltip="Would open this image in a new tab for full-size viewing. Click × to remove before sending.">
