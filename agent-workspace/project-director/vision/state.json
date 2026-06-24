@@ -34,5 +34,5 @@
     "flagged_concerns": ["Auto-Summarize context overflow requires separate API call costing tokens", "Text completion APIs being deprecated by some providers", "WebView2 runtime dependency adds ~100MB to install size", "bash tool security — workspace isolation is app-enforced, not OS-level sandbox", "WebSocket server security model needs review", "Global keyboard hooks may trigger antivirus false positives", "VACUUM requires temporary free disk space equal to database size", "Rich text bidirectional text rendering complexity", "Google Cloud Storage dependency for backups", "Locked chat encryption — permanent lockout risk must be communicated", "Git wiki version control — GitHub token storage requires DPAPI encryption", "Model comparison — per-panel multi-turn conversations = N independent API streams", "Skill dependency management — 11 skills require Python/Node.js/LibreOffice none bundled", "Workspace isolation is app-enforced not OS sandbox", "present_files auto-copy from workspace may cause UI pauses for large files", "Memory tool separate from wiki — two knowledge persistence mechanisms risk of user confusion"]
   },
   "spawn_count": 4,
-  "last_commit": "89f5b11"
+  "last_commit": "fff9fb3"
 }
