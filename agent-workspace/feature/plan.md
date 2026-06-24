@@ -111,7 +111,7 @@ src/
 
 ---
 
-### [ ] Step 2: Add ISkillService + ISkillLoader Interfaces
+### [x] Step 2: Add ISkillService + ISkillLoader Interfaces
 
 - **Goal:** Add the two new Core interfaces for Agent Skills subsystem.
 - **Actions:**
