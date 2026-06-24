@@ -392,7 +392,7 @@ src/
 
 ---
 
-### [ ] Step 14: Implement Workspace Isolation for Bash Tool
+### [x] Step 14: Implement Workspace Isolation for Bash Tool
 
 - **Goal:** Add workspace isolation to `BashToolExecutor` — all commands execute in `%LOCALAPPDATA%/MySecondBrain/workspace/`.
 - **Actions:**
@@ -483,10 +483,16 @@ src/
   - Additive assembly: persona → behavioral → date/time → platform → skill catalog → skill usage instructions
   - Tools filtering: `ask_user_input` always present, `skill_load` only when ≥1 skill enabled, empty array when everything disabled
   - Bash detection probes Git Bash (`C:\Program Files\Git\bin\bash.exe`) and WSL (`wsl --status`), cached via `Lazy<bool>`
-
 - **Step 13 — Structural Refactoring (completed):**
   - New file: `src/MySecondBrain.UI/ViewModels/SystemPromptCoordinator.cs` — bridges toolbar toggle state with `SystemPromptBuilder`. Takes `ISkillService` via constructor, exposes `GetSystemPrompt()`, `GetFilteredToolNames()` (static), `GetSkillCatalogXml()`, `ResolveSystemPrompt()` (static)
   - `ChatThreadViewModel` now delegates to `SystemPromptCoordinator` — system prompt methods are thin wrappers
+
+- **Step 14 — Workspace Isolation (completed):**
+  - `BashToolExecutor.cs` (524 lines): Workspace at `%LOCALAPPDATA%\MySecondBrain\workspace\`, `WorkingDirectory` set, path blocking (drive letters, `%VAR%`, `~`), wiki write protection, 24h auto-cleanup, `.sh`→Git Bash→WSL routing, heredoc→text_editor redirect, bash-specific escaping
+  - `IToolExecutor.cs`: Added `Description` and `ParametersJsonSchema` default interface methods (.NET 8 DIM) for dynamic tool descriptions
+  - `ToolOrchestrator.cs`: `GetAvailableToolDefinitions()` now iterates all registered `IToolExecutor` instances
+  - Bash detection reused from `SystemPromptBuilder.DetectBashAvailable()` via `ProbeBashAvailable()`
+
 
 
 - **Step 1 — MemoryEntry & Skill Models (completed):**
