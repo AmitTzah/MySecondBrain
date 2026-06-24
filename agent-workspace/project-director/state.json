@@ -1,31 +1,33 @@
 {
-  "project_vision": "MySecondBrain — a native Windows desktop app unifying all LLM interactions (provider-agnostic) with a personal wiki/second-brain knowledge management system",
-  "current_phase": 3,
-  "total_features": 22,
-  "current_feature_index": 9,
-  "status": "in_progress",
-  "fd_status": "idle",
-  "phase_2_substep": null,
-  "phase_4_substep": null,
-  "phase_5_substep": null,
-  "git_automation_enabled": true,
-  "hands_off_mode": true,
-  "smoke_test_automation": {
-    "enabled": false,
-    "environments": {
-      "web": null,
-      "native": null,
-      "desktop": {
-        "executable_path": "src\\MySecondBrain.UI\\bin\\Debug\\net8.0-windows10.0.17763.0\\MySecondBrain.UI.exe",
-        "window_title": "MySecondBrain",
-        "launch_args": null,
-        "mcp_available": true,
-        "mcp_name": "windows-mcp",
-        "verified": true
-      }
-    },
-    "missing_prerequisites": []
-  },
-  "total_replans": 0,
-  "current_branch_name": null
+    "project_vision":  "MySecondBrain — a native Windows desktop app unifying all LLM interactions (provider-agnostic) with a personal wiki/second-brain knowledge management system",
+    "current_phase":  3,
+    "total_features":  23,
+    "current_feature_index":  9,
+    "status":  "in_progress",
+    "fd_status":  "spawned",
+    "phase_2_substep":  null,
+    "phase_4_substep":  null,
+    "phase_5_substep":  null,
+    "git_automation_enabled":  true,
+    "hands_off_mode":  true,
+    "smoke_test_automation":  {
+                                  "enabled":  false,
+                                  "environments":  {
+                                                       "web":  null,
+                                                       "native":  null,
+                                                       "desktop":  {
+                                                                       "executable_path":  "src\\MySecondBrain.UI\\bin\\Debug\\net8.0-windows10.0.17763.0\\MySecondBrain.UI.exe",
+                                                                       "window_title":  "MySecondBrain",
+                                                                       "launch_args":  null,
+                                                                       "mcp_available":  true,
+                                                                       "mcp_name":  "windows-mcp",
+                                                                       "verified":  true
+                                                                   }
+                                                   },
+                                  "missing_prerequisites":  [
+
+                                                            ]
+                              },
+    "total_replans":  0,
+    "current_branch_name":  null
 }
