@@ -420,7 +420,7 @@ src/
 
 ---
 
-### [ ] Step 15: Update Knowledge Files
+### [x] Step 15: Update Knowledge Files
 
 - **Goal:** Update the agent-workspace knowledge files to reflect the new architecture.
 - **Actions:**
