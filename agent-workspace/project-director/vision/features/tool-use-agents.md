@@ -2,7 +2,7 @@
 
 ## What the User Accomplishes
 
-The AI can act as an agent using 9 tools matching Anthropic's trained-in schemas where possible. The model autonomously searches the web, executes shell commands in a workspace-isolated environment, creates/edits files, manages persistent memory, loads skill instructions, queries the personal wiki, presents deliverable files as artifacts, and requests structured user confirmations. The user controls which tools are enabled globally and per-chat — disabled tools are completely removed from the API call, not hidden.
+The AI can act as an agent using 10 tools matching Anthropic's trained-in schemas where possible. The model autonomously searches the web (text and images), fetches web pages, executes shell commands in a workspace-isolated environment, creates/edits files, manages persistent memory, loads skill instructions, queries the personal wiki, presents deliverable files as artifacts, and requests structured user confirmations. The user controls which tools are enabled globally and per-chat — disabled tools are completely removed from the API call, not hidden.
 
 ## Trigger
 
@@ -60,6 +60,7 @@ Anthropic server schema reimplemented as client tool with identical interface. M
 Read-only HttpClient GET fetcher. Model fetches URL content for deeper reading.
 
 - **Usage:** Model fetches promising sources discovered via `web_search`. Also used for general web page reading.
+- **URL Constraint:** The model MUST have seen the URL in prior context — either from `web_search` results or previous `web_fetch` responses. The model cannot construct URLs from memory or guess URLs. This prevents hallucinated URLs and wasted fetch calls.
 - **Output:** Page content (text extracted, HTML stripped). Limited to reasonable size (truncated if >100KB).
 - **Cost:** Zero AI token cost for the fetch itself. Page content consumes context tokens when fed back to model.
 - **Visibility:** URL and truncated content shown as tool-call system messages.
@@ -133,13 +134,26 @@ Model signals "these workspace files are done — surface them as artifacts in t
 - **Multiple files:** `present_files` accepts an array — multiple files can be presented in one call.
 - **Visibility:** Tool call shown as system message: "📄 Presented: budget.xlsx, chart.html"
 
-### H10. Tool Auto-Approval
+### H10. image_search
+
+Google Image Search or Bing Image Search API. Separate from `web_search` — dedicated to finding images rather than web pages. Model uses this when the user asks for images, photos, diagrams, or visual references.
+
+- **Backend:** Google Custom Search API (with `searchType=image`) or Bing Image Search API. User brings own API key (same key as web_search).
+- **Results:** Thumbnail URL, full image URL, dimensions, source page URL, title/alt text for each result.
+- **Usage Criteria:** Model uses `image_search` when the user explicitly asks for images ("find me pictures of...", "show me what X looks like"), needs visual references, or wants to include images in a response. NOT used for general web information queries — those use `web_search`.
+- **Safety:** Image results are filtered for safe search by default (configurable in Settings). Model must not use `image_search` for generating or finding inappropriate content.
+- **Cost:** API call cost billed to user's search API key. Typically higher cost per query than `web_search` due to richer result data.
+- **Visibility:** Query and thumbnail results displayed as tool-call system messages. Retrieved images can be displayed inline in chat or referenced by URL.
+- **Relationship to web_search:** `image_search` is for finding images. `web_search` is for finding text/web pages. They are complementary — the model decides which to use based on the user's intent. If the user says "show me pictures of modern architecture," model uses `image_search`. If the user says "tell me about modern architecture," model uses `web_search`.
+
+### H11. Tool Auto-Approval
 
 - **Global Defaults:** Settings → Tools. Configure which tools auto-execute:
   - bash: Auto-Approve / Ask / Disabled
   - text_editor: Auto-Approve / Ask / Disabled
   - web_search: Auto-Approve / Ask / Disabled
   - web_fetch: Auto-Approve / Ask / Disabled
+  - image_search: Auto-Approve / Ask / Disabled
   - memory: Auto-Approve / Ask / Disabled
   - wiki_search: Auto-Approve / Ask / Disabled
   - present_files: Auto-Approve / Ask / Disabled

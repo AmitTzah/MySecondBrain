@@ -125,19 +125,20 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 ### H. Tool Use (Agent Capabilities)
 **Spec:** [`features/tool-use-agents.md`](features/tool-use-agents.md)
 
-The model uses 9 tools matching Anthropic's trained-in schemas where possible. All tools are additively assembled per chat — disabled tools are completely removed from the API call.
+The model uses 10 tools matching Anthropic's trained-in schemas where possible. All tools are additively assembled per chat — disabled tools are completely removed from the API call.
 
 - **H1. bash:** Anthropic `bash_20250124` schema. Executes commands in workspace-isolated `%LOCALAPPDATA%/MySecondBrain/workspace/`. cmd.exe on Windows with Git Bash/WSL fallback for `.sh` scripts. Absolute paths outside workspace blocked pre-execution. Writes outside workspace require explicit user confirmation. Wiki directory is read-only from bash.
 - **H2. text_editor:** Anthropic `text_editor_20250728` schema. Commands: `view` (read file), `create` (new file — FAILS if path exists, forcing `str_replace` for updates), `str_replace` (patch file — exact match required), `insert` (append to file). Replaces the original separate `file_generate` and `file_edit` tools.
-- **H3. web_search:** Google Custom Search or Bing API. Anthropic server schema reimplemented as client tool with identical interface. Model autonomously searches web for information.
-- **H4. web_fetch:** HttpClient GET fetches URL content. Read-only. Used by Deep Research and general web page reading.
+- **H3. web_search:** Google Custom Search or Bing API. Anthropic server schema reimplemented as client tool with identical interface. Model autonomously searches web for text information. Complementary to H10 (image_search).
+- **H4. web_fetch:** HttpClient GET fetches URL content. Read-only. URL MUST have been seen in prior `web_search` results or `web_fetch` responses — model cannot construct or guess URLs. Used by Deep Research and general web page reading.
 - **H5. memory:** Anthropic `memory_20250818` schema wrapping SQLite memory store. Model stores/retrieves discrete facts about the user. Separate from the wiki. Per-chat toggle in toolbar. User can view/edit/delete memories in Settings → Memory. Full spec: [`features/agent-skills.md`](features/agent-skills.md) §Memory Tool.
 - **H6. wiki_search:** Queries local SQLite FTS5 wiki index. Returns matching filenames, headings, and content snippets. Read-only. Zero API cost. Model uses to incorporate the user's personal knowledge base into responses.
 - **H7. skill_load:** Activates an Agent Skill by loading its full `SKILL.md` instructions into context. Structured XML wrapping for context management. Deduplicated — if already activated in session, re-injection skipped. Full spec: [`features/agent-skills.md`](features/agent-skills.md).
 - **H8. ask_user_input:** Structured WPF confirmation dialogs instead of prose-based confirmations. Pattern from claude.ai. Used for dangerous operations (bash writes outside workspace, file deletions).
 - **H9. present_files:** Model signals "these workspace files are done — surface them as artifacts." App copies files from workspace to artifacts directory, renders in WebView2 side panel. First path in array shown first. Auto-copies from non-artifacts paths.
+- **H10. image_search:** Google Image Search or Bing Image Search API. Separate from `web_search` — dedicated to finding images rather than text. Model uses when user asks for images, photos, or visual references. Safe search filtering by default. Same API key as web_search.
 
-**Tool Auto-Approval (H10):** Global defaults + per-chat overrides for which tools auto-execute. `bash` writes outside workspace and `text_editor` deletes ALWAYS require confirmation. Other tools configurable: Auto-Approve / Ask / Disabled.
+**Tool Auto-Approval (H11):** Global defaults + per-chat overrides for which tools auto-execute. `bash` writes outside workspace and `text_editor` deletes ALWAYS require confirmation. Other tools configurable: Auto-Approve / Ask / Disabled.
 
 **Deep Research:** Now a skill rather than a custom state machine. Model follows research protocol using `web_search` + `web_fetch` + `bash` tools. Progress visible naturally as tool calls stream in chat. Full spec: [`features/agent-skills.md`](features/agent-skills.md) §Deep Research.
 
