@@ -4,22 +4,22 @@ using MySecondBrain.Core.Models;
 
 namespace MySecondBrain.Services.Tools;
 
-public class FileEditToolExecutor : IToolExecutor
+public class BashToolExecutor : IToolExecutor
 {
-    private readonly ILogger<FileEditToolExecutor> _logger;
+    private readonly ILogger<BashToolExecutor> _logger;
 
-    public FileEditToolExecutor(ILogger<FileEditToolExecutor> logger)
+    public BashToolExecutor(ILogger<BashToolExecutor> logger)
     {
         _logger = logger;
     }
 
-    public string ToolName => "file_edit";
+    public string ToolName => "bash";
 
-    public bool RequiresUserConfirmation => false;
+    public bool RequiresUserConfirmation => true;
 
     public ToolRiskLevel RiskLevel => ToolRiskLevel.Medium;
 
-    public bool CanAutoApprove => true;
+    public bool CanAutoApprove => false;
 
     public Task<ToolValidationResult> ValidateAsync(ToolCall toolCall, CancellationToken ct) =>
         Task.FromResult<ToolValidationResult>(default!);

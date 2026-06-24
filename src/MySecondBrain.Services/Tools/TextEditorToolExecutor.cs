@@ -4,20 +4,20 @@ using MySecondBrain.Core.Models;
 
 namespace MySecondBrain.Services.Tools;
 
-public class FileGenerateToolExecutor : IToolExecutor
+public class TextEditorToolExecutor : IToolExecutor
 {
-    private readonly ILogger<FileGenerateToolExecutor> _logger;
+    private readonly ILogger<TextEditorToolExecutor> _logger;
 
-    public FileGenerateToolExecutor(ILogger<FileGenerateToolExecutor> logger)
+    public TextEditorToolExecutor(ILogger<TextEditorToolExecutor> logger)
     {
         _logger = logger;
     }
 
-    public string ToolName => "file_generate";
+    public string ToolName => "text_editor";
 
     public bool RequiresUserConfirmation => false;
 
-    public ToolRiskLevel RiskLevel => ToolRiskLevel.Medium;
+    public ToolRiskLevel RiskLevel => ToolRiskLevel.Low;
 
     public bool CanAutoApprove => true;
 
