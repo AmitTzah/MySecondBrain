@@ -77,6 +77,8 @@ src/
       [NEW] CitationRenderer.cs           — Priority 350, clickable superscript citations
       [NEW] ArtifactsWebView2Host.cs      — WebView2 wrapper with theme bridge
       [RENAMED] ArtifactReferenceRenderer.cs → MODIFIED (stub → WebView2 integration)
+    ViewModels/
+      [NEW] SystemPromptCoordinator.cs      — System prompt coordination, delegates to SystemPromptBuilder
     [MODIFIED] MySecondBrain.UI.csproj    — Add Microsoft.Web.WebView2.Wpf NuGet
     [MODIFIED] DependencyInjectionConfig.cs — 10 tool registrations + ISkillService + ISkillLoader + CitationRenderer
 
@@ -339,7 +341,7 @@ src/
 
 ---
 
-### [ ] Step 12: Implement Additive System Prompt Construction
+### [x] Step 12: Implement Additive System Prompt Construction
 
 - **Goal:** Replace simple variable replacement with additive system prompt assembly per the skills integration spec.
 - **Actions:**
@@ -372,7 +374,25 @@ src/
 
 ---
 
-### [ ] Step 13: Implement Workspace Isolation for Bash Tool
+### [ ] Step 13: Structural Refactoring — Extract SystemPromptCoordinator from ChatThreadViewModel
+
+- **Goal:** Extract system prompt coordination methods into a dedicated `SystemPromptCoordinator` class without changing behavior.
+- **Actions:**
+  - Create `src/MySecondBrain.UI/ViewModels/SystemPromptCoordinator.cs` — a class that takes `ISkillService` via constructor and exposes: `GetSystemPrompt(personaSystemMessage, enabledToolNames, enabledSkillNames, skillCatalog, workspacePath)`, `GetFilteredToolNames(enabledToolNames, enabledSkillCount)`, `GetSkillCatalogXml(skillCatalog, enabledSkillNames)`. It coordinates between `SystemPromptBuilder` and toolbar toggle state.
+  - Move `GetSystemPrompt()`, `GetFilteredToolNames()`, `GetSkillCatalogXml()` method bodies from `ChatThreadViewModel` to the new class (the delegation to `SystemPromptBuilder` stays identical).
+  - `ChatThreadViewModel` keeps `EnabledToolNames`, `EnabledSkillNames`, `ActivePersona` properties and instantiates `SystemPromptCoordinator`, delegating to it for prompt construction.
+- **Unit Tests to Write:** None — pure structural change, existing tests cover behavior.
+- **Integration Tests to Write:** None — no infrastructure changes.
+- **Automated Test Commands:**
+  - `dotnet test tests/unit/MySecondBrain.Tests.Unit`
+  - `dotnet build MySecondBrain.sln`
+- **Smoke Test Classification:** Model
+  - Run full test suite — verify zero failures. Check that all imports resolve correctly (build succeeds).
+- **Suggested Commit Message:** `refactor: extract SystemPromptCoordinator from ChatThreadViewModel`
+
+---
+
+### [ ] Step 14: Implement Workspace Isolation for Bash Tool
 
 - **Goal:** Add workspace isolation to `BashToolExecutor` — all commands execute in `%LOCALAPPDATA%/MySecondBrain/workspace/`.
 - **Actions:**
@@ -400,7 +420,7 @@ src/
 
 ---
 
-### [ ] Step 14: Update Knowledge Files
+### [ ] Step 15: Update Knowledge Files
 
 - **Goal:** Update the agent-workspace knowledge files to reflect the new architecture.
 - **Actions:**
@@ -418,7 +438,7 @@ src/
 
 ---
 
-### [ ] Step 15: Run Full Test Suite & E2E Verification
+### [ ] Step 16: Run Full Test Suite & E2E Verification
 
 - **Goal:** Verify no regressions — all 70+ existing E2E tests pass, all unit tests pass, DI container resolves correctly.
 - **Actions:**
@@ -457,6 +477,13 @@ src/
   - `DependencyInjectionConfig.cs` is the single source of truth for all DI registrations
   - `AppDbContext` at `src/MySecondBrain.Data/AppDbContext.cs` has Fluent API configuration in `OnModelCreating`
   - Content renderers are in `src/MySecondBrain.UI/Controls/` with priority ordering
+
+- **Step 12 — System Prompt Construction (completed):**
+  - New file: `src/MySecondBrain.Services/SystemPromptBuilder.cs` — static utility class (284 lines): `BuildSystemPrompt()`, `BuildFilteredToolNames()`, `BuildSkillCatalogXml()`, `ResolveSystemPromptVariables()`, `DetectBashAvailable()` (Lazy<bool> cached)
+  - `ChatThreadViewModel` now depends on `ISkillService` via constructor injection
+  - Additive assembly: persona → behavioral → date/time → platform → skill catalog → skill usage instructions
+  - Tools filtering: `ask_user_input` always present, `skill_load` only when ≥1 skill enabled, empty array when everything disabled
+  - Bash detection probes Git Bash (`C:\Program Files\Git\bin\bash.exe`) and WSL (`wsl --status`), cached via `Lazy<bool>`
 
 - **Step 1 — MemoryEntry & Skill Models (completed):**
   - `MemoryEntry` in `DomainModels.cs`: Id (string GUID), Key (string ≤200), Value (string ≤10KB), SourceThreadId (string?), CreatedAt, UpdatedAt. Constants: KeyMaxLength=200, ValueMaxLength=10240.

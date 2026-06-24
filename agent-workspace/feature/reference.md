@@ -198,7 +198,11 @@
     ```
   - Platform context includes bash availability detection
 
-### Step 13: Implement Workspace Isolation for Bash Tool
+### Step 13: Structural Refactoring — Extract SystemPromptCoordinator from ChatThreadViewModel
+
+No specific external reference needed.
+
+### Step 14: Implement Workspace Isolation for Bash Tool
 
 - **Existing file to modify:**
   - [`BashToolExecutor.cs`](../../src/MySecondBrain.Services/Tools/BashToolExecutor.cs) (created in Step 5)
@@ -209,7 +213,7 @@
   - Shell adaptation: cmd.exe default, .sh scripts → bash.exe → wsl, heredocs → text_editor
   - 24h auto-cleanup on app startup
 
-### Step 14: Update Knowledge Files
+### Step 15: Update Knowledge Files
 
 - **Existing files to modify:**
   - [`agent-workspace/knowledge/architecture.md`](../../agent-workspace/knowledge/architecture.md)
@@ -218,7 +222,7 @@
   - [`agent-workspace/knowledge/api-routes.md`](../../agent-workspace/knowledge/api-routes.md)
 - **Classification: HUMAN/SHT REQUIRED** — content verification requires manual review of updated documentation.
 
-### Step 15: Run Full Test Suite & E2E Verification
+### Step 16: Run Full Test Suite & E2E Verification
 
 - **Commands to run:**
   - `dotnet test tests/unit/MySecondBrain.Tests.Unit`
