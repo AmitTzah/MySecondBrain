@@ -374,7 +374,7 @@ src/
 
 ---
 
-### [ ] Step 13: Structural Refactoring — Extract SystemPromptCoordinator from ChatThreadViewModel
+### [x] Step 13: Structural Refactoring — Extract SystemPromptCoordinator from ChatThreadViewModel
 
 - **Goal:** Extract system prompt coordination methods into a dedicated `SystemPromptCoordinator` class without changing behavior.
 - **Actions:**
@@ -477,13 +477,17 @@ src/
   - `DependencyInjectionConfig.cs` is the single source of truth for all DI registrations
   - `AppDbContext` at `src/MySecondBrain.Data/AppDbContext.cs` has Fluent API configuration in `OnModelCreating`
   - Content renderers are in `src/MySecondBrain.UI/Controls/` with priority ordering
-
 - **Step 12 — System Prompt Construction (completed):**
   - New file: `src/MySecondBrain.Services/SystemPromptBuilder.cs` — static utility class (284 lines): `BuildSystemPrompt()`, `BuildFilteredToolNames()`, `BuildSkillCatalogXml()`, `ResolveSystemPromptVariables()`, `DetectBashAvailable()` (Lazy<bool> cached)
   - `ChatThreadViewModel` now depends on `ISkillService` via constructor injection
   - Additive assembly: persona → behavioral → date/time → platform → skill catalog → skill usage instructions
   - Tools filtering: `ask_user_input` always present, `skill_load` only when ≥1 skill enabled, empty array when everything disabled
   - Bash detection probes Git Bash (`C:\Program Files\Git\bin\bash.exe`) and WSL (`wsl --status`), cached via `Lazy<bool>`
+
+- **Step 13 — Structural Refactoring (completed):**
+  - New file: `src/MySecondBrain.UI/ViewModels/SystemPromptCoordinator.cs` — bridges toolbar toggle state with `SystemPromptBuilder`. Takes `ISkillService` via constructor, exposes `GetSystemPrompt()`, `GetFilteredToolNames()` (static), `GetSkillCatalogXml()`, `ResolveSystemPrompt()` (static)
+  - `ChatThreadViewModel` now delegates to `SystemPromptCoordinator` — system prompt methods are thin wrappers
+
 
 - **Step 1 — MemoryEntry & Skill Models (completed):**
   - `MemoryEntry` in `DomainModels.cs`: Id (string GUID), Key (string ≤200), Value (string ≤10KB), SourceThreadId (string?), CreatedAt, UpdatedAt. Constants: KeyMaxLength=200, ValueMaxLength=10240.
