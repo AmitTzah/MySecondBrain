@@ -25,10 +25,10 @@
     { "step": 11, "name": "Implement Per-Chat Toolbar Toggles (Tools, Skills, Memory)", "classification": "HUMAN/SHT REQUIRED", "description": "Launch app, open a chat, verify Tools/Skills/Memory toggles appear in toolbar. Toggle tools off → verify they are removed from system prompt (observable via debug log).", "status": "skipped" },
     { "step": 15, "name": "Update Knowledge Files", "classification": "HUMAN/SHT REQUIRED", "description": "Open each of the 4 knowledge files and verify content reflects the new architecture: 10-tool surface, skills subsystem, WebView2 artifacts panel, MemoryEntry entity. Verify file size > 0 and content is meaningful.", "status": "skipped" }
   ],
-  "current_phase": 3,
+  "current_phase": 5,
   "plan_status": "validated",
   "total_steps": 16,
-  "current_step": 15,
+  "current_step": 16,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }
