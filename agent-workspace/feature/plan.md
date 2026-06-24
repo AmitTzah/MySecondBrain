@@ -319,7 +319,7 @@ src/
 
 ---
 
-### [ ] Step 11: Implement Per-Chat Toolbar Toggles (Tools, Skills, Memory)
+### [x] Step 11: Implement Per-Chat Toolbar Toggles (Tools, Skills, Memory)
 
 - **Goal:** Add toolbar toggles in the chat textbox area for per-chat tool/skill/memory control.
 - **Actions:**

@@ -21,12 +21,13 @@
   },
   "skipped_smoke_tests": [
     { "step": 8, "name": "Add CitationRenderer (Priority 350) and Register in DI", "classification": "HUMAN/SHT REQUIRED", "description": "Launch app, send a message that produces citations — verify inline [1] markers render as clickable superscript, verify footnote definitions render with index and linked title.", "status": "skipped" },
-    { "step": 10, "name": "Add WebView2 NuGet + ArtifactsWebView2Host Control", "classification": "HUMAN/SHT REQUIRED", "description": "Launch app, verify artifacts panel renders in right panel. Verify theme toggle updates WebView2 content.", "status": "skipped" }
+    { "step": 10, "name": "Add WebView2 NuGet + ArtifactsWebView2Host Control", "classification": "HUMAN/SHT REQUIRED", "description": "Launch app, verify artifacts panel renders in right panel. Verify theme toggle updates WebView2 content.", "status": "skipped" },
+    { "step": 11, "name": "Implement Per-Chat Toolbar Toggles (Tools, Skills, Memory)", "classification": "HUMAN/SHT REQUIRED", "description": "Launch app, open a chat, verify Tools/Skills/Memory toggles appear in toolbar. Toggle tools off → verify they are removed from system prompt (observable via debug log).", "status": "skipped" }
   ],
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 15,
-  "current_step": 10,
+  "current_step": 11,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }
