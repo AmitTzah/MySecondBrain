@@ -32,6 +32,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Skills\anthropic\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Resources\app.ico" />
   </ItemGroup>
 

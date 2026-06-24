@@ -16,6 +16,7 @@ using MySecondBrain.Services.Encryption;
 using MySecondBrain.Services.LLM;
 using MySecondBrain.Services.Logging;
 using MySecondBrain.Services.Search;
+using MySecondBrain.Services.Skills;
 using MySecondBrain.Services.Tools;
 using MySecondBrain.Services.Update;
 using MySecondBrain.Services.Wiki;
@@ -76,6 +77,8 @@ public static class DependencyInjectionConfig
         services.AddSingleton<ILLMProviderFactory, LLMProviderFactory>();
         services.AddSingleton<ITokenizerFactory, TokenizerFactory>();
         services.AddSingleton<IToolOrchestrator, ToolOrchestrator>();
+        services.AddSingleton<ISkillService, AgentSkillService>();
+        services.AddSingleton<ISkillLoader, StructuredSkillLoader>();
         services.AddSingleton<IChatSearchService, Fts5ChatSearchService>();
         services.AddSingleton<IAutoCleanupService, PeriodicAutoCleanupService>();
         services.AddSingleton<IEncryptionService, DpapiEncryptionService>();
@@ -121,10 +124,15 @@ public static class DependencyInjectionConfig
         services.AddSingleton<IChatImporter, ClaudeImporter>();
 
         services.AddSingleton<IToolExecutor, WebSearchToolExecutor>();
-        services.AddSingleton<IToolExecutor, TerminalToolExecutor>();
-        services.AddSingleton<IToolExecutor, FileGenerateToolExecutor>();
-        services.AddSingleton<IToolExecutor, FileEditToolExecutor>();
         services.AddSingleton<IToolExecutor, WikiSearchToolExecutor>();
+        services.AddSingleton<IToolExecutor, BashToolExecutor>();
+        services.AddSingleton<IToolExecutor, TextEditorToolExecutor>();
+        services.AddSingleton<IToolExecutor, WebFetchToolExecutor>();
+        services.AddSingleton<IToolExecutor, MemoryToolExecutor>();
+        services.AddSingleton<IToolExecutor, SkillLoadToolExecutor>();
+        services.AddSingleton<IToolExecutor, AskUserInputToolExecutor>();
+        services.AddSingleton<IToolExecutor, PresentFilesToolExecutor>();
+        services.AddSingleton<IToolExecutor, ImageSearchToolExecutor>();
 
         services.AddSingleton<IUpdateChecker, AutoUpdaterDotNet>();
         services.AddSingleton<IUpdateChecker, MsixAppInstallerUpdater>();

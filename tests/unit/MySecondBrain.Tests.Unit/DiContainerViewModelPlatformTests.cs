@@ -77,9 +77,9 @@ public class DiContainerViewModelPlatformTests : IDisposable
         var importers = _provider.GetServices<IChatImporter>().ToList();
         Assert.Equal(2, importers.Count);
 
-        // IToolExecutor: 5 implementations
+        // IToolExecutor: 10 implementations
         var toolExecutors = _provider.GetServices<IToolExecutor>().ToList();
-        Assert.Equal(5, toolExecutors.Count);
+        Assert.Equal(10, toolExecutors.Count);
 
         // IUpdateChecker: 2 implementations
         var updateCheckers = _provider.GetServices<IUpdateChecker>().ToList();
