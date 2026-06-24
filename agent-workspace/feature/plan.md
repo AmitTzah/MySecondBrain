@@ -273,7 +273,7 @@ src/
 
 ---
 
-### [ ] Step 9: Update DI Registrations (10 Tools + Skills)
+### [x] Step 9: Update DI Registrations (10 Tools + Skills)
 
 - **Goal:** Update [`DependencyInjectionConfig.cs`](src/MySecondBrain.UI/DependencyInjectionConfig.cs) to register all 10 tool executors and skill services.
 - **Actions:**
