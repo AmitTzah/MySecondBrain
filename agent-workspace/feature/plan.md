@@ -297,7 +297,7 @@ src/
 
 ---
 
-### [ ] Step 10: Add WebView2 NuGet + ArtifactsWebView2Host Control
+### [x] Step 10: Add WebView2 NuGet + ArtifactsWebView2Host Control
 
 - **Goal:** Add WebView2 dependency and create the host WPF control for artifacts rendering.
 - **Actions:**
