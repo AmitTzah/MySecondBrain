@@ -38,8 +38,8 @@ Anthropic `text_editor_20250728` schema. Replaces the original separate `file_ge
 
 **Critical rules:**
 - `old_str` must be unique and match byte-for-byte including whitespace
-- Always `view` the file immediately before `str_replace`
-- After any `str_replace`, all prior `view` output for that file is stale — re-view
+- Always `view` the file immediately before `str_replace` — stale context causes byte-mismatch failures
+- After any `str_replace`, all prior `view` output for that file is stale — MUST re-view before the next edit. The model cannot trust cached view output after modifying a file.
 - `create` fails if path exists — prevents accidental overwrites, forces intentional updates
 - The app tracks every file write within a chat by filename for automatic version history (F3)
 

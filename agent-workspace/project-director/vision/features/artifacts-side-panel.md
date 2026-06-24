@@ -108,6 +108,14 @@ Compare any two versions of the same artifact.
 - **"Save to Wiki" button:** Launches Write-to-Wiki pipeline (N5) with artifact content pre-filling the draft. Same pipeline: Preview Panel with inline editing, AI cross-linking (N10), Diff Viewer for updates.
 - **Preview / Code toggle:** Switch between rendered view and raw source (for Markdown and HTML artifacts)
 
+**Inline Section Edit (Markdown artifacts only):**
+- When viewing a rendered Markdown artifact, user can highlight any section of text
+- Right-click highlighted text → "Edit with AI" → opens a targeted chat prompt pre-populated with the selected section
+- Model receives: the full artifact content + the highlighted section + user's edit instruction
+- Model proposes a `str_replace` targeting that section
+- User reviews the proposed edit in a preview panel → Accept (applied to artifact, new version created) or Refine (iterate)
+- This enables surgical edits to long Markdown documents without regenerating the entire file
+
 ### F7. Global Artifacts Browser
 
 - **Access:** "📄 Artifacts" in Studio sidebar navigation
@@ -136,6 +144,7 @@ Compare any two versions of the same artifact.
 - **Empty State — No Artifacts in Chat:** "No artifacts in this chat yet."
 - **Empty State — Global Browser:** "No artifacts yet."
 - **WebView2 unavailable:** Falls back to WPF-based rendering with limited syntax highlighting. Error banner: "WebView2 runtime not available. Install Microsoft Edge WebView2 for full artifact rendering."
+- **Artifact render error:** WebView2 fails to render content (e.g., malformed HTML, unsupported format). Error banner: "⚠️ Could not render this artifact. [Reload] [Send error to chat]." "Send error to chat" copies the error details into the chat input as a new message, allowing the model to diagnose and fix the issue.
 
 ## Permissions
 
