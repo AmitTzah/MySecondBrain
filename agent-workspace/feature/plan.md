@@ -212,7 +212,7 @@ src/
 
 ---
 
-### [ ] Step 7: Implement ISkillService (AgentSkillService) + ISkillLoader (StructuredSkillLoader)
+### [x] Step 7: Implement ISkillService (AgentSkillService) + ISkillLoader (StructuredSkillLoader)
 
 - **Goal:** Implement the Agent Skills subsystem — skill discovery, catalog, loading, activation tracking.
 - **Actions:**
