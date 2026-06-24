@@ -34,7 +34,7 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 
 | Screen | Purpose | Mock HTML | Canonical Spec | Key Features |
 |--------|---------|-----------|----------------|--------------|
-| **Studio Chat** | Tier 3 primary workspace — multi-tab AI conversations, Markdown rendering (WPF), streaming, artifacts (WebView2), branching, 9-tool agent surface, skills, memory | [`screens/studio-chat.html`](screens/studio-chat.html) | [`screens/studio-chat.md`](screens/studio-chat.md) | C (Studio Chat), D (Branching), E (Chat Modes), F (Artifacts/WebView2), H (9 Tools), J (Prompts), K (Text Actions), L (Organization), M (Comparison), N (Wiki), W (Skills) |
+| **Studio Chat** | Tier 3 primary workspace — multi-tab AI conversations, Markdown rendering (WPF), streaming, artifacts (WebView2), branching, 10-tool agent surface, skills, memory | [`screens/studio-chat.html`](screens/studio-chat.html) | [`screens/studio-chat.md`](screens/studio-chat.md) | C (Studio Chat), D (Branching), E (Chat Modes), F (Artifacts/WebView2), H (10 Tools), J (Prompts), K (Text Actions), L (Organization), M (Comparison), N (Wiki), W (Skills) |
 | **Onboarding Wizard** | First-launch guided setup — API keys, Persona, wiki directory, hotkeys | [`screens/onboarding-wizard.html`](screens/onboarding-wizard.html) | [`screens/onboarding-wizard.md`](screens/onboarding-wizard.md) | A8 (Onboarding), B1 (API Keys), B3 (Personas), N1 (Wiki Dir), P1 (Hotkeys), I2 (Import) |
 | **Model Comparison** | Side-by-side multi-Persona comparison with independent mini-chats, broadcast mode, auto-branching | [`screens/model-comparison.html`](screens/model-comparison.html) | [`screens/model-comparison.md`](screens/model-comparison.md) | M1-M4 (Model Comparison), B3 (Personas), D3 (Branching), E3 (Thinking) |
 | **Settings** | Global configuration — 18 categories: Providers, Profiles, Appearance, Wiki, Backup, Text Actions, Hotkeys, Tools, Skills, Memory, Language, Notifications, Startup, Updates, Diagnostics, Pricing, Security, Maintenance | [`screens/settings.html`](screens/settings.html) | [`screens/settings.md`](screens/settings.md) | A1-A13 (Settings), B (Model Configs), N1 (Wiki Dir), R (Backup), H10 (Tool Auto-Approval), W (Skills), W8 (Memory) |
@@ -132,7 +132,7 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | [`features/chat-modes-controls.md`](features/chat-modes-controls.md) | E. Chat Modes & Controls |
 | [`features/artifacts-side-panel.md`](features/artifacts-side-panel.md) | F. Artifacts & Side Panel (WebView2) |
 | [`features/media-library.md`](features/media-library.md) | G. Media Library |
-| [`features/tool-use-agents.md`](features/tool-use-agents.md) | H. Tool Use (9-tool surface) |
+| [`features/tool-use-agents.md`](features/tool-use-agents.md) | H. Tool Use (10-tool surface) |
 | [`features/import-export.md`](features/import-export.md) | I. Import & Export |
 | [`features/prompt-library.md`](features/prompt-library.md) | J. Prompt Library |
 | [`features/text-actions-three-tier.md`](features/text-actions-three-tier.md) | K. Text Actions & Three-Tier |
@@ -261,14 +261,14 @@ The following items are flagged for Architect review before technical planning. 
 ### Architecture Update (2026-06-24)
 Major architecture evolution applied:
 - **W. Agent Skills** (new feature group): 11 built-in Anthropic skills, community skills, progressive disclosure, `skill_load` tool
-- **9-tool surface**: bash (workspace-isolated), text_editor (view/create/str_replace/insert), web_search, web_fetch, memory (SQLite, Anthropic schema), wiki_search, skill_load, ask_user_input, present_files
+- **10-tool surface**: bash (workspace-isolated), text_editor (view/create/str_replace/insert), web_search, web_fetch, memory (SQLite, Anthropic schema), wiki_search, skill_load, ask_user_input, present_files, image_search
 - **WebView2 artifacts panel**: browser-native rendering for artifacts; WPF stays for chat conversation
 - **present_files**: explicit intent bridge from workspace to artifacts directory
 - **Deep Research as skill**: replaces custom state machine
 - **Memory tool**: SQLite-backed, replaces N12 `_memory.md`
 - **Workspace isolation** (P10, P11): two-zone model, bash contained in workspace, `present_files` bridges to artifacts
-- **Per-chat toolbar**: Skills dropdown, Memory toggle, 9-tool configuration
+- **Per-chat toolbar**: Skills dropdown, Memory toggle, 10-tool configuration
 
 ---
 
-*Vision last updated: 2026-06-24 (Architecture evolution — Agent Skills, 9-tool surface, WebView2 artifacts, present_files, SQLite memory, workspace isolation, per-chat controls). Interactive mocks at `screens/*.html` — open in browser for clickable simulation.*
+*Vision last updated: 2026-06-24 (Architecture evolution — Agent Skills, 10-tool surface, WebView2 artifacts, present_files, SQLite memory, workspace isolation, per-chat controls). Interactive mocks at `screens/*.html` — open in browser for clickable simulation.*

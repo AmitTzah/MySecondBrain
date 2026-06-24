@@ -180,9 +180,9 @@ Track which skills have been activated in the current session. If the model atte
 
 ---
 
-## 5. Tool Surface (8 Tools)
+## 5. Tool Surface (10 Tools)
 
-The tool surface covers every skill's needs. Tools are named to match Anthropic's trained-in schemas where possible.
+The full tool surface includes 10 tools. Tools are named to match Anthropic's trained-in schemas where possible. Every skill uses `bash` + `text_editor`; other tools support broader application capabilities.
 
 ### Anthropic-matched tools (trained-in schemas)
 
@@ -210,14 +210,16 @@ From [Anthropic's tool use documentation](https://docs.anthropic.com/en/docs/age
 
 By matching Anthropic's tool names and schemas, models (Claude, GPT-4, Gemini) already know how to use them from training. Skills written for Anthropic's tool surface work without modification.
 
-### Why 8 tools cover all 11 skills
+### Why skills only need 8 of 10 tools
 
-Every skill uses only `bash` + `text_editor`. The other 6 tools support the broader application:
-- `web_search` + `web_fetch` → Deep Research
+Every skill uses only `bash` + `text_editor`. The other tools support the broader application:
+- `web_search` + `web_fetch` → Deep Research and general web access
 - `memory` → persistent facts across sessions
 - `wiki_search` → personal wiki queries
 - `skill_load` → skill activation
 - `ask_user_input` → structured confirmations
+- `present_files` → artifact surfacing (used by web-artifacts-builder skill)
+- `image_search` → image finding (not directly used by skills)
 
 ---
 

@@ -323,7 +323,7 @@ Abstraction for individual tool execution within the Tool Use Orchestrator. Each
 ```csharp
 public interface IToolExecutor
 {
-   string ToolName { get; }                                          // "bash", "text_editor", "web_search", "web_fetch", "wiki_search", "memory", "skill_load", "ask_user_input"
+   string ToolName { get; }                                          // "bash", "text_editor", "web_search", "web_fetch", "wiki_search", "memory", "skill_load", "ask_user_input", "present_files", "image_search"
    bool RequiresUserConfirmation { get; }                            // bash: true for writes outside workspace; text_editor: true for delete; others: false
    ToolRiskLevel RiskLevel { get; }                                  // Low, Medium, High
    bool CanAutoApprove { get; }                                      // False for bash writes and text_editor deletes
@@ -360,6 +360,8 @@ public enum ToolRiskLevel { Low, Medium, High }
 | `WikiSearchToolExecutor` | `wiki_search` | Local SQLite FTS5 query | Low (read-only) |
 | `SkillLoadToolExecutor` | `skill_load` | Reads SKILL.md from embedded resources or user directory; returns structured wrapped content | Low |
 | `AskUserInputToolExecutor` | `ask_user_input` | Shows native WPF dialog with structured options; returns user selection | Low |
+| `PresentFilesToolExecutor` | `present_files` | Copies files from workspace to artifacts directory; triggers WebView2 side panel refresh | Low |
+| `ImageSearchToolExecutor` | `image_search` | Google/Bing Image Search API via `ISearchProvider`; returns thumbnail URLs, dimensions, source pages | Low |
 
 **Key design decisions:**
 - Matching Anthropic's schemas means models (Claude, GPT-4, Gemini) already know how to use these tools from training
@@ -368,8 +370,10 @@ public enum ToolRiskLevel { Low, Medium, High }
 - `memory` wraps a SQLite store (not the flat-file `_memory.md` from the original N12 spec)
 - `skill_load` is the skill activation mechanism per the Agent Skills standard
 - `ask_user_input` replaces prose-based confirmations with structured WPF dialogs (pattern from claude.ai consumer)
+- `present_files` bridges workspace (scratch zone) to artifacts directory; model signals deliverable completion
+- `image_search` is a dedicated image-finding tool separate from `web_search`, using the same `ISearchProvider` backend with image-specific search parameters
 
-**Ref:** [tech-sourcing #38](../tech-sourcing.md#38-anthropic-tool-schema-adoption), [skills-integration.md](skills-integration.md#5-tool-surface-8-tools)
+**Ref:** [tech-sourcing #38](../tech-sourcing.md#38-anthropic-tool-schema-adoption), [skills-integration.md](skills-integration.md#5-tool-surface)
 
 ---
 
@@ -1368,7 +1372,7 @@ UI Layer (Tier1Overlay, Tier2CommandBar, MainWindow)
     │       └── IWikiGitService → LibGit2Sharp
     │
     ├── IToolOrchestrator
-    │       ├── IToolExecutor × 8
+    │       ├── IToolExecutor × 10
     │       │       ├── BashToolExecutor (bash) → cmd.exe / bash.exe / WSL
     │       │       ├── TextEditorToolExecutor (text_editor) → System.IO + DiffPlex
     │       │       ├── WebSearchToolExecutor (web_search) → ISearchProvider
@@ -1376,7 +1380,9 @@ UI Layer (Tier1Overlay, Tier2CommandBar, MainWindow)
     │       │       ├── MemoryToolExecutor (memory) → SQLite memory store
     │       │       ├── WikiSearchToolExecutor (wiki_search) → SQLite FTS5
     │       │       ├── SkillLoadToolExecutor (skill_load) → ISkillService
-    │       │       └── AskUserInputToolExecutor (ask_user_input) → WPF dialog
+    │       │       ├── AskUserInputToolExecutor (ask_user_input) → WPF dialog
+    │       │       ├── PresentFilesToolExecutor (present_files) → System.IO + WebView2
+    │       │       └── ImageSearchToolExecutor (image_search) → ISearchProvider
     │       └── ISearchProvider
     │
     ├── ISkillService
@@ -1414,4 +1420,4 @@ UI Layer (Tier1Overlay, Tier2CommandBar, MainWindow)
 
 ---
 
-*Abstractions document — updated 2026-06-24. Tool surface simplified from 5 custom executors to 8 tools (5 matching Anthropic schemas + 3 custom). Added ISkillService and ISkillLoader for Agent Skills integration. Artifacts rendering shifted from 8 WPF renderers to hybrid WPF chat + WebView2 artifacts panel. See also: [`architecture.md`](architecture.md), [`tech-stack.md`](tech-stack.md), [`skills-integration.md`](skills-integration.md).*
+*Abstractions document — updated 2026-06-24. Tool surface: 10 tools (5 matching Anthropic schemas + 5 custom). Added ISkillService and ISkillLoader for Agent Skills integration. Artifacts rendering shifted from WPF renderers to hybrid WPF chat + WebView2 artifacts panel. See also: [`architecture.md`](architecture.md), [`tech-stack.md`](tech-stack.md), [`skills-integration.md`](skills-integration.md).*
