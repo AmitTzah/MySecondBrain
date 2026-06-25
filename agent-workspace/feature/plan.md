@@ -96,7 +96,7 @@ src/
 
 ---
 
-### [ ] Step 2: Enrich UsageRecord Entity with 8 New Columns + Migration + Repository Extension
+### [x] Step 2: Enrich UsageRecord Entity with 8 New Columns + Migration + Repository Extension
 - **Goal:** Add 8 provider-agnostic fields to `UsageRecord` matching the vision data spec: `cacheReadTokens`, `cacheCreationTokens`, `latencyMs`, `tier`, `errorType`, `errorMessage`, `errorStatusCode`, `rawJsonPath`. Extend `IUsageRepository` with cache/latency query methods. The entity is ready for F12's real API calls.
 - **Actions:**
   - MODIFY [`src/MySecondBrain.Data/Entities/UsageRecord.cs`](src/MySecondBrain.Data/Entities/UsageRecord.cs) — add 8 properties:
