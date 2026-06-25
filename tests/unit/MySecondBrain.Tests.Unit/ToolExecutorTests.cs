@@ -304,69 +304,365 @@ public class ToolExecutorTests
     }
 
     // ════════════════════════════════════════════════════════════════
-    // TextEditorToolExecutor tests
+    // ReadFileToolExecutor tests
     // ════════════════════════════════════════════════════════════════
 
     [Fact]
-    public void TextEditorToolExecutor_ToolName_ReturnsTextEditor()
+    public void ReadFileToolExecutor_ToolName_ReturnsReadFile()
     {
-        var executor = CreateTextEditorExecutor();
-        Assert.Equal("text_editor", executor.ToolName);
+        var executor = CreateReadFileExecutor();
+        Assert.Equal("read_file", executor.ToolName);
     }
 
     [Fact]
-    public void TextEditorToolExecutor_RiskLevel_IsLow()
+    public void ReadFileToolExecutor_RiskLevel_IsLow()
     {
-        var executor = CreateTextEditorExecutor();
+        var executor = CreateReadFileExecutor();
         Assert.Equal(ToolRiskLevel.Low, executor.RiskLevel);
     }
 
     [Fact]
-    public void TextEditorToolExecutor_CanAutoApprove_IsTrue()
+    public void ReadFileToolExecutor_CanAutoApprove_IsTrue()
     {
-        var executor = CreateTextEditorExecutor();
+        var executor = CreateReadFileExecutor();
         Assert.True(executor.CanAutoApprove);
     }
 
     [Fact]
-    public void TextEditorToolExecutor_RequiresUserConfirmation_IsFalse()
+    public void ReadFileToolExecutor_RequiresUserConfirmation_IsFalse()
     {
-        var executor = CreateTextEditorExecutor();
+        var executor = CreateReadFileExecutor();
         Assert.False(executor.RequiresUserConfirmation);
     }
 
     [Fact]
-    public void TextEditorToolExecutor_ImplementsIToolExecutor()
+    public void ReadFileToolExecutor_ImplementsIToolExecutor()
     {
-        var executor = CreateTextEditorExecutor();
+        var executor = CreateReadFileExecutor();
         Assert.IsAssignableFrom<IToolExecutor>(executor);
     }
 
     [Fact]
-    public async Task TextEditorToolExecutor_ValidateAsync_ReturnsNull()
+    public async Task ReadFileToolExecutor_ValidateAsync_ReturnsValid()
     {
-        var executor = CreateTextEditorExecutor();
-        var toolCall = CreateToolCall("text_editor");
+        var executor = CreateReadFileExecutor();
+        var toolCall = CreateToolCall("read_file");
         var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.True(result.IsValid);
     }
 
     [Fact]
-    public async Task TextEditorToolExecutor_ExecuteAsync_ReturnsNull()
+    public async Task ReadFileToolExecutor_ExecuteAsync_ReturnsStubResult()
     {
-        var executor = CreateTextEditorExecutor();
-        var toolCall = CreateToolCall("text_editor");
+        var executor = CreateReadFileExecutor();
+        var toolCall = CreateToolCall("read_file");
         var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.Equal("Not yet implemented — Feature 17", result.Content);
+        Assert.Null(result.ErrorMessage);
     }
 
     [Fact]
-    public void TextEditorToolExecutor_GetConfirmationDescription_ReturnsEmpty()
+    public void ReadFileToolExecutor_GetConfirmationDescription_ReturnsEmpty()
     {
-        var executor = CreateTextEditorExecutor();
-        var toolCall = CreateToolCall("text_editor");
+        var executor = CreateReadFileExecutor();
+        var toolCall = CreateToolCall("read_file");
+        var description = executor.GetConfirmationDescription(toolCall);
+
+        Assert.Equal(string.Empty, description);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // ListFilesToolExecutor tests
+    // ════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ListFilesToolExecutor_ToolName_ReturnsListFiles()
+    {
+        var executor = CreateListFilesExecutor();
+        Assert.Equal("list_files", executor.ToolName);
+    }
+
+    [Fact]
+    public void ListFilesToolExecutor_RiskLevel_IsLow()
+    {
+        var executor = CreateListFilesExecutor();
+        Assert.Equal(ToolRiskLevel.Low, executor.RiskLevel);
+    }
+
+    [Fact]
+    public void ListFilesToolExecutor_CanAutoApprove_IsTrue()
+    {
+        var executor = CreateListFilesExecutor();
+        Assert.True(executor.CanAutoApprove);
+    }
+
+    [Fact]
+    public void ListFilesToolExecutor_RequiresUserConfirmation_IsFalse()
+    {
+        var executor = CreateListFilesExecutor();
+        Assert.False(executor.RequiresUserConfirmation);
+    }
+
+    [Fact]
+    public void ListFilesToolExecutor_ImplementsIToolExecutor()
+    {
+        var executor = CreateListFilesExecutor();
+        Assert.IsAssignableFrom<IToolExecutor>(executor);
+    }
+
+    [Fact]
+    public async Task ListFilesToolExecutor_ValidateAsync_ReturnsValid()
+    {
+        var executor = CreateListFilesExecutor();
+        var toolCall = CreateToolCall("list_files");
+        var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task ListFilesToolExecutor_ExecuteAsync_ReturnsStubResult()
+    {
+        var executor = CreateListFilesExecutor();
+        var toolCall = CreateToolCall("list_files");
+        var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.Equal("Not yet implemented — Feature 17", result.Content);
+        Assert.Null(result.ErrorMessage);
+    }
+
+    [Fact]
+    public void ListFilesToolExecutor_GetConfirmationDescription_ReturnsEmpty()
+    {
+        var executor = CreateListFilesExecutor();
+        var toolCall = CreateToolCall("list_files");
+        var description = executor.GetConfirmationDescription(toolCall);
+
+        Assert.Equal(string.Empty, description);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // SearchFilesToolExecutor tests
+    // ════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void SearchFilesToolExecutor_ToolName_ReturnsSearchFiles()
+    {
+        var executor = CreateSearchFilesExecutor();
+        Assert.Equal("search_files", executor.ToolName);
+    }
+
+    [Fact]
+    public void SearchFilesToolExecutor_RiskLevel_IsLow()
+    {
+        var executor = CreateSearchFilesExecutor();
+        Assert.Equal(ToolRiskLevel.Low, executor.RiskLevel);
+    }
+
+    [Fact]
+    public void SearchFilesToolExecutor_CanAutoApprove_IsTrue()
+    {
+        var executor = CreateSearchFilesExecutor();
+        Assert.True(executor.CanAutoApprove);
+    }
+
+    [Fact]
+    public void SearchFilesToolExecutor_RequiresUserConfirmation_IsFalse()
+    {
+        var executor = CreateSearchFilesExecutor();
+        Assert.False(executor.RequiresUserConfirmation);
+    }
+
+    [Fact]
+    public void SearchFilesToolExecutor_ImplementsIToolExecutor()
+    {
+        var executor = CreateSearchFilesExecutor();
+        Assert.IsAssignableFrom<IToolExecutor>(executor);
+    }
+
+    [Fact]
+    public async Task SearchFilesToolExecutor_ValidateAsync_ReturnsValid()
+    {
+        var executor = CreateSearchFilesExecutor();
+        var toolCall = CreateToolCall("search_files");
+        var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task SearchFilesToolExecutor_ExecuteAsync_ReturnsStubResult()
+    {
+        var executor = CreateSearchFilesExecutor();
+        var toolCall = CreateToolCall("search_files");
+        var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.Equal("Not yet implemented — Feature 17", result.Content);
+        Assert.Null(result.ErrorMessage);
+    }
+
+    [Fact]
+    public void SearchFilesToolExecutor_GetConfirmationDescription_ReturnsEmpty()
+    {
+        var executor = CreateSearchFilesExecutor();
+        var toolCall = CreateToolCall("search_files");
+        var description = executor.GetConfirmationDescription(toolCall);
+
+        Assert.Equal(string.Empty, description);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // ApplyDiffToolExecutor tests
+    // ════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ApplyDiffToolExecutor_ToolName_ReturnsApplyDiff()
+    {
+        var executor = CreateApplyDiffExecutor();
+        Assert.Equal("apply_diff", executor.ToolName);
+    }
+
+    [Fact]
+    public void ApplyDiffToolExecutor_RiskLevel_IsMedium()
+    {
+        var executor = CreateApplyDiffExecutor();
+        Assert.Equal(ToolRiskLevel.Medium, executor.RiskLevel);
+    }
+
+    [Fact]
+    public void ApplyDiffToolExecutor_CanAutoApprove_IsFalse()
+    {
+        var executor = CreateApplyDiffExecutor();
+        Assert.False(executor.CanAutoApprove);
+    }
+
+    [Fact]
+    public void ApplyDiffToolExecutor_RequiresUserConfirmation_IsTrue()
+    {
+        var executor = CreateApplyDiffExecutor();
+        Assert.True(executor.RequiresUserConfirmation);
+    }
+
+    [Fact]
+    public void ApplyDiffToolExecutor_ImplementsIToolExecutor()
+    {
+        var executor = CreateApplyDiffExecutor();
+        Assert.IsAssignableFrom<IToolExecutor>(executor);
+    }
+
+    [Fact]
+    public async Task ApplyDiffToolExecutor_ValidateAsync_ReturnsValid()
+    {
+        var executor = CreateApplyDiffExecutor();
+        var toolCall = CreateToolCall("apply_diff");
+        var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task ApplyDiffToolExecutor_ExecuteAsync_ReturnsStubResult()
+    {
+        var executor = CreateApplyDiffExecutor();
+        var toolCall = CreateToolCall("apply_diff");
+        var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.Equal("Not yet implemented — Feature 17", result.Content);
+        Assert.Null(result.ErrorMessage);
+    }
+
+    [Fact]
+    public void ApplyDiffToolExecutor_GetConfirmationDescription_ReturnsEmpty()
+    {
+        var executor = CreateApplyDiffExecutor();
+        var toolCall = CreateToolCall("apply_diff");
+        var description = executor.GetConfirmationDescription(toolCall);
+
+        Assert.Equal(string.Empty, description);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // WriteToFileToolExecutor tests
+    // ════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void WriteToFileToolExecutor_ToolName_ReturnsWriteToFile()
+    {
+        var executor = CreateWriteToFileExecutor();
+        Assert.Equal("write_to_file", executor.ToolName);
+    }
+
+    [Fact]
+    public void WriteToFileToolExecutor_RiskLevel_IsMedium()
+    {
+        var executor = CreateWriteToFileExecutor();
+        Assert.Equal(ToolRiskLevel.Medium, executor.RiskLevel);
+    }
+
+    [Fact]
+    public void WriteToFileToolExecutor_CanAutoApprove_IsFalse()
+    {
+        var executor = CreateWriteToFileExecutor();
+        Assert.False(executor.CanAutoApprove);
+    }
+
+    [Fact]
+    public void WriteToFileToolExecutor_RequiresUserConfirmation_IsTrue()
+    {
+        var executor = CreateWriteToFileExecutor();
+        Assert.True(executor.RequiresUserConfirmation);
+    }
+
+    [Fact]
+    public void WriteToFileToolExecutor_ImplementsIToolExecutor()
+    {
+        var executor = CreateWriteToFileExecutor();
+        Assert.IsAssignableFrom<IToolExecutor>(executor);
+    }
+
+    [Fact]
+    public async Task WriteToFileToolExecutor_ValidateAsync_ReturnsValid()
+    {
+        var executor = CreateWriteToFileExecutor();
+        var toolCall = CreateToolCall("write_to_file");
+        var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task WriteToFileToolExecutor_ExecuteAsync_ReturnsStubResult()
+    {
+        var executor = CreateWriteToFileExecutor();
+        var toolCall = CreateToolCall("write_to_file");
+        var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.Equal("Not yet implemented — Feature 17", result.Content);
+        Assert.Null(result.ErrorMessage);
+    }
+
+    [Fact]
+    public void WriteToFileToolExecutor_GetConfirmationDescription_ReturnsEmpty()
+    {
+        var executor = CreateWriteToFileExecutor();
+        var toolCall = CreateToolCall("write_to_file");
         var description = executor.GetConfirmationDescription(toolCall);
 
         Assert.Equal(string.Empty, description);
@@ -799,10 +1095,34 @@ public class ToolExecutorTests
         return new BashToolExecutor(loggerMock.Object, wikiDirectoryPath);
     }
 
-    private static TextEditorToolExecutor CreateTextEditorExecutor()
+    private static ReadFileToolExecutor CreateReadFileExecutor()
     {
-        var loggerMock = new Mock<ILogger<TextEditorToolExecutor>>();
-        return new TextEditorToolExecutor(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<ReadFileToolExecutor>>();
+        return new ReadFileToolExecutor(loggerMock.Object);
+    }
+
+    private static ListFilesToolExecutor CreateListFilesExecutor()
+    {
+        var loggerMock = new Mock<ILogger<ListFilesToolExecutor>>();
+        return new ListFilesToolExecutor(loggerMock.Object);
+    }
+
+    private static SearchFilesToolExecutor CreateSearchFilesExecutor()
+    {
+        var loggerMock = new Mock<ILogger<SearchFilesToolExecutor>>();
+        return new SearchFilesToolExecutor(loggerMock.Object);
+    }
+
+    private static ApplyDiffToolExecutor CreateApplyDiffExecutor()
+    {
+        var loggerMock = new Mock<ILogger<ApplyDiffToolExecutor>>();
+        return new ApplyDiffToolExecutor(loggerMock.Object);
+    }
+
+    private static WriteToFileToolExecutor CreateWriteToFileExecutor()
+    {
+        var loggerMock = new Mock<ILogger<WriteToFileToolExecutor>>();
+        return new WriteToFileToolExecutor(loggerMock.Object);
     }
 
     private static WebFetchToolExecutor CreateWebFetchExecutor()

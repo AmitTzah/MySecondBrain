@@ -78,4 +78,42 @@ public class DiContainerRepositoryServiceTests : IDisposable
         var second = _provider.GetRequiredService<IChatThreadService>();
         Assert.Same(first, second);
     }
+
+    [Fact]
+    public void DiContainer_ShouldResolveAllToolExecutors()
+    {
+        var executors = _provider.GetRequiredService<IEnumerable<IToolExecutor>>().ToList();
+
+        // Verify count: was 10 (9 existing + text_editor), now 14 (9 existing + 5 new file operation executors, text_editor removed)
+        Assert.Equal(14, executors.Count);
+
+        // Verify all expected tool names are present
+        var toolNames = executors.Select(e => e.ToolName).OrderBy(n => n).ToList();
+        var expectedNames = new[]
+        {
+            "apply_diff",
+            "ask_user_input",
+            "bash",
+            "image_search",
+            "list_files",
+            "memory",
+            "present_files",
+            "read_file",
+            "search_files",
+            "skill_load",
+            "web_fetch",
+            "web_search",
+            "wiki_search",
+            "write_to_file"
+        };
+
+        Assert.Equal(expectedNames.Length, toolNames.Count);
+        for (int i = 0; i < expectedNames.Length; i++)
+        {
+            Assert.Equal(expectedNames[i], toolNames[i]);
+        }
+
+        // Verify TextEditorToolExecutor is absent
+        Assert.DoesNotContain(executors, e => e.ToolName == "text_editor");
+    }
 }

@@ -123,16 +123,20 @@ public static class DependencyInjectionConfig
         services.AddSingleton<IChatImporter, ChatGPTImporter>();
         services.AddSingleton<IChatImporter, ClaudeImporter>();
 
+        services.AddSingleton<IToolExecutor, ApplyDiffToolExecutor>();
+        services.AddSingleton<IToolExecutor, AskUserInputToolExecutor>();
+        services.AddSingleton<IToolExecutor, BashToolExecutor>();
+        services.AddSingleton<IToolExecutor, ImageSearchToolExecutor>();
+        services.AddSingleton<IToolExecutor, ListFilesToolExecutor>();
+        services.AddSingleton<IToolExecutor, MemoryToolExecutor>();
+        services.AddSingleton<IToolExecutor, PresentFilesToolExecutor>();
+        services.AddSingleton<IToolExecutor, ReadFileToolExecutor>();
+        services.AddSingleton<IToolExecutor, SearchFilesToolExecutor>();
+        services.AddSingleton<IToolExecutor, SkillLoadToolExecutor>();
+        services.AddSingleton<IToolExecutor, WebFetchToolExecutor>();
         services.AddSingleton<IToolExecutor, WebSearchToolExecutor>();
         services.AddSingleton<IToolExecutor, WikiSearchToolExecutor>();
-        services.AddSingleton<IToolExecutor, BashToolExecutor>();
-        services.AddSingleton<IToolExecutor, TextEditorToolExecutor>();
-        services.AddSingleton<IToolExecutor, WebFetchToolExecutor>();
-        services.AddSingleton<IToolExecutor, MemoryToolExecutor>();
-        services.AddSingleton<IToolExecutor, SkillLoadToolExecutor>();
-        services.AddSingleton<IToolExecutor, AskUserInputToolExecutor>();
-        services.AddSingleton<IToolExecutor, PresentFilesToolExecutor>();
-        services.AddSingleton<IToolExecutor, ImageSearchToolExecutor>();
+        services.AddSingleton<IToolExecutor, WriteToFileToolExecutor>();
 
         services.AddSingleton<IUpdateChecker, AutoUpdaterDotNet>();
         services.AddSingleton<IUpdateChecker, MsixAppInstallerUpdater>();

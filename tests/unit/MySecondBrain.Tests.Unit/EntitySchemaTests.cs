@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Data;
 using MySecondBrain.Data.Entities;
 using MySecondBrain.Data.Repositories;
@@ -614,5 +615,47 @@ public class EntitySchemaTests : DataLayerTestBase
             Assert.Equal("test-config-for-update", updated.DefaultModelConfigId);
             Assert.Equal("TextCompletion", updated.DefaultChatMode);
         }
+    }
+
+    /// <summary>
+    /// Validates that there are exactly 14 IToolExecutor implementations in the Services assembly.
+    /// Was 10 (9 existing + text_editor). Now 14 (9 existing + 5 new file operation executors, text_editor removed).
+    /// </summary>
+    [Fact]
+    public void ToolExecutorCount_ShouldBe14()
+    {
+        var executorTypes = typeof(MySecondBrain.Services.Tools.WebSearchToolExecutor).Assembly
+            .GetTypes()
+            .Where(t => t.IsClass && !t.IsAbstract && typeof(IToolExecutor).IsAssignableFrom(t))
+            .ToList();
+
+        Assert.Equal(14, executorTypes.Count);
+
+        var executorNames = executorTypes.Select(t => t.Name).OrderBy(n => n).ToList();
+        var expectedNames = new[]
+        {
+            "ApplyDiffToolExecutor",
+            "AskUserInputToolExecutor",
+            "BashToolExecutor",
+            "ImageSearchToolExecutor",
+            "ListFilesToolExecutor",
+            "MemoryToolExecutor",
+            "PresentFilesToolExecutor",
+            "ReadFileToolExecutor",
+            "SearchFilesToolExecutor",
+            "SkillLoadToolExecutor",
+            "WebFetchToolExecutor",
+            "WebSearchToolExecutor",
+            "WikiSearchToolExecutor",
+            "WriteToFileToolExecutor"
+        };
+
+        for (int i = 0; i < expectedNames.Length; i++)
+        {
+            Assert.Equal(expectedNames[i], executorNames[i]);
+        }
+
+        // Verify TextEditorToolExecutor is absent
+        Assert.DoesNotContain(executorTypes, t => t.Name == "TextEditorToolExecutor");
     }
 }
