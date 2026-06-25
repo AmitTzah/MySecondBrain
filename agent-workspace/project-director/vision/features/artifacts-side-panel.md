@@ -2,14 +2,14 @@
 
 ## What the User Accomplishes
 
-The user works with AI-generated artifacts (code files, documents, spreadsheets, interactive React apps, config files) that are versioned and viewable in a WebView2-powered side panel. The model creates files in the workspace using `text_editor` or `bash`, then calls `present_files` to surface them as artifacts. The app automatically tracks versions by filename — same filename within a chat = new version. The user can view version history, compare diffs, switch versions, save to disk, and save to wiki. A global artifacts browser shows all artifacts across all chats.
+The user works with AI-generated artifacts (code files, documents, spreadsheets, interactive React apps, config files) that are versioned and viewable in a WebView2-powered side panel. The model creates files in the per-chat workspace using `write_to_file`, `apply_diff`, or `bash`, then calls `present_files` to surface them as artifacts. The app automatically tracks versions by filename — same filename within a chat = new version. The user can view version history, compare diffs, switch versions, save to disk, and save to wiki. A global artifacts browser shows all artifacts across all chats.
 
 ## Trigger
 
 - Model calls `present_files` tool with file paths (H9) during conversation
 - User clicks artifact in side panel (F2)
 - User navigates to Global Artifacts Browser (F7)
-- Model uses `text_editor` to modify a previously-presented file → auto-creates new version (F3)
+- Model uses `apply_diff` to modify a previously-presented file → auto-creates new version (F3)
 
 ## Detailed Behavior
 
@@ -17,8 +17,9 @@ The user works with AI-generated artifacts (code files, documents, spreadsheets,
 
 The complete flow from model output to side panel:
 
-1. **Model creates files** in the workspace (`%LOCALAPPDATA%/MySecondBrain/workspace/`) using:
-   - `text_editor create` — for direct file creation (code, markdown, config)
+1. **Model creates files** in the per-chat workspace (`%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/`) using:
+   - `write_to_file` — for direct file creation (code, markdown, config)
+   - `apply_diff` — for surgical edits to existing files
    - `bash` — for skill-generated files (Excel via xlsx skill, React app via web-artifacts-builder, etc.)
    - Intermediate/temp files stay in workspace and are invisible to the user
 
@@ -59,7 +60,7 @@ The complete flow from model output to side panel:
 Versioning is entirely app-side — the app tracks every file write within a chat, not the model.
 
 **How it works:**
-- The app watches for `text_editor` writes (create, str_replace, insert) and `present_files` calls
+- The app watches for `write_to_file` and `apply_diff` writes, plus `present_files` calls
 - When a file is created or modified with the same name as a previously-presented artifact → new version snapshot
 - When a file is presented with a NEW name → new artifact (v1)
 - The model has ZERO awareness of version numbers — it just writes files. The app manages version lineage.
@@ -71,9 +72,9 @@ Versioning is entirely app-side — the app tracks every file write within a cha
 - "Latest" badge on the newest version
 
 **Example:**
-- User: "Create todo.md" → model: `text_editor.create("todo.md", "...")` + `present_files(["todo.md"])` → app: "todo.md v1"
-- User: "Add item 4" → model: `text_editor.str_replace("todo.md", old, new)` → app detects same filename → "todo.md v2"
-- User: "Rewrite it entirely" → model: `text_editor.create("todo-v2.md", "...")` + `present_files(["todo-v2.md"])` → NEW filename → "todo-v2.md v1" (separate artifact)
+- User: "Create todo.md" → model: `write_to_file("todo.md", "...")` + `present_files(["todo.md"])` → app: "todo.md v1"
+- User: "Add item 4" → model: `apply_diff("todo.md", old, new)` → app detects same filename → "todo.md v2"
+- User: "Rewrite it entirely" → model: `write_to_file("todo-v2.md", "...")` + `present_files(["todo-v2.md"])` → NEW filename → "todo-v2.md v1" (separate artifact)
 
 ### F4. Diff View
 
@@ -154,8 +155,8 @@ Compare any two versions of the same artifact.
 
 ## Interactions
 
-- F1 triggered by H9 (present_files tool), written via H2 (text_editor) or H1 (bash)
-- F3 auto-tracks versions from H2 writes and H9 calls
+- F1 triggered by H13 (present_files tool), written via H4 (apply_diff), H5 (write_to_file), or H6 (bash)
+- F3 auto-tracks versions from write_to_file/apply_diff writes and present_files calls
 - F6 bridges to N5 (Write to Wiki pipeline)
 - F7 is separate from G (Media Library) — text artifacts vs media files
 - Artifacts tied to ChatThread; deleted if chat deleted and artifact not saved elsewhere (O5)

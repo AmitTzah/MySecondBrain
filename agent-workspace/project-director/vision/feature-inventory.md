@@ -130,9 +130,9 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 ### F. Artifacts & Side Panel
 **Spec:** [`features/artifacts-side-panel.md`](features/artifacts-side-panel.md)
 
-- **F1. Workspace-to-Artifact Pipeline:** Model creates files in workspace (`%LOCALAPPDATA%/MySecondBrain/workspace/`) using `bash` or `text_editor`. Model calls `present_files` tool with file paths to surface them as artifacts. App copies files to artifacts directory and displays them in the side panel. Same filename within chat = new version (app auto-tracks). Different filename = new artifact.
+- **F1. Workspace-to-Artifact Pipeline:** Model creates files in per-chat workspace (`%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/`) using `bash`, `write_to_file`, or `apply_diff`. Model calls `present_files` tool with file paths to surface them as artifacts. App copies files to artifacts directory and displays them in the side panel. Same filename within chat = new version (app auto-tracks). Different filename = new artifact.
 - **F2. Side Panel (WebView2):** Resizable panel right of chat, powered by embedded Edge WebView2 control. Lists all presented artifacts by name. Click to view content with browser-native syntax highlighting (200+ languages), Markdown rendering, and diff views. Interactive React/Tailwind artifacts from web-artifacts-builder skill render natively.
-- **F3. Version History:** Each artifact maintains versions (v1, v2, v3...). Entirely app-side — the app tracks every file write within a chat by filename. Version selector dropdown in the side panel. AI's text_editor `str_replace` commands on the same filename automatically create new versions.
+- **F3. Version History:** Each artifact maintains versions (v1, v2, v3...). Entirely app-side — the app tracks every file write within a chat by filename. Version selector dropdown in the side panel. AI's `apply_diff` edits on the same filename automatically create new versions.
 - **F4. Diff View:** Select any two versions → side-by-side or unified diff. Red = removed, Green = added. Diff computation is app-side (C#), rendering is WebView2-native (using browser diff libraries). Navigation: "Previous Change" / "Next Change."
 - **F5. Version Switching:** Switch which version is "active" (displayed in viewer). Active version is what new AI changes are based on. Reverting to older version + requesting changes = new branch from that version.
 - **F6. Artifact Viewer (WebView2):** Browser-native syntax highlighting for code, rendered Markdown, interactive HTML/React for web-artifacts-builder output. "Save to Disk" and "Save to Wiki" buttons. Save to Wiki launches N5 pipeline.
@@ -259,8 +259,8 @@ The model uses 14 provider-agnostic tools with Anthropic-flavored naming followi
 - **P6. System Tray:** Minimize to tray. Left-click restores. Right-click menu: New Chat, Open Studio, Command Bar, Recent Chats, Settings, Exit.
 - **P7. Session Restore:** Restore previous session's chats and tabs on launch (if A6 enabled).
 - **P8. Per-Monitor DPI Awareness:** Full per-monitor DPI awareness. Crisp rendering at any scaling.
-- **P9. bash Tool — Windows Adaptation:** bash tool named to match Anthropic schema but executes via `cmd.exe`. `.sh` scripts use Git Bash or WSL fallback. Heredocs redirected to `text_editor`. Cross-platform commands (python, pip, npm) work without translation. bash availability detected at startup and communicated to model via system prompt.
-- **P10. Workspace Isolation:** All bash commands execute in `%LOCALAPPDATA%/MySecondBrain/workspace/`. Working directory locked to workspace. Absolute paths outside workspace blocked pre-execution. Wiki directory is read-only from bash. Workspace cleaned up periodically (files older than 24h). The `text_editor` tool bridges workspace to artifacts directory. The `present_files` tool signals finished deliverables.
+- **P9. bash Tool — Windows Adaptation:** bash tool named to match Anthropic schema but executes via `cmd.exe`. `.sh` scripts use Git Bash or WSL fallback. Heredocs redirected to `write_to_file`. Cross-platform commands (python, pip, npm) work without translation. bash availability detected at startup and communicated to model via system prompt.
+- **P10. Workspace Isolation:** All bash commands execute in per-chat workspace `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/`. Each chat gets its own sandbox. Working directory locked to chat subdirectory. Absolute paths outside workspace blocked pre-execution. Wiki directory read-only from bash. Workspace cleaned up periodically (files older than 24h). The `write_to_file`/`apply_diff` tools bridge workspace to artifacts. The `present_files` tool signals finished deliverables.
 
 ### Q. Language & RTL Support
 **Spec:** [`features/language-rtl.md`](features/language-rtl.md)
@@ -305,7 +305,7 @@ The model uses 14 provider-agnostic tools with Anthropic-flavored naming followi
 ### W. Agent Skills
 **Spec:** [`features/agent-skills.md`](features/agent-skills.md)
 
-Skills are Markdown instruction files (`SKILL.md`) that encode domain-specific procedural knowledge. The model reads the instructions and uses existing tools (`bash`, `text_editor`, `web_search`, `web_fetch`) to produce output. Skills are NOT executable code.
+Skills are Markdown instruction files (`SKILL.md`) that encode domain-specific procedural knowledge. The model reads the instructions and uses existing tools (`bash`, `write_to_file`, `apply_diff`, `read_file`, `web_search`, `web_fetch`) to produce output. Skills are NOT executable code.
 
 - **W1. Built-in Skill Set (11 Anthropic Skills):** xlsx, docx, pdf, pptx (document creation); algorithmic-art, canvas-design, frontend-design, theme-factory (creative work); web-artifacts-builder, webapp-testing (development); skill-creator (meta). Shipped as embedded resources, updated with app updates.
 - **W2. Progressive Disclosure:** Three-tier loading: (1) Skill catalog (name + description, ~80 tokens each) in system prompt. (2) Full SKILL.md loaded on demand via `skill_load` tool. (3) Bundled scripts/resources accessed via `bash` when instructions reference them. 11 skills = ~880 token catalog upfront, not 11 full instruction sets.

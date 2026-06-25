@@ -460,16 +460,16 @@ For every feature group in [`feature-inventory.md`](feature-inventory.md), edge 
 - **Artifact file exceeds WebView2 memory limit:** Large files (>50MB) show warning: "This file is too large to preview. [Save to Disk] to view locally."
 - **present_files called with empty array:** Error returned: "No files specified. Provide at least one file path."
 - **present_files called for non-existent workspace file:** "Cannot present '[filename]': file not found in workspace."
-- **present_files tool disabled in chat:** Tool not in tools array. Model cannot call it. Artifacts can still be created if model writes directly to artifacts directory via text_editor.
+- **present_files tool disabled in chat:** Tool not in tools array. Model cannot call it. Artifacts can still be created if model writes directly to artifacts directory via write_to_file.
 - **Workspace cleanup during active bash execution:** Cleanup skips files currently open (locked by running processes). Only idle files >24h are removed.
-- **bash tries to access path outside workspace:** Blocked pre-execution. "Cannot access path outside workspace: [path]. Use text_editor to save files to user-chosen destinations."
+- **bash tries to access path outside workspace:** Blocked pre-execution. "Cannot access path outside workspace: [path]. Use write_to_file to save files to workspace or artifacts directory."
 - **bash .sh script requires Git Bash or WSL but neither available:** "This command requires Git Bash or WSL. Install Git for Windows or enable WSL."
 - **Workspace disk full:** bash commands fail with "No space left on device." Workspace cleanup runs immediately to free space. Notification to user: "Workspace disk is full. Old workspace files have been cleaned up."
 - **Memory tool — duplicate key storage:** Model stores a key that already exists → overwrites previous value (upsert). UpdatedAt refreshed. No duplicate entries.
 - **Memory tool — model tries to store oversized value (>10KB):** Value truncated to 10KB with notice: "[value truncated to 10KB]"
 - **Memory tool — "Clear All Memories" while model is actively using memory:** Model's in-flight memory retrieval may return empty results after clear. This is acceptable — the model adapts.
 - **Memory tool disabled mid-chat:** Model's existing memory context remains for current conversation turn. Subsequent turns: memory tool unavailable.
-- **Deep Research as skill — research takes too long:** User clicks Stop. Partial findings preserved in conversation. Partial report (if written via text_editor) remains in workspace.
+- **Deep Research as skill — research takes too long:** User clicks Stop. Partial findings preserved in conversation. Partial report (if written via write_to_file) remains in workspace.
 - **Deep Research — web_search API key exhausted:** "Web search failed: API quota exceeded. Check your search API key in Settings."
 
 **Affected screens:** [`screens/studio-chat.html`](screens/studio-chat.html) (artifacts panel, toolbar, chat), [`screens/settings.html`](screens/settings.html) (Skills, Memory categories)

@@ -295,7 +295,7 @@ Skills declare dependencies (Python packages, system tools, Node.js). The model 
 ## Permissions
 
 - Single-user app. All skills available to the sole user.
-- Skill execution uses existing tools (`bash`, `text_editor`) — permissions governed by those tools' auto-approval settings (H11).
+- Skill execution uses existing tools (`bash`, `write_to_file`, `apply_diff`) — permissions governed by those tools' auto-approval settings.
 - Skills cannot escalate privileges — they're instructions, not code.
 
 ## Interactions

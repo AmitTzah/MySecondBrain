@@ -2,7 +2,7 @@
 
 ## Description
 
-A file-based deliverable created by the AI and presented to the user via the `present_files` tool. Artifacts are files that the model creates in the workspace using `text_editor` or `bash`, then signals as "done" by calling `present_files`. The app copies presented files from the workspace to the artifacts directory and surfaces them in the WebView2-powered side panel. The model has no awareness of "artifacts" — it just writes files and presents them. The artifact concept is entirely client-side.
+A file-based deliverable created by the AI and presented to the user via the `present_files` tool. Artifacts are files that the model creates in the per-chat workspace using `write_to_file`, `apply_diff`, or `bash`, then signals as "done" by calling `present_files`. The app copies presented files from the workspace to the artifacts directory and surfaces them in the WebView2-powered side panel. The model has no awareness of "artifacts" — it just writes files and presents them. The artifact concept is entirely client-side.
 
 Each artifact is identified by its filename within a chat. Same filename within the same chat = new version (auto-tracked by the app). Different filename = new artifact. This matches Claude.ai's artifact identity model exactly.
 
@@ -28,23 +28,23 @@ Each artifact is identified by its filename within a chat. Same filename within 
 | `filePath` | string | Required | Path to the stored file content in the artifacts directory |
 | `sizeBytes` | long | Required | File size |
 | `createdAt` | datetime | Required | When this version was created |
-| `source` | enum | Required | `text_editor_create`, `text_editor_str_replace`, `text_editor_insert`, `bash`, `present_files` — which tool created this version |
+| `source` | enum | Required | `write_to_file`, `apply_diff`, `bash`, `present_files` — which tool created this version |
 
 ## Lifecycle
 
 ### Create (via present_files)
 
-1. Model writes file in workspace using `text_editor` or `bash`
+1. Model writes file in workspace using `write_to_file`, `apply_diff`, or `bash`
 2. Model calls `present_files(["filename.ext"])`
 3. App checks if an artifact with this filename already exists in this chat:
    - **New filename:** Creates new Artifact record (v1). Copies file from workspace to artifacts directory.
    - **Existing filename:** Increments `currentVersion`. Creates new version record. Copies file as new version.
 4. Artifact appears in WebView2 side panel
 
-### Update (via text_editor or bash + present_files)
+### Update (via write_to_file, apply_diff, or bash + present_files)
 
 - When model modifies an already-presented file and calls `present_files` again: new version created
-- When model uses `text_editor.str_replace` on a file that was previously presented: app detects the change and can auto-version (even without an explicit second `present_files` call)
+- When model uses `apply_diff` on a file that was previously presented: app detects the change and can auto-version (even without an explicit second `present_files` call)
 - Version history is entirely app-side — the model just writes files
 
 ### Delete

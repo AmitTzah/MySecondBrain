@@ -44,8 +44,8 @@ The model selects the most promising URLs from search results and calls `web_fet
 The user sees each fetch with a brief status indicator.
 
 ### Step 5: Synthesis
-The model synthesizes all gathered information into a structured report with inline citations. It writes the report to the workspace using `text_editor.create`:
-- `text_editor.create("fusion-energy-research.md", "[Report content with [1], [2], [3] citations]")`
+The model synthesizes all gathered information into a structured report with inline citations. It writes the report to the workspace using `write_to_file`:
+- `write_to_file("fusion-energy-research.md", "[Report content with [1], [2], [3] citations]")`
 
 ### Step 6: Present Report
 The model calls `present_files(["fusion-energy-research.md"])` → the report appears in the WebView2 artifacts side panel with:
@@ -65,7 +65,7 @@ The Sources section at the bottom of the report lists each citation with title, 
 ```
 
 ### Step 7: Iteration (Optional)
-User can request refinements: "Add a section on regulatory challenges." The model uses `text_editor.str_replace` on the same file → `present_files` again → the app creates v2 of the artifact.
+User can request refinements: "Add a section on regulatory challenges." The model uses `apply_diff` on the same file → `present_files` again → the app creates v2 of the artifact.
 
 ---
 
@@ -108,22 +108,22 @@ If the user says "Research X and add it to my existing Y.md wiki file," the mode
 | 2 | [`studio-chat.html`](../screens/studio-chat.html) | `skill_load` tool call: "📚 Loaded skill: deep-research" |
 | 3 | [`studio-chat.html`](../screens/studio-chat.html) | `web_search` tool calls with query and result count, streaming in real-time |
 | 4 | [`studio-chat.html`](../screens/studio-chat.html) | `web_fetch` tool calls with URL and content preview |
-| 5 | [`studio-chat.html`](../screens/studio-chat.html) | `text_editor.create` tool call: "✏️ text_editor: create fusion-energy-research.md" |
+| 5 | [`studio-chat.html`](../screens/studio-chat.html) | `write_to_file` tool call: "✍️ write_to_file: fusion-energy-research.md" |
 | 6 | [`studio-chat.html`](../screens/studio-chat.html) | `present_files` tool call: "📄 Presented: fusion-energy-research.md." Artifact appears in WebView2 side panel. |
-| 7 | [`studio-chat.html`](../screens/studio-chat.html) | Refinement iterations via `text_editor.str_replace` + `present_files` |
+| 7 | [`studio-chat.html`](../screens/studio-chat.html) | Refinement iterations via `apply_diff` + `present_files` |
 
 ---
 
 ## Data Involved
 
 - [`data/chat-thread.md`](../data/chat-thread.md) — the chat conversation
-- [`data/message.md`](../data/message.md) — tool call messages (web_search, web_fetch, text_editor, present_files)
+- [`data/message.md`](../data/message.md) — tool call messages (web_search, web_fetch, write_to_file, apply_diff, present_files)
 - [`data/artifact.md`](../data/artifact.md) — the presented research report with version history
 - No custom data entities needed — research is built entirely on existing tool infrastructure
 
 ## Cross-References
 
-- Tool specs: [`features/tool-use-agents.md`](../features/tool-use-agents.md) §H3 (web_search), §H4 (web_fetch), §H1 (bash), §H2 (text_editor), §H9 (present_files), §H7 (skill_load)
+- Tool specs: [`features/tool-use-agents.md`](../features/tool-use-agents.md) §H7 (web_search), §H8 (web_fetch), §H6 (bash), §H4 (apply_diff), §H5 (write_to_file), §H13 (present_files), §H12 (skill_load)
 - Skill spec: [`features/agent-skills.md`](../features/agent-skills.md) §W9 (Deep Research as Skill)
 - Artifacts: [`features/artifacts-side-panel.md`](../features/artifacts-side-panel.md) §F1 (workspace-to-artifact pipeline)
 - Citation rendering: [`planning/abstractions.md`](../../planning/abstractions.md) §CitationRenderer

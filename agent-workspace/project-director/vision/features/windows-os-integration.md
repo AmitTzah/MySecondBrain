@@ -156,7 +156,7 @@ bash tool receives command
     │   └── Neither? → Error: "bash or WSL required for .sh scripts"
     │
     ├── Contains heredoc (cat > file << 'EOF')?
-    │   └── Redirect: use text_editor tool instead
+    │   └── Redirect: use write_to_file tool instead
     │
     └── Everything else → cmd.exe /c "command"
          (python, pip, npm, pandoc — cross-platform, no translation needed)
@@ -166,7 +166,7 @@ bash tool receives command
 - Check `C:\Program Files\Git\bin\bash.exe` (Git for Windows)
 - Check `wsl --status` (Windows Subsystem for Linux)
 - Store availability in tool description for model awareness
-- If neither available: model adapts — uses text_editor for file writes, skips `.sh` scripts
+- If neither available: model adapts — uses write_to_file for file writes, skips `.sh` scripts
 
 **System prompt context:**
 ```
@@ -175,7 +175,7 @@ You are running on Windows. Shell commands use Command Prompt (cmd.exe).
 - .sh scripts require Git Bash or WSL
 - File paths use backslashes: C:\Users\...
 - The workspace is at %WORKSPACE%
-- For multi-line file writing, prefer the text_editor tool over heredocs
+- For multi-line file writing, prefer the write_to_file tool over heredocs
 ```
 
 ### P11. Workspace Isolation
@@ -184,7 +184,7 @@ All `bash` commands execute inside `%LOCALAPPDATA%/MySecondBrain/workspace/`:
 
 - **Working directory:** Set to workspace path via `Process.StartInfo.WorkingDirectory` before each command
 - **Path blocking:** Absolute paths outside workspace detected (scan for `C:\`, `%`, `~`) and blocked pre-execution
-- **Wiki access:** Wiki directory is read-only from bash. Writes to wiki blocked — must go through `text_editor` + Write-to-Wiki pipeline (N8)
+- **Wiki access:** Wiki directory is read-only from bash. Writes to wiki blocked — must go through Write-to-Wiki pipeline (N5)
 - **Cleanup:** Workspace files older than 24h removed on app startup
 - **Two-zone model:**
   - **Workspace** (`%LOCALAPPDATA%/MySecondBrain/workspace/`) — bash execution, temp files, intermediate work. 24h auto-cleanup. Equivalent to Claude's `/home/claude/`.

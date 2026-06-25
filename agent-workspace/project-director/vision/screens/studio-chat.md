@@ -217,7 +217,7 @@ Seven icon+label navigation items:
 | ⚖ Compare | Model comparison | "Would open Model Comparison setup: select 2+ Personas, side-by-side comparison." |
 | Send button | Send message | "Would validate token count against context limit and send message to AI." |
 | Stop button | Stop generation | "Would immediately stop AI response generation. Partial response preserved." |
-| 🔧 Tools ▼ | Tools config | "Would show checkboxes for each tool (bash, text_editor, web_search, web_fetch, wiki_search, memory, skill_load, present_files). Disabled tools are removed from the API call entirely. Auto-approval submenu per tool." |
+| 🔧 Tools ▼ | Tools config | "Would show checkboxes for each of the 14 tools (read_file, list_files, search_files, apply_diff, write_to_file, bash, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files). Disabled tools are removed from the API call entirely. Auto-approval submenu per tool." |
 | 📚 Skills ▼ | Skills config | "Would show checkboxes for each installed skill. Disabled skills removed from catalog and skill_load enum. 'All on/off' at top." |
 | 🧠 Mem | Memory toggle | "Would toggle AI memory on/off for this chat. When on, AI can store and retrieve facts about you across conversations." |
 | 🎤 Microphone | Voice input | "Would start recording from your microphone. Audio sent to configured STT provider." |
@@ -257,4 +257,4 @@ Seven icon+label navigation items:
 ## Cross-References
 
 - Displays data from: [`data/chat-thread.md`](data/chat-thread.md), [`data/message.md`](data/message.md), [`data/persona.md`](data/persona.md), [`data/usage-record.md`](data/usage-record.md), [`data/artifact.md`](data/artifact.md)
-- Supports features: C (Studio Chat), D (Branching), E (Chat Modes), F (Artifacts, WebView2), H (Tool Use, 10 tools), J (Prompts), K (Text Actions), L (Organization), M (Comparison), N (Wiki), W (Skills, Memory)
+- Supports features: C (Studio Chat), D (Branching), E (Chat Modes), F (Artifacts, WebView2), H (Tool Use, 14 tools), J (Prompts), K (Text Actions), L (Organization), M (Comparison), N (Wiki), W (Skills, Memory)

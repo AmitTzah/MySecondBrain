@@ -10,7 +10,7 @@ The AI can act as an agent using 14 provider-agnostic tools. The tool schemas us
 - User explicitly asks AI to use a tool ("Search the web for...", "Read the config file...", "Create an Excel file...")
 - User loads a skill that triggers tool usage (W)
 - User enables/disables tools in Settings → Tools or per-chat toolbar
-- Model sends multiple `tool_use` blocks in a single response → parallel execution (H12)
+- Model sends multiple `tool_use` blocks in a single response → parallel execution (H15)
 
 ## Tool Overview — 14 Tools
 

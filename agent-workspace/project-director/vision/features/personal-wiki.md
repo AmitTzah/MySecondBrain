@@ -118,8 +118,8 @@ The primary mechanism for creating and updating wiki content.
 Hard-coded least-privilege rules enforced by the app (not by AI prompting):
 - **No Deletions:** AI tool-calls to delete wiki files are rejected. Only human can delete.
 - **No Renaming:** AI cannot rename wiki files (prevents breaking cross-links). AI can suggest renames.
-- **Write-to-Wiki Only:** AI can only write to wiki through explicit N5 workflow. Generic tool use (text_editor, bash) cannot target wiki directory. Wiki directory is read-only from bash (H1).
-- **Wiki is Read-Only from bash:** The bash tool cannot write to the wiki directory. Writes must go through `text_editor` + Write-to-Wiki pipeline.
+- **Write-to-Wiki Only:** AI can only write to wiki through explicit N5 workflow. Generic tool use (write_to_file, apply_diff, bash) cannot target wiki directory. Wiki directory is read-only from bash (H6).
+- **Wiki is Read-Only from bash:** The bash tool cannot write to the wiki directory. Writes must go through the Write-to-Wiki pipeline (N5).
 
 ### N9. Append-Only Mode
 
@@ -205,7 +205,7 @@ Automatically maintained at wiki directory root. Regenerated after every wiki ch
 - N2 powers N3 (wiki search), N4 (related sections/backlinks), N7 (@ mentions), N10 (cross-linking), N11 (index.md)
 - N4 uses N2 for file tree and rendering
 - N6 stores snapshots; O6 (database compaction) may reclaim space
-- N8 restricts H1 (bash) and H2 (text_editor) from targeting wiki directory
+- N8 restricts H6 (bash), H4 (apply_diff), and H5 (write_to_file) from targeting wiki directory
 - N10 reads N11 (index.md); N11 is regenerated after N5 saves
 - H6 (wiki_search tool) queries N2 index for AI agent use
 - AI Memory is now handled by the separate `memory` tool (H5, W8) backed by SQLite — NOT the `_memory.md` wiki file. The original N12 (AI Memory via `_memory.md`) has been replaced by this cleaner separation.
