@@ -165,7 +165,7 @@ src/
 
 ---
 
-### [ ] Step 5: Per-Chat Workspace Isolation (BashToolExecutor) + Per-Chat Artifacts (PresentFilesToolExecutor)
+### [x] Step 5: Per-Chat Workspace Isolation (BashToolExecutor) + Per-Chat Artifacts (PresentFilesToolExecutor)
 - **Goal:** Change `BashToolExecutor` from a shared workspace to per-chat isolation (`workspace/{chat-id}/`). Change `PresentFilesToolExecutor` to copy files from per-chat workspace to per-chat artifacts (`artifacts/{chat-id}/`). Both are infrastructure changes — stubs that establish the correct isolation architecture.
 - **Actions:**
   - MODIFY [`src/MySecondBrain.Services/Tools/BashToolExecutor.cs`](src/MySecondBrain.Services/Tools/BashToolExecutor.cs):
