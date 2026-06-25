@@ -454,7 +454,7 @@ For every feature group in [`feature-inventory.md`](feature-inventory.md), edge 
 - **All skills disabled in chat:** Catalog block not in system prompt. `skill_load` tool not in tools array. Model operates without skill awareness.
 - **Skill re-activated in same session:** Deduplication kicks in — re-injection skipped. Model proceeds with existing context.
 - **Community skill directory contains non-SKILL.md files:** Ignored. Only subdirectories with `SKILL.md` are treated as skills.
-- **Cross-client skill path inaccessible:** Graceful skip with log warning. "⚠️ Cannot access cross-client skill path [path]: [error]."
+- **Skill path inaccessible:** Graceful skip with log warning. "⚠️ Cannot access skill path [path]: [error]."
 - **WebView2 runtime not installed (Windows 10):** Artifacts panel shows: "WebView2 runtime not available. Install Microsoft Edge WebView2 for full artifact rendering." Fallback to WPF-based rendering with limited syntax highlighting via AvalonEdit.
 - **WebView2 crashes or hangs:** Artifacts panel shows error state: "Artifact viewer encountered an error. [Reload]." Reload button re-initializes WebView2 control.
 - **Artifact file exceeds WebView2 memory limit:** Large files (>50MB) show warning: "This file is too large to preview. [Save to Disk] to view locally."

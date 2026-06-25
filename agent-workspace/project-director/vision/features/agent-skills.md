@@ -130,18 +130,16 @@ Benefits of structured wrapping:
 
 ### W4. Skill Discovery
 
-The skill loader scans four locations at startup:
+The skill loader scans two locations at startup:
 
 | Location | Path | Scope | Purpose |
 |----------|------|-------|---------|
 | Embedded | `Skills/anthropic/` in `MySecondBrain.UI.dll` | Built-in | 11 Anthropic skills, updated with app |
 | User | `%LOCALAPPDATA%/MySecondBrain/skills/` | User | User-created or downloaded community skills. Survives updates. |
-| Cross-client (agents) | `%USERPROFILE%/.agents/skills/` | Cross-client | From other compliant tools (Claude Code, Cursor) |
-| Cross-client (claude) | `%USERPROFILE%/.claude/skills/` | Cross-client | Pragmatic Claude Code compatibility |
 
 **Scanning rules:** Within each directory, look for subdirectories containing a file named exactly `SKILL.md`. Skip `.git/`, `node_modules/`. Max depth 6 levels, max 2000 directories.
 
-**Name collisions:** User-level skills override built-in. Cross-client overrides user. Within the same scope, first-found wins. Log a warning when a collision occurs.
+**Name collisions:** User-level skills override built-in. Within the same scope, first-found wins. Log a warning when a collision occurs.
 
 **Parsing:** Extract `name` and `description` from YAML frontmatter. Body is the Markdown after the closing `---`. Lenient validation:
 - `name` doesn't match directory → warn, load anyway

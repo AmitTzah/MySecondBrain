@@ -85,7 +85,7 @@ Each file viewer tab has a minimal toolbar above the content:
 - Files are read from disk — no separate data entity for the file viewer
 - API History JSON files: `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/_api_history.json`
 - Workspace files: `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/` (bash tool working directory)
-- Artifact files: `%LOCALAPPDATA%/MySecondBrain/artifacts/`
+- Artifact files: `%LOCALAPPDATA%/MySecondBrain/artifacts/{chat-id}/`
 - Wiki files: user-configured wiki directory
 
 ## Success/Failure States

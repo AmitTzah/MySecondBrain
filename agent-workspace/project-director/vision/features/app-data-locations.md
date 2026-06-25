@@ -43,10 +43,8 @@ A comprehensive reference table listing every file and folder the app uses. Colu
 | `%LOCALAPPDATA%/MySecondBrain/msb.db-shm` | SQLite Shared Memory — temporary index file. Part of normal database operation. | ❌ No — app-managed |
 | `%LOCALAPPDATA%/MySecondBrain/logs/` | Serilog rolling JSON log files — one file per day, retained 30 days. Configured in Settings → Diagnostics. | ⚠️ Caution — safe to delete old logs, but current day's log is in use |
 | `%LOCALAPPDATA%/MySecondBrain/workspace/` | Per-chat sandbox directories for bash/code execution. Subdirectory per chat: `workspace/{chat-id}/`. Cleaned automatically — files older than 24h removed on startup. | ❌ No — auto-managed, cleaned every 24h |
-| `%LOCALAPPDATA%/MySecondBrain/artifacts/` | AI-generated files surfaced via `present_files`. Shared across chats. Files persist until the source chat is deleted (O5). | ⚠️ Caution — files can be opened/saved externally, but deleting may break artifact references |
+| `%LOCALAPPDATA%/MySecondBrain/artifacts/{chat-id}/` | AI-generated files surfaced via `present_files` — per-chat subdirectory. Cleaned up when source chat is deleted. | ⚠️ Caution — files can be opened/saved externally, but deleting may break artifact references |
 | `%LOCALAPPDATA%/MySecondBrain/skills/` | User-added community Agent Skills. Never overwritten by app updates. Users add skills by copying folders here. | ✅ Yes — user-managed skills directory |
-| `%USERPROFILE%/.agents/skills/` | Cross-client Agent Skills from other compliant tools (Claude Code, Cursor, etc.). Read by MySecondBrain but not modified. | ✅ Yes — managed by other tools, readable by MySecondBrain |
-| `%USERPROFILE%/.claude/skills/` | Claude Code Agent Skills — pragmatic compatibility. Read by MySecondBrain but not modified. | ✅ Yes — managed by Claude Code, readable by MySecondBrain |
 | `[Wiki Directory]` | User-configured wiki directory (set in Settings → Wiki). Contains user's personal .md knowledge base. | ✅ Yes — user's own files |
 | `[Backup Directory]` | User-configured backup destination (Google Cloud Storage bucket or local path). Set in Settings → Backup. | ✅ Yes — user-configured |
 | `%LOCALAPPDATA%/MySecondBrain/settings.json` | Application settings (persisted preferences). May be stored in SQLite instead depending on implementation. | ❌ No — app-managed |

@@ -25,7 +25,7 @@ The complete flow from model output to side panel:
 
 2. **Model calls `present_files(["budget.xlsx", "chart.html"])`** — signals "these are done — show them"
 
-3. **App copies files** from workspace to the artifacts directory (persisted with chat)
+3. **App copies files** from workspace to the per-chat artifacts directory `%LOCALAPPDATA%/MySecondBrain/artifacts/{chat-id}/`
 
 4. **App surfaces artifacts** in the WebView2-powered side panel. The first file in the `present_files` array is shown first. Multiple files presented in one call all appear.
 

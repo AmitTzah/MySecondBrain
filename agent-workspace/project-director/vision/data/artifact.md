@@ -2,7 +2,7 @@
 
 ## Description
 
-A file-based deliverable created by the AI and presented to the user via the `present_files` tool. Artifacts are files that the model creates in the per-chat workspace using `write_to_file`, `apply_diff`, or `bash`, then signals as "done" by calling `present_files`. The app copies presented files from the workspace to the artifacts directory and surfaces them in the WebView2-powered side panel. The model has no awareness of "artifacts" — it just writes files and presents them. The artifact concept is entirely client-side.
+A file-based deliverable created by the AI and presented to the user via the `present_files` tool. Artifacts are files that the model creates in the per-chat workspace using `write_to_file`, `apply_diff`, or `bash`, then signals as "done" by calling `present_files`. The app copies presented files from the workspace to the per-chat artifacts directory `%LOCALAPPDATA%/MySecondBrain/artifacts/{chat-id}/` and surfaces them in the WebView2-powered side panel. The model has no awareness of "artifacts" — it just writes files and presents them. The artifact concept is entirely client-side.
 
 Each artifact is identified by its filename within a chat. Same filename within the same chat = new version (auto-tracked by the app). Different filename = new artifact. This matches Claude.ai's artifact identity model exactly.
 

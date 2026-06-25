@@ -100,7 +100,7 @@ Regex search across files. Parameters: `path` (required — directory to search 
 
 Surgical search/replace edits on files. Parameters: `path` (required), `diff` (required — one or more SEARCH/REPLACE blocks).
 
-- **Scope:** Workspace + artifacts only. Outside workspace is ALWAYS blocked (cannot be configured otherwise).
+- **Scope:** Workspace + artifacts (per-chat `artifacts/{chat-id}/`) only. Outside these is ALWAYS blocked.
 - **Format:** Follows the SEARCH/REPLACE block pattern:
 ```
 <<<<<<< SEARCH
@@ -120,7 +120,7 @@ Surgical search/replace edits on files. Parameters: `path` (required), `diff` (r
 
 Create or overwrite a file. Parameters: `path` (required), `content` (required), `overwrite` (optional, default `false`).
 
-- **Scope:** Workspace + artifacts only. Outside workspace is ALWAYS blocked.
+- **Scope:** Workspace + artifacts (per-chat `artifacts/{chat-id}/`) only. Outside these is ALWAYS blocked.
 - **If `overwrite=false` and path exists:** FAILS with "File already exists at [path]. Set overwrite=true to overwrite, or use a different filename."
 - **If `overwrite=true` and path exists:** Overwrites the file.
 - **Auto-creates parent directories** if they don't exist.
@@ -262,7 +262,7 @@ Parallel tool execution appears sequentially in the chat as each tool completes:
 - **Per-chat workspace:** `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/`
 - Each chat gets its own sandbox subdirectory — no conflicts between chats
 - bash, read_file, list_files, search_files, apply_diff, write_to_file are all scoped to the chat's subdirectory by default
-- present_files copies from chat workspace → shared `artifacts/` directory (artifacts ARE shared across chats)
+- present_files copies from chat workspace → per-chat `artifacts/{chat-id}/` directory
 - **Cleanup:** When chat deleted/closed: workspace subdirectory queued for deletion (24h grace period). Startup cleanup deletes workspace directories older than 24h.
 
 ---

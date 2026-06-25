@@ -118,7 +118,7 @@ Configures structured diagnostic logging written via Serilog to rolling JSON fil
 Configures global defaults for which skills are enabled in new chats. Full spec: [`features/agent-skills.md`](agent-skills.md).
 
 - **Built-in Skills List:** 11 Anthropic skills with individual enable/disable toggles. Each shows: skill name, description, source (built-in), dependency status (Python/Node.js detected or not).
-- **Community Skills:** Skills discovered at `%LOCALAPPDATA%/MySecondBrain/skills/` and cross-client paths (`%USERPROFILE%/.agents/skills/`, `%USERPROFILE%/.claude/skills/`). Listed with `source: community` or `source: cross-client` annotation.
+- **Community Skills:** Skills discovered at `%LOCALAPPDATA%/MySecondBrain/skills/`. Listed with `source: community` annotation.
 - **"Enable All" / "Disable All":** Quick actions at top of list.
 - **Skills Count:** "11 built-in, [N] community — [M] enabled"
 - **Inheritance:** New chats inherit these defaults. Per-chat toolbar overrides are temporary.
