@@ -26,9 +26,9 @@
     { "step": 15, "name": "Update Knowledge Files", "classification": "HUMAN/SHT REQUIRED", "description": "Open each of the 4 knowledge files and verify content reflects the new architecture: 10-tool surface, skills subsystem, WebView2 artifacts panel, MemoryEntry entity. Verify file size > 0 and content is meaningful.", "status": "verified" }
   ],
   "current_phase": 5,
-  "plan_status": "validated",
+  "plan_status": "archived",
   "total_steps": 16,
   "current_step": 16,
   "pivot_in_progress": false,
-  "phase_5_substep": "smoke_tests_verified"
+  "phase_5_substep": "state_finalized"
 }

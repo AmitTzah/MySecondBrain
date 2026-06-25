@@ -117,7 +117,7 @@ services.AddSingleton<ILLMProvider, OpenAICompatibleProvider>();
 public LLMProviderFactory(IEnumerable<ILLMProvider> providers) { ... }
 ```
 
-This pattern is used for: `ILLMProvider` (4 impls), `ISTTProvider` (3 impls), `IBackupProvider` (2 impls), `ISearchProvider` (2 impls), `ITokenizer` (3 impls), `IChatImporter` (2 impls), `IToolExecutor` (5 impls), `IUpdateChecker` (2 impls), `IContentBlockRenderer` (7 impls).
+This pattern is used for: `ILLMProvider` (4 impls), `ISTTProvider` (3 impls), `IBackupProvider` (2 impls), `ISearchProvider` (2 impls), `ITokenizer` (3 impls), `IChatImporter` (2 impls), `IToolExecutor` (10 impls), `IUpdateChecker` (2 impls), `IContentBlockRenderer` (8 impls).
 
 Adding a new provider requires only: (a) implement the interface, (b) one additional `AddSingleton` line. Consumers that use `IEnumerable<T>` pick up the new implementation automatically with zero code changes.
 
@@ -2343,9 +2343,30 @@ Resolved at runtime and injected into:
 
 ### 46.2 Path Blocking
 
-The bash and text_editor tool executors validate all file paths against the workspace root. Operations outside `%LOCALAPPDATA%\MySecondBrain\workspace\` require the model to call `ask_user_input` for user confirmation before proceeding. This prevents the LLM from reading/writing arbitrary system files.
+The `BashToolExecutor` scans commands for disallowed path patterns before execution. Blocked patterns include:
 
-### 46.3 Cleanup
+| Pattern | Reason |
+|---------|--------|
+| Absolute drive-letter paths (`C:\`, `D:\`, etc.) | Prevents arbitrary filesystem access |
+| Unknown environment variables (`%VAR%`) | Prevents variable-based path escapes |
+| Tilde (`~`) | Prevents Unix-style home directory escapes |
+
+Commands containing blocked patterns are rejected pre-execution. The wiki directory is also write-protected from bash. Operations outside the workspace require the model to call `ask_user_input` for user confirmation before proceeding.
+
+### 46.3 Shell Adaptation
+
+Since the tool is named `bash` (Anthropic `bash_20250124` schema) but runs on Windows, the executor adapts the shell environment:
+
+| Scenario | Shell Used | Notes |
+|----------|-----------|-------|
+| Default | `cmd.exe` | Windows native; all commands run via `cmd /c` |
+| `.sh` script detected | Git Bash (`C:\Program Files\Git\bin\bash.exe`) | Probed at startup via `SystemPromptBuilder.DetectBashAvailable()` |
+| `.sh` script + no Git Bash | WSL (`wsl --status`) | Fallback if Git Bash unavailable |
+| Neither bash nor WSL | Error returned | `.sh` scripts cannot execute |
+
+Bash availability is detected once at startup via `ProbeBashAvailable()` and cached as `Lazy<bool>` in `SystemPromptBuilder`. The result is injected into the platform context of the system prompt. Heredoc syntax (`<<EOF`) is redirected to the `text_editor` tool since `cmd.exe` does not support heredocs.
+
+### 46.4 Cleanup
 
 Workspace content has a 24-hour retention policy:
 - Files with `LastModified` older than 24 hours are eligible for cleanup
