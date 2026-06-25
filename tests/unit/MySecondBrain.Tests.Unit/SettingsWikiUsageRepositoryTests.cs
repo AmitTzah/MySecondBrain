@@ -1022,4 +1022,224 @@ public class SettingsWikiUsageRepositoryTests : DataLayerTestBase
             Assert.Equal(0, result.AverageRating);
         }
     }
+
+    // ════════════════════════════════════════════════════════════════
+    // Step 2: UsageRecord enrichment — new query method tests
+    // ════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task UsageRepository_GetCacheSummaryAsync_EmptyRange_ReturnsZeros()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var repo = new UsageRepository(db);
+            var result = await repo.GetCacheSummaryAsync(DateTimeOffset.UtcNow.AddDays(-10), DateTimeOffset.UtcNow.AddDays(-5));
+
+            Assert.Equal(0, result.TotalCacheReadTokens);
+            Assert.Equal(0, result.TotalCacheCreationTokens);
+            Assert.Equal(0.0, result.CacheHitRate);
+            Assert.Empty(result.ByProvider);
+        }
+    }
+
+    [Fact]
+    public async Task UsageRepository_GetCacheSummaryAsync_AggregatesCorrectly()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var thread = new ChatThread { Id = "cache-test-thread", ChatMode = "Standard" };
+            db.ChatThreads.Add(thread);
+            await db.SaveChangesAsync();
+
+            db.Messages.Add(new Message { Id = "cmsg-1", ThreadId = thread.Id, Role = "Assistant", Content = "1", BranchId = Guid.NewGuid().ToString("N") });
+            db.Messages.Add(new Message { Id = "cmsg-2", ThreadId = thread.Id, Role = "Assistant", Content = "2", BranchId = Guid.NewGuid().ToString("N") });
+            await db.SaveChangesAsync();
+
+            db.UsageRecords.Add(new UsageRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                MessageId = "cmsg-1", ThreadId = thread.Id,
+                Provider = "OpenAI", ModelIdentifier = "gpt-4o",
+                PromptTokens = 100, CacheReadTokens = 30, CacheCreationTokens = 10,
+                CreatedAt = now
+            });
+            db.UsageRecords.Add(new UsageRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                MessageId = "cmsg-2", ThreadId = thread.Id,
+                Provider = "Anthropic", ModelIdentifier = "claude-3",
+                PromptTokens = 50, CacheReadTokens = 50, CacheCreationTokens = 20,
+                CreatedAt = now
+            });
+            await db.SaveChangesAsync();
+
+            var repo = new UsageRepository(db);
+            var result = await repo.GetCacheSummaryAsync(now.AddDays(-1), now.AddDays(1));
+
+            Assert.Equal(80, result.TotalCacheReadTokens);  // 30 + 50
+            Assert.Equal(30, result.TotalCacheCreationTokens); // 10 + 20
+
+            // hit rate = 80 / (80 + 150) = 80/230 ≈ 0.3478
+            Assert.Equal(80.0 / 230.0, result.CacheHitRate, 4);
+
+            Assert.Equal(2, result.ByProvider.Count);
+
+            var openAi = result.ByProvider.Single(p => p.Provider == "OpenAI");
+            Assert.Equal(30, openAi.CacheReadTokens);
+            Assert.Equal(30.0 / (30 + 100), openAi.HitRate, 4);
+        }
+    }
+
+    [Fact]
+    public async Task UsageRepository_GetCacheSummaryAsync_CacheOnlyZeroPrompt_HitRateIs1()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var thread = new ChatThread { Id = "cache-only-thread", ChatMode = "Standard" };
+            db.ChatThreads.Add(thread);
+            await db.SaveChangesAsync();
+
+            db.Messages.Add(new Message { Id = "comsg-1", ThreadId = thread.Id, Role = "Assistant", Content = "1", BranchId = Guid.NewGuid().ToString("N") });
+            await db.SaveChangesAsync();
+
+            // Request served entirely from cache — 0 prompt tokens, 100 cache read tokens
+            db.UsageRecords.Add(new UsageRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                MessageId = "comsg-1", ThreadId = thread.Id,
+                Provider = "OpenAI", ModelIdentifier = "gpt-4o",
+                PromptTokens = 0, CacheReadTokens = 100, CacheCreationTokens = 0,
+                CreatedAt = now
+            });
+            await db.SaveChangesAsync();
+
+            var repo = new UsageRepository(db);
+            var result = await repo.GetCacheSummaryAsync(now.AddDays(-1), now.AddDays(1));
+
+            Assert.Equal(100, result.TotalCacheReadTokens);
+            Assert.Equal(1.0, result.CacheHitRate, 4); // 100% hit rate
+        }
+    }
+
+    [Fact]
+    public async Task UsageRepository_GetLatencyDistributionAsync_EmptyRange_ReturnsZeros()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var repo = new UsageRepository(db);
+            var result = await repo.GetLatencyDistributionAsync(DateTimeOffset.UtcNow.AddDays(-10), DateTimeOffset.UtcNow.AddDays(-5));
+
+            Assert.Equal(0, result.AverageMs);
+            Assert.Equal(0, result.P50Ms);
+            Assert.Equal(0, result.P95Ms);
+            Assert.Equal(0, result.P99Ms);
+            Assert.Empty(result.ByModel);
+        }
+    }
+
+    [Fact]
+    public async Task UsageRepository_GetLatencyDistributionAsync_CalculatesPercentilesCorrectly()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var thread = new ChatThread { Id = "latency-test-thread", ChatMode = "Standard" };
+            db.ChatThreads.Add(thread);
+            await db.SaveChangesAsync();
+
+            db.Messages.Add(new Message { Id = "lmsg-1", ThreadId = thread.Id, Role = "Assistant", Content = "1", BranchId = Guid.NewGuid().ToString("N") });
+            db.Messages.Add(new Message { Id = "lmsg-2", ThreadId = thread.Id, Role = "Assistant", Content = "2", BranchId = Guid.NewGuid().ToString("N") });
+            db.Messages.Add(new Message { Id = "lmsg-3", ThreadId = thread.Id, Role = "Assistant", Content = "3", BranchId = Guid.NewGuid().ToString("N") });
+            await db.SaveChangesAsync();
+
+            // Insert records with latencies 100, 200, 300
+            db.UsageRecords.Add(new UsageRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                MessageId = "lmsg-1", ThreadId = thread.Id,
+                Provider = "OpenAI", ModelIdentifier = "gpt-4o",
+                PromptTokens = 10, LatencyMs = 100, CreatedAt = now
+            });
+            db.UsageRecords.Add(new UsageRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                MessageId = "lmsg-2", ThreadId = thread.Id,
+                Provider = "OpenAI", ModelIdentifier = "gpt-4o",
+                PromptTokens = 10, LatencyMs = 200, CreatedAt = now
+            });
+            db.UsageRecords.Add(new UsageRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                MessageId = "lmsg-3", ThreadId = thread.Id,
+                Provider = "Anthropic", ModelIdentifier = "claude-3",
+                PromptTokens = 10, LatencyMs = 300, CreatedAt = now
+            });
+            await db.SaveChangesAsync();
+
+            var repo = new UsageRepository(db);
+            var result = await repo.GetLatencyDistributionAsync(now.AddDays(-1), now.AddDays(1));
+
+            Assert.Equal(200, result.AverageMs, 1);  // (100 + 200 + 300) / 3
+            Assert.Equal(1, result.ByModel.Count(m => m.ModelIdentifier == "gpt-4o"));
+            Assert.Equal(1, result.ByModel.Count(m => m.ModelIdentifier == "claude-3"));
+        }
+    }
+
+    [Fact]
+    public async Task UsageRepository_GetCacheSummaryAsync_WithTierFilter_FiltersCorrectly()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var thread = new ChatThread { Id = "tier-filter-thread", ChatMode = "Standard" };
+            db.ChatThreads.Add(thread);
+            await db.SaveChangesAsync();
+
+            db.Messages.Add(new Message { Id = "tmsg-1", ThreadId = thread.Id, Role = "Assistant", Content = "1", BranchId = Guid.NewGuid().ToString("N") });
+            db.Messages.Add(new Message { Id = "tmsg-2", ThreadId = thread.Id, Role = "Assistant", Content = "2", BranchId = Guid.NewGuid().ToString("N") });
+            await db.SaveChangesAsync();
+
+            db.UsageRecords.Add(new UsageRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                MessageId = "tmsg-1", ThreadId = thread.Id,
+                Provider = "OpenAI", ModelIdentifier = "gpt-4o",
+                PromptTokens = 100, CacheReadTokens = 10, Tier = 1,
+                CreatedAt = now
+            });
+            db.UsageRecords.Add(new UsageRecord
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                MessageId = "tmsg-2", ThreadId = thread.Id,
+                Provider = "Anthropic", ModelIdentifier = "claude-3",
+                PromptTokens = 100, CacheReadTokens = 20, Tier = 2,
+                CreatedAt = now
+            });
+            await db.SaveChangesAsync();
+
+            var repo = new UsageRepository(db);
+            var tier1 = await repo.GetCacheSummaryAsync(now.AddDays(-1), now.AddDays(1), tier: 1);
+            Assert.Equal(10, tier1.TotalCacheReadTokens);
+
+            var tier2 = await repo.GetCacheSummaryAsync(now.AddDays(-1), now.AddDays(1), tier: 2);
+            Assert.Equal(20, tier2.TotalCacheReadTokens);
+
+            var tier3 = await repo.GetCacheSummaryAsync(now.AddDays(-1), now.AddDays(1), tier: 3);
+            Assert.Equal(0, tier3.TotalCacheReadTokens); // no tier 3 records
+        }
+    }
 }

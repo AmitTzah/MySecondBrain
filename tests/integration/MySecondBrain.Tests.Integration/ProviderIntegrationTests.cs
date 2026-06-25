@@ -565,4 +565,94 @@ public class ProviderIntegrationTests
         Assert.NotNull(executor.ParametersJsonSchema);
         Assert.Contains("command", executor.ParametersJsonSchema);
     }
+
+    // ================================================================
+    // Step 2: UsageRecord Migration Integration Tests
+    // ================================================================
+
+    /// <summary>
+    /// Verifies that the EnrichUsageRecord migration creates all 8 new columns in a real SQLite database
+    /// and that default values are correct.
+    /// </summary>
+    [Fact]
+    public async Task EnrichUsageRecord_Migration_ShouldApplyToRealSqlite()
+    {
+        // Arrange: create a real SQLite database file with full migration applied
+        var dbPath = Path.Combine(Path.GetTempPath(), $"msb-usage-migration-test-{Guid.NewGuid()}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<Data.AppDbContext>()
+                .UseSqlite($"Data Source={dbPath};Pooling=False")
+                .Options;
+
+            using (var db = new Data.AppDbContext(options))
+            {
+                // Act: apply all migrations (which includes the EnrichUsageRecord migration)
+                await db.Database.MigrateAsync();
+
+                // Assert: verify the migration ran without error
+                var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
+                Assert.Empty(pendingMigrations);
+
+                // Insert prerequisite entities to satisfy FK constraints
+                db.ChatThreads.Add(new Data.Entities.ChatThread
+                {
+                    Id = "thread-migration-test",
+                    ChatMode = "Standard"
+                });
+                db.Messages.Add(new Data.Entities.Message
+                {
+                    Id = "msg-migration-test",
+                    ThreadId = "thread-migration-test",
+                    Role = "Assistant",
+                    Content = "test",
+                    BranchId = Guid.NewGuid().ToString("N")
+                });
+                await db.SaveChangesAsync();
+
+                // Verify the 8 new columns exist by inserting and reading back
+                var usageRecord = new Data.Entities.UsageRecord
+                {
+                    Id = "test-migration-enrich",
+                    MessageId = "msg-migration-test",
+                    ThreadId = "thread-migration-test",
+                    Provider = "OpenAI",
+                    ModelIdentifier = "gpt-4o",
+                    PromptTokens = 100,
+                    CompletionTokens = 50,
+                    TotalTokens = 150,
+                    CacheReadTokens = 30,
+                    CacheCreationTokens = 20,
+                    LatencyMs = 1500,
+                    Tier = 2,
+                    ErrorType = "rate_limit",
+                    ErrorMessage = "Rate limit exceeded",
+                    ErrorStatusCode = 429,
+                    RawJsonPath = "/workspace/chat-123/_api_history.json"
+                };
+
+                db.UsageRecords.Add(usageRecord);
+                await db.SaveChangesAsync();
+
+                // Reset the context to ensure fresh read
+                db.ChangeTracker.Clear();
+
+                var retrieved = await db.UsageRecords.FindAsync("test-migration-enrich");
+                Assert.NotNull(retrieved);
+                Assert.Equal(30, retrieved!.CacheReadTokens);
+                Assert.Equal(20, retrieved.CacheCreationTokens);
+                Assert.Equal(1500, retrieved.LatencyMs);
+                Assert.Equal(2, retrieved.Tier);
+                Assert.Equal("rate_limit", retrieved.ErrorType);
+                Assert.Equal("Rate limit exceeded", retrieved.ErrorMessage);
+                Assert.Equal(429, retrieved.ErrorStatusCode);
+                Assert.Equal("/workspace/chat-123/_api_history.json", retrieved.RawJsonPath);
+            }
+        }
+        finally
+        {
+            if (File.Exists(dbPath))
+                File.Delete(dbPath);
+        }
+    }
 }

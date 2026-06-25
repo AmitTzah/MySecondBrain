@@ -122,3 +122,47 @@ public record ImageSearchResults(
     IReadOnlyList<ImageSearchResultItem> Items,
     int TotalEstimatedResults
 );
+
+// ── Step 2: UsageRecord enrichment DTOs ──────────────────────────────
+
+/// <summary>
+/// Aggregated cache token usage over a time range.
+/// </summary>
+public record CacheSummary(
+    long TotalCacheReadTokens,
+    long TotalCacheCreationTokens,
+    double CacheHitRate,          // cacheReadTokens / (cacheReadTokens + promptTokens)
+    IReadOnlyList<CacheByProvider> ByProvider
+);
+
+/// <summary>
+/// Cache statistics grouped by provider.
+/// </summary>
+public record CacheByProvider(
+    string Provider,
+    long CacheReadTokens,
+    long CacheCreationTokens,
+    double HitRate
+);
+
+/// <summary>
+/// Latency distribution statistics over a time range.
+/// </summary>
+public record LatencyDistribution(
+    double AverageMs,
+    int P50Ms,
+    int P95Ms,
+    int P99Ms,
+    IReadOnlyList<LatencyByModel> ByModel
+);
+
+/// <summary>
+/// Latency statistics grouped by model.
+/// </summary>
+public record LatencyByModel(
+    string ModelIdentifier,
+    double AverageMs,
+    int P50Ms,
+    int P95Ms,
+    int P99Ms
+);

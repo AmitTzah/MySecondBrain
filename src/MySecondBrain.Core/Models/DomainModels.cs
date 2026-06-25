@@ -109,10 +109,39 @@ public class UsageRecord
     public string MessageId { get; set; } = string.Empty;
     public string ModelIdentifier { get; set; } = string.Empty;
     public ProviderType ProviderType { get; set; }
+    public string? PersonaId { get; set; }
+    public string? ModelConfigId { get; set; }
     public int PromptTokens { get; set; }
     public int CompletionTokens { get; set; }
     public int TotalTokens { get; set; }
+    public decimal? EstimatedCost { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    // ── Step 2: Enriched fields ─────────────────────────────────────
+
+    /// <summary>Cache read/hit tokens (provider-agnostic).</summary>
+    public int CacheReadTokens { get; set; }
+
+    /// <summary>Cache creation/write tokens.</summary>
+    public int CacheCreationTokens { get; set; }
+
+    /// <summary>Time from request sent to full response complete, in milliseconds.</summary>
+    public int LatencyMs { get; set; }
+
+    /// <summary>Which interaction tier: 1=Hotkey, 2=CommandBar, 3=Studio.</summary>
+    public int Tier { get; set; } = 3;
+
+    /// <summary>Null if successful. "auth", "rate_limit", "network", "timeout", "server", "unknown".</summary>
+    public string? ErrorType { get; set; }
+
+    /// <summary>Human-readable error message. Null if successful.</summary>
+    public string? ErrorMessage { get; set; }
+
+    /// <summary>HTTP status code from the provider. Null if successful.</summary>
+    public int? ErrorStatusCode { get; set; }
+
+    /// <summary>Path to per-chat raw JSON log.</summary>
+    public string? RawJsonPath { get; set; }
 }
 
 /// <summary>

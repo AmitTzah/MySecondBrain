@@ -183,6 +183,16 @@ public class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.SetNull);
 
         // ────────────────────────────────────────────────────────────
+        // UsageRecord — MaxLength constraints for new Step 2 columns
+        // ────────────────────────────────────────────────────────────
+
+        modelBuilder.Entity<UsageRecord>(entity =>
+        {
+            entity.Property(u => u.ErrorType).HasMaxLength(50);
+            entity.Property(u => u.ErrorStatusCode).HasColumnType("INTEGER");
+        });
+
+        // ────────────────────────────────────────────────────────────
         // TextAction → ModelConfiguration (SetNull)
         // ────────────────────────────────────────────────────────────
 

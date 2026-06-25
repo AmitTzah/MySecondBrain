@@ -31,7 +31,7 @@ public class EntitySchemaTests : DataLayerTestBase
             [typeof(Persona)] = 8,               // Id, DisplayName, SystemPrompt?, DefaultModelConfigId?, DefaultChatMode, IsBuiltIn, CreatedAt, UpdatedAt
             [typeof(PromptTemplate)] = 7,        // Id, Name, Text, Tags?, FolderId?, CreatedAt, UpdatedAt
             [typeof(TextAction)] = 10,           // Id, DisplayName, SystemPrompt, ModelConfigId?, Hotkey?, CaptureScope, ApplyMode, IsBuiltIn, CreatedAt, UpdatedAt
-            [typeof(UsageRecord)] = 12,          // Id, MessageId, ThreadId, PersonaId?, ModelConfigId?, Provider, ModelIdentifier, PromptTokens, CompletionTokens, TotalTokens, EstimatedCost?, CreatedAt
+            [typeof(UsageRecord)] = 20,          // Id, MessageId, ThreadId, PersonaId?, ModelConfigId?, Provider, ModelIdentifier, PromptTokens, CompletionTokens, TotalTokens, EstimatedCost?, CacheReadTokens, CacheCreationTokens, LatencyMs, Tier, ErrorType?, ErrorMessage?, ErrorStatusCode?, RawJsonPath?, CreatedAt
             [typeof(WikiFile)] = 9,              // FilePath (PK), FileName, H1Title?, Headings?, Content?, WordCount?, LastModifiedAt?, CrossLinksOut?, CrossLinksIn?
             [typeof(WikiVersionSnapshot)] = 5,   // Id, WikiFilePath, Content, Source, CreatedAt
             [typeof(MessageDrafts)] = 4,         // ThreadId, Content, CursorPosition, SavedAt
@@ -657,5 +657,61 @@ public class EntitySchemaTests : DataLayerTestBase
 
         // Verify TextEditorToolExecutor is absent
         Assert.DoesNotContain(executorTypes, t => t.Name == "TextEditorToolExecutor");
+    }
+
+    /// <summary>
+    /// Validates that UsageRecord has the 8 new enriched columns from Step 2.
+    /// </summary>
+    [Fact]
+    public void UsageRecord_ShouldHave8NewColumns()
+    {
+        var entityType = typeof(UsageRecord);
+        var props = entityType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .Where(p => !IsNavigationProperty(p))
+            .ToDictionary(p => p.Name);
+
+        // Verify each new property exists
+        Assert.True(props.ContainsKey(nameof(UsageRecord.CacheReadTokens)),
+            "UsageRecord should have CacheReadTokens property");
+        Assert.Equal(typeof(int), props[nameof(UsageRecord.CacheReadTokens)].PropertyType);
+
+        Assert.True(props.ContainsKey(nameof(UsageRecord.CacheCreationTokens)),
+            "UsageRecord should have CacheCreationTokens property");
+        Assert.Equal(typeof(int), props[nameof(UsageRecord.CacheCreationTokens)].PropertyType);
+
+        Assert.True(props.ContainsKey(nameof(UsageRecord.LatencyMs)),
+            "UsageRecord should have LatencyMs property");
+        Assert.Equal(typeof(int), props[nameof(UsageRecord.LatencyMs)].PropertyType);
+
+        Assert.True(props.ContainsKey(nameof(UsageRecord.Tier)),
+            "UsageRecord should have Tier property");
+        Assert.Equal(typeof(int), props[nameof(UsageRecord.Tier)].PropertyType);
+
+        Assert.True(props.ContainsKey(nameof(UsageRecord.ErrorType)),
+            "UsageRecord should have ErrorType property");
+        Assert.Equal(typeof(string), props[nameof(UsageRecord.ErrorType)].PropertyType);
+
+        Assert.True(props.ContainsKey(nameof(UsageRecord.ErrorMessage)),
+            "UsageRecord should have ErrorMessage property");
+        Assert.Equal(typeof(string), props[nameof(UsageRecord.ErrorMessage)].PropertyType);
+
+        Assert.True(props.ContainsKey(nameof(UsageRecord.ErrorStatusCode)),
+            "UsageRecord should have ErrorStatusCode property");
+        Assert.Equal(typeof(int?), props[nameof(UsageRecord.ErrorStatusCode)].PropertyType);
+
+        Assert.True(props.ContainsKey(nameof(UsageRecord.RawJsonPath)),
+            "UsageRecord should have RawJsonPath property");
+        Assert.Equal(typeof(string), props[nameof(UsageRecord.RawJsonPath)].PropertyType);
+
+        // Verify default values
+        var defaultEntity = new UsageRecord();
+        Assert.Equal(0, defaultEntity.CacheReadTokens);
+        Assert.Equal(0, defaultEntity.CacheCreationTokens);
+        Assert.Equal(0, defaultEntity.LatencyMs);
+        Assert.Equal(3, defaultEntity.Tier);
+        Assert.Null(defaultEntity.ErrorType);
+        Assert.Null(defaultEntity.ErrorMessage);
+        Assert.Null(defaultEntity.ErrorStatusCode);
+        Assert.Null(defaultEntity.RawJsonPath);
     }
 }
