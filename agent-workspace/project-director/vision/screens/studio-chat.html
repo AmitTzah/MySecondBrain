@@ -232,11 +232,14 @@
         <div class="tab">Website Redesign <span class="tab-close">×</span></div>
         <div class="tab"><span class="tab-incognito">🕶️</span> Quick Rewrite <span class="tab-close">×</span></div>
         <div class="tab">Chapter 3 <span class="tab-complete-dot"></span><span class="tab-close">×</span></div>
+        <div class="tab" style="font-style:italic;color:#999">📄 _api_history.json <span style="font-size:9px;background:#eee;border-radius:2px;padding:0 4px">Read-Only</span> <span class="tab-close">×</span></div>
         <div class="tab-add" data-tooltip="Would open the Persona picker to create a new chat tab.">+</div>
       </div>
 
       <div class="chat-header">
         <span class="chat-header-persona" data-tooltip="Would open a popover showing the current system message for editing. Changes take effect for subsequent messages. 'Reset to Persona Default' available.">🤖 Python Expert</span>
+        <select class="chat-header-btn" style="font-size:11px;cursor:pointer" data-tooltip="Would change the chat visual theme. Classic: user right/assistant left. Compact: minimal spacing. Bubble: chat-bubble style."><option>Classic</option><option>Compact</option><option>Bubble</option></select>
+        <button class="chat-header-btn" style="font-size:11px" data-tooltip="Would serialize all API calls for this chat into a JSON file and open it in a read-only file viewer tab with syntax highlighting.">📡 API History</button>
         <span class="chat-header-context">12,450 / 128,000 tokens</span>
         <div class="context-bar"><div class="context-bar-fill" style="width:9.7%"></div></div>
         <span class="chat-header-cost">$0.42 total</span>
@@ -246,6 +249,7 @@
         <button class="chat-header-btn" data-tooltip="Would increase chat message font size by 1px.">A⁺</button>
         <button class="chat-header-btn" data-tooltip="Would instantly switch between dark mode and light mode.">☀️</button>
         <button class="chat-header-btn" data-tooltip="Would pin this window to stay on top of other applications.">📌</button>
+        <button class="chat-header-btn" data-tooltip="Would open dropdown: App Data Locations (opens Settings → System Info), Keyboard Shortcuts (Ctrl+/), About MySecondBrain.">?</button>
         <button class="chat-header-btn" data-tooltip="Would open menu: Clear Conversation, Export Chat, Duplicate Chat, Chat Tree, Edit System Message, Summarize Chat, Make Temporary.">⋯</button>
       </div>
 
@@ -370,7 +374,7 @@
           <button class="toolbar-btn" data-tooltip="Would switch the active Persona for this chat. Changes system prompt and model for subsequent messages.">🤖 Python Expert ▾</button>
           <button class="toolbar-btn active" data-tooltip="Would toggle extended reasoning (thinking) mode. When ON: AI shows its reasoning as an expandable block. Only works with models that support extended thinking.">🧠 Thinking</button>
           <button class="toolbar-btn" data-tooltip="Would mute sound notifications for this specific chat.">🔇 Mute</button>
-          <button class="toolbar-btn" data-tooltip="Would show checkboxes for all 10 tools (bash, text_editor, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files). Disabled tools are removed from the API call entirely. Auto-approval submenu per tool.">🔧 Tools ▾</button>
+          <button class="toolbar-btn" data-tooltip="Would show checkboxes for all 14 tools (read_file, list_files, search_files, apply_diff, write_to_file, bash, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files). Disabled tools are removed from the API call entirely. Out-of-workspace read approval configurable per tool.">🔧 Tools ▾</button>
           <button class="toolbar-btn" data-tooltip="Would show checkboxes for each installed skill (xlsx, docx, pdf, pptx, algorithmic-art, canvas-design, frontend-design, theme-factory, web-artifacts-builder, webapp-testing, skill-creator) + community skills. Disabled skills removed from catalog and skill_load enum.">📚 Skills ▾</button>
           <button class="toolbar-btn active" data-tooltip="Would toggle AI memory on/off for this chat. When ON: AI can store and retrieve facts about you across conversations via SQLite-backed memory tool (Anthropic schema). Memories persist across all chats. Manage in Settings → Memory.">🧠 Mem</button>
           <a href="model-comparison.html" class="toolbar-btn" style="text-decoration:none" data-tooltip="Would open Model Comparison: select 2+ Personas, see responses side-by-side in real time.">⚖ Compare</a>
