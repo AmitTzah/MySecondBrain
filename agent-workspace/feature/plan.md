@@ -128,7 +128,7 @@ src/
 
 ---
 
-### [ ] Step 3: Add chatMode to TextAction Entity + Migration
+### [x] Step 3: Add chatMode to TextAction Entity + Migration
 - **Goal:** Add `ChatMode` field to the `TextAction` entity matching the vision spec — supports `Standard` (chat API with system prompt) and `TextCompletion` (raw prompt to raw completion).
 - **Actions:**
   - MODIFY [`src/MySecondBrain.Data/Entities/TextAction.cs`](src/MySecondBrain.Data/Entities/TextAction.cs) — add property:
