@@ -612,13 +612,15 @@ public class ChatThreadViewModelTests
     {
         var vm = CreateViewModel();
 
-        // All tools default to enabled (10 tools). No skills enabled,
-        // so skill_load is removed from the array. Result = 9.
+        // All tools default to enabled (10 tools, including legacy text_editor).
+        // text_editor is not in AllKnownToolNames so it's filtered out (→9).
+        // skill_load is removed because no skills are enabled (→8).
+        // ask_user_input is always present.
         var tools = vm.GetFilteredToolNames();
 
         Assert.Contains("ask_user_input", tools);
         Assert.DoesNotContain("skill_load", tools);
-        Assert.Equal(9, tools.Count);
+        Assert.Equal(8, tools.Count);
     }
 
     [Fact]

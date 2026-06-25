@@ -6,6 +6,7 @@ using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Data;
 using MySecondBrain.Data.Entities;
 using MySecondBrain.Data.Repositories;
+using MySecondBrain.Services;
 using MySecondBrain.Services.Tools;
 using Message = MySecondBrain.Data.Entities.Message;
 using CoreModels = MySecondBrain.Core.Models;
@@ -1032,6 +1033,108 @@ public class EntitySchemaTests : DataLayerTestBase
 
         public string GetConfirmationDescription(CoreModels.ToolCall toolCall) =>
             $"Execute {ToolName}";
+    }
+    // ════════════════════════════════════════════════════════════════
+    // SystemPromptBuilder Step 7 Tests: 14-Tool Surface
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Validates that BehavioralInstructions describes tool capability categories
+    /// corresponding to the 14-tool surface. Tool names like present_files and
+    /// skill_load are handled through BuildFilteredToolNames and SkillUsageInstructions
+    /// respectively, not in BehavioralInstructions.
+    /// </summary>
+    [Fact]
+    public void SystemPromptBuilder_ShouldMentionToolCapabilities()
+    {
+        var instructions = SystemPromptBuilder_GetBehavioralInstructions();
+
+        // Check capability descriptions for each tool category described in BehavioralInstructions.
+        // present_files is registered via AllKnownToolNames in BuildFilteredToolNames.
+        // skill_load is described in the SkillUsageInstructions constant (separate section).
+        var expectedIndicators = new (string Keyword, string ToolName)[]
+        {
+            ("reading", "read_file"),
+            ("listing", "list_files"),
+            ("searching", "search_files"),      // appears in file-search context
+            ("editing", "apply_diff"),
+            ("creating", "write_to_file"),
+            ("executing commands", "bash"),
+            ("searching the web", "web_search"),
+            ("fetching web pages", "web_fetch"),
+            ("searching for images", "image_search"),
+            ("searching the user's wiki", "wiki_search"),
+            ("managing persistent memory", "memory"),
+            ("ask_user_input", "ask_user_input"),
+        };
+
+        var missing = new List<string>();
+        foreach (var (keyword, toolName) in expectedIndicators)
+        {
+            // Check by keyword or exact tool name
+            var found = instructions.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+                        || instructions.Contains(toolName, StringComparison.OrdinalIgnoreCase);
+            if (!found)
+                missing.Add($"{toolName} (expected: '{keyword}')");
+        }
+
+        Assert.Empty(missing);
+    }
+
+    /// <summary>
+    /// Validates that BuildFilteredToolNames recognizes all 14 known tool names
+    /// and correctly filters out unknown tool names.
+    /// </summary>
+    [Fact]
+    public void SystemPromptBuilder_ShouldFilterAll14ToolNames()
+    {
+        // All 14 known tool names
+        var all14ToolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "read_file", "list_files", "search_files", "apply_diff", "write_to_file",
+            "bash", "web_search", "web_fetch", "image_search",
+            "wiki_search", "memory", "skill_load", "ask_user_input", "present_files"
+        };
+
+        // Pass enabledSkillCount: 1 so skill_load is retained in the result
+        var result = SystemPromptBuilder.BuildFilteredToolNames(all14ToolNames, enabledSkillCount: 1);
+
+        // All 14 names should be in the result
+        foreach (var name in all14ToolNames)
+        {
+            Assert.Contains(result, n => n.Equals(name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Unknown tool names should be filtered out
+        var withUnknown = new HashSet<string>(all14ToolNames, StringComparer.OrdinalIgnoreCase)
+        {
+            "fake_tool", "unknown_executor", "text_editor"
+        };
+        var filteredResult = SystemPromptBuilder.BuildFilteredToolNames(withUnknown, enabledSkillCount: 1);
+
+        // Unknown tools should be absent (including the legacy text_editor)
+        Assert.DoesNotContain(filteredResult, n => n.Equals("fake_tool", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(filteredResult, n => n.Equals("unknown_executor", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(filteredResult, n => n.Equals("text_editor", StringComparison.OrdinalIgnoreCase));
+
+        // All 14 known tools should still be present
+        foreach (var name in all14ToolNames)
+        {
+            Assert.Contains(filteredResult, n => n.Equals(name, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    /// <summary>
+    /// Extracts the private BehavioralInstructions constant via reflection.
+    /// </summary>
+    private static string SystemPromptBuilder_GetBehavioralInstructions()
+    {
+        var field = typeof(SystemPromptBuilder).GetField(
+            "BehavioralInstructions",
+            BindingFlags.Static | BindingFlags.NonPublic);
+
+        Assert.NotNull(field);
+        return (field!.GetValue(null) as string)!;
     }
 }
 
