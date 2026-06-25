@@ -76,7 +76,7 @@ src/
 
 ## 5. Execution Steps
 
-### [ ] Step 1: Delete TextEditorToolExecutor + Create 5 File Operation Executors
+### [x] Step 1: Delete TextEditorToolExecutor + Create 5 File Operation Executors
 - **Goal:** Replace the single `text_editor` tool (Anthropic `text_editor_20250728`) with 5 provider-agnostic file operation tools: `read_file`, `list_files`, `search_files`, `apply_diff`, `write_to_file`. The app behaves identically — tool executors are stubs that return empty results — but the 14-tool surface is architecturally in place.
 - **Actions:**
   - DELETE [`src/MySecondBrain.Services/Tools/TextEditorToolExecutor.cs`](src/MySecondBrain.Services/Tools/TextEditorToolExecutor.cs)
@@ -258,5 +258,7 @@ src/
 - **Data Model Version:** After all steps, 2 new EF Core migrations exist: `EnrichUsageRecord` (8 columns) and `AddTextActionChatMode` (1 column). Both are additive-only — no data migration needed.
 
 - **Smoke Test Automation:** All smoke tests are Model-classified (build + full unit test suite). No manual or HUMAN/SHT REQUIRED steps. The `state.json` has `smoke_test_automation.enabled = false` which is correct for this infrastructure-only feature.
+
+- **14 Tool Executors Registered After Step 1:** `ApplyDiffToolExecutor`, `AskUserInputToolExecutor`, `BashToolExecutor`, `ImageSearchToolExecutor`, `ListFilesToolExecutor`, `MemoryToolExecutor`, `PresentFilesToolExecutor`, `ReadFileToolExecutor`, `SearchFilesToolExecutor`, `SkillLoadToolExecutor`, `WebFetchToolExecutor`, `WebSearchToolExecutor`, `WikiSearchToolExecutor`, `WriteToFileToolExecutor`. DI container has 14 `IToolExecutor` singleton registrations.
 
 - [Initial State]: No shared context yet.
