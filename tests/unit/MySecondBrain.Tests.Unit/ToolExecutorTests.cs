@@ -86,7 +86,7 @@ public class ToolExecutorTests
     [Fact]
     public void BashToolExecutor_WorkspacePath_IsUnderLocalAppData()
     {
-        var workspacePath = BashToolExecutor.WorkspacePath;
+        var workspacePath = BashToolExecutor.WorkspaceBasePath;
         Assert.StartsWith(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             workspacePath);
@@ -95,7 +95,7 @@ public class ToolExecutorTests
     [Fact]
     public void BashToolExecutor_WorkspacePath_EndsWithMySecondBrainWorkspace()
     {
-        var workspacePath = BashToolExecutor.WorkspacePath;
+        var workspacePath = BashToolExecutor.WorkspaceBasePath;
         Assert.Contains("MySecondBrain", workspacePath, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("workspace", workspacePath, StringComparison.OrdinalIgnoreCase);
     }
@@ -105,7 +105,7 @@ public class ToolExecutorTests
     {
         var executor = CreateBashExecutor();
         var desc = executor.Description;
-        Assert.Contains(BashToolExecutor.WorkspacePath, desc, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(BashToolExecutor.WorkspaceBasePath, desc, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -211,8 +211,8 @@ public class ToolExecutorTests
     [Fact]
     public async Task BashToolExecutor_ValidateAsync_BlocksWikiDirectoryWrites()
     {
-        // Wiki path nested under workspace so relative paths resolve correctly
-        var wikiPath = Path.Combine(BashToolExecutor.WorkspacePath, "wiki");
+        // Wiki path nested under workspace base so relative paths resolve correctly
+        var wikiPath = Path.Combine(BashToolExecutor.WorkspaceBasePath, "wiki");
         var executor = CreateBashExecutor(wikiPath);
         var toolCall = new ToolCall("test", "bash",
             """{"command":"echo test > wiki/test.md"}""");
@@ -225,7 +225,7 @@ public class ToolExecutorTests
     [Fact]
     public async Task BashToolExecutor_ValidateAsync_BlocksWikiDirectoryWrites_WithAppendRedirect()
     {
-        var wikiPath = Path.Combine(BashToolExecutor.WorkspacePath, "wiki");
+        var wikiPath = Path.Combine(BashToolExecutor.WorkspaceBasePath, "wiki");
         var executor = CreateBashExecutor(wikiPath);
         var toolCall = new ToolCall("test", "bash",
             """{"command":"echo test >> wiki/test.md"}""");
@@ -284,7 +284,7 @@ public class ToolExecutorTests
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
         field?.SetValue(null, false);
 
-        var workspacePath = BashToolExecutor.WorkspacePath;
+        var workspacePath = BashToolExecutor.WorkspaceBasePath;
         try
         {
             if (Directory.Exists(workspacePath))
@@ -984,23 +984,26 @@ public class ToolExecutorTests
     }
 
     [Fact]
-    public async Task PresentFilesToolExecutor_ValidateAsync_ReturnsNull()
+    public async Task PresentFilesToolExecutor_ValidateAsync_ReturnsValid()
     {
         var executor = CreatePresentFilesExecutor();
         var toolCall = CreateToolCall("present_files");
         var result = await executor.ValidateAsync(toolCall, CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.True(result.IsValid);
     }
 
     [Fact]
-    public async Task PresentFilesToolExecutor_ExecuteAsync_ReturnsNull()
+    public async Task PresentFilesToolExecutor_ExecuteAsync_WithoutChatId_ReturnsError()
     {
         var executor = CreatePresentFilesExecutor();
         var toolCall = CreateToolCall("present_files");
         var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
 
-        Assert.Null(result);
+        Assert.NotNull(result);
+        Assert.False(result.Success);
+        Assert.Contains("chat_id", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

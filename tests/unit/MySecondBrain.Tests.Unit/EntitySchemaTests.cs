@@ -1,10 +1,12 @@
 using System.Reflection;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Data;
 using MySecondBrain.Data.Entities;
 using MySecondBrain.Data.Repositories;
+using MySecondBrain.Services.Tools;
 using Message = MySecondBrain.Data.Entities.Message;
 using CoreModels = MySecondBrain.Core.Models;
 
@@ -810,5 +812,75 @@ public class EntitySchemaTests : DataLayerTestBase
             if (Directory.Exists(testSkillDir))
                 Directory.Delete(testSkillDir, true);
         }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Per-Chat Workspace Isolation Tests (Step 5)
+    // ════════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Validates that BashToolExecutor.GetChatWorkspacePath produces
+    /// a path ending with workspace/{chat-id}.
+    /// </summary>
+    [Fact]
+    public void BashToolExecutor_ShouldDerivePerChatWorkspace()
+    {
+        const string chatId = "test-chat-123";
+        var path = BashToolExecutor.GetChatWorkspacePath(chatId);
+
+        Assert.EndsWith(chatId, path);
+        Assert.Contains("workspace", path);
+        Assert.StartsWith(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            path);
+    }
+
+    /// <summary>
+    /// Validates that PresentFilesToolExecutor.GetChatArtifactsPath produces
+    /// a path ending with artifacts/{chat-id}.
+    /// </summary>
+    [Fact]
+    public void PresentFiles_ShouldDerivePerChatArtifactsPath()
+    {
+        const string chatId = "test-chat-456";
+        var path = PresentFilesToolExecutor.GetChatArtifactsPath(chatId);
+
+        Assert.EndsWith(chatId, path);
+        Assert.Contains("artifacts", path);
+        Assert.StartsWith(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            path);
+    }
+
+    /// <summary>
+    /// Validates that BashToolExecutor.ExecuteAsync returns error when chat_id is missing.
+    /// </summary>
+    [Fact]
+    public async Task BashToolExecutor_ExecuteAsync_WithoutChatId_ReturnsError()
+    {
+        var logger = new Moq.Mock<Microsoft.Extensions.Logging.ILogger<BashToolExecutor>>();
+        var executor = new BashToolExecutor(logger.Object);
+        var toolCall = new CoreModels.ToolCall("test-id", "bash", """{"command": "echo hello"}""");
+
+        var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("chat_id", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Validates that PresentFilesToolExecutor.ExecuteAsync returns error when chat_id is missing.
+    /// </summary>
+    [Fact]
+    public async Task PresentFiles_ExecuteAsync_WithoutChatId_ReturnsError()
+    {
+        var logger = new Moq.Mock<Microsoft.Extensions.Logging.ILogger<PresentFilesToolExecutor>>();
+        var executor = new PresentFilesToolExecutor(logger.Object);
+        var toolCall = new CoreModels.ToolCall("test-id", "present_files", """{"paths": ["test.txt"]}""");
+
+        var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("chat_id", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -419,7 +419,7 @@ public class ProviderIntegrationTests
         var executor = new BashToolExecutor(loggerMock.Object);
 
         // Reset workspace cleanup flag for test isolation
-        var workspacePath = BashToolExecutor.WorkspacePath;
+        var workspacePath = BashToolExecutor.WorkspaceBasePath;
 
         try
         {
@@ -456,7 +456,7 @@ public class ProviderIntegrationTests
         // Arrange
         var loggerMock = new Mock<ILogger<BashToolExecutor>>();
         var executor = new BashToolExecutor(loggerMock.Object);
-        var workspacePath = BashToolExecutor.WorkspacePath;
+        var workspacePath = BashToolExecutor.WorkspaceBasePath;
 
         try
         {
@@ -506,7 +506,7 @@ public class ProviderIntegrationTests
         // Arrange
         var loggerMock = new Mock<ILogger<BashToolExecutor>>();
         var executor = new BashToolExecutor(loggerMock.Object);
-        var workspacePath = BashToolExecutor.WorkspacePath;
+        var workspacePath = BashToolExecutor.WorkspaceBasePath;
 
         try
         {
@@ -534,7 +534,7 @@ public class ProviderIntegrationTests
         // Arrange
         var loggerMock = new Mock<ILogger<BashToolExecutor>>();
         var executor = new BashToolExecutor(loggerMock.Object);
-        var workspacePath = BashToolExecutor.WorkspacePath;
+        var workspacePath = BashToolExecutor.WorkspaceBasePath;
 
         try
         {

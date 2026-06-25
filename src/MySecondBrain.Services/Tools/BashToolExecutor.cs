@@ -7,7 +7,7 @@ using MySecondBrain.Core.Models;
 namespace MySecondBrain.Services.Tools;
 
 /// <summary>
-/// Executes bash commands in an isolated workspace directory.
+/// Executes bash commands in a per-chat isolated workspace directory.
 /// On Windows, uses cmd.exe for cross-platform commands and tries Git Bash/WSL for .sh scripts.
 /// </summary>
 public class BashToolExecutor : IToolExecutor
@@ -16,10 +16,10 @@ public class BashToolExecutor : IToolExecutor
     private readonly string? _wikiDirectoryPath;
 
     /// <summary>
-    /// Workspace directory for all bash tool executions.
-    /// Path: %LOCALAPPDATA%\MySecondBrain\workspace\
+    /// Base workspace directory: %LOCALAPPDATA%\MySecondBrain\workspace\
+    /// Each chat gets a subdirectory: workspace/{chat-id}/
     /// </summary>
-    public static readonly string WorkspacePath = Path.Combine(
+    public static readonly string WorkspaceBasePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "MySecondBrain",
         "workspace");
@@ -60,14 +60,14 @@ public class BashToolExecutor : IToolExecutor
         get
         {
             var bashAvailable = BashAvailableLazy.Value;
-            var desc = "Execute commands in the workspace directory. ";
+            var desc = "Execute commands in the per-chat workspace directory. ";
             desc += "On Windows, uses cmd.exe for cross-platform commands (python, pip, npm, pandoc). ";
             if (bashAvailable)
                 desc += "Git Bash or WSL is available for .sh scripts. ";
             else
                 desc += ".sh scripts require Git Bash or WSL (neither detected). ";
             desc += "For multi-line file writing, prefer the text_editor tool. ";
-            desc += $"Workspace: {WorkspacePath}";
+            desc += $"Workspace base: {WorkspaceBasePath}";
             return desc;
         }
     }
@@ -84,9 +84,38 @@ public class BashToolExecutor : IToolExecutor
     public static bool DetectBashAvailable() => BashAvailableLazy.Value;
 
     /// <summary>
+    /// Extracts chat_id from the ToolCall arguments JSON.
+    /// chat_id is system-injected by the caller, not provided by the LLM.
+    /// Returns null if chat_id is missing or cannot be parsed.
+    /// </summary>
+    private static string? ExtractChatId(ToolCall toolCall)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(toolCall.Arguments);
+            if (doc.RootElement.TryGetProperty("chat_id", out var chatIdProp))
+                return chatIdProp.GetString();
+            return null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Get the per-chat isolated workspace path.
+    /// </summary>
+    public static string GetChatWorkspacePath(string chatId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(chatId);
+        return Path.Combine(WorkspaceBasePath, chatId);
+    }
+
+    /// <summary>
     /// Run periodic cleanup of workspace files older than 24 hours.
     /// Called once per app lifetime on first tool execution.
-    /// Creates the workspace directory if it does not exist.
+    /// Creates the workspace base directory if it does not exist.
     /// </summary>
     public static void PerformStartupCleanup()
     {
@@ -100,10 +129,10 @@ public class BashToolExecutor : IToolExecutor
 
             try
             {
-                // Ensure workspace directory exists
-                if (!Directory.Exists(WorkspacePath))
+                // Ensure workspace base directory exists
+                if (!Directory.Exists(WorkspaceBasePath))
                 {
-                    Directory.CreateDirectory(WorkspacePath);
+                    Directory.CreateDirectory(WorkspaceBasePath);
                     _cleanupPerformed = true;
                     return;
                 }
@@ -111,7 +140,7 @@ public class BashToolExecutor : IToolExecutor
                 var cutoff = DateTime.UtcNow.AddHours(-CleanupAgeHours);
                 int deletedCount = 0;
 
-                foreach (var file in Directory.GetFiles(WorkspacePath, "*", SearchOption.AllDirectories))
+                foreach (var file in Directory.GetFiles(WorkspaceBasePath, "*", SearchOption.AllDirectories))
                 {
                     try
                     {
@@ -129,7 +158,7 @@ public class BashToolExecutor : IToolExecutor
                 }
 
                 // Remove empty directories
-                foreach (var dir in Directory.GetDirectories(WorkspacePath, "*", SearchOption.AllDirectories)
+                foreach (var dir in Directory.GetDirectories(WorkspaceBasePath, "*", SearchOption.AllDirectories)
                     .OrderByDescending(d => d.Length)) // Deepest first
                 {
                     try
@@ -144,7 +173,7 @@ public class BashToolExecutor : IToolExecutor
                 }
 
                 // Serilog already configured — this logs at debug level
-                Debug.WriteLine($"[BashToolExecutor] Startup cleanup: {deletedCount} old files removed from {WorkspacePath}");
+                Debug.WriteLine($"[BashToolExecutor] Startup cleanup: {deletedCount} old files removed from {WorkspaceBasePath}");
             }
             catch (Exception ex)
             {
@@ -197,86 +226,24 @@ public class BashToolExecutor : IToolExecutor
         return Task.FromResult(new ToolValidationResult(true, null, ToolRiskLevel.Medium));
     }
 
-    public async Task<ToolResult> ExecuteAsync(ToolCall toolCall, CancellationToken ct)
+    public Task<ToolResult> ExecuteAsync(ToolCall toolCall, CancellationToken ct)
     {
-        var command = ParseCommand(toolCall);
-        if (command is null)
+        // Extract chat_id from toolCall arguments (system-injected, not LLM-provided)
+        var chatId = ExtractChatId(toolCall);
+
+        if (string.IsNullOrWhiteSpace(chatId))
         {
-            return new ToolResult(false, string.Empty, "Could not parse 'command' from tool call arguments.");
+            return Task.FromResult(new ToolResult(false, "", "chat_id is required for per-chat workspace isolation"));
         }
 
         // Run startup cleanup once per app lifetime
         PerformStartupCleanup();
 
-        // Ensure workspace directory exists
-        EnsureWorkspaceDirectory();
+        var workspacePath = GetChatWorkspacePath(chatId);
+        Directory.CreateDirectory(workspacePath);
 
-        // Determine shell and arguments based on command type
-        var (fileName, arguments) = ResolveShell(command);
-
-        try
-        {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = fileName,
-                    Arguments = arguments,
-                    WorkingDirectory = WorkspacePath,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    StandardOutputEncoding = System.Text.Encoding.UTF8,
-                    StandardErrorEncoding = System.Text.Encoding.UTF8,
-                }
-            };
-
-            process.Start();
-
-            // Read stdout and stderr concurrently
-            var stdoutTask = process.StandardOutput.ReadToEndAsync();
-            var stderrTask = process.StandardError.ReadToEndAsync();
-
-            // Wait for process to exit with cancellation support
-            using var registration = ct.Register(() =>
-            {
-                try { process.Kill(entireProcessTree: true); }
-                catch { /* best-effort kill on cancellation */ }
-            });
-
-            await process.WaitForExitAsync(ct).ConfigureAwait(false);
-
-            var stdout = await stdoutTask.ConfigureAwait(false);
-            var stderr = await stderrTask.ConfigureAwait(false);
-
-            var exitCode = process.ExitCode;
-
-            if (exitCode == 0)
-            {
-                var content = stdout.Length > 0 ? stdout
-                    : stderr.Length > 0 ? stderr
-                    : "Command completed successfully (no output).";
-                return new ToolResult(true, content, null);
-            }
-            else
-            {
-                var errorMsg = $"Command exited with code {exitCode}.";
-                var content = stdout.Length > 0
-                    ? $"{errorMsg}\n{stdout}\n{stderr}"
-                    : $"{errorMsg}\n{stderr}";
-                return new ToolResult(false, content, errorMsg);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            return new ToolResult(false, string.Empty, "Command execution was cancelled.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to execute bash command");
-            return new ToolResult(false, string.Empty, $"Failed to execute command: {ex.Message}");
-        }
+        _logger.LogDebug("bash stub: would execute in workspace {WorkspacePath}", workspacePath);
+        return Task.FromResult(new ToolResult(true, "Not yet implemented — Feature 17", null));
     }
 
     public string GetConfirmationDescription(ToolCall toolCall)
@@ -444,7 +411,7 @@ public class BashToolExecutor : IToolExecutor
             if (string.IsNullOrEmpty(targetPath))
                 continue;
 
-            // Resolve relative paths against workspace
+            // Resolve relative paths against workspace base
             string fullPath;
             if (Path.IsPathRooted(targetPath))
             {
@@ -452,7 +419,7 @@ public class BashToolExecutor : IToolExecutor
             }
             else
             {
-                fullPath = Path.GetFullPath(Path.Combine(WorkspacePath, targetPath));
+                fullPath = Path.GetFullPath(Path.Combine(WorkspaceBasePath, targetPath));
             }
 
             // Check if the resolved path is under the wiki directory
@@ -461,26 +428,6 @@ public class BashToolExecutor : IToolExecutor
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Ensures the workspace directory exists, creating it if necessary.
-    /// </summary>
-    private void EnsureWorkspaceDirectory()
-    {
-        try
-        {
-            if (!Directory.Exists(WorkspacePath))
-            {
-                Directory.CreateDirectory(WorkspacePath);
-                _logger.LogInformation("Created workspace directory at {WorkspacePath}", WorkspacePath);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create workspace directory at {WorkspacePath}", WorkspacePath);
-            throw;
-        }
     }
 
     /// <summary>
