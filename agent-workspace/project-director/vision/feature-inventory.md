@@ -56,7 +56,10 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **C14. Error Handling & Retry:** Specific error message + Retry button on API failure. Escalating message on consecutive failures.
 - **C15. Scroll-to-Bottom Button:** Floating button when scrolled up during streaming. Smooth scroll to latest.
 - **C16. Clear Conversation:** Clear all messages, preserve chat. Accessible from chat header three-dot (⋯) menu. Confirmation dialog. Undo via toast or Ctrl+Z.
-- **C16a. Chat Header Three-Dot Menu (⋯):** Clear Conversation, Export Chat (I1), Duplicate Chat (D7), Chat Tree (D4), Edit System Message (E5).
+- **C16a. Chat Header Three-Dot Menu (⋯):** Clear Conversation, Export Chat (I1), Duplicate Chat (D7), Chat Tree (D4), Edit System Message (E5), Summarize Chat (C32), Make Temporary (C30).
+- **C38. API History Button (📡):** Button in chat header bar (near theme selector). Opens per-chat raw API call JSON log in generic file viewer tab. Full spec: [`features/api-history-viewer.md`](features/api-history-viewer.md).
+- **C39. Generic File Viewer Tabs:** Read-only tabs alongside chat tabs for text/code (syntax highlighting), Markdown (rendered), images (zoom/pan). Open via Ctrl+O, drag-drop, API History, image thumbnails. Drag tab to textbox for context. Full spec: [`features/file-viewer-tabs.md`](features/file-viewer-tabs.md).
+- **C40. "?" Help Icon:** Icon in app header bar. Dropdown: App Data Locations, Keyboard Shortcuts, About. Full spec: [`features/app-data-locations.md`](features/app-data-locations.md).
 - **C17. Auto-Scroll Behavior:** Auto-pauses when user scrolls up during generation. Handles media height changes smoothly.
 - **C18. Message Selection Mode:** Checkboxes appear on message hover. Bulk actions bar: Copy Selected, Delete Selected, Quote Selected.
 - **C19. Offline/Network Status Indicator:** Green/Yellow/Red dot in status bar. Offline banner below header.
@@ -92,6 +95,29 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 - **D8. Message Feedback:** Thumbs-up/down on assistant messages. Stored with message.
 - **D9. Undo/Redo Message Edits:** Ctrl+Z/Ctrl+Y. Per-chat stack, persists until chat closed.
 
+### X. API History Viewer (NEW)
+**Spec:** [`features/api-history-viewer.md`](features/api-history-viewer.md)
+
+- **X1. API History Button:** "📡 API History" button in Studio Chat header bar (near theme selector). Opens per-chat raw API call JSON log in generic file viewer tab. No custom UI beyond the button.
+- **X2. Raw JSON Format:** Complete request/response cycle — user messages, assistant responses with tool_use/reasoning blocks, tool_result blocks, timestamps. JSON syntax highlighting via file viewer.
+- **X3. Data Source:** Per-chat JSON log file: `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/_api_history.json`. Appended per API call.
+
+### Y. Generic File Viewer Tabs (NEW)
+**Spec:** [`features/file-viewer-tabs.md`](features/file-viewer-tabs.md)
+
+- **Y1. File Viewer Tabs:** Read-only tabs in main content area alongside chat tabs. Text/code with syntax highlighting, Markdown rendered, images with zoom/pan.
+- **Y2. Open Methods:** Ctrl+O, drag-drop onto tab bar, double-click in file picker, present_files results, API History button, click image thumbnail.
+- **Y3. Tab Behavior:** Reorder, close (Ctrl+W), reopen (Ctrl+Shift+T). 📄 icon + "Read-Only" badge.
+- **Y4. Drag to Textbox:** Include file content as chat context when dragging tab to input.
+- **Y5. Distinct from:** Wiki Browser (backlinks/indexing), Artifacts Panel (WebView2, versioned), Media Library (gallery grid).
+
+### Z. App Data Locations (NEW)
+**Spec:** [`features/app-data-locations.md`](features/app-data-locations.md)
+
+- **Z1. System Info Category:** 19th category in Settings sidebar (after Diagnostics). Comprehensive reference table of every file/folder the app touches.
+- **Z2. Table Columns:** Location (path), Purpose, Size on Disk, "User Can Edit?" badge (✅/⚠️/❌), "Open in Explorer" button.
+- **Z3. "?" Help Icon:** In app header bar. Dropdown: App Data Locations → Settings → System Info, Keyboard Shortcuts, About.
+
 ### E. Chat Modes & Controls
 **Spec:** [`features/chat-modes-controls.md`](features/chat-modes-controls.md)
 
@@ -125,22 +151,28 @@ Two-layer model: **Model Configurations** (engine — what model runs) and **Per
 ### H. Tool Use (Agent Capabilities)
 **Spec:** [`features/tool-use-agents.md`](features/tool-use-agents.md)
 
-The model uses 10 tools matching Anthropic's trained-in schemas where possible. All tools are additively assembled per chat — disabled tools are completely removed from the API call.
+The model uses 14 provider-agnostic tools with Anthropic-flavored naming following the Roo Code pattern. All tools are additively assembled per chat — disabled tools are completely removed from the API call. Schemas are designed for instruction-following by ANY model (OpenAI, Anthropic, Google, DeepSeek, MiMo, Moonshot, Mistral, OpenAI-compatible).
 
-- **H1. bash:** Anthropic `bash_20250124` schema. Executes commands in workspace-isolated `%LOCALAPPDATA%/MySecondBrain/workspace/`. cmd.exe on Windows with Git Bash/WSL fallback for `.sh` scripts. Absolute paths outside workspace blocked pre-execution. Writes outside workspace require explicit user confirmation. Wiki directory is read-only from bash.
-- **H2. text_editor:** Anthropic `text_editor_20250728` schema. Commands: `view` (read file), `create` (new file — FAILS if path exists, forcing `str_replace` for updates), `str_replace` (patch file — exact match required), `insert` (append to file). Replaces the original separate `file_generate` and `file_edit` tools.
-- **H3. web_search:** Google Custom Search or Bing API. Anthropic server schema reimplemented as client tool with identical interface. Model autonomously searches web for text information. Complementary to H10 (image_search).
-- **H4. web_fetch:** HttpClient GET fetches URL content. Read-only. URL MUST have been seen in prior `web_search` results or `web_fetch` responses — model cannot construct or guess URLs. Used by Deep Research and general web page reading.
-- **H5. memory:** Anthropic `memory_20250818` schema wrapping SQLite memory store. Model stores/retrieves discrete facts about the user. Separate from the wiki. Per-chat toggle in toolbar. User can view/edit/delete memories in Settings → Memory. Full spec: [`features/agent-skills.md`](features/agent-skills.md) §Memory Tool.
-- **H6. wiki_search:** Queries local SQLite FTS5 wiki index. Returns matching filenames, headings, and content snippets. Read-only. Zero API cost. Model uses to incorporate the user's personal knowledge base into responses.
-- **H7. skill_load:** Activates an Agent Skill by loading its full `SKILL.md` instructions into context. Structured XML wrapping for context management. Deduplicated — if already activated in session, re-injection skipped. Full spec: [`features/agent-skills.md`](features/agent-skills.md).
-- **H8. ask_user_input:** Structured WPF confirmation dialogs instead of prose-based confirmations. Pattern from claude.ai. Used for dangerous operations (bash writes outside workspace, file deletions).
-- **H9. present_files:** Model signals "these workspace files are done — surface them as artifacts." App copies files from workspace to artifacts directory, renders in WebView2 side panel. First path in array shown first. Auto-copies from non-artifacts paths.
-- **H10. image_search:** Google Image Search or Bing Image Search API. Separate from `web_search` — dedicated to finding images rather than text. Model uses when user asks for images, photos, or visual references. Safe search filtering by default. Same API key as web_search.
+- **H1. read_file:** Read any file on the filesystem. Parameters: path (required), offset (optional), limit (optional). Workspace/artifacts/wiki auto-approved. Outside workspace triggers approval gate. Binary files returned as metadata. Blocked paths (C:\Windows\, C:\Program Files\, .env) always denied.
+- **H2. list_files:** List directory contents. Parameters: path (required), recursive (optional). Returns structured JSON. Same approval model as read_file.
+- **H3. search_files:** Regex search across files. Parameters: path, regex (required), file_pattern (optional). Returns structured matches. Same approval model as read_file.
+- **H4. apply_diff:** Surgical search/replace edits using SEARCH/REPLACE blocks. Parameters: path (required), diff (required). Workspace + artifacts only. Replaces former text_editor str_replace/insert.
+- **H5. write_to_file:** Create or overwrite a file. Parameters: path (required), content (required), overwrite (optional, default false). Workspace + artifacts only. Fails if path exists without overwrite flag. Replaces former text_editor create.
+- **H6. bash:** Anthropic `bash_20250124` schema. Executes in per-chat workspace `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/`. cmd.exe on Windows with Git Bash/WSL fallback. Blocked paths always denied. Writes outside workspace always ask.
+- **H7. web_search:** Google/Bing text search. Model autonomously searches web. Same API key as image_search.
+- **H8. web_fetch:** Read-only HTTP GET. URL must come from prior search results.
+- **H9. image_search:** Google/Bing image search. Separate from web_search. Safe search by default.
+- **H10. wiki_search:** Local SQLite FTS5 wiki index query. Read-only. Zero API cost.
+- **H11. memory:** Anthropic `memory_20250818` schema. SQLite-backed key-value store. Separate from wiki. Per-chat toggle.
+- **H12. skill_load:** Activates Agent Skill instructions. Enum-constrained. Deduplicated per session.
+- **H13. present_files:** Surface workspace files as artifacts in WebView2 side panel.
+- **H14. ask_user_input:** Structured WPF confirmation dialogs. Always available — cannot be disabled.
 
-**Tool Auto-Approval (H11):** Global defaults + per-chat overrides for which tools auto-execute. `bash` writes outside workspace and `text_editor` deletes ALWAYS require confirmation. Other tools configurable: Auto-Approve / Ask / Disabled.
+**Parallel Tool Execution (H15):** When model sends multiple tool_use blocks, independent tools run in parallel. Sequential display as each completes. "[N] tools running in parallel…" indicator.
 
-**Deep Research:** Now a skill rather than a custom state machine. Model follows research protocol using `web_search` + `web_fetch` + `bash` tools. Progress visible naturally as tool calls stream in chat. Full spec: [`features/agent-skills.md`](features/agent-skills.md) §Deep Research.
+**Tool Auto-Approval:** Global defaults + per-chat overrides. Out-of-workspace read access configurable per read-tool (Auto-Approve / Ask / Disabled). bash writes outside workspace + apply_diff/write_to_file outside workspace ALWAYS require confirmation or are blocked. Blocked paths never overridable.
+
+**Workspace Isolation:** Per-chat subdirectories. Each chat gets own sandbox. 24h grace period cleanup.
 
 ### I. Import & Export
 **Spec:** [`features/import-export.md`](features/import-export.md)
@@ -157,7 +189,7 @@ The model uses 10 tools matching Anthropic's trained-in schemas where possible. 
 ### K. Text Actions & Three-Tier Interaction
 **Spec:** [`features/text-actions-three-tier.md`](features/text-actions-three-tier.md)
 
-- **K1. Text Actions (Unified):** Named text transformation actions with three independent dimensions: capture scope (what to grab — selection, focused element, surrounding context, full document, screenshot), transform (system prompt + Model Configuration), apply mode (where to put result — replace, insert, append, prepend, clipboard, show only). Built-in defaults: Rewrite, Summarize, Explain, Translate, Fix Grammar, Enhance Prompt, Continue Writing, Improve Flow, Summarize Page, Explain Screen. Custom actions with any combination supported. Available as hotkeys (Tier 1) and toolbar dropdown (Studio).
+- **K1. Text Actions (Unified):** Named text transformation actions with four independent dimensions: capture scope (what to grab), transform (system prompt + Model Configuration + chatMode), apply mode (where to put result). chatMode: Standard (chat API) or TextCompletion (raw prompt → raw completion). "Continue Writing" defaults to TextCompletion mode. Built-in defaults: Rewrite, Summarize, Explain, Translate, Fix Grammar, Enhance Prompt, Continue Writing (TextCompletion), Improve Flow, Summarize Page, Explain Screen. Custom actions with any combination supported. Available as hotkeys (Tier 1) and toolbar dropdown (Studio).
 - **K2. Textbox Toolbar:** Controls above chat input: Persona selector, thinking toggle, mute toggle, tools dropdown, skills dropdown, memory toggle, prompt library, Text Actions dropdown.
 - **K3. Tier 1 — Global Hotkey Text Actions:** Three phases: Capture (graduated UIA pipeline per capture scope flags + HWND + "Thinking..." overlay), Result Popup (editable AI output + Accept/Discard/Open in Studio/Save to Wiki/Retry + Additional Instructions field), Apply (per apply mode: HWND injection, UIA insertion, clipboard-only, or show-only + fallbacks + confirmation toast + Undo).
 - **K4. Tier 2 — Command Bar (Alt+Space):** Spotlight-style overlay. Inline state: input field, Q&A display, Pop-out/Close/Copy controls. Popped-out state: floating resizable mini-window with Open in Studio, Pin, Minimize, Close. Elevation to Studio. Dismissal saves as transient thread.

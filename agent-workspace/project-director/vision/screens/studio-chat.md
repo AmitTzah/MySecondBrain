@@ -50,25 +50,31 @@ Seven icon+label navigation items:
 ### Region 2: Main Content (Center Column) — WPF-Native
 
 **Tab Bar:**
-- Horizontal row of chat tabs. Each: chat title (truncated if needed) + close X
+- Horizontal row of tabs — chat tabs AND file viewer tabs
+- **Chat tabs:** chat title (truncated if needed) + close X
+- **File viewer tabs:** 📄 filename + "Read-Only" badge + close X (C39)
 - "+" button at right end — opens Persona picker → creates new chat
-- Draggable reordering
+- Draggable reordering (both chat and file viewer tabs)
 - Overflow: scrollable with left/right arrows
 - Active tab highlighted
 - Incognito tabs show 🕶️ icon
 - Tab completion indicator: green dot on inactive tabs (C35)
 - Right-click tab: Close, Close Others, Close All, Make Temporary (C30), Lock Chat (C31)
+- **Drag file viewer tab to textbox:** Includes file content as chat context (C39)
 
 **Chat Header Bar (left to right):**
 1. Active Persona name (clickable → system message editor popover, C27)
-2. Context window bar: "12,450 / 128,000 tokens" with colored fill (green→yellow→red)
-3. Cumulative cost: "$0.42 total" (across all branches)
-4. [Source: App — 'Document'] banner + [Apply Latest] (only for Tier 1 elevation, C5a)
-5. Spacer
-6. A⁻ 14 A⁺ (font size quick adjust, C25)
-7. ☀/🌙 (dark mode quick toggle, C24)
-8. 📌 (pin window toggle, C23)
-9. ⋯ (three-dot menu): Clear Conversation, Export Chat, Duplicate Chat, Chat Tree, Edit System Message, Summarize Chat, Make Temporary
+2. Chat theme selector: Classic / Compact / Bubble (A3)
+3. 📡 API History button (opens `_api_history.json` in file viewer tab, C38)
+4. Context window bar: "12,450 / 128,000 tokens" with colored fill (green→yellow→red)
+5. Cumulative cost: "$0.42 total" (across all branches)
+6. [Source: App — 'Document'] banner + [Apply Latest] (only for Tier 1 elevation, C5a)
+7. Spacer
+8. A⁻ 14 A⁺ (font size quick adjust, C25)
+9. ☀/🌙 (dark mode quick toggle, C24)
+10. 📌 (pin window toggle, C23)
+11. ? (Help icon — dropdown: App Data Locations, Keyboard Shortcuts, About, C40)
+12. ⋯ (three-dot menu): Clear Conversation, Export Chat, Duplicate Chat, Chat Tree, Edit System Message, Summarize Chat, Make Temporary
 
 **Conversation View (WPF FlowDocument):**
 - Scrollable message history for the active ChatThread
@@ -103,15 +109,21 @@ Seven icon+label navigation items:
 
 **Tool Call Messages (rendered inline):**
 - Tool call system messages shown as styled cards:
+  - **read_file:** "📖 Reading: [path]"
+  - **list_files:** "📂 Listing: [path]"
+  - **search_files:** "🔎 Searching: [regex] in [path]"
+  - **apply_diff:** "✏️ Editing: [path]"
+  - **write_to_file:** "✍️ Writing: [path]"
   - **bash:** "🖥 bash: [command preview]"
-  - **text_editor:** "✏️ text_editor: [command] [path]"
   - **web_search:** "🔍 Searching: [query]"
   - **web_fetch:** "🌐 Fetching: [URL]"
+  - **image_search:** "🖼️ Image search: [query]"
   - **memory:** "🧠 Memory: [store/retrieve] [key]"
   - **wiki_search:** "📚 Wiki search: [query]"
   - **skill_load:** "📚 Loaded skill: [name]"
   - **ask_user_input:** "❓ Asking: [question]"
   - **present_files:** "📄 Presented: [filename(s)]"
+- **Parallel execution indicator:** "⚡ Running [N] tools in parallel…" → "⚡ [N] tools completed in [T]ms"
 - Tool results shown as collapsible result blocks
 - During streaming: tool calls appear progressively as model generates them
 
@@ -121,7 +133,7 @@ Seven icon+label navigation items:
 1. **Persona selector dropdown** (B4) — [Persona Name ▼]
 2. **Thinking toggle** (E3) — 🧠 icon, toggle on/off
 3. **Mute toggle** (E4) — 🔇 icon, toggle on/off
-4. **Tools dropdown** (H11) — 🔧 "Tools ▼" with checkboxes for all 10 tools (bash, text_editor, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files). "All on/off" at top. Auto-approval submenu per tool.
+4. **Tools dropdown** (H) — 🔧 "Tools ▼" with checkboxes for all 14 tools (read_file, list_files, search_files, apply_diff, write_to_file, bash, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files). "All on/off" at top. Auto-approval submenu per tool (out-of-workspace read access: Auto-Approve/Ask/Disabled per read tool).
 5. **Skills dropdown** (W6) — 📚 "Skills ▼" with checkboxes for each discovered skill + "All on/off"
 6. **Memory toggle** (W8) — 🧠 "Mem" toggle on/off
 7. 📎 Attach File button (C9b)

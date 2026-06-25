@@ -40,8 +40,12 @@ Categories listed vertically:
 16. 🔒 Security
 17. 🛠️ Maintenance
 18. 🩺 Diagnostics
+19. ℹ️ System Info
 
 Active category highlighted. Clicking a category changes the content area.
+
+17. 🩺 Diagnostics
+18. ℹ️ System Info
 
 At bottom:
 - "Re-run Onboarding Wizard" link → opens [`onboarding-wizard.html`](onboarding-wizard.html)
@@ -98,11 +102,12 @@ Scrollable area showing the active category's settings. Each category section ha
 - "Change" opens key recorder overlay. "Reset to Defaults" link.
 
 ### 🔧 Tools
-- **Tool Enable/Disable Defaults (H11):** Per-tool toggles for all 10 tools:
-  - bash, text_editor, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files
+- **Tool Enable/Disable Defaults (H):** Per-tool toggles for all 14 tools:
+  - read_file, list_files, search_files, apply_diff, write_to_file, bash, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files
   - Each toggle: ON/OFF. OFF = tool removed from API tools array for new chats.
   - Note: `ask_user_input` cannot be disabled (needed for confirmations).
-- **Tool Auto-Approval Defaults (H11):** Per-tool: Auto-Approve | Ask | Disabled. Overridden by hard-coded rules (bash outside workspace + text_editor deletes ALWAYS ask).
+- **Tool Auto-Approval Defaults:** Per-tool: Auto-Approve | Ask | Disabled. Overridden by hard-coded rules (bash writes outside workspace + apply_diff/write_to_file outside workspace ALWAYS blocked or require confirmation. Blocked paths always denied).
+- **Out-of-Workspace Read Access:** Per read-tool (read_file, list_files, search_files): Auto-Approve | Ask (default) | Disabled. Controls behavior when model attempts to read files outside workspace/artifacts/wiki directories.
 - **STT Provider (A10):** Provider dropdown, Model field, API Key, "Test Microphone" button.
 
 ### 📚 Skills (A12)
@@ -161,6 +166,13 @@ Scrollable area showing the active category's settings. Each category section ha
 - **Per-Category Toggles (A11b):** Eight checkboxes: LLM API Calls, Tier 1 Hotkey Pipeline, Tier 2 Command Bar, Database, Wiki & File System, WebSocket, Startup & Shutdown, System Integration.
 - **"Open Logs Folder" Button (A11c):** Opens `%LOCALAPPDATA%\MySecondBrain\logs\` in Windows Explorer.
 - **"Clear Logs" Button (A11d):** Deletes all log files with confirmation.
+
+### ℹ️ System Info (A14 — NEW)
+- **App Data Locations Table:** Comprehensive reference of every file/folder the app writes to. Columns: Location, Purpose, Size on Disk, "User Can Edit?" badge (✅ Yes / ⚠️ Caution / ❌ No), "Open in Explorer" button.
+- **Entries:** Database file, logs, workspace, artifacts, skills directories, wiki directory, backup directory, settings file.
+- **Clear distinction:** App-managed (don't touch), User-editable (wiki, skills), Temporary (workspace, 24h cleanup).
+- Also accessible from: "?" icon in app header → "App Data Locations".
+- Full spec: [`features/app-data-locations.md`](../features/app-data-locations.md)
 
 ## Data Displayed
 

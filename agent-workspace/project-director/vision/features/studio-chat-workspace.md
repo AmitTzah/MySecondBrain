@@ -1,16 +1,18 @@
 # Studio Chat Workspace — Feature Spec
 
 ## What the User Accomplishes
-The user engages in deep, multi-turn AI conversations with full Markdown rendering, code syntax highlighting, streaming responses, multiple chat tabs, and comprehensive message actions. This is the Tier 3 primary workspace.
+The user engages in deep, multi-turn AI conversations with full Markdown rendering, code syntax highlighting, streaming responses, multiple chat tabs (including generic file viewer tabs), 14-tool agent surface, and comprehensive message actions. This is the Tier 3 primary workspace.
 
 ## Trigger
 - Open main application window
 - Click system tray → "Open Studio"
 - Elevate from Tier 1 (Open in Studio) or Tier 2 (Open in Studio)
 - Ctrl+N (new chat)
+- Ctrl+O (open file in viewer tab)
+- Drag file onto tab bar (opens in file viewer tab)
 
 ## Layout
-The Studio window uses a sidebar + main content layout with tabbed chats. See [`screens/studio-chat.md`](screens/studio-chat.md) for the full screen specification.
+The Studio window uses a sidebar + main content layout with tabbed chats AND file viewer tabs. See [`screens/studio-chat.md`](screens/studio-chat.md) for the full screen specification.
 
 ## Detailed Behavior
 
@@ -82,7 +84,7 @@ See [`features/windows-os-integration.md`](features/windows-os-integration.md) P
 - When an image is on the clipboard and user presses Ctrl+V in the textbox: the image appears as a thumbnail icon below the textbox (not embedded in the text)
 - Multiple pasted images stack as thumbnails in an attachment row below the textbox
 - Each thumbnail shows a small preview + filename + size. Hover shows full preview.
-- **Click thumbnail:** Opens the image in a new tab in the main content area (full-size viewer with zoom/pan)
+- **Click thumbnail:** Opens the image in a file viewer tab in the main content area (full-size viewer with zoom/pan) — see [`features/file-viewer-tabs.md`](file-viewer-tabs.md)
 - **Remove:** X button on each thumbnail removes it before sending
 - Images in the attachment row are sent with the next message (for vision-capable models)
 - **Text still editable:** The textbox remains the primary input; images are attachments, not inline
@@ -113,25 +115,27 @@ See [`features/windows-os-integration.md`](features/windows-os-integration.md) P
   - The warning is informational, not a hard block
 
 ### C10. Multiple Chat Tabs
-- Tab bar above chat view. Each tab = independent ChatThread.
+- Tab bar above chat view. Each tab = independent ChatThread OR file viewer tab.
+- **Chat tabs:** Chat title (C7), truncated if needed
+- **File viewer tabs:** 📄 filename, "Read-Only" badge. See [`features/file-viewer-tabs.md`](file-viewer-tabs.md).
 - **Reorder:** Drag-and-drop tabs
 - **Close:** X button on tab or Ctrl+W
-- **Reopen:** Ctrl+Shift+T reopens last closed tab
+- **Reopen:** Ctrl+Shift+T reopens last closed tab (chat or file viewer)
 - **Overflow:** When tabs exceed width, scrollable tab bar with arrows
-- **Tab Title:** Chat title (C7), truncated if needed
 
 ### C11. Token Usage & Context Display
-- **Per-Message:** Each assistant message shows: prompt tokens + completion tokens = total. Estimated cost (if pricing configured).
+- **Per-Message:** Each assistant message shows: prompt tokens + completion tokens = total. Cache tokens (if any). Estimated cost (if pricing configured). Latency: "in 1.2s".
 - **Chat Header:** Shows (a) Current Context Size — "12,450 / 128,000 tokens" with colored bar (green/yellow/red as limit approaches), and (b) Cumulative Chat Cost — total estimated cost across ALL branches
 - **Real-Time:** Context size updates as user types, using local tokenizer library (not API response headers)
 
 ### C12. Keyboard Shortcuts (Studio)
 - Ctrl+N: New Chat (opens Persona picker)
+- Ctrl+O: Open File (opens file picker → opens in file viewer tab)
 - Ctrl+W: Close Current Tab
 - Ctrl+Shift+T: Reopen Last Closed Tab
 - Ctrl+Tab: Next Tab
 - Ctrl+Shift+Tab: Previous Tab
-- Ctrl+F: Search Within Current Chat
+- Ctrl+F: Search Within Current Tab (chat or file viewer)
 - Ctrl+Shift+F: Global Search Across All Chats (opens L3)
 - Ctrl+S: Export Current Chat (opens I1 dialog)
 - Ctrl+/: Searchable keyboard shortcut reference overlay
@@ -168,6 +172,8 @@ The chat header contains a three-dot menu with the following items:
 - **Duplicate Chat** (D7) — Creates fork from current point
 - **Chat Tree** (D4) — Opens tree visualization
 - **Edit System Message** (E5) — Opens system message editor
+- **Summarize Chat** (C32) — AI generates summary
+- **Make Temporary** (C30) — Toggle incognito mode
 
 ### C17. Auto-Scroll Behavior
 - **Pause:** When user scrolls up during active generation, auto-scroll pauses. Indicator: "Auto-scroll paused." Click to resume.
@@ -186,6 +192,25 @@ The chat header contains a three-dot menu with the following items:
 - When offline: yellow banner below chat header: "You are offline. AI responses are unavailable until connection is restored."
 - Auto-detects reconnection; banner auto-dismisses
 
+### C20. Close Confirmation with Active Generation
+- Trigger: Close tab or window while AI is generating
+- Dialog: "A response is still being generated. Are you sure you want to close?" Options: "Wait for response" / "Close anyway"
+
+### C21. Audio Input (Microphone)
+- Microphone button in textbox toolbar
+- Click to start recording → button pulses red during recording → click to stop
+- Audio sent to configured STT Provider (A10)
+- Transcribed text appears in textbox, editable before sending
+
+### C22. Camera Capture
+- Camera button in textbox toolbar
+- Opens webcam capture dialog (live preview + "Capture" button)
+- Captured image immediately attached to current message
+
+### C23. Pin Window / Always on Top
+- Toggle button in Studio window header (pin icon)
+- State remembered across sessions
+
 ### C24. Dark/Light Mode Quick Toggle
 - Sun/Moon icon button in the chat header bar (right side, near pin toggle)
 - Click toggles between dark mode and light mode (A5)
@@ -193,35 +218,29 @@ The chat header contains a three-dot menu with the following items:
 - State remembered across sessions
 
 ### C25. Font Size Quick Adjust
-- Two small buttons (A⁻ / A⁺) in the chat header bar, next to the dark mode toggle
-- Click A⁺: increases chat message font size by 1px (up to max 24px)
-- Click A⁻: decreases chat message font size by 1px (down to min 10px)
-- Current font size shown as a small number between the buttons (e.g., "14")
+- Two small buttons (A⁻ / A⁺) in the chat header bar
+- Range: 10-24px. Current size displayed (e.g., "14")
 - Only affects chat messages, not UI chrome
-- Full font customization (family, weight) remains in Settings (A3)
 
 ### C26. Model Comparison Button
 - "Compare" button (⚖ icon) in the textbox toolbar (K2)
-- Click opens Model Comparison setup (M2): select 2+ Personas → enter prompt → side-by-side comparison view
-- Accessible from any chat
+- Click opens Model Comparison setup (M2)
 
 ### C27. Dynamic System Message Editing Access
-- Click the Persona name in the chat header → popover appears showing:
-  - Current system message (editable text area)
-  - "Reset to Persona Default" button
-  - Changes take effect for subsequent messages
-- Also accessible from: Chat Navigation Bar (D6) → system message entry at top, AND three-dot menu → "Edit System Message"
+- Click the Persona name in the chat header → popover appears
+- Also accessible from: Chat Navigation Bar (D6), three-dot menu
 
 ### C28. Duplicate / Fork Chat Access
 - Right-click any message → "Fork from here" (D7)
-- Also in chat header three-dot menu → "Duplicate Chat" (forks from latest message)
-- Creates new ChatThread with messages up to that point
+- Also in chat header three-dot menu → "Duplicate Chat"
 
 ### C29. Chat Header Layout (Complete)
 Top-to-bottom in the main content area:
-1. **Tab Bar:** Tabs + "+" new chat button
+1. **Tab Bar:** Tabs (chat tabs + file viewer tabs) + "+" new chat button
 2. **Chat Header Bar (left to right):**
    - Active Persona name (clickable → system message editor C27)
+   - Chat theme selector: Classic / Compact / Bubble (A3)
+   - 📡 API History button (opens `_api_history.json` in file viewer tab)
    - Context window bar: "12,450 / 128,000 tokens" with colored fill
    - Cumulative cost: "$0.42 total"
    - [Source: App — 'Document'] banner + [Apply Latest] (only for Tier 1 elevation, C5a)
@@ -229,114 +248,81 @@ Top-to-bottom in the main content area:
    - A⁻ 14 A⁺ (font size, C25)
    - ☀/🌙 (dark mode toggle, C24)
    - 📌 (pin window toggle, C23)
+   - ? (Help icon — dropdown: App Data Locations, Keyboard Shortcuts, About)
    - ⋯ (three-dot menu, C16a)
 3. **Conversation View** (C1-C8, C14-C15, C17-C18)
 4. **Message Input Area** with toolbar (C21-C22, C26, K2)
 
-### C20. Close Confirmation with Active Generation
-- Trigger: Close tab or window while AI is generating
-- Dialog: "A response is still being generated. Are you sure you want to close?" Options: "Wait for response" / "Close anyway"
-- "Wait for response": keeps tab open, generation continues
-
-### C21. Audio Input (Microphone)
-- Microphone button in textbox toolbar
-- Click to start recording → button pulses red during recording → click to stop
-- Audio sent to configured STT Provider (A10)
-- Transcribed text appears in textbox, editable before sending
-- **Error:** "Speech recognition failed. Check your microphone and STT settings."
-
-### C22. Camera Capture
-- Camera button in textbox toolbar
-- Opens webcam capture dialog (live preview + "Capture" button)
-- Captured image immediately attached to current message
-- Sent to AI (for vision-capable models)
-
-### C23. Pin Window / Always on Top
-- Toggle button in Studio window header (pin icon)
-- When active: window stays on top of other applications
-- State remembered across sessions
-- Visual indicator on header when pinned
-
 ### C30. Incognito / Temporary Studio Chat
 - **Toggle:** "Incognito" toggle in chat header three-dot (⋯) menu or right-click chat tab → "Make Temporary"
-- **When Active:** Chat marked IsTransient=true. Subject to 7-day auto-cleanup (O4). Visual indicator: 🕶️ icon on tab + "(Temporary)" label in header
-- **Elevation:** If user sends a reply, same elevation rules as Tier 1/2 (O3) — chat can become permanent
-- **Exception:** Incognito chats that are favorited, tagged, pinned, or contain user branches are auto-elevated (same as O4 exceptions)
-- **Default:** All Studio chats default to permanent (IsTransient=false). Incognito is opt-in per chat
+- **When Active:** Chat marked IsTransient=true. 🕶️ indicator on tab.
+- **Elevation:** Same elevation rules as Tier 1/2 (O3)
 
 ### C31. Locked Chats
-- **Lock:** Right-click chat in sidebar → "Lock Chat" → prompts for password (or uses global default from Settings)
-- **Global Default Password:** Settings → Security → "Default Lock Password." Encrypted via Windows DPAPI
-- **Per-Chat Override:** Each locked chat can use the global password or a custom password set at lock time
-- **Encryption:** Chat content (messages, title, metadata) encrypted at rest using strong encryption (AES-256-GCM or similar). Password is the key derivation source (PBKDF2/Argon2). Without password, data is irrecoverable.
-- **Unlock:** Click locked chat in sidebar → password prompt → if correct, chat unlocks and displays normally for this session. Auto re-locks when app closes or user manually re-locks.
-- **Hide Locked Chats:** Settings → Security → "Hide locked chats from sidebar." When enabled, locked chats are invisible. "Reveal Locked Chats" button (lock icon) appears at bottom of sidebar → prompts for password → shows all locked chats.
-- **Lost Password:** If password is lost, chat content is permanently inaccessible. ⚠️ FLAGGED: Strong encryption with no recovery mechanism — intentional design but user must understand the risk.
-- **Locked Indicator:** 🔒 icon on locked chat entries in sidebar. Title visible but preview hidden (shows "🔒 Locked").
-- **Bulk Lock:** Select multiple chats → right-click → "Lock Selected" → one password for all.
+- Password-protected encryption (AES-256-GCM). Global default + per-chat override.
+- ⚠️ FLAGGED: No recovery if password lost.
 
 ### C32. Chat Summarization
-- **Access:** Chat header three-dot (⋯) menu → "Summarize Chat"
-- **Behavior:** AI reads the full conversation (current branch) and generates a concise summary
-- **Output Options (dialog after generation):**
-  - **[Save as Artifact]:** Creates an artifact (F1) in the side panel with name "Chat Summary — [Chat Title]" — versioned, editable, can be refined
-  - **[Export]:** Opens export dialog (I1) with summary content pre-filled — save as .md or .txt
-  - **[Copy]:** Copies summary to clipboard
-- **Summary Content:** Includes chat title, date range, Persona used, key topics discussed, decisions made, action items identified
-- **Empty Chat:** "Cannot summarize an empty chat."
+- Three-dot menu → "Summarize Chat" → AI generates summary → save as artifact, export, or copy.
 
 ### C33. Message Favoriting
-- **Star:** Star icon (☆) on each message, next to thumbs up/down (D8). Click to toggle (★).
-- **Visual:** Favorited messages show a filled star ★. Subtle highlight background.
-- **Filter:** "Favorited Messages" filter in Chat Navigation Bar (D6) — shows only starred messages in the current chat
-- **Global Search:** Full-text search (L3) has a "Favorited only" filter — search across all favorited messages in all chats
-- **Persistence:** Favorited state stored with message. Survives chat clearing (C16) — cleared messages lose favorite if deleted, but if chat is cleared (messages removed), favorites are lost with the messages.
+- Star (★/☆) per message. Filter in Chat Nav and global search.
 
 ### C34. Spell Check in Textbox
-- **Underline:** Misspelled words underlined with red squiggly line (standard spell-check pattern)
-- **Right-Click:** Right-click misspelled word → suggestions dropdown → click to replace
-- **Language:** Uses system language (English). Configurable in Settings → Language.
-- **Toggle:** Enable/disable spell check in Settings → Appearance. Default: enabled.
-- **Ignore:** "Add to Dictionary" option in right-click menu for custom words
-- **Performance:** Local spell-check library. No API calls.
+- Red squiggly underline. Right-click suggestions. Toggle in Settings.
 
 ### C35. Cross-Tab Completion Alert
-- **Indicator:** When AI generation completes on an inactive tab (user is viewing a different tab), the inactive tab shows a pulsing green dot or checkmark
-- **Sound:** Plays notification sound (A4) regardless of active tab
-- **Tab Bar:** Tab title briefly changes to "[Title] ✓" for 5 seconds after completion
-- **Configuration:** Settings → Notifications → "Alert when generation completes on inactive tab" toggle. Default: enabled.
-- **Multiple Completions:** If multiple inactive tabs complete, each shows the indicator independently
+- Pulsing green dot on inactive tab when generation completes. Configurable in Settings.
 
 ### C36. Auto-Save Message Drafts
-- **Behavior:** Textbox content auto-saves every 5 seconds while user is typing
-- **Storage:** Draft saved locally (SQLite or temp file). Per-chat: each chat tab has its own draft.
-- **Indicator:** Small "💾 Draft saved" text below toolbar while typing. Changes to "💾 Draft saved" with green check after each auto-save.
-- **Recovery:** If app closes unexpectedly (crash, force quit) or user accidentally closes a tab with content, on next open: dialog "You have an unsent draft in '[Chat Title]'. Restore it?" Options: [Restore Draft] / [Discard]
-- **Tab Close:** If user manually closes tab with unsent text, same restore dialog appears.
-- **Cleanup:** Draft deleted when message is sent successfully. If user clears textbox and 5 seconds pass with empty content, draft is deleted.
-- **Multiple Drafts:** If multiple tabs had drafts, dialog shows list: "Restore drafts from [N] chats?" with individual toggles.
+- Textbox content auto-saves every 5 seconds. Recover unsent drafts after crash.
 
 ### C37. Right Panel Layout
-The right panel contains two vertically stacked resizable sections (no tabs):
-- **Top: Artifacts (F2).** Collapsible section header "📄 Artifacts (N)". Lists artifacts with name, type, version. Save to Disk / Save to Wiki buttons.
-- **Resizable Divider:** Drag to resize relative heights of the two sections.
-- **Bottom: Chat Navigation (D6).** Collapsible section header "🧭 Chat Navigation". Scrollable message list. "★ Favorited only" filter. Active message highlighted.
-- Both sections independently collapsible. Entire right panel collapsible via toggle in chat header.
+Two vertically stacked resizable sections:
+- **Top: Artifacts (F2).** WebView2-powered. Lists presented artifacts.
+- **Bottom: Chat Navigation (D6).** Scrollable message list with favorited filter.
+
+### NEW: C38. API History Button
+
+"📡 API History" button in the chat header bar (between chat theme selector and context window bar):
+- Always visible when a chat is active
+- Click → generates/retrieves the per-chat raw API call JSON log → opens in a new read-only file viewer tab
+- Tab title: "API History — [Chat Title]"
+- Full spec: [`features/api-history-viewer.md`](api-history-viewer.md)
+
+### NEW: C39. Generic File Viewer Tabs
+
+Read-only file viewer tabs open alongside chat tabs in the main content area:
+- **Supported:** text, markdown (rendered), code (syntax highlighting), images (zoom/pan)
+- **Open via:** Ctrl+O, drag & drop onto tab bar, double-click in file picker, present_files results, API History button, click image thumbnail
+- **Tab behavior:** Same as chat tabs (reorder, close, reopen). 📄 icon prefix + "Read-Only" badge.
+- **Drag to textbox:** Include file content as chat context
+- Full spec: [`features/file-viewer-tabs.md`](file-viewer-tabs.md)
+
+### NEW: C40. "?" Help Icon
+
+"?" icon in the app header bar (right side, near ⋯ menu):
+- Click opens dropdown: App Data Locations, Keyboard Shortcuts, About MySecondBrain
+- "App Data Locations" navigates to Settings → System Info
+- Full spec: [`features/app-data-locations.md`](app-data-locations.md)
 
 ## Data
-- [`data/chat-thread.md`](data/chat-thread.md) — C30: isTransient flag, C31: encryption metadata
-- [`data/message.md`](data/message.md) — C33: isFavorited field
+- [`data/chat-thread.md`](data/chat-thread.md)
+- [`data/message.md`](data/message.md)
 - [`data/usage-record.md`](data/usage-record.md)
+- Per-chat raw JSON log: `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/_api_history.json`
 
 ## Success/Failure States
 - **Empty State — No Chats:** "No chats yet. Press Ctrl+N to start a new conversation."
-- **Empty State — Cleared Chat:** Shows Persona info: "[Persona Name] — [System prompt preview]. Start typing below."
-- **Loading State — Chat History:** Skeleton loading placeholders for messages
-- **Loading State — AI Generating:** Streaming tokens or "Generating..." spinner (if streaming disabled)
-- **Error State — Chat Not Found:** "This chat no longer exists. It may have been deleted."
+- **Empty State — Cleared Chat:** Persona info card
+- **Loading State — Chat History:** Skeleton loading placeholders
+- **Error State — Chat Not Found:** "This chat no longer exists."
 
 ## Permissions
 - Single-user app. All actions available to the sole user.
 
 ## Interactions
-- References: A3 (themes), A4 (notifications/streaming), A10 (STT), B4 (Persona selection), C5a (Tier 1 elevation), D (branching), E (modes), F (artifacts), G (media), H (tools), I (export), J (prompts), K (text actions), L (organization), M (comparison), N (wiki), P3 (spatial anchoring)
+- C38: API History → [`features/api-history-viewer.md`](api-history-viewer.md), [`features/file-viewer-tabs.md`](file-viewer-tabs.md)
+- C39: File Viewer → [`features/file-viewer-tabs.md`](file-viewer-tabs.md)
+- C40: Help → [`features/app-data-locations.md`](app-data-locations.md)
+- References: A3 (themes), H (14 tools), K (text actions), E (chat modes), F (artifacts)

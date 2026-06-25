@@ -223,15 +223,51 @@ For every feature group in [`feature-inventory.md`](feature-inventory.md), edge 
 
 ---
 
-### H. Tool Use (Agent Capabilities)
+### H. Tool Use (Agent Capabilities) — 14-Tool Surface
 
-- **Terminal command execution (H2) with dangerous command (e.g., `rm -rf`):** ALWAYS shown in confirmation dialog with risk assessment. User must explicitly approve. Cannot be auto-approved (H5 override). User approves at their own risk.
-- **File generation (H3) targeting a path that already exists:** Confirmation: "A file already exists at [path]. Overwrite?" Options: Overwrite / Choose Different Name / Cancel.
-- **File editing (H4) on a file that changed externally since last read:** Warning: "This file has been modified since the AI last read it. The AI's suggested edit may be based on outdated content." User can proceed or cancel.
-- **Deep Research (H6) exceeds 30 minutes:** Pauses with: "Research paused after 30 minutes (limit reached). [N] of [M] sources processed. Increase limit in Settings → Tools or continue."
-- **Deep Research (H6) with no web search tool available (tool disabled):** AI responds: "Deep Research requires web search to be enabled. Enable Browser Search in Settings → Tools."
-- **Wiki Search Tool (H7) when wiki not configured:** AI responds: "Wiki search is not available — no wiki directory configured. Set one up in Settings → Wiki."
+- **read_file outside workspace (Ask mode):** Triggers `ask_user_input` confirmation: "Model is trying to read file outside workspace: [path]. Approve?" with Configure/Approve Once/Deny.
+- **read_file outside workspace (Disabled):** "Access denied: reading files outside workspace is disabled for read_file. Configure in Settings → Tools."
+- **read_file — blocked path:** "Access denied: [path] is a protected system location." Cannot be overridden.
+- **read_file — binary file:** "[Binary file: filename (size)]" — content not readable.
+- **apply_diff — no match:** "old_str not found in file. Use read_file to re-read before editing."
+- **apply_diff — multiple matches:** "old_str found [N] times. It must be unique. Use a larger context string."
+- **apply_diff/write_to_file — outside workspace:** "Cannot write outside workspace. Files can only be created in the workspace or artifacts directories." Always blocked.
+- **write_to_file — path exists, overwrite=false:** "File already exists. Set overwrite=true or use a different filename."
+- **Terminal command execution (H6) with dangerous command (e.g., `format C:`):** ALWAYS shown in confirmation dialog with risk assessment. User must explicitly approve. Cannot be auto-approved. Blocked paths always denied.
+- **Deep Research as skill — exceeds time limit:** Same as previous. User clicks Stop → partial findings preserved.
+- **Deep Research with no web search available:** Same as previous.
+- **Wiki Search when wiki not configured:** Same as previous.
 - **All tools disabled globally:** The Tools toggle in the textbox toolbar is grayed out. Tooltip: "All tools are disabled in Settings → Tools."
+
+### H-New. Parallel Tool Execution Edge Cases
+
+- **Model sends 10+ tool_use blocks in one response:** Maximum 10 concurrent executions. Additional tools are queued and executed as others complete. Results returned together.
+- **One parallel tool fails, others succeed:** Failed tool shows error. Successful tools' results returned normally. Model receives all results including the error.
+- **Model batches dependent tools (bash → read_file output):** Tools execute in model-specified order. The model should not batch dependent calls — if it does, the second tool may fail because the first hasn't completed yet. This is a model instruction concern, not an app-enforcement concern.
+- **User clicks Stop during parallel execution:** All in-progress tool executions are cancelled. Completed tools' results preserved. Partial results returned to model.
+
+### H-New. Workspace Isolation Edge Cases
+
+- **Chat deleted while bash is running in its workspace:** bash process is terminated. Workspace subdirectory queued for deletion (24h grace period).
+- **Two chats write to same filename in artifacts:** No conflict — artifacts are keyed by chat ID + filename. Each chat's artifact is independent.
+- **Workspace disk full:** bash commands fail with "No space left on device." 24h cleanup runs to free space. Notification: "Workspace disk is full. Old workspace files have been cleaned up."
+- **present_files called with empty array:** Error: "No files specified. Provide at least one file path."
+- **present_files for non-existent file:** "Cannot present '[filename]': file not found in workspace."
+- **Workspace cleanup during active bash execution:** Cleanup skips files locked by running processes. Only idle files >24h are removed.
+
+### H-New. API History Edge Cases
+
+- **_api_history.json grows very large (long chat with many tool calls):** File viewer handles large files. "Open in External Editor" recommended for >50MB files. The JSON file is cleaned up with workspace (24h after chat close).
+- **API call fails before any data written:** UsageRecord created with error fields set. Raw JSON entry appended with error information. Token fields = 0.
+
+### H-New. File Viewer Tab Edge Cases
+
+- **File deleted from disk while open in viewer tab:** "File '[path]' no longer exists. It may have been moved or deleted." Tab closes automatically.
+- **File too large (>100MB):** "This file is too large to preview ([size]). [Open in External Editor]"
+- **Binary file opened as text:** "Cannot display this file — it appears to be a binary file. [Open in External Editor]"
+- **Unsupported image format:** Falls back to "Open in External Editor" with generic file icon.
+- **File locked by another process:** "Cannot open file — it is being used by another process. [Retry]"
+- **Drag file viewer tab to textbox with file exceeding context limit:** Content truncated with notice: "⚠️ File '[filename]' was truncated — [N] of [M] characters included."
 
 **Affected screens:** [`screens/studio-chat.html`](screens/studio-chat.html), [`screens/settings.html`](screens/settings.html)
 

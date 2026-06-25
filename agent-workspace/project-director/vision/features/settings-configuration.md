@@ -12,7 +12,7 @@ User clicks "Settings" from the Studio sidebar, system tray context menu, or the
 
 ### A1. Global Settings Screen
 
-A dedicated screen containing all global configuration options, organized into 18 collapsible or tabbed sections:
+A dedicated screen containing all global configuration options, organized into 19 collapsible or tabbed sections:
 - **Providers:** API key management (B1)
 - **Profiles:** Personas and Model Configurations (B)
 - **Appearance:** Visual themes, fonts (A3, A5)
@@ -20,7 +20,7 @@ A dedicated screen containing all global configuration options, organized into 1
 - **Backup:** Google Cloud Storage config, schedule (R)
 - **Text Actions:** Create, edit, delete, reorder Text Actions with capture scope and apply mode (K1). Hotkey assignment table (K, P1).
 - **Hotkeys:** Global hotkey assignments for Text Actions and Command Bar (K, P1)
-- **Tools:** Tool enable/disable defaults and auto-approval for 10 tools: bash, text_editor, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files (H11)
+- **Tools:** Tool enable/disable defaults and auto-approval for 14 tools: read_file, list_files, search_files, apply_diff, write_to_file, bash, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files (H). Out-of-workspace read access configurable per read-tool (Auto-Approve / Ask / Disabled).
 - **Skills:** Built-in skills list with individual enable/disable toggles + community skills discovered at `%LOCALAPPDATA%/MySecondBrain/skills/` (A12, W)
 - **Memory:** View, edit, delete AI-stored memories. "Clear All Memories." Memory storage size displayed (A13, W8)
 - **Language:** UI language preferences (Q)
@@ -30,6 +30,7 @@ A dedicated screen containing all global configuration options, organized into 1
 - **Pricing:** Budget alerts, cost tracking (S5)
 - **Security:** API key encryption status
 - **Diagnostics:** Debug logging configuration — log level, 8 per-category toggles, open logs folder, clear logs (A11)
+- **System Info:** Comprehensive reference of all app data locations — paths, purposes, sizes, editability. Also accessible from "?" icon in app header (A14, new)
 - **Maintenance:** Database compaction (A9)
 
 ### A2. Default Profile Selection
@@ -133,6 +134,15 @@ Manages AI-stored memories (SQLite-backed, Anthropic `memory_20250818` schema). 
 - **Storage Size:** "Memory storage: [size] across [N] entries."
 - **Per-Chat Default:** Toggle: "Enable memory for new chats by default." (Default: OFF). New chats inherit this as the initial state of the textbox toolbar "🧠 Mem" toggle.
 
+### A14. System Info (NEW)
+
+A comprehensive reference of every file and folder the app writes to or reads from on the user's computer. Full spec: [`features/app-data-locations.md`](app-data-locations.md).
+
+- **App Data Locations Table:** Each entry shows: Location (file system path), Purpose (what it's for), Size on Disk (real-time), "User Can Edit?" badge (✅ Yes / ⚠️ Caution / ❌ No), "Open in Explorer" button.
+- **Entries include:** Database file, logs directory, workspace directory, artifacts directory, skills directories (user + cross-client), wiki directory (user-configured), backup directory (user-configured), settings file.
+- **Clear distinction:** App-managed (don't touch), User-editable (wiki, skills), Temporary (workspace, cleaned every 24h).
+- Also accessible from: "?" (Help) icon in the app header bar → "App Data Locations".
+
 ## Data
 
 - All settings stored in local SQLite database
@@ -171,4 +181,5 @@ Manages AI-stored memories (SQLite-backed, Anthropic `memory_20250818` schema). 
 - A10 feeds into C21 (voice dictation)
 - A12 feeds into W6 (per-chat skills toggle), W7 (system prompt construction)
 - A13 manages W8 (memory tool storage)
-- Tools section controls H11 (tool auto-approval defaults for 10 tools)
+- Tools section controls H (tool enable/disable + auto-approval for 14 tools, out-of-workspace read access per read-tool)
+- A14 (System Info) references app data locations from [`features/app-data-locations.md`](app-data-locations.md)

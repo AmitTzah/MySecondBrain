@@ -13,11 +13,12 @@ The user accesses AI-powered text transformations across three interaction tiers
 ### K1. Text Actions (Unified)
 Text Actions are the unified mechanism for AI-powered text transformations. Define once, use via hotkey (Tier 1) or toolbar dropdown (Studio).
 
-A Text Action has three independent dimensions:
+A Text Action has four independent dimensions:
 
 1. **Capture Scope** (flags, any combination): WHAT to grab from the active window — `selection`, `focusedElement`, `surroundingContext`, `fullDocument`, `screenshot`
-2. **Transform** (systemPrompt + modelConfigId): HOW to process the captured content — the AI instruction and which model to use
+2. **Transform** (systemPrompt + modelConfigId + chatMode): HOW to process the captured content — the AI instruction, which model to use, and which chat mode (Standard or TextCompletion)
 3. **Apply Mode** (single choice): WHERE to put the result — `replaceSelection`, `insertAtCursor`, `replaceFocusedElement`, `appendToFocusedElement`, `prependToFocusedElement`, `clipboardOnly`, `showOnly`
+4. **Chat Mode** (single choice): `Standard` (chat API, with system prompt) or `TextCompletion` (raw prompt → raw completion, no conversation history)
 
 The user has full freedom to create ANY combination across all three dimensions.
 
@@ -45,7 +46,7 @@ Row of controls above/beside chat message input in Studio (left to right):
 - **Persona Selector:** Dropdown. Shows active Persona. Switch anytime. (B4)
 - **Thinking Toggle (🧠):** On/Off for extended reasoning (E3)
 - **Mute Toggle (🔇):** Per-chat sound notification mute (E4)
-- **Tools Dropdown (🔧):** Checkboxes for all 10 tools (bash, text_editor, web_search, web_fetch, image_search, memory, wiki_search, skill_load, ask_user_input, present_files). "All on/off" at top. Auto-approval submenu per tool. Disabled tools removed from API call entirely. (H11)
+- **Tools Dropdown (🔧):** Checkboxes for all 14 tools (read_file, list_files, search_files, apply_diff, write_to_file, bash, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files). "All on/off" at top. Auto-approval submenu per tool (out-of-workspace read access: Auto-Approve/Ask/Disabled per read tool). Disabled tools removed from API call entirely. (H)
 - **Skills Dropdown (📚):** Checkboxes for each discovered skill + "All on/off." Disabled skills removed from system prompt catalog and skill_load enum. (W6)
 - **Memory Toggle (🧠 Mem):** On/Off. Controls SQLite-backed memory tool availability for this chat. (W8)
 - **Prompt Library Button:** Opens prompt library (J1)

@@ -22,27 +22,27 @@ All 11 skills are included verbatim from [`github.com/anthropics/skills`](https:
 
 | Skill | What It Does | Tools Used | Key Dependencies |
 |-------|-------------|------------|-----------------|
-| **xlsx** | Create/edit Excel spreadsheets with formulas, formatting, charts | bash, text_editor | Python + openpyxl + LibreOffice |
-| **docx** | Create/edit Word documents with TOC, headers, tracked changes | bash, text_editor | Python + pandoc + LibreOffice |
-| **pdf** | Extract, split, merge, fill forms, OCR, create PDFs | bash, text_editor | Python (pypdf) + qpdf + LibreOffice |
-| **pptx** | Create/edit PowerPoint decks with layouts, charts, speaker notes | bash, text_editor | Python (python-pptx) + LibreOffice |
+| **xlsx** | Create/edit Excel spreadsheets with formulas, formatting, charts | bash, write_to_file, apply_diff | Python + openpyxl + LibreOffice |
+| **docx** | Create/edit Word documents with TOC, headers, tracked changes | bash, write_to_file, apply_diff | Python + pandoc + LibreOffice |
+| **pdf** | Extract, split, merge, fill forms, OCR, create PDFs | bash, write_to_file, apply_diff | Python (pypdf) + qpdf + LibreOffice |
+| **pptx** | Create/edit PowerPoint decks with layouts, charts, speaker notes | bash, write_to_file, apply_diff | Python (python-pptx) + LibreOffice |
 
 **Creative Skills:**
 
 | Skill | What It Does | Tools Used | Key Dependencies |
 |-------|-------------|------------|-----------------|
-| **algorithmic-art** | p5.js generative art (flow fields, particles, seeded randomness) | bash, text_editor | Node.js + p5.js |
+| **algorithmic-art** | p5.js generative art (flow fields, particles, seeded randomness) | bash, write_to_file | Node.js + p5.js |
 | **canvas-design** | Create posters/designs as PNG/PDF with bundled fonts | bash | Python |
-| **frontend-design** | Design guidance: typography, color, avoiding "template look" | text_editor | None (knowledge only) |
-| **theme-factory** | 10 pre-set color/font themes to apply to any artifact | text_editor | None (knowledge only) |
+| **frontend-design** | Design guidance: typography, color, avoiding "template look" | write_to_file | None (knowledge only) |
+| **theme-factory** | 10 pre-set color/font themes to apply to any artifact | write_to_file | None (knowledge only) |
 
 **Development & Meta:**
 
 | Skill | What It Does | Tools Used | Key Dependencies |
 |-------|-------------|------------|-----------------|
-| **web-artifacts-builder** | Create React/Tailwind/shadcn/ui HTML artifacts, bundle to single file | bash, text_editor | Node.js + React + Vite + Parcel |
+| **web-artifacts-builder** | Create React/Tailwind/shadcn/ui HTML artifacts, bundle to single file | bash, write_to_file, apply_diff | Node.js + React + Vite + Parcel |
 | **webapp-testing** | Test web applications using Playwright (screenshots, DOM inspection) | bash | Python + Playwright + Chromium |
-| **skill-creator** | Create, evaluate, and improve skills with benchmarking | bash, text_editor | Python + Claude CLI |
+| **skill-creator** | Create, evaluate, and improve skills with benchmarking | bash, write_to_file, apply_diff | Python + Claude CLI |
 
 ### W2. Progressive Disclosure
 
@@ -189,10 +189,15 @@ System prompt =
 
 **Tools array** (separate from system prompt):
 ```
+    [read_file schema]                 ← only if enabled
+    [list_files schema]                ← only if enabled
+    [search_files schema]              ← only if enabled
+    [apply_diff schema]                ← only if enabled
+    [write_to_file schema]             ← only if enabled
     [bash schema]                      ← only if enabled
-    [text_editor schema]               ← only if enabled
     [web_search schema]                ← only if enabled
     [web_fetch schema]                 ← only if enabled
+    [image_search schema]              ← only if enabled
     [wiki_search schema]               ← only if enabled
     [memory schema]                    ← only if enabled
     [ask_user_input schema]            ← always (needed for confirmations)
@@ -242,7 +247,7 @@ Deep Research is now a skill rather than a custom state machine. The model follo
 
 **No custom state machine:** The skill-based approach eliminates the need for custom progress displays ("Searching...", "Reading 3 of 8 sources...", "Synthesizing..."). The model's natural tool-call streaming provides equivalent visibility with zero custom implementation.
 
-**Cancellation:** User can cancel at any point by clicking Stop. Partial findings preserved in conversation. If the report was partially written via `text_editor`, the partial file remains in workspace.
+**Cancellation:** User can cancel at any point by clicking Stop. Partial findings preserved in conversation. If the report was partially written via `write_to_file`, the partial file remains in workspace.
 
 ### W10. Skill Context Protection
 
@@ -295,10 +300,10 @@ Skills declare dependencies (Python packages, system tools, Node.js). The model 
 
 ## Interactions
 
-- W1-W5 interact with H7 (skill_load tool)
+- W1-W5 interact with H12 (skill_load tool)
 - W6 interacts with K2 (textbox toolbar), A12 (Settings → Skills defaults)
 - W7 interacts with E1 (standard chat mode — system prompt assembly)
-- W8 interacts with H5 (memory tool) — memory is listed in both W (skill spec) and H (tool spec)
-- W9 interacts with H3 (web_search), H4 (web_fetch), H1 (bash), F1 (present_files → artifacts)
+- W8 interacts with H11 (memory tool) — memory is listed in both W (skill spec) and H (tool spec)
+- W9 interacts with H7 (web_search), H8 (web_fetch), H6 (bash), H13 (present_files → artifacts)
 - W10 interacts with B8 (context overflow strategy — skill blocks protected from pruning)
 - W11 depends on user-installed system tools (Python, Node.js, LibreOffice — none bundled)

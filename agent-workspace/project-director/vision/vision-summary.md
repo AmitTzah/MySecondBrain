@@ -4,7 +4,7 @@
 
 MySecondBrain is a native Windows desktop application that serves as the user's sole interface for all AI language model interactions — a unified, provider-agnostic chat hub that replaces ChatGPT.com, Claude.ai, and all other LLM chat platforms. It operates across three interaction tiers: ephemeral hotkey-triggered text transformations (Tier 1), a Spotlight-style command bar with mini-chat (Tier 2), and a full Studio chat workspace (Tier 3). Beyond chat, it functions as a personal wiki / second-brain: an indexed, searchable knowledge base of user-owned `.md` files on disk, where an AI agent can read a conversation and produce polished, permanent summary notes — turning every AI discussion into lasting knowledge.
 
-The app includes 11 built-in Agent Skills (Anthropic skills for document creation, creative work, and web development) plus community skill support. The AI uses 10 tools matching Anthropic's trained-in schemas — including a workspace-isolated bash executor, text editor, web search, image search, web fetch, SQLite-backed persistent memory, wiki search, skill loader, structured confirmations, and file presentation for artifacts. Artifacts render in a WebView2-powered side panel with browser-native syntax highlighting, diff views, and interactive React app support.
+The app includes 11 built-in Agent Skills plus community skill support. The AI uses 14 provider-agnostic tools following the Roo Code pattern — including file operations (read_file, list_files, search_files, apply_diff, write_to_file), a workspace-isolated bash executor (per-chat sandbox), web search, image search, web fetch, SQLite-backed persistent memory, wiki search, skill loader, structured confirmations, and file presentation for artifacts. Tools execute in parallel when the model batches independent calls. A generic file viewer renders arbitrary files with syntax highlighting alongside chat tabs. A comprehensive API History viewer provides raw JSON debugging of every API call. Artifacts render in a WebView2-powered side panel with browser-native syntax highlighting, diff views, and interactive React app support.
 
 ---
 
@@ -34,12 +34,12 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 
 | Screen | Purpose | Mock HTML | Canonical Spec | Key Features |
 |--------|---------|-----------|----------------|--------------|
-| **Studio Chat** | Tier 3 primary workspace — multi-tab AI conversations, Markdown rendering (WPF), streaming, artifacts (WebView2), branching, 10-tool agent surface, skills, memory | [`screens/studio-chat.html`](screens/studio-chat.html) | [`screens/studio-chat.md`](screens/studio-chat.md) | C (Studio Chat), D (Branching), E (Chat Modes), F (Artifacts/WebView2), H (10 Tools), J (Prompts), K (Text Actions), L (Organization), M (Comparison), N (Wiki), W (Skills) |
+| **Studio Chat** | Tier 3 primary workspace — multi-tab AI conversations + file viewer tabs, Markdown rendering (WPF), streaming, artifacts (WebView2), branching, 14-tool agent surface, parallel execution, API History, skills, memory | [`screens/studio-chat.html`](screens/studio-chat.html) | [`screens/studio-chat.md`](screens/studio-chat.md) | C (Studio Chat), D (Branching), E (Chat Modes), F (Artifacts/WebView2), H (14 Tools), J (Prompts), K (Text Actions), L (Organization), M (Comparison), N (Wiki), W (Skills), X (API History), Y (File Viewer) |
 | **Onboarding Wizard** | First-launch guided setup — API keys, Persona, wiki directory, hotkeys | [`screens/onboarding-wizard.html`](screens/onboarding-wizard.html) | [`screens/onboarding-wizard.md`](screens/onboarding-wizard.md) | A8 (Onboarding), B1 (API Keys), B3 (Personas), N1 (Wiki Dir), P1 (Hotkeys), I2 (Import) |
 | **Model Comparison** | Side-by-side multi-Persona comparison with independent mini-chats, broadcast mode, auto-branching | [`screens/model-comparison.html`](screens/model-comparison.html) | [`screens/model-comparison.md`](screens/model-comparison.md) | M1-M4 (Model Comparison), B3 (Personas), D3 (Branching), E3 (Thinking) |
-| **Settings** | Global configuration — 18 categories: Providers, Profiles, Appearance, Wiki, Backup, Text Actions, Hotkeys, Tools, Skills, Memory, Language, Notifications, Startup, Updates, Diagnostics, Pricing, Security, Maintenance | [`screens/settings.html`](screens/settings.html) | [`screens/settings.md`](screens/settings.md) | A1-A13 (Settings), B (Model Configs), N1 (Wiki Dir), R (Backup), H10 (Tool Auto-Approval), W (Skills), W8 (Memory) |
+| **Settings** | Global configuration — 19 categories including new System Info (App Data Locations). 14-tool surface with out-of-workspace read approval. | [`screens/settings.html`](screens/settings.html) | [`screens/settings.md`](screens/settings.md) | A1-A14 (Settings), B (Model Configs), N1 (Wiki Dir), R (Backup), H (14 Tools + out-of-workspace approval), W (Skills), W8 (Memory), Z (App Data Locations) |
 | **Wiki Browser** | Three-region browser for personal wiki — file tree, Markdown viewer, info panel (related sections, backlinks, file info) | [`screens/wiki-browser.html`](screens/wiki-browser.html) | [`screens/wiki-browser.md`](screens/wiki-browser.md) | N4 (Wiki Browser), N2 (Indexing), N6 (Snapshots), N10 (Cross-Linking) |
-| **Usage Dashboard** | Token/cost analytics — summary cards, charts, per-chat breakdown, AI feedback summary | [`screens/usage-dashboard.html`](screens/usage-dashboard.html) | [`screens/usage-dashboard.md`](screens/usage-dashboard.md) | S1-S6 (Usage Dashboard) |
+| **Usage Dashboard** | Complete analytics — tokens, cache breakdown, latency distribution, per-provider/model filtering, per-chat breakdown, budget alerts, AI feedback. Every API call across all 3 tiers logged. | [`screens/usage-dashboard.html`](screens/usage-dashboard.html) | [`screens/usage-dashboard.md`](screens/usage-dashboard.md) | S1-S8 (Usage Dashboard, enriched) |
 | **Media Library** | Browsable gallery of all media across chats — images, audio, video, webcam captures | [`screens/media-library.html`](screens/media-library.html) | [`screens/media-library.md`](screens/media-library.md) | G1-G6 (Media Library) |
 | **Global Artifacts Browser** | Cross-chat artifact listing — code, docs, config files with search, filter, version history | [`screens/global-artifacts-browser.html`](screens/global-artifacts-browser.html) | [`screens/global-artifacts-browser.md`](screens/global-artifacts-browser.md) | F7 (Global Artifacts Browser) |
 
@@ -56,10 +56,10 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | **E. Chat Modes & Controls** (E1-E5) | Core | Studio Chat | persona, model-configuration |
 | **F. Artifacts & Side Panel** (F1-F7) | Core | Studio Chat, Global Artifacts Browser | artifact |
 | **G. Media Library & Multi-Modal** (G1-G6) | Core | Media Library, Studio Chat | media-item |
-| **H. Tool Use / Agent Capabilities** (H1-H11) | Core | Studio Chat | chat-thread, message, memory-entry |
+| **H. Tool Use / Agent Capabilities** (H1-H15) | Core | Studio Chat | chat-thread, message, memory-entry |
 | **I. Import & Export** (I1-I2) | Core | Studio Chat, Settings, Onboarding Wizard | chat-thread, message |
 | **J. Prompt Library** (J1-J2) | Core | Studio Chat | prompt-template |
-| **K. Text Actions & Three-Tier** (K1-K5) | Core | Tier 1/2 overlays, Studio Chat, Settings | text-action, chat-thread, message |
+| **K. Text Actions & Three-Tier** (K1-K5) | Core | Tier 1/2 overlays, Studio Chat, Settings | text-action (now with chatMode), chat-thread, message |
 | **L. Chat Organization & Search** (L1-L14) | Core | Studio Chat | chat-thread, message |
 | **M. Model Comparison** (M1-M4) | Core | Model Comparison, Studio Chat | persona, model-configuration, chat-thread |
 | **N. Personal Wiki / Second Brain** (N1-N13) | Core | Wiki Browser, Studio Chat, Settings, Onboarding Wizard | wiki-file, wiki-version-snapshot |
@@ -67,10 +67,13 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | **P. Windows OS Integration** (P1-P11) | Core | All screens (system-wide) | (system — no data entity) |
 | **Q. Language & RTL** (Q1-Q3) | Core | All screens | (system — no data entity) |
 | **R. Backup & Recovery** (R1-R4) | Core | Settings | backup-snapshot |
-| **S. Usage & Pricing Dashboard** (S1-S6) | Core | Usage Dashboard | usage-record |
+| **S. Usage & Pricing Dashboard** (S1-S8) | Core | Usage Dashboard | usage-record (enriched — cache tokens, latency, tier, error info) |
 | **U. Soft-Delete Trash** (U1-U6) | Core | Studio Chat | chat-thread |
 | **V. Diagnostics & Debug Logging** (A11a-A11d) | Core | Settings | (logging — no data entity) |
 | **W. Agent Skills** (W1-W11) | Core | Studio Chat, Settings | memory-entry, skill (in-memory) |
+| **X. API History Viewer** (X1-X3) | Core | Studio Chat | usage-record, per-chat raw JSON log |
+| **Y. Generic File Viewer Tabs** (Y1-Y5) | Core | Studio Chat | (file system — no data entity) |
+| **Z. App Data Locations** (Z1-Z3) | Core | Settings | (file system — no data entity) |
 | **T. Nice-to-Have (Future)** (T1-T6) | Nice-to-Have | (deferred) | (deferred) |
 
 ---
@@ -91,7 +94,7 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | [`prompt-template`](data/prompt-template.md) | Saved reusable prompt with variables | Studio Chat (toolbar) |
 | [`skill`](data/skill.md) | Agent Skill metadata (in-memory, not persisted) — Markdown instruction file for domain-specific AI capabilities | Studio Chat (toolbar Skills dropdown), Settings (Skills), system prompt catalog |
 | [`text-action`](data/text-action.md) | Named text transformation with hotkey | Tier 1 overlays, Settings (Hotkeys), Studio Chat (toolbar) |
-| [`usage-record`](data/usage-record.md) | Token count and cost per message | Studio Chat (header), Usage Dashboard |
+| [`usage-record`](data/usage-record.md) | Complete API call audit log — token counts (incl. cache), latency, cost, tier, error info, raw JSON path | Studio Chat (header), Usage Dashboard, API History |
 | [`wiki-file`](data/wiki-file.md) | Indexed .md file in personal wiki directory | Wiki Browser, Studio Chat (via @ mentions, Write to Wiki) |
 | [`wiki-version-snapshot`](data/wiki-version-snapshot.md) | Pre-modification snapshot of a wiki file | Wiki Browser (Version History) |
 
@@ -119,10 +122,10 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 |------|-------------|
 | [`app-overview.md`](app-overview.md) | Core purpose, elevator pitch, differentiators, platform, success metrics |
 | [`personas.md`](personas.md) | Primary persona: Hybrid Developer/Knowledge Worker/Creative Writer |
-| [`feature-inventory.md`](feature-inventory.md) | All 23 feature groups (A-W) cataloged by tier |
-| [`edge-cases.md`](edge-cases.md) | Global scenarios + per-feature edge cases for all 23 feature groups |
+| [`feature-inventory.md`](feature-inventory.md) | All 26 feature groups (A-Z) cataloged by tier |
+| [`edge-cases.md`](edge-cases.md) | Global scenarios + per-feature edge cases for all 26 feature groups |
 
-### Features (23 files)
+### Features (26 files)
 | File | Feature Group |
 |------|---------------|
 | [`features/settings-configuration.md`](features/settings-configuration.md) | A. Settings & Configuration |
@@ -132,7 +135,7 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | [`features/chat-modes-controls.md`](features/chat-modes-controls.md) | E. Chat Modes & Controls |
 | [`features/artifacts-side-panel.md`](features/artifacts-side-panel.md) | F. Artifacts & Side Panel (WebView2) |
 | [`features/media-library.md`](features/media-library.md) | G. Media Library |
-| [`features/tool-use-agents.md`](features/tool-use-agents.md) | H. Tool Use (10-tool surface) |
+| [`features/tool-use-agents.md`](features/tool-use-agents.md) | H. Tool Use (14-tool provider-agnostic surface) |
 | [`features/import-export.md`](features/import-export.md) | I. Import & Export |
 | [`features/prompt-library.md`](features/prompt-library.md) | J. Prompt Library |
 | [`features/text-actions-three-tier.md`](features/text-actions-three-tier.md) | K. Text Actions & Three-Tier |
@@ -147,6 +150,9 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | [`features/soft-delete-trash.md`](features/soft-delete-trash.md) | U. Soft-Delete Trash |
 | [`features/diagnostics-debug-logging.md`](features/diagnostics-debug-logging.md) | V. Diagnostics & Debug Logging |
 | [`features/agent-skills.md`](features/agent-skills.md) | W. Agent Skills |
+| [`features/api-history-viewer.md`](features/api-history-viewer.md) | X. API History Viewer (NEW) |
+| [`features/file-viewer-tabs.md`](features/file-viewer-tabs.md) | Y. Generic File Viewer Tabs (NEW) |
+| [`features/app-data-locations.md`](features/app-data-locations.md) | Z. App Data Locations (NEW) |
 | [`features/nice-to-have-future.md`](features/nice-to-have-future.md) | T. Nice-to-Have Features (Future) |
 
 ### Data Entities (15 files)
@@ -164,7 +170,7 @@ This vision document set describes the complete end-state of MySecondBrain in ex
 | [`data/prompt-template.md`](data/prompt-template.md) | Reusable prompt with variables |
 | [`data/skill.md`](data/skill.md) | Agent Skill metadata (in-memory) |
 | [`data/text-action.md`](data/text-action.md) | Named text transformation |
-| [`data/usage-record.md`](data/usage-record.md) | Token/cost per message |
+| [`data/usage-record.md`](data/usage-record.md) | Complete API call audit log — tokens (incl. cache), latency, cost, tier, error info, raw JSON path |
 | [`data/wiki-file.md`](data/wiki-file.md) | Indexed .md wiki file |
 | [`data/wiki-version-snapshot.md`](data/wiki-version-snapshot.md) | Wiki file snapshot |
 
@@ -235,6 +241,18 @@ The following items are flagged for Architect review before technical planning. 
 
 16. ⚠️ **Memory tool (SQLite) separate from wiki** — two knowledge persistence mechanisms. Risk of user confusion: "why does AI remember X but not Y?" Clear distinction: memory = AI-extracted facts, wiki = user-authored knowledge. (W8, N)
 
+17. ⚠️ **14-tool provider-agnostic schemas** — tool descriptions are designed for instruction-following by any model, but model compliance varies. Some models may misuse tools or ignore constraints. Tool schemas must be tested per provider.
+
+18. ⚠️ **Out-of-workspace file read approval** — configurable per read-tool (Auto-Approve/Ask/Disabled). Auto-Approve removes a safety gate. Ask mode may cause frequent confirmation dialogs. Default: Ask.
+
+19. ⚠️ **Per-chat workspace isolation** — subdirectories under `workspace/{chat-id}/` prevent inter-chat conflicts, but a malicious model within one chat can still read/write anything within its own workspace. Workspace is app-scoped, not OS-sandboxed.
+
+20. ⚠️ **Raw API JSON log per chat** — `_api_history.json` may grow very large for long conversations with many tool calls. File is cleaned up with workspace (24h after chat close). For persistent debugging, the UsageRecord entity provides structured queryable data.
+
+21. ⚠️ **Parallel tool execution — model-dependent behavior** — some models may not batch independent tool calls, reducing the benefit of parallel execution. The app handles parallel execution when the model requests it, but cannot force the model to batch calls.
+
+22. ⚠️ **Generic file viewer — Markdown rendering** — .md files render with formatting in the file viewer. This uses the same engine as the Wiki Browser viewer but WITHOUT backlinks/indexing. Risk: user may expect wiki features (backlinks, related sections) to work in the file viewer.
+
 ---
 
 ## Completion Status
@@ -242,33 +260,36 @@ The following items are flagged for Architect review before technical planning. 
 ### Metrics
 | Metric | Count |
 |--------|-------|
-| Features documented | 23 feature groups (A-W), 180+ individual feature items |
+| Features documented | 26 feature groups (A-Z), 195+ individual feature items |
 | Screens designed | 8 screens with canonical .md specs + interactive .html mocks |
 | Data entities | 15 entities with attributes, lifecycle, relationships, UI visibility |
 | User flows | 8 end-to-end journeys documented |
-| Flagged concerns | 16 items for Architect review |
+| Flagged concerns | 22 items for Architect review |
 
 ### Phase Completion
 | Phase | Status | Artifacts |
 |-------|--------|-----------|
-| Phase 1: Foundation | ✅ Complete | app-overview.md, personas.md, feature-inventory.md, 23 feature specs, 15 data entities |
+| Phase 1: Foundation | ✅ Complete | app-overview.md, personas.md, feature-inventory.md, 26 feature specs, 15 data entities |
 | Phase 2: Screens | ✅ Complete | 8 screen .md specs + 8 interactive .html mocks |
 | Phase 3: Flows | ✅ Complete | 8 flow documents |
-| Phase 4: Edge Cases | ✅ Complete | edge-cases.md — global + 23 feature-specific |
+| Phase 4: Edge Cases | ✅ Complete | edge-cases.md — global + 26 feature-specific |
 | Phase 5: Wire-Up | ✅ Complete | vision-summary.md generated; screen HTML consistency maintained |
 | Phase 6: Report Back | ✅ Complete | Final report delivered |
 
-### Architecture Update (2026-06-24)
-Major architecture evolution applied:
-- **W. Agent Skills** (new feature group): 11 built-in Anthropic skills, community skills, progressive disclosure, `skill_load` tool
-- **10-tool surface**: bash (workspace-isolated), text_editor (view/create/str_replace/insert), web_search, web_fetch, memory (SQLite, Anthropic schema), wiki_search, skill_load, ask_user_input, present_files, image_search
-- **WebView2 artifacts panel**: browser-native rendering for artifacts; WPF stays for chat conversation
-- **present_files**: explicit intent bridge from workspace to artifacts directory
-- **Deep Research as skill**: replaces custom state machine
-- **Memory tool**: SQLite-backed, replaces N12 `_memory.md`
-- **Workspace isolation** (P10, P11): two-zone model, bash contained in workspace, `present_files` bridges to artifacts
-- **Per-chat toolbar**: Skills dropdown, Memory toggle, 10-tool configuration
+### 2026-06-25 Update — 7-Item Vision Refresh
+Major updates applied:
+- **14-tool provider-agnostic surface**: text_editor replaced by read_file, list_files, search_files, apply_diff, write_to_file. Tool count 10 → 14. Roo Code pattern. Schemas designed for any model.
+- **Parallel tool execution**: Independent tools run in parallel. Sequential display with indicator.
+- **Per-chat workspace isolation**: Each chat gets own workspace subdirectory. 24h grace period cleanup.
+- **Approval model**: Out-of-workspace read configurable per read-tool. Blocked paths always denied.
+- **X. API History Viewer**: Per-chat raw JSON log. Opens in generic file viewer tab.
+- **Y. Generic File Viewer Tabs**: Read-only tabs alongside chat tabs. Text/code with syntax highlighting, Markdown rendered, images with zoom/pan.
+- **Z. App Data Locations**: System Info category in Settings. Comprehensive reference of all app file/folder paths.
+- **Enriched UsageRecord**: cacheReadTokens, cacheCreationTokens, latencyMs, tier, errorInfo, rawJsonPath.
+- **Usage Dashboard upgrade**: Provider/model filter dropdowns, cache breakdown, latency distribution (avg/p50/p95/p99).
+- **Text Completion mode for Text Actions**: TextAction.chatMode field (Standard/TextCompletion). "Continue Writing" defaults to TextCompletion.
+- **K2 toolbar**: Updated to 14 tools. Out-of-workspace read approval per read-tool.
 
 ---
 
-*Vision last updated: 2026-06-24 (Architecture evolution — Agent Skills, 10-tool surface, WebView2 artifacts, present_files, SQLite memory, workspace isolation, per-chat controls). Interactive mocks at `screens/*.html` — open in browser for clickable simulation.*
+*Vision last updated: 2026-06-25 (7-item vision update — 14-tool provider-agnostic surface, parallel execution, API History viewer, generic file viewer tabs, rich UsageRecord with cache/latency/tier, Text Completion mode for Text Actions, App Data Locations panel). Interactive mocks at `screens/*.html` — open in browser for clickable simulation.*
