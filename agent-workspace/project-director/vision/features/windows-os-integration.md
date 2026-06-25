@@ -231,6 +231,6 @@ All `bash` commands execute inside `%LOCALAPPDATA%/MySecondBrain/workspace/`:
 - P6 provides system-level access to all tiers
 - P7 uses A6 (startup behavior setting)
 - P9 powers K3 Phase 1 capture scope (graduated UIA pipeline per TextAction.captureScope flags)
-- P10 (bash on Windows) serves H1 (bash tool)
-- P11 (workspace isolation) contains H1 execution, bridges to F1 (present_files → artifacts)
+- P10 (bash on Windows) serves H6 (bash tool)
+- P11 (workspace isolation) contains H6 execution, bridges to F1 (present_files → artifacts)
 - P11 wiki read-only restriction enforces N8 (wiki access restrictions)

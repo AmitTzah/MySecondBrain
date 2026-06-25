@@ -641,7 +641,7 @@ Every component above is analyzed in detail in the sections below, including alt
 
 - **Vision Requirement:** Extensible domain-specific capabilities (document creation, creative work, testing) without per-capability custom tool implementations.
 - **Sourcing Recommendation:** Open Standard adoption.
-- **Recommended Approach:** Adopt the [Agent Skills](https://agentskills.io) open standard — the same pattern used by Claude Code, Cursor, and other AI tools. Skills are Markdown instruction files (`SKILL.md`) with YAML frontmatter that encode domain-specific procedural knowledge. The model reads instructions and uses existing tools (`bash`, `text_editor`, `web_search`) to produce output. Progressive disclosure: catalog (name + description) in system prompt → full body loaded on demand via `skill_load` tool → bundled scripts/references loaded as needed.
+- **Recommended Approach:** Adopt the [Agent Skills](https://agentskills.io) open standard — the same pattern used by Claude Code, Cursor, and other AI tools. Skills are Markdown instruction files (`SKILL.md`) with YAML frontmatter that encode domain-specific procedural knowledge. The model reads instructions and uses existing tools (`bash`, `read_file`, `apply_diff`, `write_to_file`, `list_files`, `search_files`, `web_search`) to produce output. Progressive disclosure: catalog (name + description) in system prompt → full body loaded on demand via `skill_load` tool → bundled scripts/references loaded as needed.
 - **Rationale:** Skills are the standard pattern for extending AI agent capabilities. Anthropic publishes 17 production-grade skills (11 useful for MySecondBrain). Community repositories (alirezarezvani/claude-skills) provide 345+ additional skills. The open standard means skills are portable across tools. The progressive disclosure model keeps base context small (~80 tokens per skill) while providing deep domain knowledge on demand. Skills replace the need for custom `IToolExecutor` implementations for document generation and creative work.
 - **Alternatives Considered:**
   - **Custom tool executors for each capability:** Would require building ExcelGeneratorToolExecutor, DocxGeneratorToolExecutor, etc. Massive development effort for capabilities that skills provide for free. Rejected.
@@ -652,25 +652,25 @@ Every component above is analyzed in detail in the sections below, including alt
 
 ---
 
-### 38. Anthropic Tool Schema Adoption
+### 38. Tool Schema Design (Updated 2026-06-25)
+
+> **Note (2026-06-25):** The original decision to adopt Anthropic-trained schemas (below) was implemented in Feature 10. The 2026-06-25 vision update pivoted to **provider-agnostic schemas** with Anthropic-flavored naming — designed for instruction-following by ANY model (OpenAI, Anthropic, Google, DeepSeek, etc.). The `text_editor_20250728` schema was replaced by 5 separate file operation tools (`read_file`, `list_files`, `search_files`, `apply_diff`, `write_to_file`), bringing the total tool count to 14. This section is preserved for historical context. The updated tool surface is documented in [`planning/abstractions.md`](planning/abstractions.md).
 
 - **Vision Requirement:** Tool surface that supports all 11 built-in skills and the agentic loop.
-- **Sourcing Recommendation:** Open Standard adoption.
-- **Recommended Approach:** Match Anthropic's trained-in tool schemas for core tools. The model has been optimized on thousands of trajectories using these exact signatures. Tools:
-  - `bash_20250124` — Client-executed shell commands (replaces custom `terminal` executor). Workspace-isolated on Windows via cmd.exe with bash.exe/WSL fallback for .sh scripts.
-  - `text_editor_20250728` — Client-executed file operations (replaces custom `file_generate` + `file_edit` executors). Commands: view, create, str_replace, insert.
-  - `web_search_*` — Server schema, client-reimplemented via `ISearchProvider` (Google Custom Search / Bing API). Model uses same `tool_use` format; we execute locally.
-  - `web_fetch_*` — Server schema, client-reimplemented via HttpClient. Fetches full page content for Deep Research.
-  - `memory_20250818` — Client schema, wraps SQLite-backed memory store (replaces flat-file `_memory.md`).
-  - `wiki_search` — Custom tool (no Anthropic equivalent). Queries local SQLite FTS5 wiki index.
-  - `skill_load` — Custom tool for skill activation per Agent Skills standard.
-  - `ask_user_input` — Custom tool for structured user confirmations (from claude.ai consumer pattern).
-- **Rationale:** From Anthropic's documentation: "These schemas are trained-in. Claude has been optimized on thousands of successful trajectories that use these exact tool signatures, so it calls them more reliably and recovers from errors more gracefully than it would with a custom tool that does the same thing." Matching schemas means skills work without modification and the model already knows how to use each tool.
-- **Alternatives Considered:**
-  - **Keep custom tool names (terminal, file_generate, etc.):** Would require rewriting skill instructions. Model not optimized for custom names. Rejected.
-  - **Implement all Anthropic tools (code_execution, computer_use, mcp_toolset):** Unnecessary for skills. code_execution is server-side sandbox (replaced by workspace-isolated bash). Rejected.
-- **Tradeoffs:** Gain: Trained-in schemas = more reliable tool calls. Skills work verbatim. Lose: Tool names are Anthropic-specific — if Anthropic deprecated a schema, we'd need to update. Minor risk.
-- **Risk Level:** Low. Anthropic's client-tool schemas are GA (bash_20250124, text_editor_20250728, memory_20250818). Server-tool schemas reimplemented as client tools with identical interfaces.
+- **Sourcing Recommendation:** ~~Open Standard adoption~~ → Provider-agnostic custom schemas (2026-06-25 update).
+- **Original Approach (Feature 10):** Match Anthropic's trained-in tool schemas for core tools. Tools:
+  - `bash_20250124` — Shell commands. Retained in 14-tool surface as `bash` (H6).
+  - ~~`text_editor_20250728`~~ — **REPLACED (2026-06-25).** Decomposed into 5 provider-agnostic tools: `read_file`, `list_files`, `search_files`, `apply_diff`, `write_to_file`.
+  - `web_search_*` — Retained as `web_search` (H7).
+  - `web_fetch_*` — Retained as `web_fetch` (H8).
+  - `memory_20250818` — Retained as `memory` (H11).
+  - `wiki_search` — Retained as `wiki_search` (H10).
+  - `skill_load` — Retained as `skill_load` (H12).
+  - `ask_user_input` — Retained as `ask_user_input` (H14).
+  - **New (2026-06-25):** `image_search` (H9), `list_files` (H2), `search_files` (H3), `present_files` (H13) — separate tool for surfacing files as artifacts.
+- **Updated Rationale:** MySecondBrain is provider-agnostic (8+ providers). Anthropic-trained schemas only benefit Claude models. For all other providers, the model already follows instructions. The 14-tool surface uses Anthropic-flavored naming (well-designed, broadly recognized) but schemas are designed for general model consumption via instruction-following — matching the Roo Code pattern.
+- **Tradeoffs:** Gain: Provider-agnostic tool surface works equally well with all models. Clean separation of file operations (read vs. write vs. edit). Lose: Claude loses the trained-in schema advantage for file operations (mitigated by Anthropic-flavored naming and clear schema descriptions).
+- **Risk Level:** Low. Modern models (Claude 3.5/4, GPT-4o, DeepSeek V3) handle custom tool schemas reliably via instruction-following. The Roo Code tool surface proves this pattern works across all providers.
 
 ---
 
@@ -758,7 +758,7 @@ Every component above is analyzed in detail in the sections below, including alt
 | 35 | Auto-Save Drafts | Custom | Timer + SQLite draft table | Low |
 | 36 | Per-Monitor DPI Awareness | Platform (WPF) | PerMonitorV2 app.manifest | Low |
 | 37 | Agent Skills Integration | Open Standard | Agent Skills spec + 11 Anthropic skills + community ecosystem | Low |
-| 38 | Anthropic Tool Schema Adoption | Open Standard | bash_20250124, text_editor_20250728, web_search_*, web_fetch_*, memory_20250818 | Low |
+| 38 | Tool Schema Design (14-tool provider-agnostic) | Custom (Provider-Agnostic) | read_file, list_files, search_files, apply_diff, write_to_file, bash, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files | Low |
 | 39 | WebView2 for Artifacts Panel | Platform (WebView2) | Embedded Edge WebView2 + browser-native rendering libraries | Medium |
 | 40 | Deep Research (Skill-Based) | Custom (Skill File) | Skill file on top of web_search + web_fetch + bash | Medium |
 

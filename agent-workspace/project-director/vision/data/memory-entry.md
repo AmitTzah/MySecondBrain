@@ -19,7 +19,7 @@ A single AI-extracted fact about the user, stored in SQLite using Anthropic's `m
 
 ### Create
 
-- **By AI:** Model calls `memory` tool (H5) during conversation to store a fact. App creates MemoryEntry in SQLite.
+- **By AI:** Model calls `memory` tool (H11) during conversation to store a fact. App creates MemoryEntry in SQLite.
 - **By User:** Manually in Settings → Memory (A13) via "Add Memory" button.
 
 ### Update
@@ -50,6 +50,6 @@ A single AI-extracted fact about the user, stored in SQLite using Anthropic's `m
 ## Cross-References
 
 - Stored by: [`features/agent-skills.md`](../features/agent-skills.md) §W8 (Memory Tool)
-- Tool spec: [`features/tool-use-agents.md`](../features/tool-use-agents.md) §H5 (memory tool)
+- Tool spec: [`features/tool-use-agents.md`](../features/tool-use-agents.md) §H11 (memory tool)
 - Managed in: [`features/settings-configuration.md`](../features/settings-configuration.md) §A13 (Memory Management)
 - Not related to: [`features/personal-wiki.md`](../features/personal-wiki.md) — wiki is separate user-authored knowledge base

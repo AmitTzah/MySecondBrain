@@ -12,11 +12,11 @@ This file is the index of the `planning/` directory. It is what the Feature Deve
 |---|------|-------|---------|
 | 1 | [`tech-stack.md`](tech-stack.md) | 1 | Complete technology stack: 15 OSS libraries, 12 custom builds, 10 platform features, 2 SaaS services. Every runtime dependency with version, sizing, and sourcing rationale. |
 | 2 | [`architecture.md`](architecture.md) | 1 | System design: component diagram (6 groups), data flow (message lifecycle, Tier 1 hotkey flow), architectural patterns (MVVM, Provider/Adapter, Repository, Plugin/Registry), deployment model, cross-cutting concerns. |
-| 3 | [`abstractions.md`](abstractions.md) | 1 | All C# interfaces and contracts: 10 tool executors (bash, text_editor, web_search, web_fetch, memory, wiki_search, skill_load, ask_user_input, present_files, image_search), ISkillService, ISkillLoader, plus LLM/STT/backup/search/tokenizer/importer/renderer/theme/update/platform interfaces. Dependency map updated for skills architecture. |
+| 3 | [`abstractions.md`](abstractions.md) | 1 | All C# interfaces and contracts: 14 tool executors (read_file, list_files, search_files, apply_diff, write_to_file, bash, web_search, web_fetch, image_search, wiki_search, memory, skill_load, ask_user_input, present_files), ISkillService, ISkillLoader, IToolOrchestrator with parallel execution, plus LLM/STT/backup/search/tokenizer/importer/renderer/theme/update/platform interfaces. Dependency map updated for 14-tool provider-agnostic surface. |
 | 4 | [`data-model.md`](data-model.md) | 2 | 15 data entities with attributes, relationships, feature-group mapping, ASCII ER diagram, and special modeling notes: message branching (version-chain), transient vs. permanent threads, soft-delete, wiki index tables, usage aggregation, cascading delete rules. |
 | 5 | [`integration-points.md`](integration-points.md) | 2 | 24 integration points: 8 SaaS/cloud (OpenAI, Anthropic, Google Gemini, OpenAI-Compatible, GCS, Web Search, GitHub, Auto-Update) + 16 platform (DPAPI, AES-GCM, Clipboard, FileSystemWatcher, Kestrel, System Tray, Global Hooks, HWND/UIA, SharpToken, STT, Audio, Webcam, Video, SpellCheck, Git, Serilog Destructuring). Each with abstraction, fallback, config. |
 | 6 | [`platform-notes.md`](platform-notes.md) | 2 | WPF-specific implementation guidance: MVVM with CommunityToolkit.Mvvm, XAML DataTemplate patterns (chat messages, wiki browser, code blocks, BiDi), DI lifetimes, three-tier window management (WS_EX_NOACTIVATE, overlay positioning, focus), system tray, global hotkeys (RegisterHotKey), PerMonitorV2 DPI, MSIX packaging, auto-update, and 10 known WPF pitfalls with workarounds. |
-| 7 | [**`skills-integration.md`**](skills-integration.md) | 3 | **Agent Skills integration**: what skills are, progressive disclosure, 11 built-in Anthropic skills, skill activation via skill_load, 10-tool surface matching Anthropic schemas, agentic loop with skills (full API trace), skill discovery (4 locations), system prompt construction, per-chat controls, platform adaptation, context management, memory tool, community skills. |
+| 7 | [**`skills-integration.md`**](skills-integration.md) | 3 | **Agent Skills integration**: what skills are, progressive disclosure, 11 built-in Anthropic skills, skill activation via skill_load, 14-tool provider-agnostic surface, agentic loop with skills (full API trace), skill discovery (2 locations: embedded + %LOCALAPPDATA%), system prompt construction, per-chat controls, platform adaptation, context management, memory tool, community skills. |
 | 8 | [**`artifacts-and-skills-reference.md`**](artifacts-and-skills-reference.md) | 3 | **Developer reference**: end-to-end artifacts & skills workflow — workspace vs. artifacts filesystem layout, the `present_files` bridge, complete tool set with schemas, skill activation via `skill_load`, Deep Research as skill-based protocol, versioning (model vs. app), memory tool (SQLite), artifact lifecycle, system prompt construction, key design decisions. |
 | 9 | **`planning-summary.md`** | 2 | **This file.** Index and quick reference for the entire planning directory. Architecture decision log. |
 | — | [`tech-sourcing.md`](../tech-sourcing.md) | 0 | Upstream: 40 technology sourcing decisions with alternatives analysis and risk levels. Updated with Agent Skills, Anthropic tool schemas, WebView2, and skill-based Deep Research. |
@@ -61,7 +61,7 @@ This file is the index of the `planning/` directory. It is what the Feature Deve
 | Web Fetch | HttpClient | Custom |
 | Agent Skills | Agent Skills open standard + 11 Anthropic skills | Open Standard |
 | Bash Tool | Anthropic bash_20250124 schema, cmd.exe + bash.exe/WSL fallback | Open Standard |
-| Text Editor | Anthropic text_editor_20250728 schema | Open Standard |
+| File Operations | 5 provider-agnostic tools (read_file, list_files, search_files, apply_diff, write_to_file) replacing text_editor | Open Standard |
 | Artifacts Panel | WebView2 + highlight.js + marked.js + diff2html | Platform |
 | Memory Tool | Anthropic memory_20250818 schema, SQLite-backed | Open Standard |
 
@@ -76,7 +76,7 @@ This file is the index of the `planning/` directory. It is what the Feature Deve
 | `ISearchProvider` | GoogleCustomSearchProvider, BingSearchProvider | Web search for AI tool-use |
 | `ITokenizer` / `ITokenizerFactory` | SharpTokenTokenizer, FallbackTokenizer | Real-time token counting |
 | `IChatImporter` | ChatGPTImporter, ClaudeImporter | Chat history import |
-| `IToolExecutor` | BashToolExecutor, TextEditorToolExecutor, WebSearchToolExecutor, WebFetchToolExecutor, MemoryToolExecutor, WikiSearchToolExecutor, SkillLoadToolExecutor, AskUserInputToolExecutor, PresentFilesToolExecutor, ImageSearchToolExecutor | Tool execution for AI agents (10 tools) |
+| `IToolExecutor` | ReadFileToolExecutor, ListFilesToolExecutor, SearchFilesToolExecutor, ApplyDiffToolExecutor, WriteToFileToolExecutor, BashToolExecutor, WebSearchToolExecutor, WebFetchToolExecutor, ImageSearchToolExecutor, WikiSearchToolExecutor, MemoryToolExecutor, SkillLoadToolExecutor, AskUserInputToolExecutor, PresentFilesToolExecutor | Tool execution for AI agents (14 provider-agnostic tools; 5 file ops replace text_editor) |
 | `IToolOrchestrator` | ToolOrchestrator | Function-calling loop |
 | `IContentBlockRenderer` | MarkdownTextRenderer, CodeBlockRenderer, ArtifactReferenceRenderer, CitationRenderer, ImageRenderer, MediaRenderer, ThinkingRenderer, ToolCallRenderer | Markdig AST → WPF elements |
 | `IThemeProvider` | WpfThemeProvider | Dark/light + chat themes |
@@ -228,8 +228,11 @@ Every vision feature group (A-U) is addressed in the planning documents:
 | U. Soft-Delete Trash | AutoCleanupService | SQLite | ChatThread (isDeleted, deletedAt) | IChatThreadRepository |
 | **V. Diagnostics & Debug Logging** | Serilog destructuring policy, Settings → Diagnostics UI | Serilog (Feature 3), ISettingsRepository | AppSetting (9 key-value pairs) | ILogger\<T\>, ISettingsRepository, IDestructuringPolicy |
 | **W. Agent Skills** | ISkillService, ISkillLoader, skill_load tool, progressive disclosure | Embedded resources, WebView2, bash/cmd.exe | MemoryEntry, Skill (in-memory) | ISkillService, ISkillLoader, IToolExecutor (SkillLoadToolExecutor) |
+| **X. API History Viewer** | API History Logger → per-chat _api_history.json | System.Text.Json, per-chat workspace | UsageRecord.rawJsonPath | ILLMProvider (capture raw request/response) |
+| **Y. File Viewer Tabs** | Tab bar file viewer support, read-only badge | WPF TabControl, System.IO read | ChatThread (file refs) | IToolExecutor (read_file) |
+| **Z. App Data Locations** | System Info settings category | System.IO directory enumeration | AppSetting | ISettingsRepository |
 | T. Nice-to-Have | Architecture accommodates | (deferred) | (deferred) | (deferred) |
 
 ---
 
-*Planning summary document — the index for the complete `planning/` directory. Batch 2 of 2. Planning directory is now complete (10 files). Updated 2026-06-24 with 15 entities, 10-tool surface, Agent Skills subsystem, WebView2 artifacts, and codebase realignment roadmap revision. See [`tech-sourcing.md`](../tech-sourcing.md) for upstream sourcing decisions.*
+*Planning summary document — the index for the complete `planning/` directory. Updated 2026-06-25 with 14-tool provider-agnostic surface (5 file ops replacing text_editor), per-chat workspace/artifacts isolation, parallel tool execution, enriched UsageRecord (8 new fields), TextAction.chatMode, new features X/Y/Z (API History/File Viewer Tabs/App Data Locations), 24 total features (new F11 Codebase Realignment). See [`tech-sourcing.md`](../tech-sourcing.md) for upstream sourcing decisions.*

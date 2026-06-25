@@ -6,7 +6,7 @@ The user works with AI-generated artifacts (code files, documents, spreadsheets,
 
 ## Trigger
 
-- Model calls `present_files` tool with file paths (H9) during conversation
+- Model calls `present_files` tool with file paths (H13) during conversation
 - User clicks artifact in side panel (F2)
 - User navigates to Global Artifacts Browser (F7)
 - Model uses `apply_diff` to modify a previously-presented file → auto-creates new version (F3)
@@ -150,8 +150,8 @@ Compare any two versions of the same artifact.
 ## Permissions
 
 - Single-user app. All actions available.
-- `present_files` auto-approval configurable in H10. Default: Auto-Approve (presenting files is non-destructive).
-- Workspace isolation: model cannot access files outside workspace without user confirmation (H1).
+- `present_files` auto-approval configurable in H13. Default: Auto-Approve (presenting files is non-destructive).
+- Workspace isolation: model cannot access files outside workspace without user confirmation (H6).
 
 ## Interactions
 

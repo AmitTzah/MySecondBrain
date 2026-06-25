@@ -238,7 +238,7 @@ All 15 data entities are stored in a single SQLite database via Entity Framework
 ---
 
 ### 9. TextAction
-**Description:** A Text Action is a named AI-powered text transformation defined across three independent dimensions: **what to capture** (captureScope — flags like `selection`, `focusedElement`, `fullDocument`, `screenshot`), **how to transform it** (systemPrompt + modelConfigId), and **where to put the result** (applyMode — `replaceSelection`, `insertAtCursor`, `replaceFocusedElement`, `appendToFocusedElement`, `prependToFocusedElement`, `clipboardOnly`, `showOnly`). Defined once and available everywhere: as global hotkeys (Tier 1) and toolbar dropdown options (Studio).
+**Description:** A Text Action is a named AI-powered text transformation defined across four independent dimensions: **what to capture** (captureScope — flags like `selection`, `focusedElement`, `fullDocument`, `screenshot`), **how to transform it** (systemPrompt + modelConfigId + chatMode), and **where to put the result** (applyMode — `replaceSelection`, `insertAtCursor`, `replaceFocusedElement`, `appendToFocusedElement`, `prependToFocusedElement`, `clipboardOnly`, `showOnly`). Defined once and available everywhere: as global hotkeys (Tier 1) and toolbar dropdown options (Studio).
 
 | Key Attribute | Type | Notes |
 |---------------|------|-------|
@@ -246,12 +246,19 @@ All 15 data entities are stored in a single SQLite database via Entity Framework
 | displayName | string (≤100, unique) | e.g., "Rewrite", "Summarize", "Continue Writing" |
 | systemPrompt | string (≤~8K) | Instructs how to transform text |
 | modelConfigId | UUID? (FK) | References ModelConfiguration. Nullable until ModelConfiguration seed data exists. |
+| chatMode | string (enum) | `Standard` (default) or `TextCompletion`. Standard = chat API with system prompt. TextCompletion = raw prompt to raw completion, no conversation history. "Continue Writing" defaults to TextCompletion. |
 | captureScope | string (flags) | Comma-separated combination: `selection`, `focusedElement`, `surroundingContext`, `fullDocument`, `screenshot`. Default: `selection`. |
 | applyMode | string (enum) | One of: `replaceSelection`, `insertAtCursor`, `replaceFocusedElement`, `appendToFocusedElement`, `prependToFocusedElement`, `clipboardOnly`, `showOnly`. Default: `replaceSelection`. |
 | hotkey | string? | e.g., "Alt+Q", "Alt+C" |
 | isBuiltIn | boolean | Shipped defaults (10 built-in actions) |
 | createdAt | datetime | Auto-set on creation |
 | updatedAt | datetime | Auto-updated on modification |
+
+**Chat Mode:**
+| Mode | Behavior | Use Case |
+|------|----------|----------|
+| `Standard` | Chat API with system prompt. User's captured content becomes the first user message. | Rewrite, Summarize, Explain, Translate, Fix Grammar, Enhance Prompt, Improve Flow |
+| `TextCompletion` | Raw prompt to raw completion. No conversation history. Captured content becomes the raw prompt. | Continue Writing (raw continuation from where text left off) |
 
 **Built-in Defaults (10, shipped with isBuiltIn=true):**
 
@@ -301,29 +308,46 @@ All 15 data entities are stored in a single SQLite database via Entity Framework
 ---
 
 ### 10. UsageRecord
-**Description:** Token consumption and estimated cost for a single AI API call. Records are aggregated for the Usage & Pricing Dashboard.
+**Description:** Complete API call audit log capturing token consumption (including cache tokens), latency, cost, provider/model identity, tier origin, and error information. Every single API call across all three tiers (Tier 1 hotkey, Tier 2 Command Bar, Tier 3 Studio) is logged. Records are aggregated for the Usage & Pricing Dashboard (S) and API History Viewer (X).
 
 | Key Attribute | Type | Notes |
 |---------------|------|-------|
 | id | UUID (PK) | Primary identifier |
-| messageId | UUID (FK) | References Message |
+| messageId | UUID? (FK) | References Message. Null if the call failed before message creation. |
 | threadId | UUID (FK, denormalized) | References ChatThread |
 | personaId | UUID? (FK) | References Persona |
 | modelConfigId | UUID (FK) | References ModelConfiguration |
-| provider | string | For provider-level aggregation |
-| modelIdentifier | string | For model-level aggregation |
+| provider | string | For provider-level aggregation (e.g., "Anthropic", "OpenAI", "DeepSeek") |
+| modelIdentifier | string | For model-level aggregation (e.g., "claude-sonnet-4-20250514") |
 | promptTokens | integer | ≥ 0 |
 | completionTokens | integer | ≥ 0 |
 | totalTokens | integer | promptTokens + completionTokens |
-| estimatedCost | number? | USD, from pricing config × tokens |
+| cacheReadTokens | integer | ≥ 0, default: 0. Cache read/hit tokens (provider-agnostic). Anthropic: cache_read_input_tokens, DeepSeek: cache_hit_tokens. |
+| cacheCreationTokens | integer | ≥ 0, default: 0. Cache creation/write tokens. Anthropic: cache_creation_input_tokens, DeepSeek: cache_miss_tokens. |
+| latencyMs | integer | ≥ 0. Time from request sent to full response complete, in milliseconds. |
+| estimatedCost | number? | USD. Calculated from ModelConfiguration pricing × token counts (including cache token pricing). |
+| tier | integer | 1, 2, or 3. Which tier generated this API call. |
+| errorType | string? | Null if successful. "auth", "rate_limit", "network", "timeout", "server", "unknown". |
+| errorMessage | string? | Null if successful. Human-readable error message. |
+| errorStatusCode | integer? | Null if successful. HTTP status code from the provider (401, 429, 500, etc.). |
+| rawJsonPath | string? | Filesystem path to per-chat raw JSON log: `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/_api_history.json`. Used by API History Viewer. |
+| createdAt | datetime | Auto-set. When the API call completed (or failed). |
+
+**Cache Token Provider Mapping:**
+| Field | Anthropic | DeepSeek | OpenAI | Google | Other |
+|-------|-----------|----------|--------|--------|-------|
+| cacheReadTokens | `cache_read_input_tokens` | `cache_hit_tokens` | `prompt_tokens_details.cached_tokens` | TBD | 0 if not supported |
+| cacheCreationTokens | `cache_creation_input_tokens` | `cache_miss_tokens` | N/A | TBD | 0 if not supported |
+
+**Lifecycle:** Immutable after creation (append-only). Created on every API call (success or failure). Cascading delete with parent ChatThread.
 
 **Relationships:**
-- `belongs to` → Message (via messageId)
+- `belongs to` → Message (via messageId, nullable — null if call failed before message creation)
 - `belongs to` → ChatThread (via threadId, denormalized)
 - `references` → Persona (via personaId)
 - `references` → ModelConfiguration (via modelConfigId)
 
-**Consumed by feature groups:** C11, S
+**Consumed by feature groups:** C11, S, X (API History Viewer)
 
 ---
 
@@ -411,13 +435,13 @@ Key Attribute | Type | Notes |
 ---
 
 ### 15. Skill (In-Memory Metadata)
-**Description:** Agent Skill metadata discovered at startup. NOT persisted to SQLite — re-discovered each launch from embedded resources and filesystem paths. Stored in-memory for the skill catalog, `skill_load` tool schema, and per-chat toggles.
+**Description:** Agent Skill metadata discovered at startup. NOT persisted to SQLite — re-discovered each launch from embedded resources and `%LOCALAPPDATA%/MySecondBrain/skills/` only. Cross-client paths (`.agents/`, `.claude/`) removed. Stored in-memory for the skill catalog, `skill_load` tool schema, and per-chat toggles.
 
 Key Attribute | Type | Notes |
 |---------------|------|-------|
 | name | string | Kebab-case identifier (e.g., "xlsx", "web-artifacts-builder") |
 | description | string | When to trigger, what it does (~80 tokens for catalog) |
-| source | enum | built-in, user, cross-client |
+| source | enum | built-in (embedded in app DLL), user (%LOCALAPPDATA%/MySecondBrain/skills/) |
 | location | string | Path to SKILL.md directory |
 | isEnabled | boolean | Per-chat toggle; defaults from global settings |
 

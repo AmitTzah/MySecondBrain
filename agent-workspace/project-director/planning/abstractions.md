@@ -2,6 +2,8 @@
 
 Every integration point from [`tech-sourcing.md`](../tech-sourcing.md) is captured as a C# interface. Each interface defines the contract that concrete implementations must fulfill. The pattern: **Build [interface] with [key methods]; implement [concrete] as first [provider/implementation].**
 
+> **Vision Update (2026-06-25):** Tool surface expanded from 10 to 14 provider-agnostic tools. `TextEditorToolExecutor` replaced by 5 file operation executors (`ReadFileToolExecutor`, `ListFilesToolExecutor`, `SearchFilesToolExecutor`, `ApplyDiffToolExecutor`, `WriteToFileToolExecutor`). `BashToolExecutor` and `PresentFilesToolExecutor` modified for per-chat workspace/artifacts isolation. `IToolOrchestrator` now supports parallel execution (`Task.WhenAll`, max 10 concurrent). `IUsageRepository` extended with cache/latency/tier filtering. Skills discovery reduced from 4 to 2 locations (embedded + `%LOCALAPPDATA%/MySecondBrain/skills/` only).
+
 ---
 
 ## 1. LLM Provider Abstraction
@@ -318,15 +320,15 @@ public record ImportValidationResult(bool IsValid, string? ErrorMessage, int Est
 ## 7. Tool Executor
 
 ### `IToolExecutor`
-Abstraction for individual tool execution within the Tool Use Orchestrator. Each tool type has its own executor implementation. Tools match Anthropic's trained-in schemas where applicable — the model has been optimized on thousands of trajectories using these exact signatures.
+Abstraction for individual tool execution within the Tool Use Orchestrator. Each tool type has its own executor implementation. Tools use **provider-agnostic schemas** (Roo Code pattern) with Anthropic-flavored naming — designed for instruction-following by ANY model, not just Claude.
 
 ```csharp
 public interface IToolExecutor
 {
-   string ToolName { get; }                                          // "bash", "text_editor", "web_search", "web_fetch", "wiki_search", "memory", "skill_load", "ask_user_input", "present_files", "image_search"
-   bool RequiresUserConfirmation { get; }                            // bash: true for writes outside workspace; text_editor: true for delete; others: false
+   string ToolName { get; }                                          // "read_file", "list_files", "search_files", "apply_diff", "write_to_file", "bash", "web_search", "web_fetch", "image_search", "wiki_search", "memory", "skill_load", "ask_user_input", "present_files"
+   bool RequiresUserConfirmation { get; }                            // read_file/list_files/search_files: true for out-of-workspace (Ask mode); bash: true for writes outside workspace; apply_diff/write_to_file outside workspace: always blocked
    ToolRiskLevel RiskLevel { get; }                                  // Low, Medium, High
-   bool CanAutoApprove { get; }                                      // False for bash writes and text_editor deletes
+   bool CanAutoApprove { get; }                                      // False for bash writes outside workspace; apply_diff/write_to_file outside workspace always blocked
 
    // Validate tool parameters before execution
    Task<ToolValidationResult> ValidateAsync(ToolCall toolCall, CancellationToken ct);
@@ -343,12 +345,33 @@ public record ToolResult(bool Success, string Content, string? ErrorMessage);
 public enum ToolRiskLevel { Low, Medium, High }
 ```
 
+### File Operations (5 Tools — NEW, replacing text_editor)
+
+These five tools replace the former single `TextEditorToolExecutor` (Anthropic `text_editor_20250728`). Together they cover all file reading, searching, listing, editing, and creation operations. Schemas are provider-agnostic.
+
+| Implementation | Tool | Execution Mechanism | Risk | Scope |
+|---------------|------|---------------------|------|-------|
+| `ReadFileToolExecutor` | `read_file` | `System.IO.File.ReadAllText` with offset/limit; binary detection; blocked-path enforcement | Low (read-only; out-of-workspace triggers approval gate) | Any path; auto-approved in workspace/artifacts/wiki |
+| `ListFilesToolExecutor` | `list_files` | `System.IO.Directory.GetFileSystemEntries`; structured JSON output | Low (read-only; out-of-workspace triggers approval gate) | Any path; same approval model as read_file |
+| `SearchFilesToolExecutor` | `search_files` | `System.Text.RegularExpressions.Regex` + `System.IO` enumeration; file_pattern glob filter | Low (read-only; out-of-workspace triggers approval gate) | Any path; same approval model as read_file |
+| `ApplyDiffToolExecutor` | `apply_diff` | SEARCH/REPLACE block parser; `System.IO.File.ReadAllText` + `WriteAllText`; byte-for-byte match | Medium (writes files) | Workspace + artifacts only |
+| `WriteToFileToolExecutor` | `write_to_file` | `System.IO.File.WriteAllText`; overwrite flag; auto-creates parent dirs | Medium (creates/overwrites files) | Workspace + artifacts only |
+
+**Approval model for read tools (read_file, list_files, search_files):**
+- Workspace/artifacts/wiki paths: Auto-approved
+- Outside workspace: Configurable per-tool (Auto-Approve / Ask [default] / Disabled)
+- Blocked paths (`C:\Windows\`, `C:\Program Files\`, `.env`): Always denied
+
+**Approval model for write tools (apply_diff, write_to_file):**
+- Workspace + artifacts only — outside these is ALWAYS blocked
+- `write_to_file` with `overwrite=false` fails if path exists (safety gate)
+- `apply_diff` re-reads file after applying (stale context guard)
+
 ### Anthropic-matched tools (trained-in schemas)
 
 | Implementation | Tool | Anthropic Schema | Execution Mechanism | Risk |
 |---------------|------|-----------------|---------------------|------|
-| `BashToolExecutor` | `bash` | `bash_20250124` | `cmd.exe` with bash.exe/WSL fallback; workspace-isolated | Medium (explicit permission for writes) |
-| `TextEditorToolExecutor` | `text_editor` | `text_editor_20250728` | `System.IO` for create/view; DiffPlex for diffs; commands: view/create/str_replace/insert | Low-Medium (explicit for delete) |
+| `BashToolExecutor` | `bash` | `bash_20250124` | `cmd.exe` with bash.exe/WSL fallback; **per-chat workspace** `workspace/{chat-id}/` | Medium (explicit permission for writes outside workspace) |
 | `WebSearchToolExecutor` | `web_search` | `web_search_*` (client-reimplemented) | Google Custom Search / Bing API via `ISearchProvider` | Low |
 | `WebFetchToolExecutor` | `web_fetch` | `web_fetch_*` (client-reimplemented) | `HttpClient` GET request, returns page content | Low (read-only) |
 | `MemoryToolExecutor` | `memory` | `memory_20250818` | SQLite-backed memory store (separate from wiki) | Low |
@@ -358,19 +381,20 @@ public enum ToolRiskLevel { Low, Medium, High }
 | Implementation | Tool | Execution Mechanism | Risk |
 |---------------|------|---------------------|------|
 | `WikiSearchToolExecutor` | `wiki_search` | Local SQLite FTS5 query | Low (read-only) |
-| `SkillLoadToolExecutor` | `skill_load` | Reads SKILL.md from embedded resources or user directory; returns structured wrapped content | Low |
-| `AskUserInputToolExecutor` | `ask_user_input` | Shows native WPF dialog with structured options; returns user selection | Low |
-| `PresentFilesToolExecutor` | `present_files` | Copies files from workspace to artifacts directory; triggers WebView2 side panel refresh | Low |
+| `SkillLoadToolExecutor` | `skill_load` | Reads SKILL.md from embedded resources or `%LOCALAPPDATA%/MySecondBrain/skills/`; returns structured wrapped content | Low |
+| `AskUserInputToolExecutor` | `ask_user_input` | Shows native WPF dialog with structured options; returns user selection. **Always available** — cannot be disabled. | Low |
+| `PresentFilesToolExecutor` | `present_files` | Copies files from **per-chat workspace** to **per-chat artifacts** `artifacts/{chat-id}/`; triggers WebView2 side panel refresh. Version tracking by filename within chat. | Low |
 | `ImageSearchToolExecutor` | `image_search` | Google/Bing Image Search API via `ISearchProvider`; returns thumbnail URLs, dimensions, source pages | Low |
 
 **Key design decisions:**
-- Matching Anthropic's schemas means models (Claude, GPT-4, Gemini) already know how to use these tools from training
-- `bash` replaces the original `terminal` executor; `text_editor` merges `file_generate` + `file_edit`
+- Schemas are provider-agnostic (Roo Code pattern) — designed for instruction-following by ANY model, not just Claude
+- `text_editor` (Anthropic text_editor_20250728) REPLACED by `read_file` + `apply_diff` + `write_to_file` + `list_files` + `search_files`
+- `bash` executes in per-chat workspace `workspace/{chat-id}/` — workspace persists with chat, deleted on chat deletion
 - `web_search` and `web_fetch` are server tools in Anthropic's ecosystem, reimplemented as client tools with identical interfaces
 - `memory` wraps a SQLite store (not the flat-file `_memory.md` from the original N12 spec)
 - `skill_load` is the skill activation mechanism per the Agent Skills standard
 - `ask_user_input` replaces prose-based confirmations with structured WPF dialogs (pattern from claude.ai consumer)
-- `present_files` bridges workspace (scratch zone) to artifacts directory; model signals deliverable completion
+- `present_files` bridges per-chat workspace to per-chat artifacts; model signals deliverable completion
 - `image_search` is a dedicated image-finding tool separate from `web_search`, using the same `ISearchProvider` backend with image-specific search parameters
 
 **Ref:** [tech-sourcing #38](../tech-sourcing.md#38-anthropic-tool-schema-adoption), [skills-integration.md](skills-integration.md#5-tool-surface)
@@ -378,18 +402,19 @@ public enum ToolRiskLevel { Low, Medium, High }
 ---
 
 ### `IToolOrchestrator`
-Manages the function-calling loop: AI requests tool → validate → confirm → execute → feed result back.
+Manages the function-calling loop: AI requests tool → validate → confirm → execute → feed result back. Supports **parallel execution** — when the model sends multiple `tool_use` blocks, independent tools execute concurrently via `Task.WhenAll`.
 
 ```csharp
 public interface IToolOrchestrator
 {
     // Process tool calls from an AI response, returning results for the next LLM call
+    // Independent tools execute in parallel (Task.WhenAll, max 10 concurrent)
     Task<IReadOnlyList<ToolResult>> ProcessToolCallsAsync(
         IReadOnlyList<ToolCall> toolCalls,
         ToolAutoApprovalSettings settings,
         CancellationToken ct);
 
-    // Get available tool definitions to send to the LLM
+    // Get available tool definitions to send to the LLM (14 tools when all enabled)
     IReadOnlyList<ToolDefinition> GetAvailableToolDefinitions();
 
     // Check if a specific tool is enabled
@@ -399,6 +424,13 @@ public interface IToolOrchestrator
     ToolAutoApprovalSettings GetAutoApprovalSettings();
 }
 ```
+
+**Parallel Execution Model (H15):**
+- Independent tools (`web_search` + `read_file` on different files, `list_files` + `wiki_search`) execute concurrently
+- Dependencies detected and sequentialized (model expected to avoid batching dependent calls)
+- Maximum 10 concurrent tool executions; additional tools queued
+- Each tool execution is independent — one failure does not block others
+- UI displays: "⚡ Running [N] tools in parallel…" → "⚡ [N] tools completed in [T]ms"
 
 ---
 
@@ -447,13 +479,13 @@ public record SkillContent(
 );
 
 public record SkillDependencies(
-    IReadOnlyList<string> Tools,        // e.g., ["bash", "text_editor"]
+    IReadOnlyList<string> Tools,        // e.g., ["bash", "write_to_file", "apply_diff"]
     IReadOnlyList<string> Packages,     // e.g., ["python", "openpyxl"]
     IReadOnlyList<string> System        // e.g., ["libreoffice"]
 );
 ```
 
-**Implementation:** `AgentSkillService` — scans embedded resources + `%LOCALAPPDATA%/MySecondBrain/skills/` + `~/.agents/skills/` + `~/.claude/skills/`. Parses YAML frontmatter. Returns structured wrapped content on activation. Tracks activation state per session.
+**Implementation:** `AgentSkillService` — scans embedded resources + `%LOCALAPPDATA%/MySecondBrain/skills/` only. Parses YAML frontmatter. Returns structured wrapped content on activation. Tracks activation state per session. Cross-client paths (`.agents/`, `.claude/`) removed — only embedded and user paths are scanned.
 
 **Ref:** [skills-integration.md](skills-integration.md#4-skill-activation-skill_load-tool)
 
@@ -778,12 +810,19 @@ public interface IWikiIndexRepository
 public interface IUsageRepository
 {
     Task RecordUsageAsync(UsageRecord record);
-    Task<IReadOnlyList<UsageRecord>> GetUsageAsync(DateTimeOffset from, DateTimeOffset to);
-    Task<UsageSummary> GetSummaryAsync(DateTimeOffset from, DateTimeOffset to);
+    Task<IReadOnlyList<UsageRecord>> GetUsageAsync(DateTimeOffset from, DateTimeOffset to,
+        string? provider = null, string? model = null, int? tier = null);
+    Task<UsageSummary> GetSummaryAsync(DateTimeOffset from, DateTimeOffset to,
+        string? provider = null, string? model = null, int? tier = null);
     Task<IReadOnlyList<UsageByProvider>> GetByProviderAsync(DateTimeOffset from, DateTimeOffset to);
     Task<IReadOnlyList<UsageByModel>> GetByModelAsync(DateTimeOffset from, DateTimeOffset to);
     Task<IReadOnlyList<UsageByChat>> GetByChatAsync(DateTimeOffset from, DateTimeOffset to);
     Task<FeedbackSummary> GetFeedbackSummaryAsync(DateTimeOffset from, DateTimeOffset to);
+    // New: cache/latency-specific queries for enriched UsageRecord
+    Task<CacheSummary> GetCacheSummaryAsync(DateTimeOffset from, DateTimeOffset to,
+        string? provider = null, string? model = null);
+    Task<LatencyDistribution> GetLatencyDistributionAsync(DateTimeOffset from, DateTimeOffset to,
+        string? provider = null, string? model = null);
 }
 ```
 
@@ -1371,22 +1410,26 @@ UI Layer (Tier1Overlay, Tier2CommandBar, MainWindow)
     │       ├── IWikiFileWatcher
     │       └── IWikiGitService → LibGit2Sharp
     │
-    ├── IToolOrchestrator
-    │       ├── IToolExecutor × 10
-    │       │       ├── BashToolExecutor (bash) → cmd.exe / bash.exe / WSL
-    │       │       ├── TextEditorToolExecutor (text_editor) → System.IO + DiffPlex
+    ├── IToolOrchestrator (parallel: Task.WhenAll, max 10 concurrent)
+    │       ├── IToolExecutor × 14
+    │       │       ├── ReadFileToolExecutor (read_file) → System.IO + approval gate
+    │       │       ├── ListFilesToolExecutor (list_files) → System.IO.Directory + approval gate
+    │       │       ├── SearchFilesToolExecutor (search_files) → Regex + System.IO + approval gate
+    │       │       ├── ApplyDiffToolExecutor (apply_diff) → System.IO + SEARCH/REPLACE parser
+    │       │       ├── WriteToFileToolExecutor (write_to_file) → System.IO
+    │       │       ├── BashToolExecutor (bash) → cmd.exe / bash.exe / WSL (per-chat workspace)
     │       │       ├── WebSearchToolExecutor (web_search) → ISearchProvider
     │       │       ├── WebFetchToolExecutor (web_fetch) → HttpClient
-    │       │       ├── MemoryToolExecutor (memory) → SQLite memory store
+    │       │       ├── ImageSearchToolExecutor (image_search) → ISearchProvider
     │       │       ├── WikiSearchToolExecutor (wiki_search) → SQLite FTS5
+    │       │       ├── MemoryToolExecutor (memory) → SQLite memory store
     │       │       ├── SkillLoadToolExecutor (skill_load) → ISkillService
-    │       │       ├── AskUserInputToolExecutor (ask_user_input) → WPF dialog
-    │       │       ├── PresentFilesToolExecutor (present_files) → System.IO + WebView2
-    │       │       └── ImageSearchToolExecutor (image_search) → ISearchProvider
+    │       │       ├── AskUserInputToolExecutor (ask_user_input) → WPF dialog (always available)
+    │       │       └── PresentFilesToolExecutor (present_files) → System.IO + WebView2 (per-chat artifacts)
     │       └── ISearchProvider
     │
     ├── ISkillService
-    │       └── Embedded resources + %LOCALAPPDATA% + ~/.agents/skills/
+    │       └── Embedded resources + %LOCALAPPDATA%/MySecondBrain/skills/
     │
     ├── ISkillLoader
     │       └── ISkillService (reads SKILL.md, wraps in <skill_content>)
@@ -1420,4 +1463,4 @@ UI Layer (Tier1Overlay, Tier2CommandBar, MainWindow)
 
 ---
 
-*Abstractions document — updated 2026-06-24. Tool surface: 10 tools (5 matching Anthropic schemas + 5 custom). Added ISkillService and ISkillLoader for Agent Skills integration. Artifacts rendering shifted from WPF renderers to hybrid WPF chat + WebView2 artifacts panel. See also: [`architecture.md`](architecture.md), [`tech-stack.md`](tech-stack.md), [`skills-integration.md`](skills-integration.md).*
+*Abstractions document — updated 2026-06-25. Tool surface: 14 provider-agnostic tools (5 file operations replacing text_editor + 4 Anthropic-matched + 5 custom). IToolOrchestrator supports parallel execution (Task.WhenAll, max 10 concurrent). IUsageRepository extended with cache/latency/tier filtering. Skills discovery reduced to 2 locations (embedded + %LOCALAPPDATA%/MySecondBrain/skills/). See also: [`architecture.md`](architecture.md), [`tech-stack.md`](tech-stack.md), [`skills-integration.md`](skills-integration.md).*

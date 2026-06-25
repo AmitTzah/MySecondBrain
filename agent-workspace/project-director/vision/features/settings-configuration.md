@@ -30,7 +30,7 @@ A dedicated screen containing all global configuration options, organized into 1
 - **Pricing:** Budget alerts, cost tracking (S5)
 - **Security:** API key encryption status
 - **Diagnostics:** Debug logging configuration — log level, 8 per-category toggles, open logs folder, clear logs (A11)
-- **System Info:** Comprehensive reference of all app data locations — paths, purposes, sizes, editability. Also accessible from "?" icon in app header (A14, new)
+- **System Info:** Comprehensive reference of all app data locations — paths, purposes, sizes, editability. Also accessible from "?" icon in app header (Z, new)
 - **Maintenance:** Database compaction (A9)
 
 ### A2. Default Profile Selection
@@ -134,7 +134,7 @@ Manages AI-stored memories (SQLite-backed, Anthropic `memory_20250818` schema). 
 - **Storage Size:** "Memory storage: [size] across [N] entries."
 - **Per-Chat Default:** Toggle: "Enable memory for new chats by default." (Default: OFF). New chats inherit this as the initial state of the textbox toolbar "🧠 Mem" toggle.
 
-### A14. System Info (NEW)
+### Z. System Info (NEW)
 
 A comprehensive reference of every file and folder the app writes to or reads from on the user's computer. Full spec: [`features/app-data-locations.md`](app-data-locations.md).
 

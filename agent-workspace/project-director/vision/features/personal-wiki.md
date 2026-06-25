@@ -111,7 +111,7 @@ The primary mechanism for creating and updating wiki content.
 - Each result shows: filename and H1 title
 - **Selecting a file:** Injects full content into chat context
 - **Content too large (>~8K tokens):** Injects summarized excerpt (H1 + all H2 headings + first paragraph of each section) with note: "[Full content available in Wiki Browser]"
-- AI can also autonomously query wiki via [wiki_search tool (H6)](tool-use-agents.md)
+- AI can also autonomously query wiki via [wiki_search tool (H10)](tool-use-agents.md)
 
 ### N8. AI Wiki Access Restrictions
 
@@ -207,5 +207,5 @@ Automatically maintained at wiki directory root. Regenerated after every wiki ch
 - N6 stores snapshots; O6 (database compaction) may reclaim space
 - N8 restricts H6 (bash), H4 (apply_diff), and H5 (write_to_file) from targeting wiki directory
 - N10 reads N11 (index.md); N11 is regenerated after N5 saves
-- H6 (wiki_search tool) queries N2 index for AI agent use
-- AI Memory is now handled by the separate `memory` tool (H5, W8) backed by SQLite — NOT the `_memory.md` wiki file. The original N12 (AI Memory via `_memory.md`) has been replaced by this cleaner separation.
+- H10 (wiki_search tool) queries N2 index for AI agent use
+- AI Memory is now handled by the separate `memory` tool (H11, W8) backed by SQLite — NOT the `_memory.md` wiki file. The original N12 (AI Memory via `_memory.md`) has been replaced by this cleaner separation.

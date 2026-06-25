@@ -14,7 +14,7 @@ The filename is the entire artifact identity mechanism. There is no `artifact_id
 | Same filename | New version of same artifact (v2, v3...) |
 | Different filename | New, unrelated artifact (v1) |
 
-The model has zero version awareness. If the user says "call it v4," the model writes to `report-v4.md` — a new artifact. If the user says "add item 4" and the model `str_replace`s `report.md`, the app detects the same filename → v2. Version numbers are purely client-side, tracked per filename within a chat.
+The model has zero version awareness. If the user says "call it v4," the model writes to `report-v4.md` — a new artifact. If the user says "add item 4" and the model `apply_diff`s `report.md`, the app detects the same filename → v2. Version numbers are purely client-side, tracked per filename within a chat.
 
 ---
 
@@ -22,9 +22,9 @@ The model has zero version awareness. If the user says "call it v4," the model w
 
 An artifact is a file surfaced in the WebView2-powered side panel. The primitive sequence:
 
-1. Model writes a file to the **workspace** using `text_editor` or `bash`
+1. Model writes a file to the **per-chat workspace** using `write_to_file`, `apply_diff`, or `bash`
 2. Model calls `present_files` pointing at that file
-3. App copies file from workspace to **artifacts directory**, renders it in WebView2 side panel
+3. App copies file from per-chat workspace to **per-chat artifacts directory**, renders it in WebView2 side panel
 
 There is no `create_artifact` or `update_artifact` tool. The word "artifact" does not appear in any tool name. It is entirely a client-side label for a presented file. The model just writes files and presents them.
 
@@ -49,7 +49,7 @@ Chat conversation rendering stays WPF-native (FlowDocument + ContentBlockRendere
 | Copy | Raw content to clipboard |
 | Save to Disk | Export file to user-chosen path |
 | Save to Wiki | Launch Write-to-Wiki pipeline (N5) with content pre-filled |
-| Inline section edit | Highlight text in rendered Markdown → "Edit with AI" → targeted `str_replace` |
+| Inline section edit | Highlight text in rendered Markdown → "Edit with AI" → targeted `apply_diff` |
 | "Send error to chat" | On render error: copies error into chat for model to diagnose |
 
 Built-in side-by-side and unified diff views between any two versions.
@@ -58,69 +58,74 @@ Built-in side-by-side and unified diff views between any two versions.
 
 ## 2. Filesystem Layout — Workspace vs Artifacts
 
-MySecondBrain uses a two-zone model matching Claude.ai's pattern:
+MySecondBrain uses a per-chat two-zone model:
 
 | Path | Access | Purpose | Cleanup | Equivalent |
 |------|--------|---------|---------|------------|
-| `%LOCALAPPDATA%/MySecondBrain/workspace/` | **Read/write** | Scratch/working space — bash execution, temp files, intermediate work. Invisible to user. | 24h auto-cleanup | Claude's `/home/claude/` |
-| Artifacts directory (app-managed) | **Read/write** | Final deliverables — presented files land here. Watched by side panel. | Persists with chat | Claude's `/mnt/user-data/outputs/` |
-| Wiki directory (user-chosen) | **Read-only** from bash | User's personal `.md` knowledge base. Writes only via `text_editor` + N5 pipeline. | N/A (user-managed) | No Claude equivalent |
+| `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/` | **Read/write** | Scratch/working space — bash execution, temp files, intermediate work. Invisible to user. | On chat deletion; orphan cleanup on startup | Claude's `/home/claude/` |
+| `%LOCALAPPDATA%/MySecondBrain/artifacts/{chat-id}/` | **Read/write** | Final deliverables — presented files land here. Watched by side panel. | On chat deletion | Claude's `/mnt/user-data/outputs/` |
+| Wiki directory (user-chosen) | **Read-only** from bash | User's personal `.md` knowledge base. Writes only via apply_diff/write_to_file + N5 pipeline. | N/A (user-managed) | No Claude equivalent |
 | `%LOCALAPPDATA%/MySecondBrain/skills/` | **Read-only** | User-added community skills | Survives app updates | Claude's `/mnt/skills/private/` |
 
 ### The `present_files` Bridge
 
-Model writes to workspace (scratch zone), calls `present_files(["file"])` → app copies to artifacts directory → surfaced in side panel. Auto-copy: if a path passed to `present_files` is outside the artifacts directory, it's copied there automatically.
+Model writes to per-chat workspace (scratch zone), calls `present_files(["file"])` → app copies to per-chat artifacts directory → surfaced in side panel. Auto-copy: if a path passed to `present_files` is outside the artifacts directory, it's copied there automatically.
 
 ### Workspace Isolation (bash)
 
-All `bash` commands execute in the workspace directory. Absolute paths outside workspace blocked pre-execution. Wiki read-only from bash. Workspace cleaned up every 24h on app startup.
+All `bash` commands execute in the per-chat workspace directory `workspace/{chat-id}/`. Absolute paths outside workspace blocked pre-execution. Wiki read-only from bash. Workspace created on chat creation, deleted on chat deletion. Orphan workspace directories (no matching chat in SQLite) cleaned up on app startup.
 
 ---
 
-## 3. The Complete Tool Set (10 Tools)
+## 3. The Complete Tool Set (14 Tools)
 
-Tools match Anthropic's trained-in schemas where possible. Models (Claude, GPT-4, Gemini) already know how to use these from training.
+Tools use provider-agnostic schemas (Roo Code pattern) — designed for instruction-following by ANY model. The former `text_editor` (Anthropic text_editor_20250728) is replaced by 5 separate file operation tools for finer-grained safety control.
 
-### File Tools (consolidated into `text_editor`)
-
-MySecondBrain uses Anthropic's `text_editor_20250728` schema — a single tool with four commands, replacing Claude.ai's separate `view`/`create_file`/`str_replace` tools:
+### File Operations (5 tools — replacing text_editor)
 
 ```javascript
-// ── VIEW ──
-text_editor({
-  command: "view",
-  path: "/path/to/file-or-directory"
+// ── READ ── (with offset/limit, binary detection, blocked-path enforcement)
+read_file({
+  path: "/path/to/file",
+  offset: 0,        // optional: start line
+  limit: 2000       // optional: max lines
 })
 
-// ── CREATE (fails if path exists) ──
-text_editor({
-  command: "create",
-  path: "filename.ext",
-  file_text: "...full content..."
+// ── LIST ── (directory listing, recursive option, structured JSON output)
+list_files({
+  path: "/path/to/dir",
+  recursive: false
 })
 
-// ── EDIT (exact match required) ──
-text_editor({
-  command: "str_replace",
-  path: "filename.ext",
-  old_str: "exact text — must appear exactly once",
-  new_str: "replacement"   // omit to delete
+// ── SEARCH ── (regex search across files, file_pattern glob filter)
+search_files({
+  path: "/path/to/dir",
+  regex: "pattern",
+  file_pattern: "*.ts"  // optional glob filter
 })
 
-// ── APPEND ──
-text_editor({
-  command: "insert",
+// ── DIFF/EDIT ── (SEARCH/REPLACE block parser, byte-for-byte match)
+apply_diff({
   path: "filename.ext",
-  new_str: "text to append"
+  diff: "<<<<<<< SEARCH\n:start_line:1\n-------\nexact content\n=======\nnew content\n>>>>>>> REPLACE"
+})
+
+// ── WRITE ── (create/overwrite, safety flag, auto-create parent dirs)
+write_to_file({
+  path: "filename.ext",
+  content: "...full content..."
 })
 ```
 
-**Critical rules:**
-- `old_str` must match byte-for-byte including whitespace, and appear exactly once
-- Always `view` before `str_replace`
-- After any `str_replace`, all prior `view` output is stale — MUST re-view
-- `create` fails if path exists → forces `str_replace` for updates
-- Omitting `new_str` in `str_replace` deletes the matched text
+**Approval model for read tools (read_file, list_files, search_files):**
+- Workspace/artifacts/wiki paths: Auto-approved
+- Outside workspace: Configurable per-tool (Auto-Approve / Ask [default] / Disabled)
+- Blocked paths (`C:\Windows\`, `C:\Program Files\`, `.env`): Always denied
+
+**Approval model for write tools (apply_diff, write_to_file):**
+- Workspace + artifacts only — outside these is ALWAYS blocked
+- `write_to_file` with overwrite=false fails if path exists (safety gate)
+- `apply_diff` re-reads file after applying (stale context guard)
 
 ### Shell Tool
 
@@ -130,7 +135,7 @@ bash({
 })
 ```
 
-Runs in workspace-isolated `%LOCALAPPDATA%/MySecondBrain/workspace/`. cmd.exe on Windows, with Git Bash/WSL fallback for `.sh` scripts. Writes outside workspace require user confirmation.
+Runs in per-chat workspace-isolated `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/`. cmd.exe on Windows, with Git Bash/WSL fallback for `.sh` scripts. Writes outside workspace require user confirmation. Workspace created on chat creation, deleted on chat deletion.
 
 ### Web Search Tools
 
@@ -231,13 +236,11 @@ Shipped as embedded resources in `MySecondBrain.UI.dll`:
 
 ### Skill Discovery
 
-Four locations scanned at startup:
+Two locations scanned at startup (cross-client paths removed per 2026-06-25 vision update):
 1. **Embedded** `Skills/anthropic/` — 11 built-in, updated with app
 2. **User** `%LOCALAPPDATA%/MySecondBrain/skills/` — community skills, survives updates
-3. **Cross-client** `%USERPROFILE%/.agents/skills/` — from Claude Code, Cursor, etc.
-4. **Cross-client** `%USERPROFILE%/.claude/skills/` — pragmatic Claude Code compatibility
 
-Name collisions: user overrides built-in, cross-client overrides user.
+Name collisions: user overrides built-in.
 
 ---
 
@@ -248,7 +251,7 @@ Deep Research is a skill, not a custom state machine. The model follows a resear
 **Flow:**
 1. User asks for research → Model matches Deep Research skill description → calls `skill_load("deep-research")`
 2. Model follows protocol: plan → `web_search` (multiple queries) → `web_fetch` (promising sources) → synthesize
-3. Model writes report via `text_editor.create` in workspace
+3. Model writes report via `write_to_file` in workspace
 4. Model calls `present_files(["report.md"])` → report appears in WebView2 side panel with citations
 
 **Progress:** Visible naturally as tool calls stream in chat — no custom progress UI needed. "Searching for: fusion energy breakthroughs 2025" appears as a `web_search` tool call. "Reading: iter.org" appears as a `web_fetch` tool call.
@@ -265,9 +268,9 @@ Deep Research is a skill, not a custom state machine. The model follows a resear
 
 | User says | Model does | App records |
 |-----------|-----------|-------------|
-| "Add item 4" | `text_editor.str_replace` same path | New version of same artifact |
+| "Add item 4" | `apply_diff` same path | New version of same artifact |
 | "Rewrite completely" | `bash` overwrite + `present_files` | New version of same artifact |
-| "Call it v4" | `text_editor.create` new path + `present_files` | New independent artifact |
+| "Call it v4" | `write_to_file` new path + `present_files` | New independent artifact |
 | "Go back to v1" | Nothing | Client UI navigation only |
 | Edits a prior message | Nothing (sees different branch) | Separate artifact history |
 
@@ -294,14 +297,14 @@ No `_memory.md` wiki file — the original N12 approach was replaced by SQLite m
 User: "Create a React dashboard for sales data"
   → Model: skill_load("web-artifacts-builder")
   → Model: bash("bash scripts/init-artifact.sh sales-dashboard")
-  → Model: text_editor.str_replace (develops React components)
+  → Model: apply_diff (develops React components)
   → Model: bash("bash scripts/bundle-artifact.sh")
   → Model: present_files(["bundle.html"])
-  → App: copies bundle.html to artifacts directory → renders in WebView2 panel
+  → App: copies bundle.html to per-chat artifacts directory → renders in WebView2 panel
   → User sees: interactive React dashboard in side panel (v1)
 
 User: "Add a revenue chart"
-  → Model: text_editor.str_replace (adds chart component)
+  → Model: apply_diff (adds chart component)
   → Model: bash("bash scripts/bundle-artifact.sh")
   → Model: present_files(["bundle.html"])
   → App: detects same filename → creates v2 → shows diff (v1→v2)
@@ -322,13 +325,17 @@ System prompt =
     [persona.system_message]           ← only if non-empty
     [behavioral_instructions]          ← always
     [date_time_context]                ← always
-    [platform_context]                 ← always (Windows, cmd.exe, workspace path)
+    [platform_context]                 ← always (Windows, cmd.exe, per-chat workspace path)
     [<available_skills> block]         ← only if ≥1 skill enabled
     [skill_usage_instructions]         ← only if ≥1 skill enabled
 
-Tools array =
+Tools array (14 when all enabled) =
+    [read_file]                        ← only if enabled
+    [list_files]                       ← only if enabled
+    [search_files]                     ← only if enabled
+    [apply_diff]                       ← only if enabled
+    [write_to_file]                    ← only if enabled
     [bash]                             ← only if enabled
-    [text_editor]                      ← only if enabled
     [web_search]                       ← only if enabled
     [web_fetch]                        ← only if enabled
     [image_search]                     ← only if enabled
@@ -361,17 +368,17 @@ Tools array =
 |----------|-------------|--------|
 | Artifact identity | Filename within chat | Model naturally handles context by filename |
 | Versioning | Client-side, per file-write event | Model has zero version state |
-| File tools | `text_editor` (consolidated) | Anthropic's trained-in `text_editor_20250728` schema |
+| File tools | 5 decomposed tools (read_file, list_files, search_files, apply_diff, write_to_file) | Finer-grained safety: reads auto-approved in workspace, writes restricted to workspace+artifacts. Provider-agnostic schemas. |
 | Skill activation | `skill_load` tool with enum | Embedded resources not on model's filesystem; enum prevents hallucination |
-| Workspace model | Two-zone (workspace + artifacts) | Clean separation of working vs deliverable |
+| Workspace model | Per-chat two-zone (workspace/{chat-id}/ + artifacts/{chat-id}/) | Clean separation of working vs deliverable; per-chat isolation |
 | `present_files` | Explicit bridge | Model signals intent; temp files stay hidden |
 | Rendering | WebView2 (artifacts) + WPF (chat) | Best of both: browser-native for artifacts, native WPF for conversation |
 | Memory | SQLite, separate from wiki | Wiki = user knowledge, Memory = AI facts |
 | Deep Research | Skill, not state machine | Zero custom code; model follows protocol naturally |
-| Tools count | 10 (including image_search) | Image search is a distinct tool with different API, safety, and use criteria |
-| Pre-edit reads | Mandatory re-view after str_replace | Prevents byte-mismatch failures from stale context |
-| `create` fails if exists | Yes | Forces intentional updates via `str_replace` |
+| Tools count | 14 provider-agnostic tools (5 file ops + 4 Anthropic-matched + 5 custom) | 5 file ops replace text_editor for finer-grained safety |
+| Pre-edit reads | read_file before apply_diff | Prevents byte-mismatch failures from stale context |
+| `write_to_file` overwrite safety | Fails if path exists and overwrite=false | Forces intentional updates via apply_diff |
 
 ---
 
-*Developer reference — created 2026-06-24. See [`vision/vision-summary.md`](../vision/vision-summary.md) for the product specification. See [`skills-integration.md`](skills-integration.md) for detailed skills subsystem design. See [`abstractions.md`](abstractions.md) for C# interface contracts.*
+*Developer reference — updated 2026-06-25. See [`vision/vision-summary.md`](../vision/vision-summary.md) for the product specification. See [`skills-integration.md`](skills-integration.md) for detailed skills subsystem design. See [`abstractions.md`](abstractions.md) for C# interface contracts.*

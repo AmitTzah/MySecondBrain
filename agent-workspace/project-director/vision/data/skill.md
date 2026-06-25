@@ -59,6 +59,6 @@ Metadata about an installed Agent Skill. Skills are Markdown instruction files (
 
 - Defined by: [`features/agent-skills.md`](../features/agent-skills.md) §W1-W5
 - Enabled in: [`features/settings-configuration.md`](../features/settings-configuration.md) §A12
-- Activated by: [`features/tool-use-agents.md`](../features/tool-use-agents.md) §H7 (skill_load tool)
+- Activated by: [`features/tool-use-agents.md`](../features/tool-use-agents.md) §H12 (skill_load tool)
 - Listed in: System prompt catalog (W2, W7)
 - Not persisted: Skills are re-discovered from filesystem on each app launch. This entity is in-memory only during the app session.

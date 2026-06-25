@@ -97,7 +97,7 @@ Three-region split (N4): `Grid` with two `GridSplitter`s — one vertical (tree 
 
 ### Settings Screen
 
-14 categories organized as a list of section headers. Use `ListBox` with grouping or a flat `ScrollViewer` with `Expander` controls per section. Each section's content bound to a subsection ViewModel.
+16 categories (plus System Info as 17th planned in F11) organized as a list of section headers. Use `ListBox` with grouping or a flat `ScrollViewer` with `Expander` controls per section. Each section's content bound to a subsection ViewModel.
 
 ### Code Block Rendering
 
@@ -670,7 +670,7 @@ bash tool receives command
     │   └── Neither? → Error: "bash or WSL required for .sh scripts"
     │
     ├── Contains heredoc (cat > file << 'EOF')?
-    │   └── Redirect: write file via text_editor tool instead
+    │   └── Redirect: write file via write_to_file or apply_diff tool instead
     │
     └── Everything else → cmd.exe /c "command"
          (python, pip, npm, pandoc — cross-platform, no translation needed)
@@ -680,19 +680,20 @@ bash tool receives command
 - Check `C:\Program Files\Git\bin\bash.exe` (Git for Windows)
 - Check `wsl --status` (Windows Subsystem for Linux)
 - Store availability in tool description for model awareness
-- If neither available: model adapts — uses text_editor for file writes, skips .sh scripts
+- If neither available: model adapts — uses write_to_file/apply_diff for file writes, skips .sh scripts
 
-**Shared scripts between skills:** The `scripts/office/` directory is identical in both docx and xlsx skills. At runtime, the skill loader copies bundled scripts to the workspace so both skills can reference them.
+**Shared scripts between skills:** The `scripts/office/` directory is identical in both docx and xlsx skills. At runtime, the skill loader copies bundled scripts to the per-chat workspace so both skills can reference them.
 
 ### Workspace Isolation
 
-All `bash` commands execute in `%LOCALAPPDATA%/MySecondBrain/workspace/`:
+All `bash` commands execute in per-chat `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/`:
 
-- Working directory set to workspace path via `Process.StartInfo.WorkingDirectory`
+- Working directory set to per-chat workspace path via `Process.StartInfo.WorkingDirectory`
 - Absolute paths outside workspace detected and blocked pre-execution (scan for `C:\`, `%`, `~`)
-- Wiki directory symlinked read-only into workspace for reference
-- Wiki writes blocked from bash; must go through `text_editor` + Write-to-Wiki pipeline
-- Workspace cleaned up periodically (files older than 24h removed on app startup)
+- Wiki directory read-only from bash
+- Wiki writes blocked from bash; must go through apply_diff/write_to_file + Write-to-Wiki pipeline
+- Workspace created on chat creation, deleted on chat deletion
+- Orphan workspace directories (no matching chat in SQLite) cleaned up on app startup
 
 ### WebView2 for Artifacts Panel
 
@@ -707,16 +708,14 @@ The artifacts panel uses an embedded Microsoft Edge WebView2 control:
 
 ### Skill Discovery on Windows
 
-Skills are discovered from four locations on Windows:
+Skills are discovered from two locations on Windows (cross-client path scanning removed per 2026-06-25 vision update):
 
 | Location | Path | Purpose |
 |----------|------|---------|
 | Built-in | Embedded resources in `MySecondBrain.UI.dll` | 11 Anthropic skills, updated with app |
-| User | `%LOCALAPPDATA%/MySecondBrain/skills/` | User-created or downloaded |
-| Cross-client (agents) | `%USERPROFILE%/.agents/skills/` | From Claude Code, Cursor, etc. |
-| Cross-client (claude) | `%USERPROFILE%/.claude/skills/` | Pragmatic Claude Code compatibility |
+| User | `%LOCALAPPDATA%/MySecondBrain/skills/` | User-created or downloaded community skills |
 
-The skill loader scans each directory for subdirectories containing `SKILL.md`. Built-in skills are read from embedded resources via `Assembly.GetManifestResourceStream()`.
+The skill loader scans each directory for subdirectories containing `SKILL.md`. Built-in skills are read from embedded resources via `Assembly.GetManifestResourceStream()`. Name collisions: user overrides built-in.
 
 ### Embedded Resource Configuration
 

@@ -35,7 +35,7 @@ The model calls `web_search` multiple times with different query angles to gathe
 The user sees each search query and result count in real-time as tool calls stream.
 
 ### Step 4: Source Reading
-The model selects the most promising URLs from search results and calls `web_fetch` on each. Per the URL constraint (H4), it can only fetch URLs seen in prior search results.
+The model selects the most promising URLs from search results and calls `web_fetch` on each. Per the URL constraint (H8), it can only fetch URLs seen in prior search results.
 
 - `web_fetch("https://iter.org/fusion-outlook-2025")` → page content extracted
 - `web_fetch("https://techcrunch.com/fusion-investment-6b")` → page content extracted

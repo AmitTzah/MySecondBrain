@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The Settings screen provides a single, organized interface for configuring all global application settings. It uses a sidebar + content layout: a category sidebar on the left navigates between 18 setting categories; the selected category's settings appear in the content area on the right. All settings changes take effect immediately — there is no "Save" button.
+The Settings screen provides a single, organized interface for configuring all global application settings. It uses a sidebar + content layout: a category sidebar on the left navigates between 19 setting categories; the selected category's settings appear in the content area on the right. All settings changes take effect immediately — there is no "Save" button.
 
 ## Layout
 
@@ -43,9 +43,6 @@ Categories listed vertically:
 19. ℹ️ System Info
 
 Active category highlighted. Clicking a category changes the content area.
-
-17. 🩺 Diagnostics
-18. ℹ️ System Info
 
 At bottom:
 - "Re-run Onboarding Wizard" link → opens [`onboarding-wizard.html`](onboarding-wizard.html)
@@ -116,7 +113,7 @@ Scrollable area showing the active category's settings. Each category section ha
   - algorithmic-art, canvas-design, frontend-design, theme-factory (creative skills)
   - web-artifacts-builder, webapp-testing, skill-creator (dev & meta)
   - Each shows: name, description, source badge (built-in), dependency status indicators (Python ✓/✕, Node.js ✓/✕)
-- **Community Skills:** Skills discovered at `%LOCALAPPDATA%/MySecondBrain/skills/` and cross-client paths. Listed with `source: community` or `source: cross-client` annotation.
+- **Community Skills:** Skills discovered at `%LOCALAPPDATA%/MySecondBrain/skills/`. Listed with `source: community` annotation.
 - **"Enable All" / "Disable All"** quick actions at top.
 - **Skills Count:** "11 built-in, [N] community — [M] enabled."
 - **Inheritance:** New chats inherit these defaults. Per-chat toolbar overrides are temporary.
@@ -167,7 +164,7 @@ Scrollable area showing the active category's settings. Each category section ha
 - **"Open Logs Folder" Button (A11c):** Opens `%LOCALAPPDATA%\MySecondBrain\logs\` in Windows Explorer.
 - **"Clear Logs" Button (A11d):** Deletes all log files with confirmation.
 
-### ℹ️ System Info (A14 — NEW)
+### ℹ️ System Info (Z — NEW)
 - **App Data Locations Table:** Comprehensive reference of every file/folder the app writes to. Columns: Location, Purpose, Size on Disk, "User Can Edit?" badge (✅ Yes / ⚠️ Caution / ❌ No), "Open in Explorer" button.
 - **Entries:** Database file, logs, workspace, artifacts, skills directories, wiki directory, backup directory, settings file.
 - **Clear distinction:** App-managed (don't touch — cleaned on chat deletion), User-editable (wiki, skills).
@@ -263,5 +260,5 @@ Scrollable area showing the active category's settings. Each category section ha
 - Wiki: [`features/personal-wiki.md`](../features/personal-wiki.md) N1
 - Backup: [`features/backup-recovery.md`](../features/backup-recovery.md) R1-R4
 - Hotkeys: [`features/windows-os-integration.md`](../features/windows-os-integration.md) P1
-- Tools: [`features/tool-use-agents.md`](../features/tool-use-agents.md) H1-H10
+- Tools: [`features/tool-use-agents.md`](../features/tool-use-agents.md) H1-H15
 - Data entity: [`data/memory-entry.md`](../data/memory-entry.md), [`data/text-action.md`](../data/text-action.md)

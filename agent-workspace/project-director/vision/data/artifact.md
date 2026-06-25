@@ -71,7 +71,7 @@ Each artifact is identified by its filename within a chat. Same filename within 
 ## Cross-References
 
 - Created by: [`features/artifacts-side-panel.md`](../features/artifacts-side-panel.md) §F1 (workspace-to-artifact pipeline)
-- Triggered by: [`features/tool-use-agents.md`](../features/tool-use-agents.md) §H9 (present_files tool)
+- Triggered by: [`features/tool-use-agents.md`](../features/tool-use-agents.md) §H13 (present_files tool)
 - Rendered in: WebView2 side panel (F2, F6)
 - Version history: F3 (auto-tracked by filename within chat)
 - Garbage collected with parent chat: O5
