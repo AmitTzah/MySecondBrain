@@ -248,16 +248,16 @@ For every feature group in [`feature-inventory.md`](feature-inventory.md), edge 
 
 ### H-New. Workspace Isolation Edge Cases
 
-- **Chat deleted while bash is running in its workspace:** bash process is terminated. Workspace subdirectory queued for deletion (24h grace period).
-- **Two chats write to same filename in artifacts:** No conflict — artifacts are keyed by chat ID + filename. Each chat's artifact is independent.
-- **Workspace disk full:** bash commands fail with "No space left on device." 24h cleanup runs to free space. Notification: "Workspace disk is full. Old workspace files have been cleaned up."
+- **Chat deleted while bash is running in its workspace:** bash process is terminated. Workspace subdirectory deleted along with all chat data.
+- **Two chats write to same filename in artifacts:** No conflict — artifacts are per-chat (`artifacts/{chat-id}/`). Each chat's artifact is independent.
+- **Workspace disk full:** bash commands fail with "No space left on device." User should free disk space or delete old chats. Notification: "Workspace disk is full. Consider deleting old chats to free space."
 - **present_files called with empty array:** Error: "No files specified. Provide at least one file path."
 - **present_files for non-existent file:** "Cannot present '[filename]': file not found in workspace."
-- **Workspace cleanup during active bash execution:** Cleanup skips files locked by running processes. Only idle files >24h are removed.
+- **Workspace persists with chat:** Workspace files persist as long as the chat exists. No time-based cleanup. On chat deletion: workspace/{chat-id}/ and artifacts/{chat-id}/ deleted together.
 
 ### H-New. API History Edge Cases
 
-- **_api_history.json grows very large (long chat with many tool calls):** File viewer handles large files. "Open in External Editor" recommended for >50MB files. The JSON file is cleaned up with workspace (24h after chat close).
+- **_api_history.json grows very large (long chat with many tool calls):** File viewer handles large files. "Open in External Editor" recommended for >50MB files. The JSON file is cleaned up when the chat is deleted.
 - **API call fails before any data written:** UsageRecord created with error fields set. Raw JSON entry appended with error information. Token fields = 0.
 
 ### H-New. File Viewer Tab Edge Cases
@@ -461,7 +461,7 @@ For every feature group in [`feature-inventory.md`](feature-inventory.md), edge 
 - **present_files called with empty array:** Error returned: "No files specified. Provide at least one file path."
 - **present_files called for non-existent workspace file:** "Cannot present '[filename]': file not found in workspace."
 - **present_files tool disabled in chat:** Tool not in tools array. Model cannot call it. Artifacts can still be created if model writes directly to artifacts directory via write_to_file.
-- **Workspace cleanup during active bash execution:** Cleanup skips files currently open (locked by running processes). Only idle files >24h are removed.
+- **Workspace cleanup during chat deletion:** Chat deletion terminates any active bash processes. Workspace/{chat-id}/ deleted with all files.
 - **bash tries to access path outside workspace:** Blocked pre-execution. "Cannot access path outside workspace: [path]. Use write_to_file to save files to workspace or artifacts directory."
 - **bash .sh script requires Git Bash or WSL but neither available:** "This command requires Git Bash or WSL. Install Git for Windows or enable WSL."
 - **Workspace disk full:** bash commands fail with "No space left on device." Workspace cleanup runs immediately to free space. Notification to user: "Workspace disk is full. Old workspace files have been cleaned up."

@@ -132,7 +132,7 @@ Compare any two versions of the same artifact.
 
 - [`data/artifact.md`](../data/artifact.md) — artifact metadata, versions, content
 - Artifact files stored in app data directory (persisted with chat)
-- Workspace files are temporary (24h cleanup) unless presented
+- Workspace files persist with chat — no time-based cleanup
 
 ## Success/Failure States
 

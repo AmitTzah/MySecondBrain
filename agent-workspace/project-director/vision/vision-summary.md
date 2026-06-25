@@ -247,7 +247,7 @@ The following items are flagged for Architect review before technical planning. 
 
 19. ⚠️ **Per-chat workspace isolation** — subdirectories under `workspace/{chat-id}/` prevent inter-chat conflicts, but a malicious model within one chat can still read/write anything within its own workspace. Workspace is app-scoped, not OS-sandboxed.
 
-20. ⚠️ **Raw API JSON log per chat** — `_api_history.json` may grow very large for long conversations with many tool calls. File is cleaned up with workspace (24h after chat close). For persistent debugging, the UsageRecord entity provides structured queryable data.
+20. ⚠️ **Raw API JSON log per chat** — `_api_history.json` may grow very large for long conversations with many tool calls. File is cleaned up when the chat is deleted. For persistent debugging, the UsageRecord entity provides structured queryable data.
 
 21. ⚠️ **Parallel tool execution — model-dependent behavior** — some models may not batch independent tool calls, reducing the benefit of parallel execution. The app handles parallel execution when the model requests it, but cannot force the model to batch calls.
 
@@ -280,7 +280,7 @@ The following items are flagged for Architect review before technical planning. 
 Major updates applied:
 - **14-tool provider-agnostic surface**: text_editor replaced by read_file, list_files, search_files, apply_diff, write_to_file. Tool count 10 → 14. Roo Code pattern. Schemas designed for any model.
 - **Parallel tool execution**: Independent tools run in parallel. Sequential display with indicator.
-- **Per-chat workspace isolation**: Each chat gets own workspace subdirectory. 24h grace period cleanup.
+- **Per-chat workspace isolation**: Each chat gets own workspace subdirectory. Workspace persists with chat — deleted only on chat deletion.
 - **Approval model**: Out-of-workspace read configurable per read-tool. Blocked paths always denied.
 - **X. API History Viewer**: Per-chat raw JSON log. Opens in generic file viewer tab.
 - **Y. Generic File Viewer Tabs**: Read-only tabs alongside chat tabs. Text/code with syntax highlighting, Markdown rendered, images with zoom/pan.

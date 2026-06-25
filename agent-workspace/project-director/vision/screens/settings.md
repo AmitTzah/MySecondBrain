@@ -170,7 +170,7 @@ Scrollable area showing the active category's settings. Each category section ha
 ### ℹ️ System Info (A14 — NEW)
 - **App Data Locations Table:** Comprehensive reference of every file/folder the app writes to. Columns: Location, Purpose, Size on Disk, "User Can Edit?" badge (✅ Yes / ⚠️ Caution / ❌ No), "Open in Explorer" button.
 - **Entries:** Database file, logs, workspace, artifacts, skills directories, wiki directory, backup directory, settings file.
-- **Clear distinction:** App-managed (don't touch), User-editable (wiki, skills), Temporary (workspace, 24h cleanup).
+- **Clear distinction:** App-managed (don't touch — cleaned on chat deletion), User-editable (wiki, skills).
 - Also accessible from: "?" icon in app header → "App Data Locations".
 - Full spec: [`features/app-data-locations.md`](../features/app-data-locations.md)
 

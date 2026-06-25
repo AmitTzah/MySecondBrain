@@ -140,7 +140,7 @@ A comprehensive reference of every file and folder the app writes to or reads fr
 
 - **App Data Locations Table:** Each entry shows: Location (file system path), Purpose (what it's for), Size on Disk (real-time), "User Can Edit?" badge (✅ Yes / ⚠️ Caution / ❌ No), "Open in Explorer" button.
 - **Entries include:** Database file, logs directory, workspace directory, artifacts directory, skills directories (user + cross-client), wiki directory (user-configured), backup directory (user-configured), settings file.
-- **Clear distinction:** App-managed (don't touch), User-editable (wiki, skills), Temporary (workspace, cleaned every 24h).
+- **Clear distinction:** App-managed (don't touch — cleaned on chat deletion), User-editable (wiki, skills).
 - Also accessible from: "?" (Help) icon in the app header bar → "App Data Locations".
 
 ## Data

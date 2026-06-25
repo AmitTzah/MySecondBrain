@@ -136,7 +136,7 @@ Anthropic `bash_20250124` schema. Model executes shell commands in a workspace-i
 - **Workspace:** `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/`. Each chat gets its own sandbox — no conflicts between chats. Working directory locked to the chat's subdirectory.
 - **Safety:** Writes outside workspace require explicit user confirmation via `ask_user_input` (H14). This is a hard-coded override — cannot be auto-approved. Wiki directory is read-only from bash.
 - **Blocked paths:** `C:\Windows\`, `C:\Program Files\`, `.env` files, registry hives — always denied, cannot be overridden.
-- **Workspace cleanup:** When chat deleted/closed: workspace subdirectory queued for deletion (24h grace period). Startup cleanup: delete workspace directories older than 24h.
+- **Workspace lifecycle:** Workspace persists as long as the chat exists — no time-based cleanup. On chat deletion: workspace/{chat-id}/ is deleted along with SQLite records and artifacts/{chat-id}/. On startup: orphaned workspace directories (no matching chat in SQLite) are cleaned up.
 - **bash availability:** Detected at startup. Communicated to model via system prompt: "You are running on Windows. Shell commands use cmd.exe. Python, pip, npm work as expected. .sh scripts require Git Bash or WSL."
 - **Skills integration:** Skills' bundled scripts (Python, Node.js) run via bash. Model follows skill instructions, writes code, executes it, verifies output.
 
@@ -263,7 +263,7 @@ Parallel tool execution appears sequentially in the chat as each tool completes:
 - Each chat gets its own sandbox subdirectory — no conflicts between chats
 - bash, read_file, list_files, search_files, apply_diff, write_to_file are all scoped to the chat's subdirectory by default
 - present_files copies from chat workspace → per-chat `artifacts/{chat-id}/` directory
-- **Cleanup:** When chat deleted/closed: workspace subdirectory queued for deletion (24h grace period). Startup cleanup deletes workspace directories older than 24h.
+- **Cleanup:** Workspace persists with chat. On chat deletion: workspace/{chat-id}/ deleted along with all related data.
 
 ---
 
@@ -296,7 +296,7 @@ Parallel tool execution appears sequentially in the chat as each tool completes:
 
 - Tool call records stored with Messages (tool name, parameters, result)
 - Memory entries stored in SQLite: [`data/memory-entry.md`](../data/memory-entry.md)
-- Workspace files are temporary (24h cleanup) unless presented via `present_files`
+- Workspace files persist with the chat — no time-based cleanup
 - Per-chat raw API log: `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/_api_history.json`
 
 ---

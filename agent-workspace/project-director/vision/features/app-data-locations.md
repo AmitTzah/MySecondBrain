@@ -42,7 +42,7 @@ A comprehensive reference table listing every file and folder the app uses. Colu
 | `%LOCALAPPDATA%/MySecondBrain/msb.db-wal` | SQLite Write-Ahead Log — temporary journal file. Part of normal database operation. | ❌ No — app-managed |
 | `%LOCALAPPDATA%/MySecondBrain/msb.db-shm` | SQLite Shared Memory — temporary index file. Part of normal database operation. | ❌ No — app-managed |
 | `%LOCALAPPDATA%/MySecondBrain/logs/` | Serilog rolling JSON log files — one file per day, retained 30 days. Configured in Settings → Diagnostics. | ⚠️ Caution — safe to delete old logs, but current day's log is in use |
-| `%LOCALAPPDATA%/MySecondBrain/workspace/` | Per-chat sandbox directories for bash/code execution. Subdirectory per chat: `workspace/{chat-id}/`. Cleaned automatically — files older than 24h removed on startup. | ❌ No — auto-managed, cleaned every 24h |
+| `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/` | Per-chat sandbox directories for bash/code execution. Persists as long as the chat exists. Deleted when chat is deleted. | ❌ No — app-managed, cleaned on chat deletion |
 | `%LOCALAPPDATA%/MySecondBrain/artifacts/{chat-id}/` | AI-generated files surfaced via `present_files` — per-chat subdirectory. Cleaned up when source chat is deleted. | ⚠️ Caution — files can be opened/saved externally, but deleting may break artifact references |
 | `%LOCALAPPDATA%/MySecondBrain/skills/` | User-added community Agent Skills. Never overwritten by app updates. Users add skills by copying folders here. | ✅ Yes — user-managed skills directory |
 | `[Wiki Directory]` | User-configured wiki directory (set in Settings → Wiki). Contains user's personal .md knowledge base. | ✅ Yes — user's own files |

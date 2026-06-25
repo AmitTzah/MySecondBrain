@@ -94,7 +94,7 @@ The API History viewer has NO custom UI beyond the header button. All viewing, s
 - Raw API call JSON stored per chat: `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/_api_history.json`
 - Structured usage data stored in SQLite: [`data/usage-record.md`](../data/usage-record.md)
 - The raw JSON file is NOT the source for the Usage Dashboard — that comes from the UsageRecord entity
-- The raw JSON file is cleaned up with the workspace (24h after chat close/delete)
+- The raw JSON file is cleaned up when the chat is deleted (along with workspace and artifacts)
 
 ## Success/Failure States
 
@@ -112,4 +112,4 @@ The API History viewer has NO custom UI beyond the header button. All viewing, s
 - Reads from the per-chat raw JSON log file (appended by every ILLMProvider call)
 - Uses the generic file viewer for display: [`features/file-viewer-tabs.md`](file-viewer-tabs.md)
 - Structured data feeds the Usage Dashboard: [`features/usage-pricing-dashboard.md`](usage-pricing-dashboard.md)
-- Raw JSON file cleaned up with workspace (24h grace period after chat close/delete)
+- Raw JSON file cleaned up when the chat is deleted

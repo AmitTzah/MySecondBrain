@@ -172,7 +172,7 @@ The model uses 14 provider-agnostic tools with Anthropic-flavored naming followi
 
 **Tool Auto-Approval:** Global defaults + per-chat overrides. Out-of-workspace read access configurable per read-tool (Auto-Approve / Ask / Disabled). bash writes outside workspace + apply_diff/write_to_file outside workspace ALWAYS require confirmation or are blocked. Blocked paths never overridable.
 
-**Workspace Isolation:** Per-chat subdirectories. Each chat gets own sandbox. 24h grace period cleanup.
+**Workspace Isolation:** Per-chat subdirectories. Each chat gets own sandbox. Workspace persists with chat — deleted only when chat is deleted.
 
 ### I. Import & Export
 **Spec:** [`features/import-export.md`](features/import-export.md)
@@ -260,7 +260,7 @@ The model uses 14 provider-agnostic tools with Anthropic-flavored naming followi
 - **P7. Session Restore:** Restore previous session's chats and tabs on launch (if A6 enabled).
 - **P8. Per-Monitor DPI Awareness:** Full per-monitor DPI awareness. Crisp rendering at any scaling.
 - **P9. bash Tool — Windows Adaptation:** bash tool named to match Anthropic schema but executes via `cmd.exe`. `.sh` scripts use Git Bash or WSL fallback. Heredocs redirected to `write_to_file`. Cross-platform commands (python, pip, npm) work without translation. bash availability detected at startup and communicated to model via system prompt.
-- **P10. Workspace Isolation:** All bash commands execute in per-chat workspace `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/`. Each chat gets its own sandbox. Working directory locked to chat subdirectory. Absolute paths outside workspace blocked pre-execution. Wiki directory read-only from bash. Workspace cleaned up periodically (files older than 24h). The `write_to_file`/`apply_diff` tools bridge workspace to artifacts. The `present_files` tool signals finished deliverables.
+- **P10. Workspace Isolation:** All bash commands execute in per-chat workspace `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/`. Each chat gets its own sandbox. Working directory locked to chat subdirectory. Absolute paths outside workspace blocked pre-execution. Wiki directory read-only from bash. Workspace persists with chat — deleted only when chat is deleted. The `write_to_file`/`apply_diff` tools bridge workspace to per-chat artifacts. The `present_files` tool signals finished deliverables.
 
 ### Q. Language & RTL Support
 **Spec:** [`features/language-rtl.md`](features/language-rtl.md)

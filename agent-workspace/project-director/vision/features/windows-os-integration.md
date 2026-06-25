@@ -185,10 +185,10 @@ All `bash` commands execute inside `%LOCALAPPDATA%/MySecondBrain/workspace/`:
 - **Working directory:** Set to workspace path via `Process.StartInfo.WorkingDirectory` before each command
 - **Path blocking:** Absolute paths outside workspace detected (scan for `C:\`, `%`, `~`) and blocked pre-execution
 - **Wiki access:** Wiki directory is read-only from bash. Writes to wiki blocked — must go through Write-to-Wiki pipeline (N5)
-- **Cleanup:** Workspace files older than 24h removed on app startup
+- **Cleanup:** Workspace persists with chat. On chat deletion: workspace/{chat-id}/ deleted along with artifacts/{chat-id}/ and SQLite records.
 - **Two-zone model:**
-  - **Workspace** (`%LOCALAPPDATA%/MySecondBrain/workspace/`) — bash execution, temp files, intermediate work. 24h auto-cleanup. Equivalent to Claude's `/home/claude/`.
-  - **Artifacts directory** — final deliverables. Model calls `present_files` to copy from workspace to artifacts. Persisted with chat. Equivalent to Claude's `/mnt/user-data/outputs/`.
+  - **Workspace** (`%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/`) — bash execution, temp files, intermediate work. Persists with chat. Equivalent to Claude's `/home/claude/`.
+  - **Artifacts directory** (`%LOCALAPPDATA%/MySecondBrain/artifacts/{chat-id}/`) — final deliverables. Model calls `present_files` to copy from workspace to per-chat artifacts. Persisted with chat. Equivalent to Claude's `/mnt/user-data/outputs/`.
 - **`present_files` bridge:** Model creates in workspace, calls `present_files(["file"])` to surface as artifact. Without `present_files`, workspace files remain invisible to user.
 - **Skills integration:** Skills' bundled scripts are copied to workspace so both bash and skills can reference them. Shared scripts (e.g., `scripts/office/` used by both docx and xlsx) are accessible to both skills.
 
