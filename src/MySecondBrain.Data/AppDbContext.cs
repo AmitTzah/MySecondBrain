@@ -360,6 +360,7 @@ public class AppDbContext : DbContext
                 CaptureScope = "focusedElement",
                 ApplyMode = "insertAtCursor",
                 IsBuiltIn = true,
+                ChatMode = "TextCompletion",
                 CreatedAt = seedDate,
                 UpdatedAt = seedDate
             },

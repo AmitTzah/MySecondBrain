@@ -172,6 +172,7 @@ public class TextAction
     public string CaptureScope { get; set; } = "selection";
     public string ApplyMode { get; set; } = "replaceSelection";
     public bool IsBuiltIn { get; set; }
+    public string ChatMode { get; set; } = "Standard";
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

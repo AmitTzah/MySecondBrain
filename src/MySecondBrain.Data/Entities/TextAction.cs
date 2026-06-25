@@ -40,6 +40,14 @@ public class TextAction
 
     public bool IsBuiltIn { get; set; }
 
+    /// <summary>
+    /// Chat mode for this text action: "Standard" (chat API with system prompt) or
+    /// "TextCompletion" (raw prompt to raw completion).
+    /// "Continue Writing" defaults to TextCompletion. All others default to Standard.
+    /// </summary>
+    [MaxLength(20)]
+    public string ChatMode { get; set; } = "Standard";
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;

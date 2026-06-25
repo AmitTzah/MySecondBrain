@@ -1,6 +1,9 @@
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
+using MySecondBrain.Data;
 using MySecondBrain.Services.LLM;
 using MySecondBrain.Services.Tools;
 
@@ -647,6 +650,81 @@ public class ProviderIntegrationTests
                 Assert.Equal("Rate limit exceeded", retrieved.ErrorMessage);
                 Assert.Equal(429, retrieved.ErrorStatusCode);
                 Assert.Equal("/workspace/chat-123/_api_history.json", retrieved.RawJsonPath);
+            }
+        }
+        finally
+        {
+            if (File.Exists(dbPath))
+                File.Delete(dbPath);
+        }
+    }
+
+    // ================================================================
+    // Step 3: TextAction ChatMode Migration Integration Tests
+    // ================================================================
+
+    /// <summary>
+    /// Verifies that the AddTextActionChatMode migration adds the ChatMode column
+    /// in a real SQLite database with correct values for all seed TextActions.
+    /// </summary>
+    [Fact]
+    public async Task TextActionChatMode_Migration_ShouldApplyToRealSqlite()
+    {
+        // Arrange: create a real SQLite database file with full migration applied
+        var dbPath = Path.Combine(Path.GetTempPath(), $"msb-textaction-migration-test-{Guid.NewGuid()}.db");
+        try
+        {
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseSqlite($"Data Source={dbPath};Pooling=False")
+                .Options;
+
+            using (var db = new AppDbContext(options))
+            {
+                // Act: apply all migrations
+                await db.Database.MigrateAsync();
+
+                // Assert: verify the migration ran without error
+                var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
+                Assert.Empty(pendingMigrations);
+
+                // Verify column schema: notnull = 1 for ChatMode
+                using (var cmd = db.Database.GetDbConnection().CreateCommand())
+                {
+                    cmd.CommandText = "SELECT \"notnull\" FROM pragma_table_info('TextActions') WHERE name = 'ChatMode'";
+                    await db.Database.OpenConnectionAsync();
+                    var notnull = (long)(await cmd.ExecuteScalarAsync())!;
+                    Assert.Equal(1, notnull);
+                }
+
+                // Verify column default: inserting a non-seed TextAction without ChatMode gets "Standard"
+                var nonSeedAction = new Data.Entities.TextAction
+                {
+                    Id = "test-non-seed-default",
+                    DisplayName = "Test Non-Seed",
+                    SystemPrompt = "Test prompt"
+                    // ChatMode deliberately not set
+                };
+                db.TextActions.Add(nonSeedAction);
+                await db.SaveChangesAsync();
+                db.ChangeTracker.Clear();
+
+                var retrievedNonSeed = await db.TextActions.FindAsync("test-non-seed-default");
+                Assert.NotNull(retrievedNonSeed);
+                Assert.Equal("Standard", retrievedNonSeed!.ChatMode);
+
+                // Verify seed data ChatMode values
+                var textActions = db.TextActions.Where(ta => ta.IsBuiltIn).ToList();
+                Assert.Equal(10, textActions.Count);
+
+                var continueWriting = textActions.Single(ta => ta.Id == "a000000000000000000000000000007");
+                Assert.Equal("Continue Writing", continueWriting.DisplayName);
+                Assert.Equal("TextCompletion", continueWriting.ChatMode);
+
+                // All other built-in TextActions should be "Standard"
+                foreach (var action in textActions.Where(ta => ta.Id != "a000000000000000000000000000007"))
+                {
+                    Assert.Equal("Standard", action.ChatMode);
+                }
             }
         }
         finally

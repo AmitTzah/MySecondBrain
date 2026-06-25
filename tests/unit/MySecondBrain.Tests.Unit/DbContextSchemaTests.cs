@@ -271,6 +271,12 @@ public class DbContextSchemaTests : DataLayerTestBase
                 Assert.True(action.IsBuiltIn);
                 Assert.NotNull(action.SystemPrompt);
                 Assert.NotEmpty(action.SystemPrompt);
+
+                // Verify ChatMode: "Continue Writing" is TextCompletion, rest are Standard
+                if (id == "a000000000000000000000000000007")
+                    Assert.Equal("TextCompletion", action.ChatMode);
+                else
+                    Assert.Equal("Standard", action.ChatMode);
             }
         }
     }
@@ -667,16 +673,18 @@ public class DbContextSchemaTests : DataLayerTestBase
             Assert.Contains(textActions, ta => ta.DisplayName == "Rewrite");
             Assert.Contains(textActions, ta => ta.DisplayName == "Enhance Prompt");
 
-            // Verify CaptureScope, ApplyMode, and Hotkey on a representative sample
+            // Verify CaptureScope, ApplyMode, Hotkey, and ChatMode on a representative sample
             var rewrite = textActions.Single(ta => ta.DisplayName == "Rewrite");
             Assert.Equal("selection", rewrite.CaptureScope);
             Assert.Equal("replaceSelection", rewrite.ApplyMode);
             Assert.Equal("Alt+Q", rewrite.Hotkey);
+            Assert.Equal("Standard", rewrite.ChatMode);
 
             var continueWriting = textActions.Single(ta => ta.DisplayName == "Continue Writing");
             Assert.Equal("focusedElement", continueWriting.CaptureScope);
             Assert.Equal("insertAtCursor", continueWriting.ApplyMode);
             Assert.Equal("Alt+C", continueWriting.Hotkey);
+            Assert.Equal("TextCompletion", continueWriting.ChatMode);
 
             var explainScreen = textActions.Single(ta => ta.DisplayName == "Explain Screen");
             Assert.Equal("fullDocument,screenshot", explainScreen.CaptureScope);
@@ -719,6 +727,23 @@ public class DbContextSchemaTests : DataLayerTestBase
         {
             using var cmd = connection.CreateCommand();
             cmd.CommandText = "SELECT COUNT(*) FROM __EFMigrationsHistory WHERE MigrationId LIKE '%AddMemoryEntry'";
+            var count = (long)cmd.ExecuteScalar()!;
+            Assert.Equal(1, count);
+        }
+    }
+
+    /// <summary>
+    /// Verifies that the migration history table contains the AddTextActionChatMode entry.
+    /// </summary>
+    [Fact]
+    public void Migration_HistoryTable_HasAddTextActionChatMode()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM __EFMigrationsHistory WHERE MigrationId LIKE '%AddTextActionChatMode'";
             var count = (long)cmd.ExecuteScalar()!;
             Assert.Equal(1, count);
         }

@@ -30,7 +30,7 @@ public class EntitySchemaTests : DataLayerTestBase
             [typeof(ModelConfiguration)] = 16,   // Id, DisplayName, Provider, ApiKeyId?, ModelIdentifier?, Temperature, MaxOutputTokens, MaxContextWindow, ThinkingEnabled, PricingInputPer1K?, PricingOutputPer1K?, PricingCacheHitPer1K?, PricingCacheMissPer1K?, ContextOverflowStrategy, CreatedAt, UpdatedAt
             [typeof(Persona)] = 8,               // Id, DisplayName, SystemPrompt?, DefaultModelConfigId?, DefaultChatMode, IsBuiltIn, CreatedAt, UpdatedAt
             [typeof(PromptTemplate)] = 7,        // Id, Name, Text, Tags?, FolderId?, CreatedAt, UpdatedAt
-            [typeof(TextAction)] = 10,           // Id, DisplayName, SystemPrompt, ModelConfigId?, Hotkey?, CaptureScope, ApplyMode, IsBuiltIn, CreatedAt, UpdatedAt
+            [typeof(TextAction)] = 11,           // Id, DisplayName, SystemPrompt, ModelConfigId?, Hotkey?, CaptureScope, ApplyMode, IsBuiltIn, ChatMode, CreatedAt, UpdatedAt
             [typeof(UsageRecord)] = 20,          // Id, MessageId, ThreadId, PersonaId?, ModelConfigId?, Provider, ModelIdentifier, PromptTokens, CompletionTokens, TotalTokens, EstimatedCost?, CacheReadTokens, CacheCreationTokens, LatencyMs, Tier, ErrorType?, ErrorMessage?, ErrorStatusCode?, RawJsonPath?, CreatedAt
             [typeof(WikiFile)] = 9,              // FilePath (PK), FileName, H1Title?, Headings?, Content?, WordCount?, LastModifiedAt?, CrossLinksOut?, CrossLinksIn?
             [typeof(WikiVersionSnapshot)] = 5,   // Id, WikiFilePath, Content, Source, CreatedAt
@@ -174,6 +174,7 @@ public class EntitySchemaTests : DataLayerTestBase
         Assert.Equal("selection", textAction.CaptureScope);
         Assert.Equal("replaceSelection", textAction.ApplyMode);
         Assert.Equal(string.Empty, textAction.SystemPrompt);
+        Assert.Equal("Standard", textAction.ChatMode);
 
         var memoryEntry = new MemoryEntryEntity();
         Assert.NotEmpty(memoryEntry.Id);
@@ -713,5 +714,65 @@ public class EntitySchemaTests : DataLayerTestBase
         Assert.Null(defaultEntity.ErrorMessage);
         Assert.Null(defaultEntity.ErrorStatusCode);
         Assert.Null(defaultEntity.RawJsonPath);
+    }
+
+    /// <summary>
+    /// Validates that TextAction has a ChatMode field with the correct type and default.
+    /// </summary>
+    [Fact]
+    public void TextAction_ShouldHaveChatModeField()
+    {
+        var entityType = typeof(TextAction);
+        var props = entityType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .ToDictionary(p => p.Name);
+
+        Assert.True(props.ContainsKey(nameof(TextAction.ChatMode)),
+            "TextAction should have ChatMode property");
+        Assert.Equal(typeof(string), props[nameof(TextAction.ChatMode)].PropertyType);
+
+        var defaultEntity = new TextAction();
+        Assert.Equal("Standard", defaultEntity.ChatMode);
+    }
+
+    /// <summary>
+    /// Validates that "Continue Writing" seed data defaults to TextCompletion.
+    /// </summary>
+    [Fact]
+    public void TextAction_ContinueWriting_ShouldDefaultToTextCompletion()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            var continueWriting = db.TextActions.Single(ta => ta.Id == "a000000000000000000000000000007");
+            Assert.Equal("Continue Writing", continueWriting.DisplayName);
+            Assert.Equal("TextCompletion", continueWriting.ChatMode);
+
+            // All other built-in TextActions should be "Standard"
+            var standardActions = db.TextActions.Where(ta => ta.IsBuiltIn && ta.Id != "a000000000000000000000000000007").ToList();
+            Assert.Equal(9, standardActions.Count);
+            foreach (var action in standardActions)
+            {
+                Assert.Equal("Standard", action.ChatMode);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Validates that the domain model TextAction has a ChatMode field.
+    /// </summary>
+    [Fact]
+    public void DomainModel_TextAction_ShouldHaveChatMode()
+    {
+        var props = typeof(CoreModels.TextAction)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            .ToDictionary(p => p.Name);
+
+        Assert.True(props.ContainsKey("ChatMode"),
+            "Domain model TextAction should have ChatMode property");
+        Assert.Equal(typeof(string), props["ChatMode"].PropertyType);
+
+        var defaultEntity = new CoreModels.TextAction();
+        Assert.Equal("Standard", defaultEntity.ChatMode);
     }
 }
