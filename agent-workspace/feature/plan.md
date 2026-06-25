@@ -147,7 +147,7 @@ src/
 
 ---
 
-### [ ] Step 4: Reduce Skill Discovery to 2 Locations in AgentSkillService
+### [x] Step 4: Reduce Skill Discovery to 2 Locations in AgentSkillService
 - **Goal:** Remove cross-client path scanning (`.agents/`, `.claude/`) from skill discovery. Skills are now discovered from only 2 locations: embedded resources (`Skills/anthropic/` in the DLL) and `%LOCALAPPDATA%/MySecondBrain/skills/`. The `skill_load` tool enum and skill catalog are regenerated from these 2 sources only.
 - **Actions:**
   - MODIFY [`src/MySecondBrain.Services/Skills/AgentSkillService.cs`](src/MySecondBrain.Services/Skills/AgentSkillService.cs) — in the `DiscoverAsync` method:
