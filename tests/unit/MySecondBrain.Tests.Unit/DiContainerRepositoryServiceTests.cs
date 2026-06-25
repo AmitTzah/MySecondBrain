@@ -116,4 +116,37 @@ public class DiContainerRepositoryServiceTests : IDisposable
         // Verify TextEditorToolExecutor is absent
         Assert.DoesNotContain(executors, e => e.ToolName == "text_editor");
     }
+
+    [Fact]
+    public void DiContainer_ToolOrchestrator_GetAvailableToolDefinitions_Returns14Definitions()
+    {
+        var orchestrator = _provider.GetRequiredService<IToolOrchestrator>();
+        var definitions = orchestrator.GetAvailableToolDefinitions();
+
+        Assert.Equal(14, definitions.Count);
+
+        var definitionNames = definitions.Select(d => d.Name).OrderBy(n => n).ToList();
+        var expectedNames = new[]
+        {
+            "apply_diff",
+            "ask_user_input",
+            "bash",
+            "image_search",
+            "list_files",
+            "memory",
+            "present_files",
+            "read_file",
+            "search_files",
+            "skill_load",
+            "web_fetch",
+            "web_search",
+            "wiki_search",
+            "write_to_file"
+        };
+
+        for (int i = 0; i < expectedNames.Length; i++)
+        {
+            Assert.Equal(expectedNames[i], definitionNames[i]);
+        }
+    }
 }

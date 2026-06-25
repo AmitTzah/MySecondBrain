@@ -523,12 +523,16 @@ public class EntitySchemaTests : DataLayerTestBase
     // ════════════════════════════════════════════════════════════════
 
     [Fact]
-    public void ToolAutoApprovalSettings_HasTenToolFields()
+    public void ToolAutoApprovalSettings_HasFourteenToolFields()
     {
         var expectedToolProperties = new[]
         {
             "AutoApproveBash",
-            "AutoApproveTextEditor",
+            "AutoApproveReadFile",
+            "AutoApproveListFiles",
+            "AutoApproveSearchFiles",
+            "AutoApproveApplyDiff",
+            "AutoApproveWriteToFile",
             "AutoApproveWebSearch",
             "AutoApproveWebFetch",
             "AutoApproveWikiSearch",
@@ -555,11 +559,12 @@ public class EntitySchemaTests : DataLayerTestBase
             "ToolAutoApprovalSettings should have MaxConsecutiveAutoApprovals property.");
 
         // Verify removed fields are gone
+        Assert.DoesNotContain("AutoApproveTextEditor", props);
         Assert.DoesNotContain("AutoApproveFileGenerate", props);
         Assert.DoesNotContain("AutoApproveFileEdit", props);
 
-        // Total: 10 booleans + 1 int = 11 declared properties
-        Assert.Equal(11, props.Count);
+        // Total: 14 booleans + 1 int = 15 declared properties
+        Assert.Equal(15, props.Count);
     }
 
     [Fact]
@@ -567,7 +572,14 @@ public class EntitySchemaTests : DataLayerTestBase
     {
         var settings = new CoreModels.ToolAutoApprovalSettings();
         Assert.False(settings.AutoApproveBash);
-        Assert.False(settings.AutoApproveTextEditor);
+
+        // File operation tools: all default to false
+        Assert.False(settings.AutoApproveReadFile);
+        Assert.False(settings.AutoApproveListFiles);
+        Assert.False(settings.AutoApproveSearchFiles);
+        Assert.False(settings.AutoApproveApplyDiff);
+        Assert.False(settings.AutoApproveWriteToFile);
+
         Assert.False(settings.AutoApproveWebSearch);
         Assert.False(settings.AutoApproveWebFetch);
         Assert.False(settings.AutoApproveWikiSearch);
@@ -868,19 +880,158 @@ public class EntitySchemaTests : DataLayerTestBase
         Assert.Contains("chat_id", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>
-    /// Validates that PresentFilesToolExecutor.ExecuteAsync returns error when chat_id is missing.
-    /// </summary>
+    // ════════════════════════════════════════════════════════════════
+    // ToolOrchestrator Step 6 Tests: Parallel Execution & Auto-Approval
+    // ════════════════════════════════════════════════════════════════
+
     [Fact]
-    public async Task PresentFiles_ExecuteAsync_WithoutChatId_ReturnsError()
+    public async Task ToolOrchestrator_ShouldSupportParallelExecution()
     {
-        var logger = new Moq.Mock<Microsoft.Extensions.Logging.ILogger<PresentFilesToolExecutor>>();
-        var executor = new PresentFilesToolExecutor(logger.Object);
-        var toolCall = new CoreModels.ToolCall("test-id", "present_files", """{"paths": ["test.txt"]}""");
+        var logger = new Moq.Mock<Microsoft.Extensions.Logging.ILogger<ToolOrchestrator>>();
 
-        var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
+        // Create stubs for a few tool executors
+        var executors = new List<IToolExecutor>
+        {
+            new TestStubExecutor("read_file"),
+            new TestStubExecutor("web_search"),
+            new TestStubExecutor("bash")
+        };
 
-        Assert.False(result.Success);
-        Assert.Contains("chat_id", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        var orchestrator = new ToolOrchestrator(executors, logger.Object);
+
+        // Verify ProcessToolCallsAsync returns results for each tool
+        var toolCalls = new List<CoreModels.ToolCall>
+        {
+            new("1", "read_file", """{"path": "test.txt"}"""),
+            new("2", "web_search", """{"query": "hello"}"""),
+            new("3", "bash", """{"command": "echo hi"}""")
+        };
+
+        var results = await orchestrator.ProcessToolCallsAsync(toolCalls,
+            new CoreModels.ToolAutoApprovalSettings(), CancellationToken.None);
+
+        Assert.Equal(3, results.Count);
+        Assert.All(results, r => Assert.True(r.Success, $"Tool should succeed: {r.ErrorMessage}"));
+    }
+
+    [Fact]
+    public async Task ToolOrchestrator_ProcessToolCallsAsync_WithEmptyList_ReturnsEmpty()
+    {
+        var logger = new Moq.Mock<Microsoft.Extensions.Logging.ILogger<ToolOrchestrator>>();
+        var orchestrator = new ToolOrchestrator(Array.Empty<IToolExecutor>(), logger.Object);
+
+        var results = await orchestrator.ProcessToolCallsAsync(
+            Array.Empty<CoreModels.ToolCall>(),
+            new CoreModels.ToolAutoApprovalSettings(),
+            CancellationToken.None);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task ToolOrchestrator_ProcessToolCallsAsync_WithMoreThan10Calls_ExecutesAll()
+    {
+        var logger = new Moq.Mock<Microsoft.Extensions.Logging.ILogger<ToolOrchestrator>>();
+        var executors = Enumerable.Range(0, 5).Select(i => new TestStubExecutor($"tool_{i}")).Cast<IToolExecutor>().ToList();
+        var orchestrator = new ToolOrchestrator(executors, logger.Object);
+
+        // Create 12 tool calls — exercises multi-batch splitting in GroupIndependentTools
+        var toolCalls = Enumerable.Range(0, 12)
+            .Select(i => new CoreModels.ToolCall(i.ToString(), $"tool_{i % 5}", "{}"))
+            .ToList();
+
+        var results = await orchestrator.ProcessToolCallsAsync(toolCalls,
+            new CoreModels.ToolAutoApprovalSettings(), CancellationToken.None);
+
+        Assert.Equal(12, results.Count);
+        Assert.All(results, r => Assert.True(r.Success, $"Tool {r.Content} should succeed"));
+    }
+
+    [Fact]
+    public void ToolOrchestrator_AreIndependent_StubReturnsTrue()
+    {
+        var a = new CoreModels.ToolCall("1", "read_file", """{"path": "a.txt"}""");
+        var b = new CoreModels.ToolCall("2", "write_to_file", """{"path": "b.txt"}""");
+
+        // Stub: all tools are treated as independent
+        Assert.True(ToolOrchestrator.AreIndependent(a, b));
+    }
+
+    [Fact]
+    public void ToolOrchestrator_AutoApprovalSettings_ShouldCategorizeFileOps()
+    {
+        var logger = new Moq.Mock<Microsoft.Extensions.Logging.ILogger<ToolOrchestrator>>();
+        var executors = Array.Empty<IToolExecutor>();
+        var orchestrator = new ToolOrchestrator(executors, logger.Object);
+
+        var settings = orchestrator.GetAutoApprovalSettings();
+
+        // Read operations: auto-approved within workspace
+        Assert.True(settings.AutoApproveReadFile,
+            "read_file should be auto-approved by default");
+        Assert.True(settings.AutoApproveListFiles,
+            "list_files should be auto-approved by default");
+        Assert.True(settings.AutoApproveSearchFiles,
+            "search_files should be auto-approved by default");
+
+        // Write operations: always require confirmation
+        Assert.False(settings.AutoApproveApplyDiff,
+            "apply_diff should require confirmation by default");
+        Assert.False(settings.AutoApproveWriteToFile,
+            "write_to_file should require confirmation by default");
+
+        // Knowledge tools: restricted by default
+        Assert.False(settings.AutoApproveWebSearch);
+        Assert.False(settings.AutoApproveWebFetch);
+        Assert.False(settings.AutoApproveWikiSearch);
+        Assert.False(settings.AutoApproveMemory);
+        Assert.False(settings.AutoApproveSkillLoad);
+        Assert.False(settings.AutoApproveAskUserInput);
+        Assert.False(settings.AutoApprovePresentFiles);
+        Assert.False(settings.AutoApproveImageSearch);
+    }
+
+    [Fact]
+    public void ToolOrchestrator_IsToolEnabled_ReturnsTrueForRegisteredTools()
+    {
+        var logger = new Moq.Mock<Microsoft.Extensions.Logging.ILogger<ToolOrchestrator>>();
+        var executors = new List<IToolExecutor>
+        {
+            new TestStubExecutor("read_file"),
+            new TestStubExecutor("write_to_file")
+        };
+        var orchestrator = new ToolOrchestrator(executors, logger.Object);
+
+        Assert.True(orchestrator.IsToolEnabled("read_file"));
+        Assert.True(orchestrator.IsToolEnabled("write_to_file"));
+        Assert.False(orchestrator.IsToolEnabled("unknown_tool"));
+    }
+
+    /// <summary>
+    /// Minimal IToolExecutor stub for orchestrator tests.
+    /// </summary>
+    private sealed class TestStubExecutor : IToolExecutor
+    {
+        public string ToolName { get; }
+        public string Description => $"Stub for {ToolName}";
+        public string ParametersJsonSchema => "{}";
+        public bool RequiresUserConfirmation => false;
+        public CoreModels.ToolRiskLevel RiskLevel => CoreModels.ToolRiskLevel.Low;
+        public bool CanAutoApprove => true;
+
+        public TestStubExecutor(string toolName)
+        {
+            ToolName = toolName;
+        }
+
+        public Task<CoreModels.ToolValidationResult> ValidateAsync(CoreModels.ToolCall toolCall, CancellationToken ct)
+            => Task.FromResult(new CoreModels.ToolValidationResult(true, null, CoreModels.ToolRiskLevel.Low));
+
+        public Task<CoreModels.ToolResult> ExecuteAsync(CoreModels.ToolCall toolCall, CancellationToken ct)
+            => Task.FromResult(new CoreModels.ToolResult(true, $"Stub result for {ToolName}", null));
+
+        public string GetConfirmationDescription(CoreModels.ToolCall toolCall) =>
+            $"Execute {ToolName}";
     }
 }
+

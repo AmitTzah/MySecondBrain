@@ -150,7 +150,17 @@ public class UsageRecord
 public class ToolAutoApprovalSettings
 {
     public bool AutoApproveBash { get; set; }
-    public bool AutoApproveTextEditor { get; set; }
+
+    // ── File operation tools ────────────────────────────────────
+    // Read operations are auto-approved by default in workspace.
+    // Write/apply operations always require user confirmation.
+    public bool AutoApproveReadFile { get; set; }
+    public bool AutoApproveListFiles { get; set; }
+    public bool AutoApproveSearchFiles { get; set; }
+    public bool AutoApproveApplyDiff { get; set; }
+    public bool AutoApproveWriteToFile { get; set; }
+
+    // ── Knowledge and communication tools ────────────────────────
     public bool AutoApproveWebSearch { get; set; }
     public bool AutoApproveWebFetch { get; set; }
     public bool AutoApproveWikiSearch { get; set; }
@@ -159,6 +169,7 @@ public class ToolAutoApprovalSettings
     public bool AutoApproveAskUserInput { get; set; }
     public bool AutoApprovePresentFiles { get; set; }
     public bool AutoApproveImageSearch { get; set; }
+
     public int MaxConsecutiveAutoApprovals { get; set; } = 10;
 }
 
