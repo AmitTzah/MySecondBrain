@@ -2222,8 +2222,8 @@ The 🔧 Tools dropdown (`ToggleButton` + `Popup`) shows a scrollable list of `C
 ```
 
 `ToolToggleItem` (`ViewModels/ToolToggleItem.cs`) is an `ObservableObject` with:
-- `Name` (string) — internal tool name (e.g., "bash", "text_editor")
-- `DisplayName` (string) — human-readable (e.g., "Bash", "Text Editor")
+- `Name` (string) — internal tool name (e.g., "bash", "read_file")
+- `DisplayName` (string) — human-readable (e.g., "Bash", "Read File")
 - `IsEnabled` (bool) — default `true`
 
 New chats inherit tool toggle state from global defaults (Settings → Tools category).

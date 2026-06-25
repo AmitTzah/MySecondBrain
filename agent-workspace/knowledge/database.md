@@ -1336,3 +1336,136 @@ The settings are persisted via `ISettingsRepository` (key-value in `AppSetting` 
 ### 28.3 Usage
 
 The orchestrator (`ToolOrchestrator.GetAutoApprovalSettings()`) returns the current settings. Tool executors check `CanAutoApprove` (per-executor capability) AND the corresponding `AutoApprove{Name}` flag (user preference) before executing without confirmation.
+
+### 28.4 14-Tool Update — File-Op-Specific Flags
+
+The single `AutoApproveTextEditor` flag is replaced with 5 file-operation-specific flags matching the 14-tool surface (see [Architecture §41.4](architecture.md#414-auto-approval-settings-14-tool)):
+
+| Flag | Replaces | Default | Category |
+|------|----------|---------|----------|
+| `AutoApproveReadFile` | — | `false` | File Read |
+| `AutoApproveListFiles` | — | `false` | File Read |
+| `AutoApproveSearchFiles` | — | `false` | File Read |
+| `AutoApproveApplyDiff` | — | `false` | File Write |
+| `AutoApproveWriteToFile` | — | `false` | File Write |
+
+Persistence keys follow the pattern `AutoApprove_{ToolName}` (e.g., `AutoApprove_ReadFile`). The `AutoApproveTextEditor` key is retired — migration is not needed since these are AppSetting key-value pairs, not entity columns.
+
+---
+
+## 29. Enriched UsageRecord Entity — 8 New Columns
+
+The `UsageRecord` entity has been enriched with 8 provider-agnostic fields for cache token tracking, latency measurement, tier attribution, error diagnostics, and raw JSON logging. These fields support the Usage Dashboard's enriched analytics (Feature 11).
+
+### 29.1 New Field Schema
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|-------|
+| `CacheReadTokens` | `int` | Yes | `0` | Cache read/hit tokens (provider-agnostic). Anthropic: `cache_read_input_tokens`. DeepSeek: `cache_hit_tokens`. |
+| `CacheCreationTokens` | `int` | Yes | `0` | Cache creation/write tokens. Anthropic: `cache_creation_input_tokens`. DeepSeek: `cache_miss_tokens`. |
+| `LatencyMs` | `int` | Yes | `0` | Time from request sent to full response complete, in milliseconds |
+| `Tier` | `int` | Yes | `3` | Which interaction tier generated this call: 1=Hotkey Overlay, 2=Command Bar, 3=Studio Chat |
+| `ErrorType` | `string?` (MaxLength 50) | No | `null` | Null if successful. Values: `"auth"`, `"rate_limit"`, `"network"`, `"timeout"`, `"server"`, `"unknown"` |
+| `ErrorMessage` | `string?` | No | `null` | Human-readable error message. Null if successful. |
+| `ErrorStatusCode` | `int?` | No | `null` | HTTP status code from the provider. Null if successful. |
+| `RawJsonPath` | `string?` | No | `null` | Path to per-chat raw JSON log: `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/_api_history.json` |
+
+### 29.2 Provider Cache Token Mapping
+
+Different providers use different field names for cache tokens. The `UsageRecord` entity stores them in provider-agnostic columns:
+
+| Provider | Cache Read Tokens | Cache Creation Tokens |
+|----------|------------------|-----------------------|
+| Anthropic | `usage.cache_read_input_tokens` | `usage.cache_creation_input_tokens` |
+| DeepSeek | `usage.cache_hit_tokens` | `usage.cache_miss_tokens` |
+| OpenAI | N/A (prompt caching not yet supported) | N/A |
+
+The `ILLMProvider` adapter is responsible for mapping provider-specific response fields to the agnostic `UsageRecord` columns. Consumers of `UsageRecord` data (Usage Dashboard, cost calculations) never deal with provider-specific field names.
+
+### 29.3 Migration
+
+Created via: `dotnet ef migrations add EnrichUsageRecord --project src/MySecondBrain.Data --startup-project src/MySecondBrain.UI`
+
+All 8 columns are additive only — no data migration needed for existing rows. Default values (`0` for ints, `null` for nullables) apply to pre-existing records.
+
+---
+
+## 30. Cache Summary & Latency Distribution Query Patterns
+
+Two new query methods on `IUsageRepository` support the Usage Dashboard's analytics charts:
+
+### 30.1 Cache Summary
+
+```csharp
+Task<CacheSummary> GetCacheSummaryAsync(DateTimeOffset from, DateTimeOffset to,
+    string? provider = null, string? model = null);
+```
+
+Returns aggregate cache token statistics with optional provider/model filters:
+
+```csharp
+public record CacheSummary(
+    long TotalCacheReadTokens,
+    long TotalCacheCreationTokens,
+    double CacheHitRate,          // cacheReadTokens / (cacheReadTokens + promptTokens)
+    IReadOnlyList<CacheByProvider> ByProvider
+);
+
+public record CacheByProvider(string Provider, long CacheReadTokens, long CacheCreationTokens, double HitRate);
+```
+
+`CacheHitRate` is calculated as `TotalCacheReadTokens / (TotalCacheReadTokens + TotalPromptTokens)` across the filtered time range. A rate of 0 means no cache hits; 1.0 means all prompt tokens were cached.
+
+### 30.2 Latency Distribution
+
+```csharp
+Task<LatencyDistribution> GetLatencyDistributionAsync(DateTimeOffset from, DateTimeOffset to,
+    string? provider = null, string? model = null);
+```
+
+Returns percentile-based latency statistics:
+
+```csharp
+public record LatencyDistribution(
+    double AverageMs,
+    int P50Ms,
+    int P95Ms,
+    int P99Ms,
+    IReadOnlyList<LatencyByModel> ByModel
+);
+
+public record LatencyByModel(string ModelIdentifier, double AverageMs, int P50Ms, int P95Ms, int P99Ms);
+```
+
+Percentiles are calculated using `PERCENTILE_CONT` or client-side percentile computation on `LatencyMs` values. The `ByModel` breakdown enables model comparison on latency.
+
+### 30.3 Enhanced Existing Query Methods
+
+All existing `IUsageRepository` query methods (`GetUsageAsync`, `GetSummaryAsync`, `GetByProviderAsync`, `GetByModelAsync`, `GetByChatAsync`) now accept optional `provider`, `model`, and `tier` filter parameters. This enables the Usage Dashboard to filter analytics by provider, specific model, or interaction tier without needing separate query methods.
+
+---
+
+## 31. TextAction.ChatMode Field
+
+The `ChatMode` field on `TextAction` supports two interaction modes for text actions:
+
+| Value | Behavior |
+|-------|----------|
+| `"Standard"` | Chat API with system prompt — the text action's `SystemPrompt` is sent as a system message, context is included as messages |
+| `"TextCompletion"` | Raw prompt to raw completion — the text action's `SystemPrompt` + captured text are concatenated into a single plain-text prompt with no chat structure |
+
+### 31.1 Field Schema
+
+| Property | Value |
+|----------|-------|
+| **Column** | `ChatMode` (string, MaxLength 20) |
+| **Default** | `"Standard"` |
+| **Seeded value for "Continue Writing"** | `"TextCompletion"` — all other 9 built-in TextActions default to `"Standard"` |
+
+### 31.2 Migration
+
+Created via: `dotnet ef migrations add AddTextActionChatMode --project src/MySecondBrain.Data --startup-project src/MySecondBrain.UI`
+
+### 31.3 Seed Data
+
+In `AppDbContext.OnModelCreating`, the "Continue Writing" text action seed data explicitly sets `ChatMode = "TextCompletion"`. All other built-in text actions use the default `"Standard"`. See [§9.2](#92-seeded-textactions-10) for the complete seed data catalog.

@@ -20,10 +20,10 @@
     "missing_prerequisites": []
   },
   "skipped_smoke_tests": [],
-  "current_phase": 3,
-  "plan_status": "validated",
+  "current_phase": 5,
+  "plan_status": "archived",
   "total_steps": 7,
-  "current_step": 6,
+  "current_step": 7,
   "pivot_in_progress": false,
-  "phase_5_substep": null
+  "phase_5_substep": "state_finalized"
 }

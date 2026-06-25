@@ -117,7 +117,7 @@ services.AddSingleton<ILLMProvider, OpenAICompatibleProvider>();
 public LLMProviderFactory(IEnumerable<ILLMProvider> providers) { ... }
 ```
 
-This pattern is used for: `ILLMProvider` (4 impls), `ISTTProvider` (3 impls), `IBackupProvider` (2 impls), `ISearchProvider` (2 impls), `ITokenizer` (3 impls), `IChatImporter` (2 impls), `IToolExecutor` (10 impls), `IUpdateChecker` (2 impls), `IContentBlockRenderer` (8 impls).
+This pattern is used for: `ILLMProvider` (4 impls), `ISTTProvider` (3 impls), `IBackupProvider` (2 impls), `ISearchProvider` (2 impls), `ITokenizer` (3 impls), `IChatImporter` (2 impls), `IToolExecutor` (14 impls), `IUpdateChecker` (2 impls), `IContentBlockRenderer` (8 impls).
 
 Adding a new provider requires only: (a) implement the interface, (b) one additional `AddSingleton` line. Consumers that use `IEnumerable<T>` pick up the new implementation automatically with zero code changes.
 
@@ -2027,24 +2027,32 @@ public async Task Onboarding_ShouldNotAppearAfterCompletion()
 
 ---
 
-## 41. 10-Tool Execution Surface
+## 41. 14-Tool Execution Surface
 
-The tool system provides 10 tool executors that the LLM can invoke during a chat session. Each tool is registered as a singleton `IToolExecutor` in DI and auto-discovered by `ToolOrchestrator` via `IEnumerable<IToolExecutor>`.
+The tool system provides 14 provider-agnostic tool executors that the LLM can invoke during a chat session. Each tool is registered as a singleton `IToolExecutor` in DI and auto-discovered by `ToolOrchestrator` via `IEnumerable<IToolExecutor>`. The 5 file operation tools (`read_file`, `list_files`, `search_files`, `apply_diff`, `write_to_file`) replace the single Anthropic-specific `text_editor` tool, making the tool surface provider-agnostic.
 
-### 41.1 Tool Registry
+### 41.1 Tool Registry (14 Tools)
 
-# | Tool Name | Risk Level | Can Auto-Approve | Schema Origin | Executor Class | Location |
-|---|-----------|-----------|-----------------|---------------|----------------|----------|
-1 | `bash` | Medium | No | Anthropic `bash_20250124` | `BashToolExecutor` | `Services/Tools/BashToolExecutor.cs` |
-2 | `text_editor` | Low | Yes | Anthropic `text_editor_20250728` | `TextEditorToolExecutor` | `Services/Tools/TextEditorToolExecutor.cs` |
-3 | `web_search` | Low | Yes | Custom (Anthropic-compatible) | `WebSearchToolExecutor` | `Services/Tools/WebSearchToolExecutor.cs` |
-4 | `web_fetch` | Low | Yes | Custom | `WebFetchToolExecutor` | `Services/Tools/WebFetchToolExecutor.cs` |
-5 | `wiki_search` | Low | Yes | Custom | `WikiSearchToolExecutor` | `Services/Tools/WikiSearchToolExecutor.cs` |
-6 | `memory` | Low | Yes | Anthropic `memory_20250818` | `MemoryToolExecutor` | `Services/Tools/MemoryToolExecutor.cs` |
-7 | `skill_load` | Low | Yes | Custom | `SkillLoadToolExecutor` | `Services/Tools/SkillLoadToolExecutor.cs` |
-8 | `ask_user_input` | Low | Yes | Custom | `AskUserInputToolExecutor` | `Services/Tools/AskUserInputToolExecutor.cs` |
-9 | `present_files` | Low | Yes | Custom | `PresentFilesToolExecutor` | `Services/Tools/PresentFilesToolExecutor.cs` |
-10 | `image_search` | Low | Yes | Custom | `ImageSearchToolExecutor` | `Services/Tools/ImageSearchToolExecutor.cs` |
+# | Tool Name | Risk Level | Can Auto-Approve | Category | Executor Class | Location |
+|---|-----------|-----------|-----------------|----------|----------------|----------|
+1 | `read_file` | Low | Yes | File Read | `ReadFileToolExecutor` | `Services/Tools/ReadFileToolExecutor.cs` |
+2 | `list_files` | Low | Yes | File Read | `ListFilesToolExecutor` | `Services/Tools/ListFilesToolExecutor.cs` |
+3 | `search_files` | Low | Yes | File Read | `SearchFilesToolExecutor` | `Services/Tools/SearchFilesToolExecutor.cs` |
+4 | `apply_diff` | Medium | No | File Write | `ApplyDiffToolExecutor` | `Services/Tools/ApplyDiffToolExecutor.cs` |
+5 | `write_to_file` | Medium | No | File Write | `WriteToFileToolExecutor` | `Services/Tools/WriteToFileToolExecutor.cs` |
+6 | `bash` | Medium | No | System | `BashToolExecutor` | `Services/Tools/BashToolExecutor.cs` |
+7 | `web_search` | Low | Yes | Web | `WebSearchToolExecutor` | `Services/Tools/WebSearchToolExecutor.cs` |
+8 | `web_fetch` | Low | Yes | Web | `WebFetchToolExecutor` | `Services/Tools/WebFetchToolExecutor.cs` |
+9 | `image_search` | Low | Yes | Web | `ImageSearchToolExecutor` | `Services/Tools/ImageSearchToolExecutor.cs` |
+10 | `wiki_search` | Low | Yes | Knowledge | `WikiSearchToolExecutor` | `Services/Tools/WikiSearchToolExecutor.cs` |
+11 | `memory` | Low | Yes | Knowledge | `MemoryToolExecutor` | `Services/Tools/MemoryToolExecutor.cs` |
+12 | `skill_load` | Low | Yes | Knowledge | `SkillLoadToolExecutor` | `Services/Tools/SkillLoadToolExecutor.cs` |
+13 | `ask_user_input` | Low | Yes | Interaction | `AskUserInputToolExecutor` | `Services/Tools/AskUserInputToolExecutor.cs` |
+14 | `present_files` | Low | Yes | Interaction | `PresentFilesToolExecutor` | `Services/Tools/PresentFilesToolExecutor.cs` |
+
+**Provider-agnostic design:** None of the 14 tools reference Anthropic-specific schemas. The 5 file operation tools use custom JSON schemas that are compatible with any LLM provider. Tool executors are stubs that return placeholder results — real execution is implemented in Feature 17.
+
+**File operation risk model:** Read tools (1-3) are low-risk and auto-approvable. Write tools (4-5) are medium-risk and require user confirmation by default. The workspace isolation architecture (see §48) restricts all file operations to the per-chat workspace unless the user explicitly approves out-of-workspace access.
 
 ### 41.2 IToolExecutor Interface
 
@@ -2067,37 +2075,69 @@ public interface IToolExecutor
 
 `Description` and `ParametersJsonSchema` use C# default interface methods — executors only override when they have non-empty schemas. The orchestrator calls `GetAvailableToolDefinitions()` to construct the tools array for the LLM API.
 
-### 41.3 Tool Orchestration
+### 41.3 Tool Orchestration — Parallel Execution Architecture
 
-`ToolOrchestrator` (`Services/Tools/ToolOrchestrator.cs`) implements `IToolOrchestrator` and receives all 10 tool executors via `IEnumerable<IToolExecutor>` DI injection:
+`ToolOrchestrator` (`Services/Tools/ToolOrchestrator.cs`) implements `IToolOrchestrator` and receives all 14 tool executors via `IEnumerable<IToolExecutor>` DI injection. Tool calls from the LLM are processed with parallel execution for independent tools:
 
-Method | Purpose |
+| Method | Purpose |
 |--------|---------|
-`ProcessToolCallsAsync(toolCalls, settings, ct)` | Routes tool calls to matching executor (stub — returns empty results) |
-`GetAvailableToolDefinitions()` | Builds `ToolDefinition` list from all executors' `ToolName` + `Description` + `ParametersJsonSchema` |
-`IsToolEnabled(toolName)` | Placeholder — currently returns `false` |
-`GetAutoApprovalSettings()` | Returns default `ToolAutoApprovalSettings` |
+| `ProcessToolCallsAsync(toolCalls, settings, ct)` | Groups independent tools, executes each group via `Task.WhenAll` (max 10 concurrent), wraps each tool in try/catch so one failure doesn't block others |
+| `GetAvailableToolDefinitions()` | Iterates all 14 `IToolExecutor` instances, builds `ToolDefinition` list from `ToolName` + `Description` + `ParametersJsonSchema` |
+| `IsToolEnabled(toolName)` | Checks tool against per-chat enabled set (stub: all enabled) |
+| `GetAutoApprovalSettings()` | Returns current `ToolAutoApprovalSettings` with file-op-specific flags |
+| `GroupIndependentTools(toolCalls)` | Groups tool calls by dependency; independent tools form one batch, dependent ones sequentialize. Stub: all treated as independent. |
+| `ExecuteSingleToolSafe(toolCall, settings, ct)` | Resolves executor by name, validates, executes; catches exceptions and returns error result without propagating |
 
-### 41.4 Auto-Approval Settings
+**Parallel execution flow:**
+```
+LLM returns N tool calls
+  -> GroupIndependentTools() -> produces batches of independent tools
+    -> For each batch: Task.WhenAll(ExecuteSingleToolSafe for each tool call)
+      -> Each executor: ValidateAsync -> ExecuteAsync
+        -> One failure -> error result, others continue
+  -> Aggregate all results -> return to caller
+```
 
-`ToolAutoApprovalSettings` (in `Core/Models/DomainModels.cs`) has one boolean per tool plus a global cap:
+The max 10 concurrent cap prevents resource exhaustion. Tools exceeding the cap are queued and executed in the next batch.
+
+### 41.4 Auto-Approval Settings (14-Tool)
+
+`ToolAutoApprovalSettings` (in `Core/Models/DomainModels.cs`) has one boolean per tool plus a global cap. The single `AutoApproveTextEditor` flag is replaced with 5 file-operation-specific flags:
 
 ```csharp
 public class ToolAutoApprovalSettings
 {
+    // File Read tools (low risk, default auto-approvable)
+    public bool AutoApproveReadFile { get; set; }
+    public bool AutoApproveListFiles { get; set; }
+    public bool AutoApproveSearchFiles { get; set; }
+
+    // File Write tools (medium risk, default require confirmation)
+    public bool AutoApproveApplyDiff { get; set; }
+    public bool AutoApproveWriteToFile { get; set; }
+
+    // System
     public bool AutoApproveBash { get; set; }
-    public bool AutoApproveTextEditor { get; set; }
+
+    // Web
     public bool AutoApproveWebSearch { get; set; }
     public bool AutoApproveWebFetch { get; set; }
+    public bool AutoApproveImageSearch { get; set; }
+
+    // Knowledge
     public bool AutoApproveWikiSearch { get; set; }
     public bool AutoApproveMemory { get; set; }
     public bool AutoApproveSkillLoad { get; set; }
+
+    // Interaction
     public bool AutoApproveAskUserInput { get; set; }
     public bool AutoApprovePresentFiles { get; set; }
-    public bool AutoApproveImageSearch { get; set; }
+
     public int MaxConsecutiveAutoApprovals { get; set; } = 10;
 }
 ```
+
+**Design decision:** File operations are split into read vs. write categories rather than a single `text_editor` flag. This enables fine-grained approval policies: users can auto-approve reads while keeping writes gated, or vice versa. The persistence keys follow the pattern `AutoApprove_{ToolName}` (e.g., `AutoApprove_ReadFile`, `AutoApprove_ApplyDiff`).
 
 ---
 
@@ -2114,15 +2154,11 @@ graph TD
     SkillLoadExec[SkillLoadToolExecutor\nIToolExecutor]
     SkillsDir["Skills/anthropic/\n(SKILL.md files)"]
     UserSkills["%LOCALAPPDATA%/MySecondBrain/skills/\n(user overrides)"]
-    CrossClient1["%USERPROFILE%/.agents/skills/\n(cross-client)"]
-    CrossClient2["%USERPROFILE%/.claude/skills/\n(cross-client)"]
     
     SkillService --> SkillLoader
     SkillLoadExec --> SkillService
     SkillLoader --> SkillsDir
     SkillLoader --> UserSkills
-    SkillLoader --> CrossClient1
-    SkillLoader --> CrossClient2
 ```
 
 ### 42.2 Key Interfaces
@@ -2151,16 +2187,16 @@ public record SkillActivationResult(bool Success, string? Content, string? Error
 
 Skills are **in-memory only** — not persisted to SQLite. Re-discovered each launch.
 
-### 42.4 Discovery Paths (Priority Order)
+### 42.4 Discovery Paths — 2 Locations Only
 
-Priority | Path | Description |
+Skills are discovered from exactly 2 locations. Cross-client path scanning (`.agents/`, `.claude/`) has been removed per the 2026-06-25 vision update to simplify discovery and avoid ambiguity.
+
+| Priority | Path | Description |
 |----------|------|-------------|
-1 (highest) | Embedded resources: `Skills/anthropic/` in `MySecondBrain.UI.dll` | Built-in skills shipped with the app |
-2 | `%LOCALAPPDATA%/MySecondBrain/skills/` | User-installed skills |
-3 | `%USERPROFILE%/.agents/skills/` | Cross-client skill directory |
-4 (lowest) | `%USERPROFILE%/.claude/skills/` | Cross-client Claude skills |
+| 1 (highest) | Embedded resources: `Skills/anthropic/` in `MySecondBrain.UI.dll` | Built-in skills shipped with the app |
+| 2 | `%LOCALAPPDATA%/MySecondBrain/skills/` | User-installed skills |
 
-Later paths override earlier ones with the same name (user skills shadow built-in skills).
+User skills shadow built-in skills with the same name. If both locations contain a skill named `"xlsx"`, the user's version is used. Discovery happens at startup via `AgentSkillService.DiscoverAsync()` — skills are in-memory only, not persisted to SQLite.
 
 ### 42.5 Progressive Disclosure
 
@@ -2191,7 +2227,7 @@ The system prompt is assembled additively from six ordered layers by `SystemProm
 Layer | Content | Always Present? |
 |-------|---------|-----------------|
 1. Persona | User's selected persona system message (after `{{variable}}` resolution) | Only if persona has a non-empty message |
-2. Behavioral instructions | Tool usage guidance (workspace safety, parallel execution rules) | Always |
+2. Behavioral instructions | Tool usage guidance covering all 14 tools: file read/write operations, parallel execution via Task.WhenAll, per-chat workspace isolation, approval gate for out-of-workspace access | Always |
 3. Date/time context | `Current date: {date}\nCurrent time: {time}` | Always |
 4. Platform context | Windows OS info, workspace path, cmd.exe guidance | Always |
 5. Skill catalog XML | `<available_skills>` with enabled skills' name + description | Only when ≥1 skill enabled |
@@ -2326,22 +2362,57 @@ All loaded from CDN at render time. No local bundling.
 
 ---
 
-## 46. Workspace Isolation
+## 46. Per-Chat Workspace Isolation
 
-The bash workspace is isolated to prevent the LLM from accessing files outside the designated directory.
+Tool operations are isolated to a per-chat workspace directory. Each chat thread gets its own subdirectory, preventing cross-chat file interference and enabling parallel chat sessions with independent file systems.
 
-### 46.1 Workspace Path
+### 46.1 Workspace Path Convention
 
 ```
-%LOCALAPPDATA%\MySecondBrain\workspace\
+%LOCALAPPDATA%\MySecondBrain\workspace\{chat-id}/
 ```
 
-Resolved at runtime and injected into:
-- The system prompt (Platform context: "The workspace is at {0}")
-- The bash tool executor's working directory
-- File path validation in the text editor tool
+| Property | Value |
+|----------|-------|
+| **Base workspace** | `%LOCALAPPDATA%\MySecondBrain\workspace\` |
+| **Per-chat path** | `workspace/{chat-id}/` |
+| **Resolution** | `BashToolExecutor.GetChatWorkspacePath(chatId)` — static method on the singleton executor |
+| **chatId source** | Extracted from `ToolCall.Arguments` JSON (`chat_id` field), system-injected by the caller (not LLM-provided) |
+| **Creation** | `Directory.CreateDirectory()` on first use — lazy, no pre-population |
 
-### 46.2 Path Blocking
+### 46.2 Per-Chat Artifacts Path
+
+```
+%LOCALAPPDATA%\MySecondBrain\artifacts\{chat-id}/
+```
+
+`PresentFilesToolExecutor` copies files from the per-chat workspace to the per-chat artifacts directory. Each chat's artifacts are isolated and cleaned up when the chat is deleted.
+
+### 46.3 chatId Injection Pattern for Singleton Tool Executors
+
+Tool executors are registered as Singletons in DI — they cannot receive per-chat state via constructor injection. Instead, `chatId` is extracted from the `ToolCall.Arguments` JSON at execution time:
+
+```csharp
+private static string? ExtractChatId(ToolCall toolCall)
+{
+    using var doc = JsonDocument.Parse(toolCall.Arguments);
+    if (doc.RootElement.TryGetProperty("chat_id", out var chatIdProp))
+        return chatIdProp.GetString();
+    return null;
+}
+```
+
+The `chat_id` is system-injected by the calling orchestrator, not provided by the LLM. This prevents the LLM from escaping its workspace by specifying arbitrary chat IDs. The `IToolExecutor` interface is not modified — `chatId` is an implementation detail of executors that need per-chat isolation.
+
+**Executors that consume chatId:**
+| Executor | Uses chatId For |
+|----------|----------------|
+| `BashToolExecutor` | Derives `GetChatWorkspacePath(chatId)` for command execution directory |
+| `PresentFilesToolExecutor` | Derives `GetChatArtifactsPath(chatId)` for artifact file destination |
+| `ReadFileToolExecutor` | (Future) Validates file paths are within `workspace/{chatId}/` |
+| `WriteToFileToolExecutor` | (Future) Restricts writes to `workspace/{chatId}/` |
+
+### 46.4 Path Blocking
 
 The `BashToolExecutor` scans commands for disallowed path patterns before execution. Blocked patterns include:
 
@@ -2351,11 +2422,11 @@ The `BashToolExecutor` scans commands for disallowed path patterns before execut
 | Unknown environment variables (`%VAR%`) | Prevents variable-based path escapes |
 | Tilde (`~`) | Prevents Unix-style home directory escapes |
 
-Commands containing blocked patterns are rejected pre-execution. The wiki directory is also write-protected from bash. Operations outside the workspace require the model to call `ask_user_input` for user confirmation before proceeding.
+Commands containing blocked patterns are rejected pre-execution. The wiki directory is also write-protected from bash. Operations outside the per-chat workspace require the model to call `ask_user_input` for user confirmation.
 
-### 46.3 Shell Adaptation
+### 46.5 Shell Adaptation
 
-Since the tool is named `bash` (Anthropic `bash_20250124` schema) but runs on Windows, the executor adapts the shell environment:
+Since the tool is named `bash` but runs on Windows, the executor adapts the shell environment:
 
 | Scenario | Shell Used | Notes |
 |----------|-----------|-------|
@@ -2364,12 +2435,12 @@ Since the tool is named `bash` (Anthropic `bash_20250124` schema) but runs on Wi
 | `.sh` script + no Git Bash | WSL (`wsl --status`) | Fallback if Git Bash unavailable |
 | Neither bash nor WSL | Error returned | `.sh` scripts cannot execute |
 
-Bash availability is detected once at startup via `ProbeBashAvailable()` and cached as `Lazy<bool>` in `SystemPromptBuilder`. The result is injected into the platform context of the system prompt. Heredoc syntax (`<<EOF`) is redirected to the `text_editor` tool since `cmd.exe` does not support heredocs.
+Bash availability is detected once at startup via `ProbeBashAvailable()` and cached as `Lazy<bool>` in `SystemPromptBuilder`.
 
-### 46.4 Cleanup
+### 46.6 Cleanup
 
-Workspace content has a 24-hour retention policy:
-- Files with `LastModified` older than 24 hours are eligible for cleanup
-- Cleanup is triggered on app startup (not as a background timer)
-- Only files directly in the workspace (not subdirectories with user content) are automatically cleaned
+Per-chat workspace content has a 24-hour retention policy tied to chat lifecycle:
+- Workspace directories for deleted chats are cleaned up when the chat is permanently deleted
+- For active chats, files with `LastModified` older than 24 hours are eligible for cleanup
+- Cleanup is triggered on app startup
 - Artifact files referenced in chat threads are excluded from cleanup

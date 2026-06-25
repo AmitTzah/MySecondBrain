@@ -218,7 +218,7 @@ src/
 
 ---
 
-### [ ] Step 7: Update SystemPromptBuilder for 14-Tool Surface
+### [x] Step 7: Update SystemPromptBuilder for 14-Tool Surface
 - **Goal:** Update the static `SystemPromptBuilder` behavioral instructions to reference all 14 tools (including the 5 new file operation tools and `image_search`), update the `BuildFilteredToolNames` to recognize the new tool names, and ensure parallel execution is mentioned in the behavioral template.
 - **Actions:**
   - MODIFY [`src/MySecondBrain.Services/SystemPromptBuilder.cs`](src/MySecondBrain.Services/SystemPromptBuilder.cs):
