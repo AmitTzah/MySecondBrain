@@ -23,12 +23,12 @@
     { "step": 8, "name": "Add CitationRenderer (Priority 350) and Register in DI", "classification": "HUMAN/SHT REQUIRED", "description": "Launch app, send a message that produces citations — verify inline [1] markers render as clickable superscript, verify footnote definitions render with index and linked title.", "status": "skipped" },
     { "step": 10, "name": "Add WebView2 NuGet + ArtifactsWebView2Host Control", "classification": "HUMAN/SHT REQUIRED", "description": "Launch app, verify artifacts panel renders in right panel. Verify theme toggle updates WebView2 content.", "status": "skipped" },
     { "step": 11, "name": "Implement Per-Chat Toolbar Toggles (Tools, Skills, Memory)", "classification": "HUMAN/SHT REQUIRED", "description": "Launch app, open a chat, verify Tools/Skills/Memory toggles appear in toolbar. Toggle tools off → verify they are removed from system prompt (observable via debug log).", "status": "skipped" },
-    { "step": 15, "name": "Update Knowledge Files", "classification": "HUMAN/SHT REQUIRED", "description": "Open each of the 4 knowledge files and verify content reflects the new architecture: 10-tool surface, skills subsystem, WebView2 artifacts panel, MemoryEntry entity. Verify file size > 0 and content is meaningful.", "status": "skipped" }
+    { "step": 15, "name": "Update Knowledge Files", "classification": "HUMAN/SHT REQUIRED", "description": "Open each of the 4 knowledge files and verify content reflects the new architecture: 10-tool surface, skills subsystem, WebView2 artifacts panel, MemoryEntry entity. Verify file size > 0 and content is meaningful.", "status": "verified" }
   ],
   "current_phase": 5,
   "plan_status": "validated",
   "total_steps": 16,
   "current_step": 16,
   "pivot_in_progress": false,
-  "phase_5_substep": null
+  "phase_5_substep": "smoke_tests_verified"
 }
