@@ -9,8 +9,10 @@ namespace MySecondBrain.Services.Skills;
 
 /// <summary>
 /// Discovers, catalogs, loads, and tracks activation state for Agent Skills.
-/// Skills are in-memory instructions discovered from embedded resources and
-/// filesystem paths — re-discovered each launch, not persisted to SQLite.
+/// Skills are in-memory instructions discovered from exactly 2 locations:
+/// embedded resources (built-in in DLL) and the user skills directory
+/// (%LOCALAPPDATA%/MySecondBrain/skills/).
+/// Re-discovered each launch, not persisted to SQLite.
 /// </summary>
 public sealed class AgentSkillService : ISkillService
 {
@@ -37,7 +39,9 @@ public sealed class AgentSkillService : ISkillService
     }
 
     /// <summary>
-    /// Discovery — scans all configured locations and returns metadata for every skill found.
+    /// Discovery — scans 2 locations (embedded resources + user skills directory)
+    /// and returns metadata for every skill found. User skills override built-in
+    /// skills with the same name.
     /// </summary>
     public Task<IReadOnlyList<SkillMetadata>> DiscoverAsync(CancellationToken ct)
     {
@@ -46,32 +50,23 @@ public sealed class AgentSkillService : ISkillService
         _catalog.Clear();
         _dependencies.Clear();
 
-        // Priority order: embedded (lowest), user, cross-client/.agents, cross-client/.claude (highest)
-        // Later scopes override earlier scopes with the same name.
+        // Priority order: embedded resources (lowest), user skills directory (highest).
+        // User skills override built-in skills with the same name.
         var discovered = new List<(SkillMetadata meta, bool isOverride)>();
 
-        // 1. Embedded resources in MySecondBrain.UI.dll
+        // 1. Embedded resources in MySecondBrain.UI.dll (built-in skills)
         DiscoverEmbeddedSkills(discovered);
 
-        // 2. %LOCALAPPDATA%/MySecondBrain/skills/
+        // 2. %LOCALAPPDATA%/MySecondBrain/skills/ (user skills — override built-in)
         var localAppData = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "MySecondBrain", "skills");
         DiscoverFilesystemSkills(localAppData, "user", discovered);
 
-        // 3. %USERPROFILE%/.agents/skills/
-        var agentsPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".agents", "skills");
-        DiscoverFilesystemSkills(agentsPath, "cross-client", discovered);
+        // Cross-client paths (.agents/, .claude/) are no longer scanned per 2026-06-25 vision update.
+        // Skills discovered from only 2 locations: embedded (built-in) + user skills directory.
 
-        // 4. %USERPROFILE%/.claude/skills/
-        var claudePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".claude", "skills");
-        DiscoverFilesystemSkills(claudePath, "cross-client", discovered);
-
-        // Apply collision resolution: later scopes override earlier ones
+        // Collision resolution: user skills override built-in skills with the same name
         var resolved = new Dictionary<string, SkillMetadata>(StringComparer.OrdinalIgnoreCase);
         foreach (var (meta, isOverride) in discovered)
         {

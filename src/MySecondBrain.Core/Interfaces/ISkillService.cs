@@ -6,14 +6,14 @@ namespace MySecondBrain.Core.Interfaces;
 /// Central service for skill discovery, loading, and lifecycle management.
 /// Implements the Agent Skills open standard.
 /// Skills are in-memory instructions (not persisted to SQLite) —
-/// re-discovered each launch from embedded resources and filesystem paths.
+/// re-discovered each launch from 2 locations: embedded resources (built-in
+/// in DLL) and the user skills directory (%LOCALAPPDATA%/MySecondBrain/skills/).
 /// </summary>
 public interface ISkillService
 {
     /// <summary>
-    /// Discovery — scans all configured locations (embedded resources, user skills,
-    /// cross-client directories) and returns metadata for every skill found.
-    /// Called at startup.
+    /// Discovery — scans 2 locations (embedded resources in DLL + user skills directory)
+    /// and returns metadata for every skill found. Called at startup.
     /// </summary>
     Task<IReadOnlyList<SkillMetadata>> DiscoverAsync(CancellationToken ct);
 

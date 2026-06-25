@@ -775,4 +775,40 @@ public class EntitySchemaTests : DataLayerTestBase
         var defaultEntity = new CoreModels.TextAction();
         Assert.Equal("Standard", defaultEntity.ChatMode);
     }
+
+    /// <summary>
+    /// Validates that AgentSkillService.DiscoverAsync scans only 2 locations:
+    /// embedded resources (built-in) and the user skills directory (%LOCALAPPDATA%/MySecondBrain/skills/).
+    /// Cross-client paths (.agents/, .claude/) are not scanned.
+    /// </summary>
+    [Fact]
+    public async Task SkillDiscovery_ShouldOnlyScanTwoLocations()
+    {
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var skillsDir = Path.Combine(localAppData, "MySecondBrain", "skills");
+        var testSkillDir = Path.Combine(skillsDir, "test-discovery-" + Guid.NewGuid().ToString("N")[..8]);
+
+        try
+        {
+            Directory.CreateDirectory(testSkillDir);
+            await File.WriteAllTextAsync(Path.Combine(testSkillDir, "SKILL.md"),
+                "---\nname: test-discovery-skill\ndescription: A test skill for discovery validation\n---\n\nSkill body content.");
+
+            var logger = new Moq.Mock<Microsoft.Extensions.Logging.ILogger<Services.Skills.AgentSkillService>>();
+            var service = new Services.Skills.AgentSkillService(logger.Object);
+
+            var skills = await service.DiscoverAsync(CancellationToken.None);
+
+            // User skill from %LOCALAPPDATA%/MySecondBrain/skills/ is discovered
+            Assert.Contains(skills, s => s.Name == "test-discovery-skill");
+
+            // No skill has "cross-client" source (ensures .agents/ and .claude/ paths are not scanned)
+            Assert.DoesNotContain(skills, s => s.Source == "cross-client");
+        }
+        finally
+        {
+            if (Directory.Exists(testSkillDir))
+                Directory.Delete(testSkillDir, true);
+        }
+    }
 }
