@@ -1,7 +1,12 @@
+using System.Runtime.CompilerServices;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using MySecondBrain.Core.Interfaces;
+using MySecondBrain.Core.Models;
 using MySecondBrain.Data;
 using MySecondBrain.Data.Repositories;
+using MySecondBrain.Services.Chat;
 using CoreModels = MySecondBrain.Core.Models;
 
 namespace MySecondBrain.Tests.Integration;
@@ -233,6 +238,155 @@ public class ChatWorkflowIntegrationTests : IDisposable
         Assert.False(unlocked!.IsLocked);
         Assert.Null(unlocked.LockSalt);
         Assert.Null(unlocked.LockNonce);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  Service-Level Integration Tests (Step 2)
+    // ═══════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task SendMessage_FullFlow_CreatesMessagesAndUpdatesThread()
+    {
+        // Arrange
+        var threadRepo = new ChatThreadRepository(_db);
+        var msgRepo = new MessageRepository(_db);
+        var llmMock = new Mock<ILLMProviderService>();
+        var personaRepo = new Mock<IPersonaRepository>();
+        var modelConfigRepo = new Mock<IModelConfigurationRepository>();
+        var usageRepo = new Mock<IUsageRepository>();
+        var titleGenMock = new Mock<ILogger<ChatTitleGenerator>>();
+        var loggerMock = new Mock<ILogger<ChatThreadService>>();
+
+        var persona = new Persona
+        {
+            Id = "00000000000000000000000000000001",
+            DisplayName = "General Assistant",
+            SystemPrompt = "You are a helpful assistant.",
+            DefaultChatMode = "Standard",
+        };
+
+        var modelConfig = new ModelConfiguration
+        {
+            Id = "config-int-test-001",
+            DisplayName = "GPT-4o",
+            ProviderType = ProviderType.OpenAI,
+            ModelIdentifier = "gpt-4o",
+            PricingInputPer1K = 0.01m,
+            PricingOutputPer1K = 0.03m,
+        };
+
+        var titleGenerator = new ChatTitleGenerator(llmMock.Object, titleGenMock.Object);
+
+        personaRepo.Setup(r => r.GetByIdAsync(persona.Id)).ReturnsAsync(persona);
+        personaRepo.Setup(r => r.GetDefaultAsync()).ReturnsAsync(persona);
+        modelConfigRepo.Setup(r => r.GetByIdAsync(It.IsAny<string>())).ReturnsAsync(modelConfig);
+        modelConfigRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<ModelConfiguration> { modelConfig });
+        usageRepo.Setup(r => r.RecordUsageAsync(It.IsAny<UsageRecord>())).Returns(Task.CompletedTask);
+
+        // Setup streaming LLM response
+        llmMock.Setup(s => s.ChatStreamAsync(
+                It.IsAny<ChatThread>(),
+                It.IsAny<string>(),
+                It.IsAny<Persona>(),
+                It.IsAny<ModelConfiguration>(),
+                It.IsAny<IReadOnlyList<ToolDefinition>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns((ChatThread t, string msg, Persona p, ModelConfiguration c, IReadOnlyList<ToolDefinition>? tools, CancellationToken ct) =>
+                GetStreamForTest(msg, ct));
+
+        var service = new ChatThreadService(
+            threadRepo, msgRepo, llmMock.Object,
+            personaRepo.Object, modelConfigRepo.Object,
+            usageRepo.Object, titleGenerator, _db, loggerMock.Object);
+
+        // Act — create thread
+        var thread = await service.CreateThreadAsync("Integration Test Service Chat", false, persona);
+        Assert.NotNull(thread);
+        Assert.NotEmpty(thread.Id);
+
+        // Act — send message
+        var assistantMsg = await service.SendMessageAsync(
+            thread.Id, "Hello, introduce yourself in one sentence.", CancellationToken.None);
+
+        // Assert — assistant response is persisted with non-empty content
+        Assert.NotNull(assistantMsg);
+        Assert.Equal("Assistant", assistantMsg.Role);
+        Assert.Equal(thread.Id, assistantMsg.ThreadId);
+        Assert.False(string.IsNullOrEmpty(assistantMsg.Content));
+        Assert.True(assistantMsg.GenerationTimeMs > 0);
+
+        // Assert — thread activity updated
+        var updatedThread = await threadRepo.GetByIdAsync(thread.Id);
+        Assert.NotNull(updatedThread);
+        Assert.True(updatedThread!.LastActivityAt >= thread.LastActivityAt);
+
+        // Assert — both messages exist in active branch
+        var activeBranch = await msgRepo.GetActiveBranchAsync(thread.Id);
+        Assert.Equal(2, activeBranch.Count);
+        Assert.Equal("User", activeBranch[0].Role);
+        Assert.Equal("Assistant", activeBranch[1].Role);
+    }
+
+    [Fact]
+    public async Task DraftWorkflow_SaveGetDelete_WorksCorrectly()
+    {
+        // Arrange
+        var threadRepo = new ChatThreadRepository(_db);
+        var msgRepo = new MessageRepository(_db);
+        var llmMock = new Mock<ILLMProviderService>();
+        var personaRepo = new Mock<IPersonaRepository>();
+        var modelConfigRepo = new Mock<IModelConfigurationRepository>();
+        var usageRepo = new Mock<IUsageRepository>();
+        var titleGenMock = new Mock<ILogger<ChatTitleGenerator>>();
+        var loggerMock = new Mock<ILogger<ChatThreadService>>();
+
+        var titleGenerator = new ChatTitleGenerator(llmMock.Object, titleGenMock.Object);
+
+        var service = new ChatThreadService(
+            threadRepo, msgRepo, llmMock.Object,
+            personaRepo.Object, modelConfigRepo.Object,
+            usageRepo.Object, titleGenerator, _db, loggerMock.Object);
+
+        var threadId = "draft-test-thread-001";
+
+        // Act — save draft
+        await service.SaveDraftAsync(threadId, "Draft content", 5);
+        var draft1 = await service.GetDraftAsync(threadId);
+
+        // Assert — draft saved
+        Assert.NotNull(draft1);
+        Assert.Equal("Draft content", draft1.Content);
+        Assert.Equal(5, draft1.CursorPosition);
+
+        // Act — update draft
+        await service.SaveDraftAsync(threadId, "Updated draft content", 10);
+        var draft2 = await service.GetDraftAsync(threadId);
+
+        // Assert — draft updated
+        Assert.NotNull(draft2);
+        Assert.Equal("Updated draft content", draft2.Content);
+        Assert.Equal(10, draft2.CursorPosition);
+
+        // Act — delete draft
+        await service.DeleteDraftAsync(threadId);
+        var draft3 = await service.GetDraftAsync(threadId);
+
+        // Assert — draft deleted
+        Assert.Null(draft3);
+    }
+
+    /// <summary>
+    /// Helper to produce a streaming response for integration tests.
+    /// </summary>
+    private static async IAsyncEnumerable<StreamChunk> GetStreamForTest(
+        string userMessage,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        var response = $"I am an AI assistant. You said: \"{userMessage}\"";
+        yield return new StreamChunk(response, null, null, null, null, false);
+        yield return new StreamChunk(null, null, null, "stop",
+            new UsageInfo(15, response.Length, 15 + response.Length), true);
+        await Task.CompletedTask;
     }
 
     public void Dispose()

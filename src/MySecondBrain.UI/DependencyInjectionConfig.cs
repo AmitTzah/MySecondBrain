@@ -73,6 +73,8 @@ public static class DependencyInjectionConfig
         // === Application Services (Singleton) ===
         services.AddSingleton<ILLMProviderService, LLMProviderService>();
         services.AddSingleton<IChatThreadService, ChatThreadService>();
+        services.AddSingleton<ChatTitleGenerator>();
+        services.AddSingleton<MarkdownStreamRenderer>();
         services.AddSingleton<IWikiService, WikiService>();
         services.AddSingleton<ILLMProviderFactory, LLMProviderFactory>();
         services.AddSingleton<ITokenizerFactory, TokenizerFactory>();
