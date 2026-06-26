@@ -132,6 +132,19 @@
                     </viewsSettings:DiagnosticsSettingsControl.Style>
                 </viewsSettings:DiagnosticsSettingsControl>
 
+                <viewsSettings:SystemInfoSettingsControl>
+                    <viewsSettings:SystemInfoSettingsControl.Style>
+                        <Style TargetType="viewsSettings:SystemInfoSettingsControl">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedSettingsCategory}" Value="SystemInfo">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </viewsSettings:SystemInfoSettingsControl.Style>
+                </viewsSettings:SystemInfoSettingsControl>
+
                 <viewsSettings:AppearanceSettingsControl>
                     <viewsSettings:AppearanceSettingsControl.Style>
                         <Style TargetType="viewsSettings:AppearanceSettingsControl">

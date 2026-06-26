@@ -84,9 +84,10 @@ public class SettingsViewModelProviderApiKeyTests : SettingsViewModelTestBase
     [Fact]
     public void CategoryItems_ContainsAllCategories()
     {
-        Assert.Equal(16, _sut.CategoryItems.Count);
+        Assert.Equal(17, _sut.CategoryItems.Count);
         Assert.Contains(_sut.CategoryItems, c => c.Category == SettingsCategory.Providers);
         Assert.Contains(_sut.CategoryItems, c => c.Category == SettingsCategory.Diagnostics);
+        Assert.Contains(_sut.CategoryItems, c => c.Category == SettingsCategory.SystemInfo);
         Assert.Contains(_sut.CategoryItems, c => c.Category == SettingsCategory.Language);
     }
 

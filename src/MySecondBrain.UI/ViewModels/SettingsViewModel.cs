@@ -234,6 +234,21 @@ public partial class SettingsViewModel : ObservableObject
     private DispatcherTimer? _copyFeedbackTimer;
     private bool _isInitialized;
 
+    /// <summary>
+    /// Static holder for a pending navigation target set by MainWindowViewModel
+    /// before navigating to Settings. Read and cleared in InitializeAsync.
+    /// </summary>
+    private static SettingsCategory? PendingNavigationCategory { get; set; }
+
+    /// <summary>
+    /// Called by MainWindowViewModel before navigating to Settings to request
+    /// a specific category be pre-selected on load.
+    /// </summary>
+    public static void SetPendingNavigationCategory(SettingsCategory category)
+    {
+        PendingNavigationCategory = category;
+    }
+
     public SettingsViewModel(
         ISettingsRepository settingsRepo,
         IThemeProvider themeProvider,
@@ -281,6 +296,7 @@ public partial class SettingsViewModel : ObservableObject
             await RefreshKeyListAsync();
             await RefreshAvailableApiKeysAsync();
         });
+
         _logger.LogDebug("[DIAG] SettingsViewModel #{HashCode} created + registered for RefreshApiKeysMessage", this.GetHashCode());
     }
 
@@ -309,11 +325,18 @@ public partial class SettingsViewModel : ObservableObject
         new("🔒", "Security", SettingsCategory.Security),
         new("🛠️", "Maintenance", SettingsCategory.Maintenance),
         new("🔬", "Diagnostics", SettingsCategory.Diagnostics),
+        new("ℹ️", "System Info", SettingsCategory.SystemInfo),
     ];
 
     partial void OnSelectedSettingsCategoryChanged(SettingsCategory value)
     {
         StatusMessage = string.Empty;
+
+        // Auto-load data location sizes when user switches to System Info category
+        if (value == SettingsCategory.SystemInfo)
+        {
+            _ = LoadDataLocationsAsync();
+        }
     }
 
     // ================================================================
@@ -324,13 +347,176 @@ public partial class SettingsViewModel : ObservableObject
     private string _statusMessage = string.Empty;
 
     // ================================================================
+    // System Info — App Data Locations
+    // ================================================================
+
+    private const string AppDataFolder = "MySecondBrain";
+    private const string LocalAppDataEnvVar = "%LOCALAPPDATA%";
+
+    /// <summary>
+    /// Returns the expanded %LOCALAPPDATA%/MySecondBrain path.
+    /// </summary>
+    private static string AppDataPath =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            AppDataFolder);
+
+    [ObservableProperty]
+    private ObservableCollection<DataLocationInfo> _dataLocations = [];
+
+    /// <summary>
+    /// Builds the list of data locations and kicks off size calculation.
+    /// </summary>
+    [RelayCommand]
+    private async Task LoadDataLocationsAsync()
+    {
+        var appData = AppDataPath;
+        var wikiDir = await _settingsRepo.GetAsync("WikiDirectoryPath");
+        var backupDir = await _settingsRepo.GetAsync("BackupDirectory");
+
+        var items = new List<DataLocationInfo>();
+
+        // 1. Main database
+        items.Add(new DataLocationInfo(
+            $@"{LocalAppDataEnvVar}\{AppDataFolder}\msb.db",
+            Path.Combine(appData, "msb.db"),
+            "Main SQLite database — all user data (chats, messages, personas, settings, API keys)",
+            LocationEditability.AppManaged, _logger)
+        { IsDirectory = false, AutomationKey = "MsbDb" });
+
+        // 2. WAL file
+        items.Add(new DataLocationInfo(
+            $@"{LocalAppDataEnvVar}\{AppDataFolder}\msb.db-wal",
+            Path.Combine(appData, "msb.db-wal"),
+            "SQLite Write-Ahead Log — temporary journal file",
+            LocationEditability.AppManaged, _logger)
+        { IsDirectory = false, AutomationKey = "MsbDbWal" });
+
+        // 3. SHM file
+        items.Add(new DataLocationInfo(
+            $@"{LocalAppDataEnvVar}\{AppDataFolder}\msb.db-shm",
+            Path.Combine(appData, "msb.db-shm"),
+            "SQLite Shared Memory — temporary index file",
+            LocationEditability.AppManaged, _logger)
+        { IsDirectory = false, AutomationKey = "MsbDbShm" });
+
+        // 4. Logs directory
+        var logsDir = Path.Combine(appData, "logs");
+        items.Add(new DataLocationInfo(
+            $@"{LocalAppDataEnvVar}\{AppDataFolder}\logs\",
+            logsDir,
+            "Serilog rolling JSON log files — one file per day, retained 30 days",
+            LocationEditability.Caution, _logger)
+        { IsDirectory = true, AutomationKey = "LogsDir" });
+
+        // 5. Workspace directory
+        items.Add(new DataLocationInfo(
+            $@"{LocalAppDataEnvVar}\{AppDataFolder}\workspace\{{chat-id}}",
+            Path.Combine(appData, "workspace"),
+            "Per-chat sandbox directories for bash/code execution",
+            LocationEditability.AppManaged, _logger)
+        { IsDirectory = true, AutomationKey = "WorkspaceDir" });
+
+        // 6. Artifacts directory
+        items.Add(new DataLocationInfo(
+            $@"{LocalAppDataEnvVar}\{AppDataFolder}\artifacts\{{chat-id}}",
+            Path.Combine(appData, "artifacts"),
+            "AI-generated files surfaced via present_files — per-chat subdirectory",
+            LocationEditability.Caution, _logger)
+        { IsDirectory = true, AutomationKey = "ArtifactsDir" });
+
+        // 7. Skills directory
+        items.Add(new DataLocationInfo(
+            $@"{LocalAppDataEnvVar}\{AppDataFolder}\skills\",
+            Path.Combine(appData, "skills"),
+            "User-added community Agent Skills — add by copying folders here",
+            LocationEditability.UserEditable, _logger)
+        { IsDirectory = true, AutomationKey = "SkillsDir" });
+
+        // 8. Settings file
+        items.Add(new DataLocationInfo(
+            $@"{LocalAppDataEnvVar}\{AppDataFolder}\settings.json",
+            Path.Combine(appData, "settings.json"),
+            "Application settings (persisted preferences)",
+            LocationEditability.AppManaged, _logger)
+        { IsDirectory = false, AutomationKey = "SettingsFile" });
+
+        // 9. Wiki directory (user-configured)
+        if (!string.IsNullOrEmpty(wikiDir))
+        {
+            items.Add(new DataLocationInfo(
+                wikiDir,
+                wikiDir,
+                "Personal wiki .md files — user-configured directory",
+                LocationEditability.UserEditable, _logger)
+            { IsDirectory = true, AutomationKey = "WikiDir" });
+        }
+        else
+        {
+            items.Add(new DataLocationInfo(
+                "[Not configured]",
+                null,
+                "Wiki directory not configured — set in Settings → Wiki",
+                LocationEditability.UserEditable, _logger)
+            { IsDirectory = true, AutomationKey = "WikiDir" });
+        }
+
+        // 10. Backup directory (user-configured)
+        if (!string.IsNullOrEmpty(backupDir))
+        {
+            items.Add(new DataLocationInfo(
+                backupDir,
+                backupDir,
+                "Backup destination — user-configured directory or cloud storage",
+                LocationEditability.UserEditable, _logger)
+            { IsDirectory = true, AutomationKey = "BackupDir" });
+        }
+        else
+        {
+            items.Add(new DataLocationInfo(
+                "[Not configured]",
+                null,
+                "Backup not configured — set in Settings → Backup",
+                LocationEditability.UserEditable, _logger)
+            { IsDirectory = true, AutomationKey = "BackupDir" });
+        }
+
+        DataLocations = new ObservableCollection<DataLocationInfo>(items);
+
+        // Kick off parallel size calculations (fire-and-forget)
+        foreach (var loc in DataLocations)
+        {
+            _ = loc.CalculateSizeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Recalculates disk sizes for all data locations (manual refresh).
+    /// </summary>
+    [RelayCommand]
+    private async Task RecalculateDataLocationsAsync()
+    {
+        var tasks = new List<Task>();
+        foreach (var loc in DataLocations)
+        {
+            loc.SizeOnDisk = "Calculating…";
+            loc.IsSizeCalculated = false;
+            tasks.Add(loc.CalculateSizeAsync());
+        }
+        await Task.WhenAll(tasks);
+    }
+
+    // ================================================================
     // Initialization
     // ================================================================
 
     [RelayCommand]
     private async Task InitializeAsync()
     {
-        SelectedSettingsCategory = SettingsCategory.Providers;
+        // If a pending category was set (from MainWindow "?" icon → App Data Locations),
+        // use that; otherwise default to Providers.
+        SelectedSettingsCategory = PendingNavigationCategory ?? SettingsCategory.Providers;
+        PendingNavigationCategory = null;
 
         await RefreshKeyListAsync();
         await RefreshAvailableApiKeysAsync();

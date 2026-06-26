@@ -1,0 +1,245 @@
+<UserControl x:Class="MySecondBrain.UI.Views.Settings.SystemInfoSettingsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:MySecondBrain.UI.ViewModels"
+             xmlns:models="clr-namespace:MySecondBrain.Core.Models;assembly=MySecondBrain.Core"
+             AutomationProperties.AutomationId="SystemInfoSettingsControl">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <Style x:Key="AccentButtonStyle" TargetType="Button">
+                <Setter Property="OverridesDefaultStyle" Value="True"/>
+                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="Padding" Value="10,4"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="3" Padding="{TemplateBinding Padding}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Opacity" Value="0.85"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Opacity" Value="0.7"/>
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Opacity" Value="0.5"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+                <Setter Property="OverridesDefaultStyle" Value="True"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Foreground" Value="{DynamicResource ContentForeground}"/>
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="Padding" Value="10,4"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="3" Padding="{TemplateBinding Padding}"
+                                    SnapsToDevicePixels="True">
+                                <ContentPresenter HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  RecognizesAccessKey="True"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter Property="Opacity" Value="0.7"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Row 0: Title -->
+        <TextBlock Grid.Row="0" Text="ℹ️ System Info" FontSize="16" FontWeight="Bold"
+                   Foreground="{DynamicResource ContentForeground}" Margin="16,16,16,4"
+                   AutomationProperties.AutomationId="SystemInfoTitle"/>
+
+        <!-- Row 1: Description -->
+        <TextBlock Grid.Row="1"
+                   Text="View where your data is stored and how much space each location uses. Use the Open buttons to browse files in Windows Explorer."
+                   FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                   TextWrapping="Wrap" Margin="16,0,16,12"
+                   AutomationProperties.AutomationId="SystemInfoDescription"/>
+
+        <!-- Row 2: Data Locations Table -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="16,0,16,8"
+                      AutomationProperties.AutomationId="SystemInfoScrollViewer">
+            <StackPanel>
+                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
+                        Background="{DynamicResource CardBackground}" Margin="0,0,0,12"
+                        AutomationProperties.AutomationId="DataLocationsTable">
+                    <StackPanel>
+                        <!-- Header row -->
+                        <Grid Margin="14,12,14,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="100"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Location" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ContentForeground}" Margin="0,0,8,6"/>
+                            <TextBlock Grid.Column="1" Text="Purpose" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ContentForeground}" Margin="0,0,8,6"/>
+                            <TextBlock Grid.Column="2" Text="Size on Disk" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ContentForeground}" Margin="0,0,8,6"/>
+                            <TextBlock Grid.Column="3" Text="User Can Edit?" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ContentForeground}" Margin="0,0,8,6"/>
+                            <TextBlock Grid.Column="4" Text="Actions" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,6"/>
+                        </Grid>
+
+                        <!-- Separator -->
+                        <Rectangle Fill="{DynamicResource BorderBrush}" Height="1" Margin="14,0"/>
+
+                        <!-- Data rows -->
+                        <ItemsControl ItemsSource="{Binding DataLocations}"
+                                      Margin="14,4,14,12"
+                                      AlternationCount="1000"
+                                      AutomationProperties.AutomationId="DataLocationItems">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:DataLocationInfo">
+                                <Border BorderThickness="0,0,0,1"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        Padding="0,6,0,6"
+                                        AutomationProperties.AutomationId="{Binding AutomationKey}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="150"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Location -->
+                                        <TextBlock Grid.Column="0" Text="{Binding DisplayPath}"
+                                                   FontSize="10" FontFamily="Consolas"
+                                                   Foreground="{DynamicResource ContentForeground}"
+                                                   TextWrapping="Wrap" Margin="0,0,8,0"
+                                                   VerticalAlignment="Center"
+                                                   ToolTip="{Binding ExpandedPath}"/>
+
+                                        <!-- Purpose -->
+                                        <TextBlock Grid.Column="1" Text="{Binding Purpose}"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   TextWrapping="Wrap" Margin="0,0,8,0"
+                                                   VerticalAlignment="Center"/>
+
+                                        <!-- Size on Disk -->
+                                        <TextBlock Grid.Column="2" Text="{Binding SizeOnDisk}"
+                                                   FontSize="10"
+                                                   Foreground="{DynamicResource ContentForeground}"
+                                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                                        <!-- User Can Edit? -->
+                                        <StackPanel Grid.Column="3" Orientation="Horizontal"
+                                                    VerticalAlignment="Center" Margin="0,0,8,0"
+                                                    ToolTip="{Binding EditabilityTooltip}">
+                                            <TextBlock Text="{Binding EditabilityIcon}" FontSize="11"
+                                                       Margin="0,0,4,0"/>
+                                            <TextBlock Text="{Binding EditabilityLabel}" FontSize="10"
+                                                       Foreground="{DynamicResource SubtleBrush}"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+
+                                        <!-- Actions -->
+                                        <Button Grid.Column="4" Content="📂 Open"
+                                                Command="{Binding OpenInExplorerCommand}"
+                                                Style="{StaticResource SecondaryButtonStyle}"
+                                                Padding="8,3" FontSize="10"
+                                                VerticalAlignment="Center"
+                                                AutomationProperties.AutomationId="{Binding AutomationKey, StringFormat='OpenInExplorer{0}'}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                        </StackPanel>
+                </Border>
+
+                <!-- Legend -->
+                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
+                        Background="{DynamicResource CardBackground}" Margin="0,0,0,12"
+                        AutomationProperties.AutomationId="EditabilityLegend">
+                    <StackPanel Margin="14,12,14,12">
+                        <TextBlock Text="Legend" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,8"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Text="❌" FontSize="11" Margin="0,0,6,0"/>
+                            <TextBlock FontSize="10" Foreground="{DynamicResource ContentForeground}"
+                                       TextWrapping="Wrap">
+                                <Run FontWeight="SemiBold">App-Managed</Run>
+                                <Run Foreground="{DynamicResource SubtleBrush}">— Do not modify manually. These files and folders are managed internally by the application.</Run>
+                            </TextBlock>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Text="⚠️" FontSize="11" Margin="0,0,6,0"/>
+                            <TextBlock FontSize="10" Foreground="{DynamicResource ContentForeground}"
+                                       TextWrapping="Wrap">
+                                <Run FontWeight="SemiBold">Caution</Run>
+                                <Run Foreground="{DynamicResource SubtleBrush}">— Editable but changes may affect app behavior. Understand consequences before modifying.</Run>
+                            </TextBlock>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="✅" FontSize="11" Margin="0,0,6,0"/>
+                            <TextBlock FontSize="10" Foreground="{DynamicResource ContentForeground}"
+                                       TextWrapping="Wrap">
+                                <Run FontWeight="SemiBold">User-Editable</Run>
+                                <Run Foreground="{DynamicResource SubtleBrush}">— Your own files, safe to modify, add, or remove.</Run>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Recalculate button -->
+                <Button Content="🔄 Recalculate Sizes"
+                        Command="{Binding RecalculateDataLocationsCommand}"
+                        Style="{StaticResource SecondaryButtonStyle}"
+                        HorizontalAlignment="Left" Margin="0,0,0,12"
+                        AutomationProperties.AutomationId="RecalculateSizesBtn"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Row 3: Status message bar -->
+        <TextBlock Grid.Row="3" Text="{Binding StatusMessage}" FontSize="10"
+                   Foreground="{DynamicResource SubtleBrush}" Margin="16,0,16,8"
+                   AutomationProperties.AutomationId="SystemInfoStatusMessage"/>
+    </Grid>
+</UserControl>

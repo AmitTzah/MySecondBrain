@@ -140,7 +140,7 @@
                     <Border Margin="8,4" Background="{DynamicResource InputBackground}"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                             CornerRadius="4" Padding="6,4">
-                        <TextBlock Text="🔍 Search all chats..."
+                        <TextBlock Text="&#x1F50D; Search all chats..."
                                    FontSize="12" Foreground="{DynamicResource SubtleBrush}"/>
                     </Border>
 
@@ -170,7 +170,7 @@
                                 HorizontalAlignment="Stretch" Margin="0,4,0,8"/>
 
                         <!-- Pinned Section -->
-                        <TextBlock Text="📌 PINNED" FontSize="10" FontWeight="Bold"
+                        <TextBlock Text="&#x1F4CC; PINNED" FontSize="10" FontWeight="Bold"
                                    Foreground="{DynamicResource SubtleBrush}"
                                    Margin="4,4,0,4"/>
                         <TextBlock Text="No pinned chats"
@@ -189,7 +189,7 @@
                         <TextBlock Margin="0,16,0,0">
                             <Hyperlink Foreground="{DynamicResource SubtleBrush}"
                                        FontSize="11" TextDecorations="Underline">
-                                🔒 Reveal Locked Chats
+                                &#x1F512; Reveal Locked Chats
                             </Hyperlink>
                         </TextBlock>
                     </StackPanel>
@@ -271,7 +271,7 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0"
-                           Text="📄 Artifacts"
+                           Text="&#x1F4C4; Artifacts"
                            Foreground="{DynamicResource PanelForeground}"
                            FontSize="13"
                            FontWeight="SemiBold"
@@ -282,13 +282,13 @@
                                FontSize="12"
                                HorizontalAlignment="Center"
                                Margin="0,0,0,12"/>
-                    <Button Content="💾 Save to Disk"
+                    <Button Content="&#x1F4BE; Save to Disk"
                             Background="Transparent"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                             Foreground="{DynamicResource PanelForeground}"
                             FontSize="11" Padding="8,4" Margin="0,0,0,4"
                             HorizontalAlignment="Stretch"/>
-                    <Button Content="📝 Save to Wiki"
+                    <Button Content="&#x1F4DD; Save to Wiki"
                             Background="Transparent"
                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                             Foreground="{DynamicResource PanelForeground}"
@@ -314,7 +314,7 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <TextBlock Grid.Row="0"
-                           Text="🧭 Chat Navigation"
+                           Text="&#x1F9ED; Chat Navigation"
                            Foreground="{DynamicResource PanelForeground}"
                            FontSize="13"
                            FontWeight="SemiBold"
@@ -325,12 +325,12 @@
                         Background="{DynamicResource InputBackground}"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                         CornerRadius="4" Padding="6,4">
-                    <TextBlock Text="🔍 Search in chat... (Ctrl+F)"
+                    <TextBlock Text="&#x1F50D; Search in chat... (Ctrl+F)"
                                FontSize="11" Foreground="{DynamicResource SubtleBrush}"/>
                 </Border>
 
                 <!-- Favorited only filter -->
-                <Button Grid.Row="2" Content="★ Favorited only"
+                <Button Grid.Row="2" Content="&#x2605; Favorited only"
                         Background="Transparent"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                         Foreground="{DynamicResource PanelForeground}"

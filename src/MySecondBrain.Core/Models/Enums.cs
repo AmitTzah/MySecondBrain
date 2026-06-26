@@ -100,7 +100,8 @@ public enum SettingsCategory
     Pricing,
     Security,
     Maintenance,
-    Diagnostics
+    Diagnostics,
+    SystemInfo
 }
 
 public enum VirtualKey

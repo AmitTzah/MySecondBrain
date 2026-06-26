@@ -561,9 +561,10 @@ public class SettingsViewModelGeneralSettingsTests : SettingsViewModelTestBase
     // ================================================================
 
     [Fact]
-    public void CategoryItems_Contains16Items()
+    public void CategoryItems_Contains17Items()
     {
-        Assert.Equal(16, _sut.CategoryItems.Count);
+        Assert.Equal(17, _sut.CategoryItems.Count);
+        Assert.Contains(_sut.CategoryItems, c => c.Category == SettingsCategory.SystemInfo);
     }
 
     [Fact]
@@ -739,6 +740,64 @@ public class SettingsViewModelGeneralSettingsTests : SettingsViewModelTestBase
         // Verify the command executes without exception (the messenger fires but
         // no recipient may be registered in a unit test context)
         var exception = Record.Exception(() => _sut.ReRunOnboardingCommand.Execute(null));
+        Assert.Null(exception);
+    }
+
+    // ================================================================
+    // System Info — Data Locations
+    // ================================================================
+
+    [Fact]
+    public async Task LoadDataLocationsAsync_PopulatesDataLocations()
+    {
+        _settingsRepoMock.Setup(r => r.GetAsync("WikiDirectoryPath"))
+            .ReturnsAsync("C:\\TestWiki");
+        _settingsRepoMock.Setup(r => r.GetAsync("BackupDirectory"))
+            .ReturnsAsync("C:\\TestBackup");
+
+        await _sut.LoadDataLocationsCommand.ExecuteAsync(null);
+
+        Assert.NotEmpty(_sut.DataLocations);
+        Assert.Contains(_sut.DataLocations, l => l.AutomationKey == "MsbDb");
+        Assert.Contains(_sut.DataLocations, l => l.AutomationKey == "LogsDir");
+        Assert.Contains(_sut.DataLocations, l => l.AutomationKey == "SkillsDir");
+        Assert.Contains(_sut.DataLocations, l => l.AutomationKey == "WikiDir");
+        Assert.Contains(_sut.DataLocations, l => l.AutomationKey == "BackupDir");
+
+        var wikiDir = _sut.DataLocations.First(l => l.AutomationKey == "WikiDir");
+        Assert.Equal("C:\\TestWiki", wikiDir.DisplayPath);
+
+        var backupDir = _sut.DataLocations.First(l => l.AutomationKey == "BackupDir");
+        Assert.Equal("C:\\TestBackup", backupDir.DisplayPath);
+    }
+
+    [Fact]
+    public async Task LoadDataLocationsAsync_WhenWikiNotConfigured_ShowsNotConfigured()
+    {
+        _settingsRepoMock.Setup(r => r.GetAsync("WikiDirectoryPath"))
+            .ReturnsAsync((string?)null);
+        _settingsRepoMock.Setup(r => r.GetAsync("BackupDirectory"))
+            .ReturnsAsync((string?)null);
+
+        await _sut.LoadDataLocationsCommand.ExecuteAsync(null);
+
+        var wikiDir = _sut.DataLocations.FirstOrDefault(l => l.AutomationKey == "WikiDir");
+        Assert.NotNull(wikiDir);
+        Assert.Equal("[Not configured]", wikiDir.DisplayPath);
+        Assert.Null(wikiDir.ExpandedPath);
+
+        var backupDir = _sut.DataLocations.FirstOrDefault(l => l.AutomationKey == "BackupDir");
+        Assert.NotNull(backupDir);
+        Assert.Equal("[Not configured]", backupDir.DisplayPath);
+        Assert.Null(backupDir.ExpandedPath);
+    }
+
+    [Fact]
+    public void OnSelectedSettingsCategoryChanged_SystemInfo_TriggersLoad()
+    {
+        // The partial method calls _ = LoadDataLocationsAsync() when SystemInfo is selected.
+        // We just verify it doesn't throw (actual load is async fire-and-forget here).
+        var exception = Record.Exception(() => _sut.SelectedSettingsCategory = SettingsCategory.SystemInfo);
         Assert.Null(exception);
     }
 }

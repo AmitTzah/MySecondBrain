@@ -131,7 +131,7 @@ Align the existing codebase (Features 1-9 built with legacy tool names, 5-tool s
 **Agent Skills Subsystem:**
 - Add `ISkillService` interface (discovery, catalog, load, resource listing, activation tracking, dependency detection)
 - Add `ISkillLoader` interface (skill_load tool schema, structured XML wrapping, deduplication)
-- Implement `AgentSkillService` — scans 4 locations (embedded resources + %LOCALAPPDATA% + .agents/skills/ + .claude/skills/), parses YAML frontmatter
+- Implement `AgentSkillService` — scans 2 locations (embedded resources + %LOCALAPPDATA%/MySecondBrain/skills/; reduced to 2 by Feature 11), parses YAML frontmatter
 - Implement `StructuredSkillLoader` — reads SKILL.md, strips frontmatter, wraps in `<skill_content>` tags with `<skill_resources>` listing
 - Skill discovery at startup (embedded `Skills/anthropic/` in MySecondBrain.UI.dll + filesystem paths)
 - Name collision resolution: user overrides built-in, cross-client overrides user
@@ -244,13 +244,13 @@ Bridge the gap between the current codebase (Feature 10's 10-tool Anthropic surf
 - Remove cross-client path scanning (`.agents/`, `.claude/`)
 - Only scan embedded + `%LOCALAPPDATA%/MySecondBrain/skills/`
 
-**UI:**
-- Studio Chat header: "📡 API History" button (C38), "?" help icon (C40)
-- Tab bar: file viewer tab support (📄 icon, "Read-Only" badge, C39)
-- Input toolbar: 14-tool dropdown with out-of-workspace read approval
-- Tool call renderer: 5 new cards (`ReadFileToolCard`, `ListFilesToolCard`, `SearchFilesToolCard`, `ApplyDiffToolCard`, `WriteToFileToolCard`) + parallel execution indicator; remove `TextEditorToolCard`
-- Settings: System Info category (19th, Z), updated Tools section (14 tools + out-of-workspace approval)
-- Usage Dashboard: filter bar (provider/model/tier), cache breakdown, latency distribution (avg/p50/p95/p99), per-provider/model tables
+**UI (Note: deferred to subsequent features — F11 built backend only):**
+- Studio Chat header: "📡 API History" button (C38), "?" help icon (C40) → **Reassigned to F12**
+- Tab bar: file viewer tab support (📄 icon, "Read-Only" badge, C39) → **Reassigned to F12**
+- Input toolbar: 14-tool dropdown with out-of-workspace read approval → **Reassigned to F17**
+- Tool call renderer: 5 new cards (`ReadFileToolCard`, `ListFilesToolCard`, `SearchFilesToolCard`, `ApplyDiffToolCard`, `WriteToFileToolCard`) + parallel execution indicator; remove `TextEditorToolCard` → **Reassigned to F17**
+- Settings: System Info category (19th, Z), updated Tools section (14 tools + out-of-workspace approval) → **Reassigned to F21 + F17**
+- Usage Dashboard: filter bar (provider/model/tier), cache breakdown, latency distribution (avg/p50/p95/p99), per-provider/model tables → **Reassigned to F21**
 
 **API History:**
 - Every `ILLMProvider` call appends to `_api_history.json` in per-chat workspace
@@ -342,7 +342,9 @@ Vision groups: F, G.
 
 14-tool provider-agnostic agent surface: read_file, list_files, search_files, apply_diff, write_to_file (file operations — replacing text_editor), bash (per-chat workspace-isolated cmd.exe with Git Bash/WSL fallback), web_search (Google Custom Search / Bing API), web_fetch (read-only HttpClient GET), image_search (Google/Bing Image Search API), memory (SQLite-backed, Anthropic memory_20250818 schema, per-chat toggle), wiki_search (local SQLite FTS5, read-only, zero API cost), skill_load (activates Agent Skills with enum-constrained schema), ask_user_input (structured WPF confirmation dialogs, always available), present_files (bridges per-chat workspace to per-chat artifacts). Parallel tool execution (Task.WhenAll for independent tools, max 10 concurrent). Tool auto-approval settings (global defaults in Settings → Tools + per-chat overrides in textbox toolbar). Out-of-workspace read approval for read_file/list_files/search_files (Auto-Approve/Ask/Disabled per tool). Hard-coded overrides: bash writes outside workspace and apply_diff/write_to_file outside workspace ALWAYS require confirmation or are blocked. Blocked paths always denied.
 
-Skills subsystem: 11 built-in Anthropic skills (xlsx, docx, pdf, pptx, algorithmic-art, canvas-design, frontend-design, theme-factory, web-artifacts-builder, webapp-testing, skill-creator) shipped as embedded resources. Progressive disclosure: catalog (~80 tokens/skill) in system prompt → full SKILL.md on skill_load → resources on demand. Skill discovery from 2 locations: embedded resources + %LOCALAPPDATA%/MySecondBrain/skills/ only. Community skills with source annotation. Per-chat Skills dropdown with individual toggles. skill-creator meta-skill for user-created skills. Deep Research as skill (not custom state machine) — model follows research protocol using web_search + web_fetch + bash, progress visible naturally as tool calls stream. Memory tool — SQLite-backed discrete fact entries, per-chat toggle, user management in Settings → Memory. Per-chat toolbar: Tools dropdown (🔧), Skills dropdown (📚), Memory toggle (🧠 Mem).
+Skills subsystem: 11 built-in Anthropic skills (xlsx, docx, pdf, pptx, algorithmic-art, canvas-design, frontend-design, theme-factory, web-artifacts-builder, webapp-testing, skill-creator) shipped as embedded resources. Progressive disclosure: catalog (~80 tokens/skill) in system prompt → full SKILL.md on skill_load → resources on demand. Skill discovery from 2 locations: embedded resources + %LOCALAPPDATA%/MySecondBrain/skills/ only. Community skills with source annotation. Per-chat Skills dropdown with individual toggles. Settings → Skills category (A12): list of all discovered skills with individual enable/disable toggles, "Enable All"/"Disable All" quick actions, skills count display. New chats inherit global defaults. skill-creator meta-skill for user-created skills. Deep Research as skill (not custom state machine) — model follows research protocol using web_search + web_fetch + bash, progress visible naturally as tool calls stream. Memory tool — SQLite-backed discrete fact entries, per-chat toggle, user management in Settings → Memory. Per-chat toolbar: Tools dropdown (🔧), Skills dropdown (📚), Memory toggle (🧠 Mem).
+
+**Tool Call Renderer Cards:** 5 new WPF ContentBlockRenderer cards built as part of the existing 7-card priority chain (MarkdownText=100 through ToolCall=700): `ReadFileToolCard` (📖), `ListFilesToolCard` (📂), `SearchFilesToolCard` (🔎), `ApplyDiffToolCard` (✏️), `WriteToFileToolCard` (✍️). Remove `TextEditorToolCard`. Parallel execution indicator card: "⚡ Running [N] tools in parallel…" → "[N] tools completed in [T]ms."
 
 WebView2 artifacts panel: embedded Microsoft Edge WebView2 control for browser-native rendering (syntax highlighting via Prism.js/highlight.js, Markdown via marked.js, diff views via diff2html.js, interactive React/Tailwind artifacts from web-artifacts-builder skill). Workspace-to-artifact pipeline: model creates files in per-chat workspace via write_to_file/apply_diff/bash → calls present_files → app copies to per-chat artifacts directory → renders in WebView2 panel. Version tracking by filename within chat. Chat conversation stays WPF-native (FlowDocument + ContentBlockRenderers).
 
