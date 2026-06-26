@@ -70,7 +70,7 @@
       <example>Architect returned. Planning/ directory and wave map: [N] features across [W] waves. Phase 2: Spawning Critic for independent architectural review of planning/ and roadmap.</example>
       <example>Critic approved. [N] issues found and fixed: [summary]. Proceeding to generalization audit.</example>
       <example>Generalization audit passed. All integration points abstracted. Ready for your approval. Phase 3: Spawning feature-developer for Feature [X] of [N].</example>
-      <example>Feature-developer returned. Feature [X] complete on branch [branch-name]. Phase 4: unit tests passed, E2E generation subtask created E2E tests ([framework]), running regression suite ([N] tests).</example>
+      <example>Feature-developer returned. Feature [X] complete on branch [branch-name]. Phase 4: unit/integration tests passed, E2E generation subtask created E2E tests ([framework]), running regression suite ([N] tests).</example>
       <example>Phase 4: All [N] E2E tests passed. Feature '[Name]' locked in.</example>
       <example>Phase 4: Architectural audit complete. Health: [Rating]. Vision re-evaluated — [no changes / minor updates / major re-plan]. Dashboard updated. Phase 5: presenting PR/merge gate.</example>
       <example>Phase 5: Merged, cleanup complete. Proceeding to Feature [Y] of [N].</example>

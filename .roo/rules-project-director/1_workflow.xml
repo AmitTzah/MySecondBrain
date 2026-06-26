@@ -1046,7 +1046,7 @@
 
           <sub_step number="A4">
             <title>Run Tests and Document</title>
-            <action>Before running unit/integration tests: check Code subtask's completion for pre-existing test failure flags. If flagged: skip unit tests — failures predate the change. Note in current-state.md.</action>
+            <action>Before running tests: check Code subtask's completion for pre-existing test failure flags. If flagged: skip the test run — failures predate the change. Note in current-state.md.</action>
             <action>If no pre-existing flags: run unit/integration tests. If they fail: spawn Code subtask to fix regressions. If still failing after retry: escalate to user.</action>
             <action>Document the change in current-state.md under "Vision Updates": what changed, which files, any implications.</action>
             <action>Commit if git_automation_enabled.</action>
@@ -1604,7 +1604,7 @@
         </update_sections>
         <action>Set phase_4_substep="dashboarded" in state.json.</action>
         <action>Commit Phase 4 changes. Read git_automation_enabled from state.json. If true:
-          Ensure the following Phase 4 artifacts are committed: the new E2E test file in tests/e2e/, the updated current-state.md, and any modified vision docs in agent-workspace/project-director/vision/. Use a commit message summarizing the QA results: feature number, unit test outcome, E2E lock-in status, audit rating, and whether dashboard/vision were updated.
+          Ensure the following Phase 4 artifacts are committed: the new E2E test file in tests/e2e/, the updated current-state.md, and any modified vision docs in agent-workspace/project-director/vision/. Use a commit message summarizing the QA results: feature number, unit/integration test outcome, E2E lock-in status, audit rating, and whether dashboard/vision were updated.
           If false: announce "Phase 4 changes ready. Please manually commit: tests/e2e/, current-state.md, vision/, and any regression fixes."</action>
       </step>
     </steps>
@@ -1626,7 +1626,7 @@
 
       <step number="1">
         <title>Present the Completion Report</title>
-        <action>Present a concise report: feature name/number, wave, branch, unit test results, E2E lock-in status
+        <action>Present a concise report: feature name/number, wave, branch, unit/integration test results, E2E lock-in status
           (framework + test file), Architectural Health rating with evidence, vision changes, tech debt items.</action>
         <action>Set phase_5_substep="report_presented" in state.json.</action>
       </step>
@@ -1764,7 +1764,7 @@
 
   <completion_criteria>
     <criterion>All features in the roadmap built and merged (current_feature_index == total_features).</criterion>
-    <criterion>All unit tests pass for the complete project.</criterion>
+    <criterion>All unit and integration tests pass for the complete project.</criterion>
     <criterion>All E2E regression tests pass. Any feature not locked in documented in current-state.md with reason.</criterion>
     <criterion>current-state.md dashboard reflects all completed features, UI map, vision updates, and E2E regression suite status.</criterion>
     <criterion>Vision docs accurately reflect the true built state of the app (all minor drifts reconciled).</criterion>

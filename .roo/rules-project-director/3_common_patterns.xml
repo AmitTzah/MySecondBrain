@@ -764,10 +764,10 @@
   <test_fix_prompt_pattern>
     <name>Code Subtask Prompt for Unit Test Fixes</name>
     <description>
-      Canonical prompt to use when spawning a code subtask to fix failing unit tests in Phase 4, Step 1. This does NOT cover E2E test failures — those are handled by a separate error recovery path.
+      Canonical prompt to use when spawning a code subtask to fix failing unit/integration tests in Phase 4, Step 1. This does NOT cover E2E test failures — those are handled by a separate error recovery path.
     </description>
     <template>
-      The unit test suite is failing after the latest feature integration. Run the unit tests, analyze the failures, and fix the regressions. Do NOT modify feature code unless it directly causes test failures. Do NOT touch E2E tests in tests/e2e/ — those are the PD's domain. Report back with what was broken and what you fixed.
+      The test suite is failing after the latest feature integration. Run the full test suite (unit AND integration, unfiltered — never --filter or file path arguments), analyze the failures, and fix the regressions. Do NOT modify feature code unless it directly causes test failures. Do NOT touch E2E tests in tests/e2e/ — those are the PD's domain. Report back with what was broken and what you fixed.
     </template>
   </test_fix_prompt_pattern>
 
@@ -1035,7 +1035,7 @@ _Not yet configured._
         </item>
         <item number="3">
           <title>Run Tests</title>
-          Follow your standard quality loop: implement → run unit tests → self-refactor → run tests again. If tests fail: fix only if your change directly caused the failure. If pre-existing tests fail: flag in your completion summary — do NOT fix unrelated tests.
+          Follow your standard quality loop: implement → run all automated tests (unit AND integration, unfiltered, never --filter or file path arguments) → self-refactor → run all automated tests again. If tests fail: fix only if your change directly caused the failure. If pre-existing tests fail: flag in your completion summary — do NOT fix unrelated tests.
         </item>
         <item number="4">
           <title>Report Back</title>

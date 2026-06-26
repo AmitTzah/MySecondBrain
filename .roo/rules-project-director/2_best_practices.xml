@@ -47,7 +47,7 @@
     <principle priority="high">
       <name>Test, Generate E2E, Lock In, Then Audit, Then PR/Merge</name>
       <description>
-        The post-feature pipeline follows the strict order defined in the Phase 4 workflow. All three quality gates (unit tests, E2E lock-in, architectural audit) must pass before a PR or merge is offered. Never skip or reorder steps.
+        The post-feature pipeline follows the strict order defined in the Phase 4 workflow. All three quality gates (unit/integration tests, E2E lock-in, architectural audit) must pass before a PR or merge is offered. Never skip or reorder steps.
       </description>
       <rationale>
         Unit tests catch code regressions. E2E tests catch behavioral regressions and lock features into the regression suite. Audits catch structural drift. This three-gate sequence ensures quality at every feature boundary.

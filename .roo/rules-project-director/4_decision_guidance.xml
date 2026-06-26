@@ -510,8 +510,8 @@
 
         <step number="A4">
           <title>Run Tests and Document</title>
-          <action>Before running unit tests: check the Code subtask's completion summary for pre-existing test failure flags. If flagged: skip unit test run — these failures predate the change. Note in current-state.md.</action>
-          <action>If no pre-existing flags: run unit tests. If they fail: spawn Code subtask to fix regressions. If still failing after retry: escalate to user.</action>
+          <action>Before running tests: check the Code subtask's completion summary for pre-existing test failure flags. If flagged: skip the test run — these failures predate the change. Note in current-state.md.</action>
+          <action>If no pre-existing flags: run the project's full test suite (unit AND integration, unfiltered). If they fail: spawn Code subtask to fix regressions. If still failing after retry: escalate to user.</action>
           <action>Document the change in current-state.md under "Vision Updates": what changed, which files, any implications.</action>
           <action>Commit the change if git_automation_enabled.</action>
           <action>Loop back to Phase 3 Step 1 for the next planned feature.</action>

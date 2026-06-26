@@ -126,7 +126,7 @@
             <action>Proceed to Phase 4, Step 2 (Run Existing E2E Suite).</action>
           </branch>
           <branch condition="Tests still fail">
-            <action>Present the failure details to the user with options: "Retry the fix", "Skip unit tests (not recommended)", "I'll fix manually".</action>
+            <action>Present the failure details to the user with options: "Retry the fix", "Skip the test run (not recommended)", "I'll fix manually".</action>
             <action>If user skips: note in current-state.md under "⚠️ Known Issues".</action>
           </branch>
         </decision_tree>
@@ -314,7 +314,7 @@
     </scenario>
 
     <scenario name="ad_hoc_change_causes_regression" priority="high">
-      <trigger>After an ad-hoc Code or UI Designer subtask completes, unit tests fail with pre-existing tests</trigger>
+      <trigger>After an ad-hoc Code or UI Designer subtask completes, tests fail with pre-existing tests</trigger>
       <recovery>
         <step>Spawn a Code subtask to fix the regressions (use test_fix_prompt_pattern). Include the ad-hoc change context.</step>
         <step>If the fix cannot be done without reverting the ad-hoc change: escalate to user. Options: "Revert the ad-hoc change", "Keep the change and accept test breakage (document as known issue)", "I'll fix manually."</step>

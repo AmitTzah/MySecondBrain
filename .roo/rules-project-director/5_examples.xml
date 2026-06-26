@@ -155,7 +155,7 @@
       <step number="1">
         <title>Routine Loop: Phase 3 → 4 → 5</title>
         <approach>
-          For each feature, the PD spawns FD (Phase 3), runs unit tests + QA-generated E2E tests + architectural audit + vision re-evaluation (Phase 4), then presents the PR/merge gate (Phase 5). Features 1–14 proceed cleanly through this loop with no drift.
+          For each feature, the PD spawns FD (Phase 3), runs unit/integration tests + QA-generated E2E tests + architectural audit + vision re-evaluation (Phase 4), then presents the PR/merge gate (Phase 5). Features 1–14 proceed cleanly through this loop with no drift.
         </approach>
       </step>
 
