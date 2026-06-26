@@ -201,7 +201,7 @@ tests/
 
 ---
 
-### [ ] Step 4: ChatThreadViewModel — Multi-Tab Architecture & Chat State Management
+### [x] Step 4: ChatThreadViewModel — Multi-Tab Architecture & Chat State Management
 - **Goal:** Build the complete `ChatThreadViewModel` with multi-tab management, message sending, streaming state, persona switching, tool/skill toggles, and auto-save drafts. Implement `MainWindow` tab bar integration with chat tabs managed via `ObservableCollection<ChatTabItem>`. Wire all toolbar buttons to ViewModel commands. Integrate `WeakReferenceMessenger` for cross-tab completion alerts.
 - **Actions:**
   - Create [`ChatTabItem`](src/MySecondBrain.Core/Models/ChatTabItem.cs): wraps `ChatThread` with `ObservableCollection<Message> Messages`, `bool IsStreaming`, `string TextboxContent`, `int CursorPosition`, `double ScrollOffset`
