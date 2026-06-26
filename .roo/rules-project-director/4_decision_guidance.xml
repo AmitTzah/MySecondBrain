@@ -490,22 +490,46 @@
         </step>
 
         <step number="A3">
-          <title>PD Sanity Check — Scoped to Change Magnitude</title>
+          <title>PD Sanity Check</title>
           <description>
-            PD must verify the change doesn't contradict vision/planning documents and doesn't introduce misalignment. The review scope scales with the change:
+            PD must verify the change doesn't contradict vision/planning documents and doesn't introduce misalignment. Source code review scales with change magnitude, but vision/planning review is always comprehensive — reading every vision and planning file is cheap and catches misalignment that a scoped read would miss.
           </description>
           <review_scopes>
-            <scope name="single_file_change">
-              <action>Review: the changed file + its direct dependencies + the vision/planning files that describe the affected area (e.g., if sidebar changed, read vision docs describing the sidebar and planning files covering the UI architecture).</action>
+            <scope name="source_code_review">
+              <tier name="single_file_change">
+                <action>Review: the changed file + its direct dependencies.</action>
+              </tier>
+              <tier name="multi_file_change">
+                <action>Review: all touched domains + their integration points.</action>
+              </tier>
+              <tier name="foundation_code_touched">
+                <action>Review: all consumers of that abstraction. Foundation changes have the highest ripple risk.</action>
+              </tier>
             </scope>
-            <scope name="multi_file_change">
-              <action>Review: all touched domains + their integration points + all vision/planning files that reference those domains.</action>
-            </scope>
-            <scope name="foundation_code_touched">
-              <action>Review: all consumers of that abstraction + ALL vision files + ALL planning files. Foundation changes have the highest ripple risk.</action>
+            <scope name="vision_planning_review">
+              <action>Always review: ALL vision files (every .md in vision/), ALL planning files (every .md in planning/), and roadmap.md — regardless of change magnitude.</action>
             </scope>
           </review_scopes>
-          <action>If the sanity check finds misalignment in untouched files: flag to user — "This change appears to have implications beyond what was modified. [Specific findings.] Recommend reclassifying to Path B." Options: "Reclassify to Path B", "Proceed — I'll address the implications separately."</action>
+          <misalignment_handling>
+            <description>When the sanity check finds a contradiction between the change and vision/planning documents, classify before acting:</description>
+            <tier name="documentation_drift">
+              <signals>
+                <signal>Stale color, breakpoint, UI detail, or minor description in a vision doc that no longer matches reality</signal>
+                <signal>Outdated file reference or renamed abstraction mentioned in a planning file</signal>
+                <signal>Roadmap E2E description slightly stale but feature intent unchanged</signal>
+              </signals>
+              <action>PD fixes it directly: update the stale vision/planning file with the correct information. Note the fix in the sanity check summary and current-state.md. Do NOT escalate — this is routine cleanup, not a vision change.</action>
+            </tier>
+            <tier name="architectural_misalignment">
+              <signals>
+                <signal>Contradicts a core interaction pattern described in vision docs</signal>
+                <signal>Removes, replaces, or adds a feature from/to the roadmap</signal>
+                <signal>Would affect 3+ remaining roadmap features</signal>
+                <signal>Foundation abstraction contract change</signal>
+              </signals>
+              <action>Flag to user: "This change has architectural implications beyond what was modified. [Specific findings.] Recommend reclassifying to Path B." Options: "Reclassify to Path B", "Proceed — I'll address the implications separately."</action>
+            </tier>
+          </misalignment_handling>
         </step>
 
         <step number="A4">
@@ -521,7 +545,7 @@
       <escalation_triggers>
         <trigger>Code subtask reports ARCHITECTURAL IMPACT</trigger>
         <trigger>>5 files touched</trigger>
-        <trigger>PD sanity check finds misalignment in untouched files</trigger>
+        <trigger>PD sanity check finds architectural misalignment (contradicts core vision patterns, affects 3+ features, or changes foundation contracts — NOT documentation drift)</trigger>
         <trigger>Tests fail and cannot be fixed after retry</trigger>
         <trigger>User disputes the Path A classification mid-execution</trigger>
       </escalation_triggers>

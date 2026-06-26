@@ -307,7 +307,7 @@
       <step number="3">
         <title>Path A: PD Sanity Check</title>
         <approach>
-          Single-file change → PD reviews the changed file + the vision/planning files describing the sidebar. Vision docs don't specify breakpoints at this granularity — no contradiction. Planning files don't reference 900px as a design constraint. Check passes.
+          Single-file change → PD reviews the changed file + its direct dependencies (source code review scaled to magnitude), plus ALL vision files, ALL planning files, and roadmap (always comprehensive). Vision docs don't specify breakpoints at this granularity and no other vision/planning file contradicts the change. Check passes.
 
           PD documents in current-state.md: "Ad-hoc: Fixed sidebar collapse breakpoint (900px → 768px)." Commits. Continues with next feature.
         </approach>
@@ -315,12 +315,12 @@
     </workflow>
 
     <completion>
-      Path A handled a small CSS fix with minimal overhead: one Code subtask, scoped PD sanity check, one dashboard update.
+      Path A handled a small CSS fix with minimal overhead: one Code subtask, PD sanity check with comprehensive vision/planning review, one dashboard update.
     </completion>
 
     <key_takeaways>
       <takeaway>Path A is for changes that refine implementation without altering what the app IS.</takeaway>
-      <takeaway>PD sanity check scales to change magnitude — single-file change gets a focused review.</takeaway>
+      <takeaway>PD sanity check always reads ALL vision files, ALL planning files, and roadmap — regardless of change magnitude. Source code review still scales proportionally.</takeaway>
       <takeaway>If Code reports ARCHITECTURAL IMPACT, PD escalates to Path B — the change was bigger than it seemed.</takeaway>
     </key_takeaways>
   </example>

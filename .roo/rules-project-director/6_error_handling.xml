@@ -321,12 +321,12 @@
       </recovery>
     </scenario>
 
-  <scenario name="path_a_sanity_check_finds_misalignment" priority="high">
-    <trigger>Path A (Simple Change), Step A3: PD sanity check finds the change contradicts vision/planning files or has implications in untouched areas</trigger>
+  <scenario name="path_a_sanity_check_finds_architectural_misalignment" priority="high">
+    <trigger>Path A (Simple Change), Step A3: PD sanity check finds architectural misalignment — the change contradicts core vision patterns, affects 3+ remaining features, or changes foundation contracts. This is NOT documentation drift (which PD fixes inline).</trigger>
     <recovery>
-      <step>Document the specific misalignment: which vision/planning files contradict the change or would be affected.</step>
-      <step>Present to user: "This change appears to have implications beyond what was modified. [Specific findings.] Recommend reclassifying to Path B (Vision Realignment Pipeline)." Options: "Reclassify to Path B", "Proceed — I'll address the implications separately."</step>
-      <step>If user selects Path B: abort Path A, re-enter triage as Path B.</step>
+      <step>Document the specific architectural misalignment: which vision/planning files contradict the change, which remaining features would be affected.</step>
+      <step>Present to user: "This change has architectural implications beyond what was modified. [Specific findings.] Recommend reclassifying to Path B (Vision Realignment Pipeline)." Options: "Reclassify to Path B", "Proceed — I'll address the implications separately."</step>
+      <step>If user selects Path B: abort Path A, set realignment_loop_count=0 in state.json, re-enter Phase 3 Step 0 triage as Path B.</step>
       <step>If user selects Proceed: document the known misalignment in current-state.md as "Known drift — [description]."</step>
     </recovery>
   </scenario>
