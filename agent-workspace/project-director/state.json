@@ -4,7 +4,7 @@
     "total_features":  24,
     "current_feature_index":  11,
     "status":  "in_progress",
-    "fd_status":  "completed",
+    "fd_status":  "idle",
     "phase_2_substep":  null,
     "phase_4_substep":  null,
     "phase_5_substep":  null,
@@ -29,5 +29,5 @@
                                                             ]
                               },
     "total_replans":  0,
-    "current_branch_name":  "feature/14-tool-vision-alignment"
+    "current_branch_name":  null
 }
