@@ -399,6 +399,243 @@ public class ChatWorkflowIntegrationTests : IDisposable
         Assert.Null(draft3);
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    //  QoL Feature Integration Tests (Step 9)
+    // ═══════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task FavoriteMessage_PersistsAndRetrieves()
+    {
+        var threadRepo = new ChatThreadRepository(_db);
+        var msgRepo = new MessageRepository(_db);
+
+        // Create thread
+        var thread = await threadRepo.CreateAsync(new CoreModels.ChatThread
+        {
+            Title = "Favoriting Test",
+            IsFavorite = false,
+            IsPinned = false
+        });
+
+        // Create a message
+        var branchId = Guid.NewGuid().ToString("N");
+        var msg = await msgRepo.CreateAsync(new CoreModels.Message
+        {
+            ThreadId = thread.Id,
+            Role = "User",
+            Content = "Test message for favoriting",
+            BranchId = branchId,
+            IsActiveBranch = true,
+            IsFavorited = false
+        });
+
+        // Verify initially not favorited
+        Assert.False(msg.IsFavorited);
+
+        // Toggle favorite on
+        msg.IsFavorited = true;
+        await msgRepo.UpdateAsync(msg);
+
+        var retrieved = await msgRepo.GetByIdAsync(msg.Id);
+        Assert.NotNull(retrieved);
+        Assert.True(retrieved!.IsFavorited);
+
+        // Toggle favorite off
+        retrieved.IsFavorited = false;
+        await msgRepo.UpdateAsync(retrieved);
+
+        var retrievedAgain = await msgRepo.GetByIdAsync(msg.Id);
+        Assert.NotNull(retrievedAgain);
+        Assert.False(retrievedAgain!.IsFavorited);
+    }
+
+    [Fact]
+    public async Task PinAndFavoriteThread_PersistsAndRetrieves()
+    {
+        var threadRepo = new ChatThreadRepository(_db);
+
+        // Create thread with pin and favorite flags
+        var thread = await threadRepo.CreateAsync(new CoreModels.ChatThread
+        {
+            Title = "Pinned & Favorited Thread",
+            IsFavorite = true,
+            IsPinned = true
+        });
+
+        Assert.True(thread.IsFavorite);
+        Assert.True(thread.IsPinned);
+
+        // Retrieve and verify
+        var retrieved = await threadRepo.GetByIdAsync(thread.Id);
+        Assert.NotNull(retrieved);
+        Assert.True(retrieved!.IsFavorite);
+        Assert.True(retrieved.IsPinned);
+
+        // Toggle off
+        retrieved.IsFavorite = false;
+        retrieved.IsPinned = false;
+        await threadRepo.UpdateAsync(retrieved);
+
+        var updated = await threadRepo.GetByIdAsync(thread.Id);
+        Assert.NotNull(updated);
+        Assert.False(updated!.IsFavorite);
+        Assert.False(updated.IsPinned);
+    }
+
+    [Fact]
+    public async Task GetAllPermanentAsync_SortsByLastActivity()
+    {
+        var threadRepo = new ChatThreadRepository(_db);
+
+        // Create threads with different activity times
+        var thread1 = await threadRepo.CreateAsync(new CoreModels.ChatThread
+        {
+            Title = "Oldest Activity",
+            IsFavorite = false,
+            IsPinned = false
+        });
+
+        // Simulate time passing by creating threads with explicit ordering
+        await Task.Delay(50);
+        var thread2 = await threadRepo.CreateAsync(new CoreModels.ChatThread
+        {
+            Title = "Middle Activity",
+            IsFavorite = false,
+            IsPinned = false
+        });
+
+        await Task.Delay(50);
+        var thread3 = await threadRepo.CreateAsync(new CoreModels.ChatThread
+        {
+            Title = "Recent Activity",
+            IsFavorite = false,
+            IsPinned = false
+        });
+
+        // Retrieve sorted by last activity descending (most recent first)
+        var sorted = await threadRepo.GetAllPermanentAsync(CoreModels.ChatSortOrder.LastActivityDesc);
+        var sortedTitles = sorted.Select(t => t.Title).ToList();
+
+        // Most recently created should appear first
+        var recentIndex = sortedTitles.IndexOf("Recent Activity");
+        var middleIndex = sortedTitles.IndexOf("Middle Activity");
+        var oldestIndex = sortedTitles.IndexOf("Oldest Activity");
+
+        Assert.True(recentIndex < middleIndex, "Recent Activity should appear before Middle Activity");
+        Assert.True(middleIndex < oldestIndex, "Middle Activity should appear before Oldest Activity");
+    }
+
+    [Fact]
+    public async Task GetAllPermanentAsync_SortsByName()
+    {
+        var threadRepo = new ChatThreadRepository(_db);
+
+        // Create threads with sortable names
+        await threadRepo.CreateAsync(new CoreModels.ChatThread
+        {
+            Title = "Alpha Thread",
+            IsFavorite = false,
+            IsPinned = false
+        });
+
+        await threadRepo.CreateAsync(new CoreModels.ChatThread
+        {
+            Title = "Beta Thread",
+            IsFavorite = false,
+            IsPinned = false
+        });
+
+        await threadRepo.CreateAsync(new CoreModels.ChatThread
+        {
+            Title = "Gamma Thread",
+            IsFavorite = false,
+            IsPinned = false
+        });
+
+        // Retrieve sorted by name ascending
+        var sorted = await threadRepo.GetAllPermanentAsync(CoreModels.ChatSortOrder.TitleAsc);
+        var sortedTitles = sorted.Select(t => t.Title)
+            .Where(t => t is "Alpha Thread" or "Beta Thread" or "Gamma Thread")
+            .ToList();
+
+        Assert.Equal("Alpha Thread", sortedTitles[0]);
+        Assert.Equal("Beta Thread", sortedTitles[1]);
+        Assert.Equal("Gamma Thread", sortedTitles[2]);
+    }
+
+    [Fact]
+    public async Task ThreadWithOrgFields_PersistsAndUpdates()
+    {
+        var threadRepo = new ChatThreadRepository(_db);
+
+        // Create thread with organization fields
+        var thread = await threadRepo.CreateAsync(new CoreModels.ChatThread
+        {
+            Title = "Organized Thread",
+            IsFavorite = true,
+            IsPinned = true,
+            IsArchived = false,
+            ColorLabel = "blue",
+            Tags = """["important", "work"]""",
+            FolderId = "project-folder"
+        });
+
+        Assert.True(thread.IsFavorite);
+        Assert.True(thread.IsPinned);
+        Assert.False(thread.IsArchived);
+        Assert.Equal("blue", thread.ColorLabel);
+        Assert.Equal("""["important", "work"]""", thread.Tags);
+        Assert.Equal("project-folder", thread.FolderId);
+
+        // Update organization fields
+        thread.IsArchived = true;
+        thread.ColorLabel = "red";
+        thread.Tags = """["archived"]""";
+        await threadRepo.UpdateAsync(thread);
+
+        var updated = await threadRepo.GetByIdAsync(thread.Id);
+        Assert.NotNull(updated);
+        Assert.True(updated!.IsArchived);
+        Assert.Equal("red", updated.ColorLabel);
+        Assert.Equal("""["archived"]""", updated.Tags);
+    }
+
+    [Fact]
+    public async Task MessageEdit_UpdatesContent()
+    {
+        var threadRepo = new ChatThreadRepository(_db);
+        var msgRepo = new MessageRepository(_db);
+
+        var thread = await threadRepo.CreateAsync(new CoreModels.ChatThread
+        {
+            Title = "Message Editing Test",
+            IsFavorite = false,
+            IsPinned = false
+        });
+
+        var branchId = Guid.NewGuid().ToString("N");
+        var msg = await msgRepo.CreateAsync(new CoreModels.Message
+        {
+            ThreadId = thread.Id,
+            Role = "User",
+            Content = "Original content",
+            BranchId = branchId,
+            IsActiveBranch = true
+        });
+
+        Assert.Equal("Original content", msg.Content);
+
+        // Edit message
+        msg.Content = "Edited content";
+        msg.RawContent = "Original content";
+        await msgRepo.UpdateAsync(msg);
+
+        var retrieved = await msgRepo.GetByIdAsync(msg.Id);
+        Assert.NotNull(retrieved);
+        Assert.Equal("Edited content", retrieved!.Content);
+        Assert.Equal("Original content", retrieved.RawContent);
+    }
+
     /// <summary>
     /// Helper to produce a streaming response for integration tests.
     /// </summary>

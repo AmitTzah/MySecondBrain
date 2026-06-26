@@ -5,6 +5,8 @@
     <AssemblyName>MySecondBrain.Tests.Integration</AssemblyName>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <WindowsSdkPackageVersion>10.0.17763.56</WindowsSdkPackageVersion>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <Description>Integration tests for MySecondBrain using xUnit and coverlet</Description>
