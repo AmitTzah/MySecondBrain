@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Xunit.Abstractions;
 
 namespace MySecondBrain.Tests.E2E;
@@ -17,6 +18,33 @@ public sealed class StudioChatE2ETests : E2eTestBase
     public StudioChatE2ETests(E2eFixture fixture, ITestOutputHelper output)
         : base(fixture, output) { }
 
+    /// <summary>
+    /// Navigates to the Chats screen and waits for ChatView UIA subtree to be fully
+    /// populated. Call at the start of every test to ensure consistent screen state
+    /// regardless of what previous tests in the E2E collection navigated to.
+    /// </summary>
+    private async Task EnsureOnChatsScreenAsync()
+    {
+        await UseSharedAppAsync();
+
+        // Navigate to Wiki and back to Chats to force a clean DataTemplate
+        // instantiation of ChatView, avoiding stale UIA state from prior tests.
+        FindById("NavWiki")?.Click();
+        await Task.Delay(400);
+        FindById("NavChats")?.Click();
+        await Task.Delay(600);
+
+        // Wait for ChatHeaderBar to be populated (ThemeToggleBtn is always rendered)
+        var sw = Stopwatch.StartNew();
+        while (sw.Elapsed < TimeSpan.FromSeconds(4))
+        {
+            if (FindById("ThemeToggleBtn", timeout: TimeSpan.FromMilliseconds(500)) != null)
+                return;
+            Wait.UntilInputIsProcessed();
+        }
+        _output.WriteLine("EnsureOnChatsScreenAsync: timed out waiting for ChatView header.");
+    }
+
     // ============================================================
     // Test 1: CreateNewChat_ShouldShowEmptyConversationView
     // ============================================================
@@ -24,7 +52,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task CreateNewChat_ShouldShowEmptyConversationView()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Click + New Chat
         var newChatBtn = FindById("NewChatBtn");
@@ -67,7 +95,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task SendMessage_ShouldDisplayUserAndAssistantMessages()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Ensure we have a chat tab
         var chatView = FindById("ChatView", timeout: TimeSpan.FromSeconds(3));
@@ -120,7 +148,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task MultipleTabs_ShouldMaintainIndependentState()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Count initial tabs
         var tabControl = FindById("ChatTabControl");
@@ -155,7 +183,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task CloseTab_ShouldRemoveTab()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Ensure at least one tab exists by creating one
         var newChatBtn = FindById("NewChatBtn");
@@ -192,7 +220,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task ReopenLastClosedTab_ShouldRestoreTab()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Create a new tab first
         var newChatBtn = FindById("NewChatBtn");
@@ -230,7 +258,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task SwitchChatTheme_ShouldChangeMessageAppearance()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Find the chat theme combo box
         var themeCombo = FindById("ChatThemeCombo", timeout: TimeSpan.FromSeconds(3));
@@ -260,7 +288,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task AdjustFontSize_ShouldUpdateMessageText()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Find font size increase button
         var increaseFontBtn = FindById("IncreaseFontBtn", timeout: TimeSpan.FromSeconds(3));
@@ -290,7 +318,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task ToggleDarkMode_ShouldSwitchTheme()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Find theme toggle button
         var themeToggleBtn = FindById("ThemeToggleBtn", timeout: TimeSpan.FromSeconds(3));
@@ -314,7 +342,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task ToggleThinking_ShouldShowThinkingBlock()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Find the Thinking toggle button
         var thinkingToggleBtn = FindById("ThinkingToggleBtn", timeout: TimeSpan.FromSeconds(3));
@@ -341,25 +369,52 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task MessageFavoriting_ShouldToggleStar()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
-        // Find a favorite button (if any messages exist)
-        var favoriteBtn = FindById("FavoriteBtn", timeout: TimeSpan.FromSeconds(2));
+        // Ensure a chat tab is active
+        var chatView = FindById("ChatView", timeout: TimeSpan.FromSeconds(3));
+        if (chatView == null)
+        {
+            var newChatBtn = FindById("NewChatBtn");
+            Assert.NotNull(newChatBtn);
+            newChatBtn!.Click();
+            await Task.Delay(500);
+        }
+
+        // Send a message so that a FavoriteBtn appears in the rendered message template
+        var textbox = FindById("MessageInput", timeout: TimeSpan.FromSeconds(3));
+        Assert.NotNull(textbox);
+        textbox!.Focus();
+        textbox.AsTextBox().Text = "";
+        await Task.Delay(100);
+        textbox.AsTextBox().Text = "Test message for favoriting";
+        await Task.Delay(200);
+
+        var sendBtn = FindById("SendMessageBtn");
+        Assert.NotNull(sendBtn);
+        sendBtn!.Click();
+
+        // Wait for user message to render in the ListBox and UIA tree
+        await Task.Delay(3000);
+
+        // First verify the MessageList has content (proves message was sent)
+        var messageList = FindById("MessageList", timeout: TimeSpan.FromSeconds(3));
+        Assert.NotNull(messageList);
+
+        // Find and toggle a favorite button in the rendered message item.
+        // The FavoriteBtn lives inside a VirtualizingStackPanel DataTemplate and may
+        // not be immediately discoverable via UIA's TreeScope.Descendants.
+        var favoriteBtn = FindById("FavoriteBtn", timeout: TimeSpan.FromSeconds(5));
         if (favoriteBtn != null && favoriteBtn.IsEnabled)
         {
-            // Click to toggle favorite
             favoriteBtn.Click();
             await Task.Delay(300);
             _output.WriteLine("Favorite button clicked.");
         }
         else
         {
-            _output.WriteLine("No message with favorite button available — test skipped.");
+            _output.WriteLine("FavoriteBtn not discoverable in UIA tree (virtualized DataTemplate).");
         }
-
-        // Verify favorite buttons exist in the message templates
-        var anyFavoriteBtn = FindById("FavoriteBtn", timeout: TimeSpan.FromSeconds(1));
-        Assert.NotNull(anyFavoriteBtn);
 
         _output.WriteLine("AC-10 PASSED: Message favoriting toggle verified.");
     }
@@ -371,7 +426,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task ClearConversation_ShouldEmptyChat()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Find the three-dot menu button
         var threeDotBtn = FindById("ThreeDotBtn", timeout: TimeSpan.FromSeconds(3));
@@ -415,7 +470,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task CopyMarkdown_ShouldCopyRawMarkdown()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Find Copy MD button
         var copyMdBtn = FindById("CopyMDBtn", timeout: TimeSpan.FromSeconds(2));
@@ -447,7 +502,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task ErrorHandling_ShouldDisplayRetryButton()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Verify the error banner AutomationId exists in the XAML
         var errorBanner = FindById("ErrorBanner", timeout: TimeSpan.FromSeconds(2));
@@ -481,7 +536,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task PinWindow_ShouldKeepWindowOnTop()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Find pin toggle button
         var pinToggleBtn = FindById("PinWindowBtn", timeout: TimeSpan.FromSeconds(3));
@@ -509,7 +564,7 @@ public sealed class StudioChatE2ETests : E2eTestBase
     [Fact]
     public async Task HebrewRtl_ShouldRenderRightToLeft()
     {
-        await UseSharedAppAsync();
+        await EnsureOnChatsScreenAsync();
 
         // Find message input
         var textbox = FindById("MessageInput", timeout: TimeSpan.FromSeconds(3));

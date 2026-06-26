@@ -1642,6 +1642,13 @@ public partial class ChatThreadViewModel : ObservableObject
             ? AppTheme.Dark
             : AppTheme.Light;
         _themeProvider.SetAppTheme(newTheme);
+
+        // Update ThemeToggleIcon on MainWindowViewModel so the ChatHeaderBar button
+        // Content binding (Window ancestor) reflects the theme change.
+        if (System.Windows.Application.Current?.MainWindow?.DataContext is MainWindowViewModel mainVm)
+        {
+            mainVm.ThemeToggleIcon = newTheme == AppTheme.Dark ? "🌙" : "☀";
+        }
     }
 
     [RelayCommand]
