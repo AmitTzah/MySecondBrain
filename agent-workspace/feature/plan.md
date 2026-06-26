@@ -230,7 +230,7 @@ tests/
 
 ---
 
-### [ ] Step 5: Conversation View — VirtualizingStackPanel + Markdown Rendering Engine
+### [x] Step 5: Conversation View — VirtualizingStackPanel + Markdown Rendering Engine
 - **Goal:** Replace the static sample messages in `ChatView.xaml` with a data-bound `VirtualizingStackPanel`-based `ItemsControl`. Implement the full Markdig→WPF FlowDocument rendering pipeline by filling all 8 `IContentBlockRenderer` stubs. Integrate AvalonEdit's `HighlightingManager` for syntax highlighting in code blocks (100+ languages). Render all Markdown constructs: headings H1-H6, bold, italic, inline code, fenced code blocks, bulleted/numbered lists, links, tables, blockquotes, horizontal rules, images.
 - **Actions:**
   - Create [`MarkdownHelper`](src/MySecondBrain.Core/Utilities/MarkdownHelper.cs): configure Markdig pipeline with all extensions (tables, task lists, footnotes, emoji, auto-links, etc.), provide `Parse()` and `RenderToFlowDocument()` entry points
