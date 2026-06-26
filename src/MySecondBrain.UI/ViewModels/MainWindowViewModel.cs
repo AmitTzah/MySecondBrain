@@ -27,6 +27,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private ChatTheme _currentChatTheme = ChatTheme.Classic;
 
+    public ChatThreadViewModel ChatThreadViewModel { get; }
+
     public AppTheme CurrentAppTheme => _themeProvider.CurrentAppTheme;
 
     public DataTemplate? CurrentMessageTemplate =>
@@ -55,11 +57,13 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(
         IThemeProvider themeProvider,
         ISystemTrayService systemTray,
-        ILogger<MainWindowViewModel> logger)
+        ILogger<MainWindowViewModel> logger,
+        ChatThreadViewModel chatThreadViewModel)
     {
         _themeProvider = themeProvider;
         _systemTray = systemTray;
         _logger = logger;
+        ChatThreadViewModel = chatThreadViewModel;
         _currentChatTheme = _themeProvider.CurrentChatTheme;
         FontSizeDisplay = _themeProvider.FontSize.ToString("F0");
 

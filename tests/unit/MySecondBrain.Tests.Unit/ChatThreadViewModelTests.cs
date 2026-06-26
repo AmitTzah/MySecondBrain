@@ -4,6 +4,8 @@ using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 using MySecondBrain.Services;
 using MySecondBrain.UI.ViewModels;
+// Resolve ambiguity with System.Windows.Forms.Message (UseWindowsForms=true)
+using Message = MySecondBrain.Core.Models.Message;
 
 // ReSharper disable PossibleNullReferenceException
 
@@ -16,6 +18,8 @@ public class ChatThreadViewModelTests
     private readonly Mock<IModelConfigurationRepository> _modelConfigRepoMock = new();
     private readonly Mock<ISettingsRepository> _settingsRepoMock = new();
     private readonly Mock<ISkillService> _skillServiceMock = new();
+    private readonly Mock<IConfirmationService> _confirmationServiceMock = new();
+    private readonly Mock<IThemeProvider> _themeProviderMock = new();
     private readonly Mock<ILogger<ChatThreadViewModel>> _loggerMock = new();
 
     private readonly Persona _generalAssistant = new()
@@ -80,6 +84,8 @@ public class ChatThreadViewModelTests
             _modelConfigRepoMock.Object,
             _settingsRepoMock.Object,
             _skillServiceMock.Object,
+            _confirmationServiceMock.Object,
+            _themeProviderMock.Object,
             _loggerMock.Object);
     }
 
@@ -100,8 +106,7 @@ public class ChatThreadViewModelTests
         // Act
         await vm.InitializeAsync();
 
-        // Assert — ActivePersona must reference an object that exists in PersonaList
-        // so the ComboBox SelectedItem matches an ItemsSource entry
+        // Assert
         Assert.NotNull(vm.ActivePersona);
         Assert.Equal("General Assistant", vm.ActivePersona!.DisplayName);
         Assert.Contains(vm.ActivePersona, vm.PersonaList);
@@ -129,14 +134,14 @@ public class ChatThreadViewModelTests
         // Act
         await vm.SelectPersonaCommand.ExecuteAsync(_customPersona);
 
-        // Assert — LastSelectedPersonaId should have been persisted exactly once
+        // Assert
         _settingsRepoMock.Verify(r => r.SetAsync("LastSelectedPersonaId", "custom-001"), Times.Once);
     }
 
     [Fact]
     public async Task InitializeAsync_RestoresLastSelectedPersona()
     {
-        // Arrange — return a saved persona ID that overrides the default
+        // Arrange
         _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
         _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper, _customPersona });
         _modelConfigRepoMock.Setup(r => r.GetByIdAsync("config-002")).ReturnsAsync(_modelConfigB);
@@ -148,7 +153,7 @@ public class ChatThreadViewModelTests
         // Act
         await vm.InitializeAsync();
 
-        // Assert — should restore Custom Writer, not the default General Assistant
+        // Assert
         Assert.NotNull(vm.ActivePersona);
         Assert.Equal("Custom Writer", vm.ActivePersona!.DisplayName);
         Assert.Contains(vm.ActivePersona, vm.PersonaList);
@@ -157,7 +162,7 @@ public class ChatThreadViewModelTests
     [Fact]
     public async Task InitializeAsync_FallsBackToDefaultWhenSavedPersonaNotFound()
     {
-        // Arrange — saved persona ID doesn't match any persona in the list
+        // Arrange
         _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
         _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper });
         _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
@@ -168,7 +173,7 @@ public class ChatThreadViewModelTests
         // Act
         await vm.InitializeAsync();
 
-        // Assert — should fall back to the default persona
+        // Assert
         Assert.NotNull(vm.ActivePersona);
         Assert.Equal("General Assistant", vm.ActivePersona!.DisplayName);
         Assert.Contains(vm.ActivePersona, vm.PersonaList);
@@ -266,10 +271,6 @@ public class ChatThreadViewModelTests
         _settingsRepoMock.Verify(r => r.SetAsync("LastSelectedPersonaId", "custom-001"), Times.Once);
     }
 
-    // ================================================================
-    // Regression: ActivePersona stays in sync after ComboBox binding
-    // ================================================================
-
     [Fact]
     public async Task SettingActivePersonaDirectly_ActivePersonaInSyncAfterSelection()
     {
@@ -287,13 +288,12 @@ public class ChatThreadViewModelTests
         Assert.Contains(vm.ActivePersona, vm.PersonaList);
 
         // Act — simulate ComboBox TwoWay binding setting ActivePersona to a different persona.
-        // Use _customPersona (NOT from PersonaList) to verify the remap actually fires.
         vm.ActivePersona = _customPersona;
 
         // Wait for fire-and-forget OnActivePersonaChanged → SetActivePersonaAsync to complete
         await Task.Delay(100);
 
-        // Assert — ActivePersona must be remapped to an object in PersonaList
+        // Assert
         Assert.NotNull(vm.ActivePersona);
         Assert.Equal("Custom Writer", vm.ActivePersona!.DisplayName);
         Assert.Contains(vm.ActivePersona, vm.PersonaList);
@@ -315,7 +315,7 @@ public class ChatThreadViewModelTests
         var vm = CreateViewModel();
         await vm.InitializeAsync();
 
-        // Assert — alphabetical order regardless of selection
+        // Assert
         Assert.Equal(3, vm.PersonaList.Count);
         Assert.Equal("Code Helper", vm.PersonaList[0].DisplayName);
         Assert.Equal("Custom Writer", vm.PersonaList[1].DisplayName);
@@ -334,10 +334,10 @@ public class ChatThreadViewModelTests
         var vm = CreateViewModel();
         await vm.InitializeAsync();
 
-        // Act — select a different persona (should NOT reorder the list)
+        // Act
         await vm.SelectPersonaCommand.ExecuteAsync(_customPersona);
 
-        // Assert — list stays alphabetically ordered
+        // Assert
         Assert.Equal(4, vm.PersonaList.Count);
         Assert.Equal("Another Persona", vm.PersonaList[0].DisplayName);
         Assert.Equal("Code Helper", vm.PersonaList[1].DisplayName);
@@ -612,10 +612,6 @@ public class ChatThreadViewModelTests
     {
         var vm = CreateViewModel();
 
-        // All tools default to enabled (10 tools, including legacy text_editor).
-        // text_editor is not in AllKnownToolNames so it's filtered out (→9).
-        // skill_load is removed because no skills are enabled (→8).
-        // ask_user_input is always present.
         var tools = vm.GetFilteredToolNames();
 
         Assert.Contains("ask_user_input", tools);
@@ -628,7 +624,6 @@ public class ChatThreadViewModelTests
     {
         var vm = CreateViewModel();
 
-        // Disable all tools
         foreach (var tool in vm.ToolToggles)
             tool.IsEnabled = false;
 
@@ -642,12 +637,9 @@ public class ChatThreadViewModelTests
     {
         var vm = CreateViewModel();
 
-        // Disable all tools
         foreach (var tool in vm.ToolToggles)
             tool.IsEnabled = false;
 
-        // Add some skills (simulate enabled skills without populating toggles)
-        // Since EnabledSkillNames depends on SkillToggles, we need to populate those
         vm.PopulateSkillToggles(new List<SkillMetadata>
         {
             new("xlsx", "Spreadsheet skill", "embedded", "Skills/anthropic/xlsx"),
@@ -655,11 +647,8 @@ public class ChatThreadViewModelTests
 
         var tools = vm.GetFilteredToolNames();
 
-        // ask_user_input is always present
         Assert.Contains("ask_user_input", tools);
-        // skill_load present because ≥1 skill enabled
         Assert.Contains("skill_load", tools);
-        // No other tools
         Assert.Equal(2, tools.Count);
     }
 
@@ -668,7 +657,6 @@ public class ChatThreadViewModelTests
     {
         var vm = CreateViewModel();
 
-        // skill_load defaults to enabled, but no skills are populated
         vm.ToolToggles.First(t => t.Name == "skill_load").IsEnabled = false;
 
         var tools = vm.GetFilteredToolNames();
@@ -720,8 +708,6 @@ public class ChatThreadViewModelTests
 
         var prompt = vm.GetSystemPrompt(@"C:\workspace");
 
-        // Empty persona + no skills, but tools are still enabled.
-        // Behavioral instructions, date/time, and platform context are always present.
         Assert.NotNull(prompt);
         Assert.Contains("Tools are called via function calling.", prompt);
         Assert.Contains("Current date:", prompt);
@@ -742,7 +728,6 @@ public class ChatThreadViewModelTests
             DefaultChatMode = "Standard",
         };
 
-        // Disable all tools
         foreach (var tool in vm.ToolToggles)
             tool.IsEnabled = false;
 
@@ -750,7 +735,6 @@ public class ChatThreadViewModelTests
 
         var prompt = vm.GetSystemPrompt(@"C:\workspace");
 
-        // Edge case: empty persona + everything disabled = no system prompt
         Assert.Null(prompt);
     }
 
@@ -814,8 +798,6 @@ public class ChatThreadViewModelTests
     public void GetSkillCatalogXml_EscapesXmlEntitiesInDescriptions()
     {
         var vm = CreateViewModel();
-        // Build the description with special XML chars that need entity escaping.
-        // Use string concatenation to avoid HTML entity decoding by source tooling.
         var desc = "Search " + '\u0026' + " Rescue: x " + '\u003C' + " y, a " + '\u003E' + " b, \"quoted\", 'single'";
         var skills = new List<SkillMetadata>
         {
@@ -839,22 +821,517 @@ public class ChatThreadViewModelTests
     public void GetSystemPrompt_NullActivePersonaWithTools_ReturnsPrompt()
     {
         var vm = CreateViewModel();
-        // ActivePersona is null by default (not initialized)
         _skillServiceMock.Setup(s => s.GetCatalog()).Returns(new List<SkillMetadata>());
 
         var prompt = vm.GetSystemPrompt(@"C:\workspace");
 
-        // Null persona → no persona message. Tools enabled → behavioral/date/platform present.
         Assert.NotNull(prompt);
         Assert.Contains("Tools are called via function calling.", prompt);
         Assert.Contains("Current date:", prompt);
         Assert.Contains("You are running on Windows.", prompt);
-        Assert.DoesNotContain("assistant", prompt); // No persona message
+        Assert.DoesNotContain("assistant", prompt);
     }
 
     [Fact]
     public void ResolveSystemPrompt_NullInput_ReturnsEmpty()
     {
         Assert.Equal(string.Empty, SystemPromptBuilder.ResolveSystemPromptVariables(null));
+    }
+
+    // ================================================================
+    // Tab management tests
+    // ================================================================
+
+    [Fact]
+    public async Task NewChatAsync_CreatesTab()
+    {
+        // Arrange
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant });
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+        _settingsRepoMock.Setup(r => r.GetAsync("LastSelectedPersonaId")).ReturnsAsync((string?)null);
+        _chatServiceMock.Setup(s => s.CreateThreadAsync(null, false, _generalAssistant))
+            .ReturnsAsync(new ChatThread { Id = "thread-001", PersonaId = _generalAssistant.Id });
+
+        var vm = CreateViewModel();
+        await vm.InitializeAsync();
+
+        // Act
+        await vm.NewChatCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Single(vm.ChatTabs);
+        Assert.NotNull(vm.ActiveTab);
+        Assert.Equal("thread-001", vm.ActiveTab!.Thread.Id);
+        Assert.Empty(vm.ActiveTab.TextboxContent);
+        Assert.False(vm.ActiveTab.IsStreaming);
+    }
+
+    [Fact]
+    public async Task NewChatAsync_WithoutPersona_DoesNothing()
+    {
+        // Arrange — no personas in the list
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(() => null);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona>());
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+        _settingsRepoMock.Setup(r => r.GetAsync("LastSelectedPersonaId")).ReturnsAsync((string?)null);
+
+        var vm = CreateViewModel();
+        await vm.InitializeAsync();
+
+        // Act
+        await vm.NewChatCommand.ExecuteAsync(null);
+
+        // Assert — no tab created since there's no persona
+        Assert.Empty(vm.ChatTabs);
+    }
+
+    [Fact]
+    public async Task NewChatAsync_CreatesMultipleTabs()
+    {
+        // Arrange
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant });
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+        _settingsRepoMock.Setup(r => r.GetAsync("LastSelectedPersonaId")).ReturnsAsync((string?)null);
+        _chatServiceMock.Setup(s => s.CreateThreadAsync(null, false, _generalAssistant))
+            .ReturnsAsync(() => new ChatThread { Id = Guid.NewGuid().ToString("N"), PersonaId = _generalAssistant.Id });
+
+        var vm = CreateViewModel();
+        await vm.InitializeAsync();
+
+        // Act — create three tabs
+        await vm.NewChatCommand.ExecuteAsync(null);
+        await vm.NewChatCommand.ExecuteAsync(null);
+        await vm.NewChatCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Equal(3, vm.ChatTabs.Count);
+        Assert.NotNull(vm.ActiveTab);
+        Assert.Equal(vm.ChatTabs[2], vm.ActiveTab); // Last created is active
+    }
+
+    [Fact]
+    public void CloseTab_RemovesTab()
+    {
+        // Arrange
+        var thread1 = new ChatThread { Id = "thread-1" };
+        var thread2 = new ChatThread { Id = "thread-2" };
+        var tab1 = new ChatTabItem(thread1);
+        var tab2 = new ChatTabItem(thread2);
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab1);
+        vm.ChatTabs.Add(tab2);
+        vm.ActiveTab = tab1;
+
+        // Act
+        vm.CloseTabCommand.Execute(tab1);
+
+        // Assert
+        Assert.Single(vm.ChatTabs);
+        Assert.Equal("thread-2", vm.ChatTabs[0].Thread.Id);
+        // ActiveTab should be null since tab1 was active and tab2 was not selected as replacement
+    }
+
+    [Fact]
+    public void CloseTab_WithNullTab_DoesNothing()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+
+        // Act
+        vm.CloseTabCommand.Execute(null);
+
+        // Assert — no exception
+        Assert.Empty(vm.ChatTabs);
+    }
+
+    [Fact]
+    public void CloseTab_ShowsConfirmationWhenStreaming()
+    {
+        // Arrange
+        _confirmationServiceMock.Setup(c => c.Confirm(It.IsAny<string>(), It.IsAny<string>())).Returns(false);
+
+        var thread = new ChatThread { Id = "thread-1" };
+        var tab = new ChatTabItem(thread) { IsStreaming = true };
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        // Act
+        vm.CloseTabCommand.Execute(tab);
+
+        // Assert — tab is NOT removed because confirmation was declined
+        Assert.Single(vm.ChatTabs);
+        _confirmationServiceMock.Verify(c => c.Confirm(
+            It.Is<string>(s => s.Contains("generated")),
+            "Generation in Progress"), Times.Once);
+    }
+
+    [Fact]
+    public async Task CloseTab_PreservesForReopen()
+    {
+        // Arrange
+        var thread = new ChatThread { Id = "thread-1" };
+        var tab = new ChatTabItem(thread);
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        // Act — close the tab
+        vm.CloseTabCommand.Execute(tab);
+        Assert.Empty(vm.ChatTabs);
+
+        // Reopen via command
+        _chatServiceMock.Setup(s => s.GetThreadAsync("thread-1"))
+            .ReturnsAsync(thread);
+        await vm.ReopenLastClosedTabCommand.ExecuteAsync(null);
+
+        // Assert — tab is restored
+        Assert.Single(vm.ChatTabs);
+        Assert.Equal("thread-1", vm.ChatTabs[0].Thread.Id);
+        Assert.Equal(vm.ChatTabs[0], vm.ActiveTab);
+    }
+
+    [Fact]
+    public void ActiveTab_ResetsCompletionAlert()
+    {
+        // Arrange
+        var thread1 = new ChatThread { Id = "thread-1" };
+        var thread2 = new ChatThread { Id = "thread-2" };
+        var tab1 = new ChatTabItem(thread1) { HasCompletionAlert = true };
+        var tab2 = new ChatTabItem(thread2);
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab1);
+        vm.ChatTabs.Add(tab2);
+        vm.ActiveTab = tab1;
+
+        // Assert — switching to tab1 resets its alert
+        Assert.False(vm.ActiveTab!.HasCompletionAlert);
+    }
+
+    // ================================================================
+    // Message sending tests
+    // ================================================================
+
+    [Fact]
+    public async Task SendMessage_CallsService()
+    {
+        // Arrange
+        var thread = new ChatThread { Id = "thread-1" };
+        var tab = new ChatTabItem(thread) { TextboxContent = "Hello" };
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        var userMessage = new Message { Id = "msg-1", Role = "User", Content = "Hello", ThreadId = "thread-1" };
+        _chatServiceMock.Setup(s => s.SendMessageAsync("thread-1", "Hello", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(userMessage);
+        _chatServiceMock.Setup(s => s.GetActiveBranchMessagesAsync("thread-1"))
+            .ReturnsAsync(new List<Message> { userMessage });
+
+        // Act
+        await vm.SendMessageCommand.ExecuteAsync(null);
+
+        // Assert
+        _chatServiceMock.Verify(s => s.SendMessageAsync("thread-1", "Hello", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendMessage_ClearsTextboxContent()
+    {
+        // Arrange
+        var thread = new ChatThread { Id = "thread-1" };
+        var tab = new ChatTabItem(thread) { TextboxContent = "Hello world" };
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        _chatServiceMock.Setup(s => s.SendMessageAsync("thread-1", "Hello world", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Message { Id = "msg-1", Role = "User", ThreadId = "thread-1" });
+        _chatServiceMock.Setup(s => s.GetActiveBranchMessagesAsync("thread-1"))
+            .ReturnsAsync(new List<Message>());
+
+        // Act
+        await vm.SendMessageCommand.ExecuteAsync(null);
+
+        // Assert — textbox is cleared after sending
+        Assert.Equal(string.Empty, tab.TextboxContent);
+    }
+
+    [Fact]
+    public async Task SendMessage_WithEmptyText_DoesNotCallService()
+    {
+        // Arrange — textbox is empty
+        var thread = new ChatThread { Id = "thread-1" };
+        var tab = new ChatTabItem(thread) { TextboxContent = "" };
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        // Act
+        await vm.SendMessageCommand.ExecuteAsync(null);
+
+        // Assert — service was never called
+        _chatServiceMock.Verify(s => s.SendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendMessage_WithWhitespace_DoesNotCallService()
+    {
+        // Arrange
+        var thread = new ChatThread { Id = "thread-1" };
+        var tab = new ChatTabItem(thread) { TextboxContent = "   " };
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        // Act
+        await vm.SendMessageCommand.ExecuteAsync(null);
+
+        // Assert
+        _chatServiceMock.Verify(s => s.SendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SendMessage_WithoutActiveTab_DoesNothing()
+    {
+        // Arrange — no active tab
+        var vm = CreateViewModel();
+
+        // Act — execute the command even though there's no active tab
+        await vm.SendMessageCommand.ExecuteAsync(null);
+
+        // Assert — no exception, service not called
+        _chatServiceMock.Verify(s => s.SendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // ================================================================
+    // Stop generation tests
+    // ================================================================
+
+    [Fact]
+    public async Task StopGeneration_CancelsActiveCts()
+    {
+        // Arrange
+        var thread = new ChatThread { Id = "thread-1" };
+        var tab = new ChatTabItem(thread) { TextboxContent = "hello" };
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        CancellationToken capturedToken = default;
+        _chatServiceMock.Setup(s => s.SendMessageAsync("thread-1", "hello", It.IsAny<CancellationToken>()))
+            .Callback<string, string, CancellationToken>((_, _, ct) => capturedToken = ct)
+            .Returns(async (string id, string content, CancellationToken ct) =>
+            {
+                await Task.Delay(5000, ct);
+                ct.ThrowIfCancellationRequested();
+                return new Message();
+            });
+
+        _chatServiceMock.Setup(s => s.GetActiveBranchMessagesAsync("thread-1"))
+            .ReturnsAsync(new List<Message>());
+
+        // Act — trigger send then stop
+        var sendTask = vm.SendMessageCommand.ExecuteAsync(null);
+        // Give the send method time to start and create the CTS
+        await Task.Delay(50);
+        vm.StopGenerationCommand.Execute(null);
+
+        // Assert — the captured token was cancelled
+        Assert.True(capturedToken != default);
+        Assert.True(capturedToken.IsCancellationRequested);
+
+        // The send task should complete (with cancellation) after stop
+        await sendTask;
+
+        // Verify streaming flag was reset
+        Assert.False(vm.ActiveTab!.IsStreaming);
+    }
+
+    // ================================================================
+    // Toggle commands
+    // ================================================================
+
+    [Fact]
+    public void ToggleThinking_UpdatesFlag()
+    {
+        var vm = CreateViewModel();
+
+        Assert.False(vm.ThinkingEnabled);
+
+        vm.ToggleThinkingCommand.Execute(null);
+        Assert.True(vm.ThinkingEnabled);
+
+        vm.ToggleThinkingCommand.Execute(null);
+        Assert.False(vm.ThinkingEnabled);
+    }
+
+    [Fact]
+    public void ToggleMute_UpdatesFlag()
+    {
+        var vm = CreateViewModel();
+
+        Assert.False(vm.IsMuted);
+
+        vm.ToggleMuteCommand.Execute(null);
+        Assert.True(vm.IsMuted);
+
+        vm.ToggleMuteCommand.Execute(null);
+        Assert.False(vm.IsMuted);
+    }
+
+    [Fact]
+    public void ToggleMemoryEnabled_UpdatesFlag()
+    {
+        var vm = CreateViewModel();
+
+        Assert.False(vm.MemoryEnabled);
+
+        vm.MemoryEnabled = true;
+        Assert.True(vm.MemoryEnabled);
+    }
+
+    // ================================================================
+    // IsStreaming property
+    // ================================================================
+
+    [Fact]
+    public void IsStreaming_ReflectsActiveTabStreamingState()
+    {
+        var vm = CreateViewModel();
+        var thread = new ChatThread { Id = "thread-1" };
+        var tab = new ChatTabItem(thread);
+        vm.ChatTabs.Add(tab);
+
+        // No active tab → not streaming
+        Assert.False(vm.IsStreaming);
+
+        // Set active tab
+        vm.ActiveTab = tab;
+        Assert.False(vm.IsStreaming);
+
+        // Tab starts streaming
+        tab.IsStreaming = true;
+        Assert.True(vm.IsStreaming);
+
+        // Tab stops streaming
+        tab.IsStreaming = false;
+        Assert.False(vm.IsStreaming);
+    }
+
+    // ================================================================
+    // ChatTabItem tests
+    // ================================================================
+
+    [Fact]
+    public void ChatTabItem_Title_FromThreadTitle()
+    {
+        var thread = new ChatThread { Id = "t1", Title = "My Chat" };
+        var tab = new ChatTabItem(thread);
+
+        Assert.Equal("My Chat", tab.Title);
+    }
+
+    [Fact]
+    public void ChatTabItem_Title_FallsBackToNewChat()
+    {
+        var thread = new ChatThread { Id = "t1", Title = null };
+        var tab = new ChatTabItem(thread);
+
+        Assert.Equal("New Chat", tab.Title);
+    }
+
+    [Fact]
+    public void ChatTabItem_InitializesWithDefaults()
+    {
+        var thread = new ChatThread { Id = "t1" };
+        var tab = new ChatTabItem(thread);
+
+        Assert.Empty(tab.Messages);
+        Assert.Empty(tab.TextboxContent);
+        Assert.False(tab.IsStreaming);
+        Assert.Equal(0, tab.CursorPosition);
+        Assert.Equal(0.0, tab.ScrollOffset);
+        Assert.False(tab.HasCompletionAlert);
+    }
+
+    // ================================================================
+    // Tab switching tests
+    // ================================================================
+
+    [Fact]
+    public void SwitchingActiveTab_ResetsCompletionAlert()
+    {
+        // Arrange
+        var thread1 = new ChatThread { Id = "t1" };
+        var thread2 = new ChatThread { Id = "t2" };
+        var tab1 = new ChatTabItem(thread1) { HasCompletionAlert = true };
+        var tab2 = new ChatTabItem(thread2);
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab1);
+        vm.ChatTabs.Add(tab2);
+
+        // Act — switch to tab1
+        vm.ActiveTab = tab1;
+
+        // Assert — alert is cleared when tab becomes active
+        Assert.False(tab1.HasCompletionAlert);
+    }
+
+    // ================================================================
+    // Existing regression: ActivePersona stays in sync
+    // ================================================================
+
+    [Fact]
+    public void IsStreaming_PropertyChanged_RaisesNotification()
+    {
+        var vm = CreateViewModel();
+        var thread = new ChatThread { Id = "t1" };
+        var tab = new ChatTabItem(thread);
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        var changedProperties = new List<string?>();
+        vm.PropertyChanged += (_, e) => changedProperties.Add(e.PropertyName);
+
+        // Act
+        tab.IsStreaming = true;
+
+        // Assert
+        Assert.Contains(nameof(vm.IsStreaming), changedProperties);
+    }
+
+    // ================================================================
+    // Cleanup tests
+    // ================================================================
+
+    [Fact]
+    public void Cleanup_DoesNotThrow()
+    {
+        var vm = CreateViewModel();
+
+        // Act
+        var exception = Record.Exception(() => vm.Cleanup());
+
+        // Assert
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void Cleanup_AfterStreaming_DoesNotThrow()
+    {
+        var vm = CreateViewModel();
+        var thread = new ChatThread { Id = "t1" };
+        var tab = new ChatTabItem(thread);
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        // Act
+        var exception = Record.Exception(() => vm.Cleanup());
+
+        // Assert
+        Assert.Null(exception);
     }
 }

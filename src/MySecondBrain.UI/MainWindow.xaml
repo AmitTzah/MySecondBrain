@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:MySecondBrain.UI.Views"
         xmlns:conv="clr-namespace:MySecondBrain.UI.Converters"
+        xmlns:models="clr-namespace:MySecondBrain.Core.Models"
         Title="MySecondBrain" Height="900" Width="1400"
         WindowStartupLocation="CenterScreen"
         MinHeight="600" MinWidth="800"
@@ -76,7 +77,7 @@
             SettingsTemplate="{StaticResource SettingsTemplate}"/>
     </Window.Resources>
 
-    <Grid AutomationProperties.AutomationId="RootLayout">
+    <Grid x:Name="RootLayout" AutomationProperties.AutomationId="RootLayout">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="280" MinWidth="150" MaxWidth="500"/>
             <ColumnDefinition Width="Auto"/>
@@ -214,26 +215,73 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- Tab Bar (always visible across all screens) -->
+            <!-- Tab Bar (data-bound to ChatThreadViewModel) -->
             <Border Grid.Row="0" Background="{DynamicResource TabBarBackground}"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
                     Padding="4,2">
-                <StackPanel Orientation="Horizontal">
-                    <Border Background="{DynamicResource TabActiveBackground}"
-                            Padding="12,6" Margin="2,0" CornerRadius="4,4,0,0">
-                        <TextBlock Text="New Chat" Foreground="{DynamicResource ContentForeground}"
-                                   FontSize="12"/>
-                    </Border>
-                    <Border Background="{DynamicResource TabInactiveBackground}"
-                            Padding="12,6" Margin="2,0" CornerRadius="4,4,0,0">
-                        <TextBlock Text="Chat 2" Foreground="{DynamicResource SubtleBrush}"
-                                   FontSize="12"/>
-                    </Border>
-                    <Button Content="+" Width="28" Height="28"
-                            Background="Transparent" BorderThickness="0"
-                            Foreground="{DynamicResource SubtleBrush}" FontSize="14"
-                            VerticalAlignment="Center" Margin="4,0,0,0"/>
-                </StackPanel>
+                <TabControl ItemsSource="{Binding ChatThreadViewModel.ChatTabs}"
+                            SelectedItem="{Binding ChatThreadViewModel.ActiveTab, Mode=TwoWay}"
+                            BorderThickness="0"
+                            Background="Transparent"
+                            Padding="0"
+                            AutomationProperties.AutomationId="ChatTabControl">
+                    <TabControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Title}"
+                                           FontSize="12"
+                                           VerticalAlignment="Center"
+                                           AutomationProperties.AutomationId="ChatTabHeader"/>
+                                <!-- Completion alert green dot -->
+                                <Ellipse Width="8" Height="8"
+                                         Fill="LimeGreen"
+                                         Margin="4,0,0,0"
+                                         VerticalAlignment="Center"
+                                         Visibility="{Binding HasCompletionAlert, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                <!-- Close button -->
+                                <Button Content="×"
+                                        Width="16" Height="16"
+                                        FontSize="11"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Foreground="{DynamicResource SubtleBrush}"
+                                        Margin="4,0,0,0"
+                                        Padding="0"
+                                        VerticalAlignment="Center"
+                                        AutomationProperties.AutomationId="CloseTabBtn"
+                                        Command="{Binding ElementName=RootLayout, Path=DataContext.ChatThreadViewModel.CloseTabCommand}"
+                                        CommandParameter="{Binding}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </TabControl.ItemTemplate>
+                    <!-- Content template: embed ChatView for each tab -->
+                    <TabControl.ContentTemplate>
+                        <DataTemplate>
+                            <views:ChatView/>
+                        </DataTemplate>
+                    </TabControl.ContentTemplate>
+                    <TabControl.Template>
+                        <ControlTemplate TargetType="TabControl">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <!-- Tab headers -->
+                                <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Auto"
+                                              VerticalScrollBarVisibility="Disabled"
+                                              Background="Transparent">
+                                    <StackPanel Orientation="Horizontal" IsItemsHost="True"/>
+                                </ScrollViewer>
+                                <!-- Tab content -->
+                                <Border Grid.Row="1"
+                                        Background="{DynamicResource ContentBackground}">
+                                    <ContentPresenter ContentSource="SelectedContent"/>
+                                </Border>
+                            </Grid>
+                        </ControlTemplate>
+                    </TabControl.Template>
+                </TabControl>
             </Border>
 
             <!-- Screen Content -->
