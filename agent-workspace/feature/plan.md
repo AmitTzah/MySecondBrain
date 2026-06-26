@@ -256,7 +256,7 @@ tests/
 
 ---
 
-### [ ] Step 6: Streaming Response Display + Auto-Scroll + Message Actions + Error Handling
+### [x] Step 6: Streaming Response Display + Auto-Scroll + Message Actions + Error Handling
 - **Goal:** Implement token-by-token progressive FlowDocument rendering during LLM streaming. Implement auto-scroll behavior (pause when user scrolls up, resume button, smooth scroll-to-bottom). Implement message actions: Send/Stop button transformation, Copy MD and Copy Rich per message, Regenerate, Continue Generation. Implement error handling with specific error messages and Retry button. Display token usage and generation time per message.
 - **Actions:**
   - Complete `MarkdownStreamRenderer` integration with ViewModel: ViewModel subscribes to `IAsyncEnumerable<StreamChunk>` from `ChatThreadService`, feeds chunks to renderer, renderer updates `ActiveTab.RenderedDocument` property, UI binds to it

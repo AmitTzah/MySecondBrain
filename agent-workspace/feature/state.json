@@ -20,14 +20,15 @@
     "missing_prerequisites": []
   },
   "skipped_smoke_tests": [
-    { "step": 4, "name": "ChatThreadViewModel — Multi-Tab Architecture & Chat State Management", "classification": "HUMAN/SHT REQUIRED", "description": "Launch the application. (1) Press Ctrl+N → verify new chat tab appears with Persona picker. (2) Select a Persona → verify chat header shows Persona name. (3) Type a message in the textbox and click Send → verify user message appears in conversation area. (4) Press Ctrl+N again → verify second tab opens. (5) Switch between tabs → verify each maintains independent state. (6) Close a tab via X button → verify tab is removed. (7) Press Ctrl+Shift+T → verify last closed tab reopens. (8) Toggle Thinking button → verify visual state change. (9) Toggle Mute button → verify visual state change. (10) Verify font size A⁻/A⁺ buttons adjust displayed size.", "status": "skipped" },
-    { "step": 5, "name": "Conversation View — VirtualizingStackPanel + Markdown Rendering Engine", "classification": "HUMAN/SHT REQUIRED", "description": "Launch the application. Create a new chat. The conversation area must render sample messages with full Markdown: (1) headings H1-H6 at correct sizes, (2) **bold** and *italic* text, (3) `inline code` with monospace background, (4) fenced code blocks with syntax highlighting (verify C#, Python, JavaScript at minimum), code block copy button visible on hover, (5) bulleted lists with proper indentation, (6) numbered lists, (7) [hyperlinks](https://example.com) — clickable, (8) tables with headers and rows, (9) blockquotes with left border, (10) horizontal rules. Verify messages are visually distinct per chat theme (Classic/Compact/Bubble). Verify relative timestamps update.", "status": "skipped" }
+    { "step": 4, "name": "ChatThreadViewModel", "classification": "HUMAN/SHT REQUIRED", "description": "Launch app. Ctrl+N new tab, select Persona, send message, Ctrl+N second tab, switch tabs, close tab, Ctrl+Shift+T reopen, toggle Thinking/Mute, font size buttons.", "status": "skipped" },
+    { "step": 5, "name": "Conversation View & Markdown Rendering", "classification": "HUMAN/SHT REQUIRED", "description": "Verify Markdown rendering: headings H1-H6, bold/italic, inline code, fenced code blocks with syntax highlighting, lists, links, tables, blockquotes, horizontal rules. Verify chat themes (Classic/Compact/Bubble). Verify relative timestamps.", "status": "skipped" },
+    { "step": 6, "name": "Streaming Response + Auto-Scroll + Message Actions + Error Handling", "classification": "HUMAN/SHT REQUIRED", "description": "Send message to LLM — verify streaming tokens. Scroll up during streaming — auto-scroll pause indicator. Scroll-to-bottom button. Stop preserves partial response. Copy MD/Rich. Regenerate. Disconnect internet — error banner with Retry. Reconnect — Retry works.", "status": "skipped" }
   ],
   "e2e_regression_status": null,
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 9,
-  "current_step": 5,
+  "current_step": 6,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }
