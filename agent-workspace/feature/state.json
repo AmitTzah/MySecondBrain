@@ -23,8 +23,8 @@
   "e2e_regression_status": null,
   "current_phase": 3,
   "plan_status": "validated",
-  "total_steps": 8,
-  "current_step": 1,
+  "total_steps": 9,
+  "current_step": 2,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }

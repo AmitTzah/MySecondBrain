@@ -70,9 +70,13 @@ src/
 
   MySecondBrain.Services/
     Chat/
-      [MODIFIED] ChatThreadService.cs (~400 lines — fill all stubs with real implementations)
-      [NEW] MarkdownStreamRenderer.cs (~300 lines — progressive token-to-FlowDocument rendering)
-      [NEW] ChatTitleGenerator.cs (~80 lines — AI-powered title generation via LLM)
+      [MODIFIED] ChatThreadService.cs (~150 lines — orchestrator composing sub-services, delegates all IChatThreadService methods)
+      [NEW] ChatThreadLifecycleService.cs (~200 lines — thread CRUD, soft-delete, permanent delete, elevate, transient management + persona resolution)
+      [NEW] ChatMessageService.cs (~200 lines — send, edit, delete messages + cost calculation + usage recording)
+      [NEW] ChatBranchService.cs (~150 lines — branch navigation, search, chat tree)
+      [NEW] ChatDraftService.cs (~80 lines — draft save/get/delete)
+      [EXISTING] MarkdownStreamRenderer.cs (~300 lines — progressive token-to-FlowDocument rendering)
+      [EXISTING] ChatTitleGenerator.cs (~80 lines — AI-powered title generation via LLM)
     Encryption/
       [NEW] LockedChatService.cs (~150 lines — AES-256-GCM chat lock/unlock with password)
     [NEW] ChatExportService.cs (~150 lines — Export to Markdown/JSON)
@@ -154,7 +158,7 @@ tests/
 
 ---
 
-### [ ] Step 2: Fill ChatThreadService — Core Chat Operations with LLM Integration
+### [x] Step 2: Fill ChatThreadService — Core Chat Operations with LLM Integration
 - **Goal:** Replace all stub methods in `ChatThreadService` with real implementations. Wire `CreateThreadAsync`, `SendMessageAsync` (full message lifecycle: create user message → build context → call LLM → stream chunks → persist assistant message), `GetActiveBranchMessagesAsync`, `RegenerateAsync`, `ContinueGenerationAsync`, `ElevateToPermanentAsync`, `SaveDraftAsync`/`GetDraftAsync`. Integrate with `ILLMProviderService` for actual LLM calls. Create the `MarkdownStreamRenderer` service for progressive FlowDocument updates. Create `ChatTitleGenerator` for AI-powered auto-titling.
 - **Actions:**
   - Fill `CreateThreadAsync`: instantiate `ChatThread` with persona defaults (chatMode, thinkingEnabled from persona; isTransient flag), persist via `_threadRepo.CreateAsync`
@@ -179,7 +183,25 @@ tests/
 
 ---
 
-### [ ] Step 3: ChatThreadViewModel — Multi-Tab Architecture & Chat State Management
+### [ ] Step 3: Structural Refactoring — Split ChatThreadService into Focused Modules
+- **Goal:** Split oversized ChatThreadService (634 lines) into focused, single-concern service classes without changing behavior.
+- **Actions:**
+  - Extract from ChatThreadService into new files:
+    * `ChatThreadLifecycleService.cs` — CreateThreadAsync, GetThreadAsync, GetPermanentThreadsAsync, GetTransientThreadsAsync, SoftDeleteThreadAsync, RestoreThreadAsync, PermanentDeleteThreadAsync, ElevateToPermanentAsync + private helpers for persona resolution
+    * `ChatMessageService.cs` — SendMessageAsync, EditMessageAsync, DeleteMessageAsync + cost calculation + usage recording helpers
+    * `ChatBranchService.cs` — GetActiveBranchMessagesAsync, SetActiveBranchAsync, GetBranchCountAsync, GetChatTreeAsync, SearchMessagesAsync
+    * `ChatDraftService.cs` — SaveDraftAsync, GetDraftAsync, DeleteDraftAsync
+    * ChatThreadService.cs remains as the orchestrator that composes all 4 sub-services together and implements IChatThreadService by delegating to them. The RegenerateAsync and ContinueGenerationAsync methods also delegate.
+  - ChatTitleGenerator.cs and MarkdownStreamRenderer.cs stay as separate files (already extracted).
+- **Unit Tests to Write:** None — pure structural change, existing tests cover behavior.
+- **Integration Tests to Write:** None — no infrastructure changes.
+- **Live Smoke Test (Mandatory):** Run full test suite — verify zero failures (716 unit + 43 integration). Check that all imports resolve correctly (build succeeds).
+- **Smoke Test Classification:** Model (self-verifiable via terminal).
+- **Suggested Commit Message:** `refactor: split ChatThreadService into focused modules (Lifecycle, Message, Branch, Draft)`
+
+---
+
+### [ ] Step 4: ChatThreadViewModel — Multi-Tab Architecture & Chat State Management
 - **Goal:** Build the complete `ChatThreadViewModel` with multi-tab management, message sending, streaming state, persona switching, tool/skill toggles, and auto-save drafts. Implement `MainWindow` tab bar integration with chat tabs managed via `ObservableCollection<ChatTabItem>`. Wire all toolbar buttons to ViewModel commands. Integrate `WeakReferenceMessenger` for cross-tab completion alerts.
 - **Actions:**
   - Create [`ChatTabItem`](src/MySecondBrain.Core/Models/ChatTabItem.cs): wraps `ChatThread` with `ObservableCollection<Message> Messages`, `bool IsStreaming`, `string TextboxContent`, `int CursorPosition`, `double ScrollOffset`
@@ -208,7 +230,7 @@ tests/
 
 ---
 
-### [ ] Step 4: Conversation View — VirtualizingStackPanel + Markdown Rendering Engine
+### [ ] Step 5: Conversation View — VirtualizingStackPanel + Markdown Rendering Engine
 - **Goal:** Replace the static sample messages in `ChatView.xaml` with a data-bound `VirtualizingStackPanel`-based `ItemsControl`. Implement the full Markdig→WPF FlowDocument rendering pipeline by filling all 8 `IContentBlockRenderer` stubs. Integrate AvalonEdit's `HighlightingManager` for syntax highlighting in code blocks (100+ languages). Render all Markdown constructs: headings H1-H6, bold, italic, inline code, fenced code blocks, bulleted/numbered lists, links, tables, blockquotes, horizontal rules, images.
 - **Actions:**
   - Create [`MarkdownHelper`](src/MySecondBrain.Core/Utilities/MarkdownHelper.cs): configure Markdig pipeline with all extensions (tables, task lists, footnotes, emoji, auto-links, etc.), provide `Parse()` and `RenderToFlowDocument()` entry points
@@ -234,7 +256,7 @@ tests/
 
 ---
 
-### [ ] Step 5: Streaming Response Display + Auto-Scroll + Message Actions + Error Handling
+### [ ] Step 6: Streaming Response Display + Auto-Scroll + Message Actions + Error Handling
 - **Goal:** Implement token-by-token progressive FlowDocument rendering during LLM streaming. Implement auto-scroll behavior (pause when user scrolls up, resume button, smooth scroll-to-bottom). Implement message actions: Send/Stop button transformation, Copy MD and Copy Rich per message, Regenerate, Continue Generation. Implement error handling with specific error messages and Retry button. Display token usage and generation time per message.
 - **Actions:**
   - Complete `MarkdownStreamRenderer` integration with ViewModel: ViewModel subscribes to `IAsyncEnumerable<StreamChunk>` from `ChatThreadService`, feeds chunks to renderer, renderer updates `ActiveTab.RenderedDocument` property, UI binds to it
@@ -261,7 +283,7 @@ tests/
 
 ---
 
-### [ ] Step 6: Chat Header Full Layout + Chat Modes + RTL + Controls
+### [ ] Step 7: Chat Header Full Layout + Chat Modes + RTL + Controls
 - **Goal:** Build the complete chat header bar with all 12 elements specified in C29. Implement chat modes: Standard mode, Text Completion mode, Thinking toggle with collapsible reasoning display, Mute notifications toggle, dynamic system message editing. Implement Hebrew RTL auto-detection with per-message `FlowDirection` and code block LTR enforcement. Wire all header controls to ViewModel commands.
 - **Actions:**
   - Create [`ChatHeaderBar.xaml`](src/MySecondBrain.UI/Views/ChatHeaderBar.xaml): standalone `UserControl` containing (left to right):
@@ -301,7 +323,7 @@ tests/
 
 ---
 
-### [ ] Step 7: QoL Features — File Viewer Tabs, Incognito, Locked Chats, Titling, Favoriting, Cross-Tab Alerts, Message Selection, Right Panel
+### [ ] Step 8: QoL Features — File Viewer Tabs, Incognito, Locked Chats, Titling, Favoriting, Cross-Tab Alerts, Message Selection, Right Panel
 - **Goal:** Implement the remaining quality-of-life features: generic file viewer tabs, incognito/temporary chat toggle, locked chat encryption (AES-256-GCM), AI-powered chat auto-titling, chat summarization, message favoriting (★), cross-tab completion alert (green dot), message selection mode with bulk actions, offline/network status indicator, close confirmation during active generation, and right panel layout (Artifacts top + Chat Nav bottom with resizable divider).
 - **Actions:**
   - **File Viewer Tabs (C39):**
@@ -373,7 +395,7 @@ tests/
 
 ---
 
-### [ ] Step 8: E2E Tests + Integration Tests + Visual Polish
+### [ ] Step 9: E2E Tests + Integration Tests + Visual Polish
 - **Goal:** Create comprehensive E2E test suite covering all Studio Chat workflows. Write integration tests for cross-component chat scenarios. Polish visual details and edge cases. Verify the full feature against all acceptance criteria from vision docs.
 - **Actions:**
   - Create [`StudioChatE2ETests.cs`](tests/e2e/MySecondBrain.Tests.E2E/StudioChatE2ETests.cs): ~15 test cases following the self-cleaning pattern (create→verify→delete via 🗑️):
@@ -440,4 +462,10 @@ tests/
 - **Step 1 — Repository Mapping:** ChatThreadRepository.UpdateAsync/MapToDomain/MapToEntity updated with 9 new fields. MessageRepository.UpdateAsync/MapToDomain/MapToEntity updated with 6 fields (RawContent, EstimatedCost, GenerationTimeMs, Feedback, IsFavorited, ThinkingContent).
 - **Step 1 — Integration Tests:** `ChatWorkflowIntegrationTests.cs` — FullWorkflow (create→messages→active branch→FTS5→soft-delete→trash), BranchingWorkflow (create branches→switch active), ThreadWithLockFields (lock/unlock cycle).
 - **Step 1 — Unit Tests:** 6 new tests in `ChatMessageRepositoryTests.cs` for organization fields (CreateWithOrgFields, UpdateOrgFields, ResetLockFields, CreateWithNewFields, UpdateNewFields, SearchAlongsideNewFields). EntitySchemaTests updated (ChatThread: 26 props, Message: 19 props).
+- **Step 2 — ChatThreadService:** 634 lines. Full implementation of all 18 IChatThreadService methods. `SendMessageAsync` — creates user+assistant messages, resolves persona/modelConfig via repo, calls ILLMProviderService.ChatStreamAsync, accumulates response, preserves partial on OperationCanceledException, auto-titles via ChatTitleGenerator, records UsageRecord. `RegenerateAsync` — deactivates old message, creates new version with VersionNumber+1. `ContinueGenerationAsync` — preserves original in RawContent, appends continuation. `GetActiveBranchMessagesAsync` — delegates to MessageRepository.GetActiveBranchAsync. Draft CRUD via AppDbContext.MessageDrafts (upsert pattern). Constructor takes 8 dependencies.
+- **Step 2 — MarkdownStreamRenderer:** 123 lines. Progressive FlowDocument rendering via Markdig + IContentRendererRegistry. AttachDocument/DetachDocument pattern. AppendToken accumulates buffer, re-parses full buffer each call. Parse failures silently swallowed (unclosed code fence mid-stream). Markdig pipeline via MarkdownHelper.Pipeline.
+- **Step 2 — ChatTitleGenerator:** 86 lines. AI-powered title generation via lightweight ChatAsync call. Strips quotes. Falls back to first 50 chars of user message on failure, "New Chat" for empty input.
+- **Step 2 — MarkdownHelper:** 36 lines. Shared Markdig pipeline with UseAdvancedExtensions, UseEmojiAndSmiley, UseAutoLinks, UseBootstrap. Parse() and ToHtml() methods.
+- **Step 2 — Unit Tests:** ChatThreadServiceTests (11 tests: CreateThread, SendMessage normal+cancellation+autoTitle, GetActiveBranch, Regenerate normal+nonAssistant guard, ContinueGeneration, ElevateToPermanent, Draft CRUD, ChatTree, Search). ChatTitleGeneratorTests (9 tests: generation, quote stripping, LLM failure, empty response, whitespace, >100 char guard, short message). MarkdownStreamRendererTests (9 tests: accumulation, attach/detach, empty/null, malformed recovery).
+- **Step 2 — Integration Tests:** ChatWorkflowIntegrationTests expanded: SendMessage_FullFlow (creates thread→sends via mock LLM→verifies user+assistant+activity), DraftWorkflow (save→update→delete).
 - **Initial State:** ChatView.xaml has visual layout with static placeholders. ChatThreadService, ChatThreadRepository, MessageRepository are all stubs returning null/empty. Content block renderers are stubs. ChatThreadViewModel has basic persona/tool/skill management but no chat/message/tab functionality. The shell (MainWindow, sidebar, right panel) is fully functional.

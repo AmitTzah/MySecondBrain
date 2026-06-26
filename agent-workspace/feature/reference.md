@@ -336,7 +336,130 @@ services.AddSingleton<ChatTitleGenerator>();
 
 ---
 
-### Step 3: ChatThreadViewModel — Multi-Tab Architecture & Chat State Management
+### Step 3: Structural Refactoring — Split ChatThreadService into Focused Modules
+
+- **Goal:** Split oversized ChatThreadService (634 lines) into focused, single-concern service classes without changing behavior.
+
+- **New Files to Create (MySecondBrain.Services/Chat/):**
+  - `ChatThreadLifecycleService.cs` — CreateThreadAsync, GetThreadAsync, GetPermanentThreadsAsync, GetTransientThreadsAsync, SoftDeleteThreadAsync, RestoreThreadAsync, PermanentDeleteThreadAsync, ElevateToPermanentAsync + private helpers for persona resolution
+  - `ChatMessageService.cs` — SendMessageAsync, EditMessageAsync, DeleteMessageAsync + cost calculation + usage recording helpers
+  - `ChatBranchService.cs` — GetActiveBranchMessagesAsync, SetActiveBranchAsync, GetBranchCountAsync, GetChatTreeAsync, SearchMessagesAsync
+  - `ChatDraftService.cs` — SaveDraftAsync, GetDraftAsync, DeleteDraftAsync
+
+- **Modified File:**
+  - `ChatThreadService.cs` — becomes orchestrator composing all 4 sub-services, implements IChatThreadService by delegating. RegenerateAsync and ContinueGenerationAsync also delegate.
+
+- **Key Pattern — Orchestrator Delegation:**
+```csharp
+public class ChatThreadService : IChatThreadService
+{
+    private readonly ChatThreadLifecycleService _lifecycle;
+    private readonly ChatMessageService _messages;
+    private readonly ChatBranchService _branches;
+    private readonly ChatDraftService _drafts;
+
+    public ChatThreadService(
+        ChatThreadLifecycleService lifecycle,
+        ChatMessageService messages,
+        ChatBranchService branches,
+        ChatDraftService drafts)
+    {
+        _lifecycle = lifecycle;
+        _messages = messages;
+        _branches = branches;
+        _drafts = drafts;
+    }
+
+    public Task<ChatThread> CreateThreadAsync(string? title, bool isTransient, Persona persona,
+        CancellationToken ct = default)
+        => _lifecycle.CreateThreadAsync(title, isTransient, persona, ct);
+
+    public Task<ChatThread?> GetThreadAsync(string threadId, CancellationToken ct = default)
+        => _lifecycle.GetThreadAsync(threadId, ct);
+
+    public Task<IReadOnlyList<ChatThread>> GetPermanentThreadsAsync(ChatSortOrder sort,
+        CancellationToken ct = default)
+        => _lifecycle.GetPermanentThreadsAsync(sort, ct);
+
+    public Task<IReadOnlyList<ChatThread>> GetTransientThreadsAsync(CancellationToken ct = default)
+        => _lifecycle.GetTransientThreadsAsync(ct);
+
+    public Task SoftDeleteThreadAsync(string threadId, CancellationToken ct = default)
+        => _lifecycle.SoftDeleteThreadAsync(threadId, ct);
+
+    public Task RestoreThreadAsync(string threadId, CancellationToken ct = default)
+        => _lifecycle.RestoreThreadAsync(threadId, ct);
+
+    public Task PermanentDeleteThreadAsync(string threadId, CancellationToken ct = default)
+        => _lifecycle.PermanentDeleteThreadAsync(threadId, ct);
+
+    public Task ElevateToPermanentAsync(string threadId, CancellationToken ct = default)
+        => _lifecycle.ElevateToPermanentAsync(threadId, ct);
+
+    public Task<Message> SendMessageAsync(string threadId, string content,
+        CancellationToken ct = default)
+        => _messages.SendMessageAsync(threadId, content, ct);
+
+    public Task<Message> EditMessageAsync(string messageId, string newContent,
+        CancellationToken ct = default)
+        => _messages.EditMessageAsync(messageId, newContent, ct);
+
+    public Task DeleteMessageAsync(string messageId, CancellationToken ct = default)
+        => _messages.DeleteMessageAsync(messageId, ct);
+
+    public Task<Message> RegenerateAsync(string messageId, CancellationToken ct = default)
+        => _messages.RegenerateAsync(messageId, ct);
+
+    public Task<Message> ContinueGenerationAsync(string messageId, CancellationToken ct = default)
+        => _messages.ContinueGenerationAsync(messageId, ct);
+
+    public Task<IReadOnlyList<Message>> GetActiveBranchMessagesAsync(string threadId,
+        CancellationToken ct = default)
+        => _branches.GetActiveBranchMessagesAsync(threadId, ct);
+
+    public Task SetActiveBranchAsync(string messageId, CancellationToken ct = default)
+        => _branches.SetActiveBranchAsync(messageId, ct);
+
+    public Task<int> GetBranchCountAsync(string threadId, CancellationToken ct = default)
+        => _branches.GetBranchCountAsync(threadId, ct);
+
+    public Task<ChatTree> GetChatTreeAsync(string threadId, CancellationToken ct = default)
+        => _branches.GetChatTreeAsync(threadId, ct);
+
+    public Task<IReadOnlyList<Message>> SearchMessagesAsync(string threadId, string query,
+        int maxResults = 20, CancellationToken ct = default)
+        => _branches.SearchMessagesAsync(threadId, query, maxResults, ct);
+
+    public Task SaveDraftAsync(string threadId, string content, CancellationToken ct = default)
+        => _drafts.SaveDraftAsync(threadId, content, ct);
+
+    public Task<string?> GetDraftAsync(string threadId, CancellationToken ct = default)
+        => _drafts.GetDraftAsync(threadId, ct);
+
+    public Task DeleteDraftAsync(string threadId, CancellationToken ct = default)
+        => _drafts.DeleteDraftAsync(threadId, ct);
+}
+```
+
+- **DI Registration Update:**
+```csharp
+// Sub-services (singletons — stateless, depend on repos/LLM)
+services.AddSingleton<ChatThreadLifecycleService>();
+services.AddSingleton<ChatMessageService>();
+services.AddSingleton<ChatBranchService>();
+services.AddSingleton<ChatDraftService>();
+
+// Orchestrator (replaces old registration, now depends on sub-services)
+services.AddSingleton<IChatThreadService, ChatThreadService>();
+```
+
+- **Tests:** No new tests required — pure structural refactoring. Existing `ChatThreadServiceTests` (11 tests) and `ChatWorkflowIntegrationTests` continue to cover behavior through the orchestrator.
+
+- **Smoke Test:** `dotnet test tests/unit/MySecondBrain.Tests.Unit --configuration Debug` (716 tests, 0 failures) + `dotnet test tests/integration/MySecondBrain.Tests.Integration --configuration Debug` (43 tests, 0 failures) + `dotnet build MySecondBrain.sln --configuration Debug` (zero errors).
+
+---
+
+### Step 4: ChatThreadViewModel — Multi-Tab Architecture & Chat State Management
 
 - **Library:** `CommunityToolkit.Mvvm` (source generators), `System.Collections.ObjectModel`
 - **Import:** `MySecondBrain.UI.ViewModels`, `CommunityToolkit.Mvvm.ComponentModel`, `CommunityToolkit.Mvvm.Input`
@@ -433,7 +556,7 @@ protected override void OnKeyDown(KeyEventArgs e)
 
 ---
 
-### Step 4: Conversation View — VirtualizingStackPanel + Markdown Rendering Engine
+### Step 5: Conversation View — VirtualizingStackPanel + Markdown Rendering Engine
 
 - **Library:** `Markdig` (NuGet, already referenced), `AvalonEdit` (NuGet, `ICSharpCode.AvalonEdit.Highlighting`)
 - **Import:** `Markdig`, `Markdig.Syntax`, `Markdig.Extensions.Tables`, `ICSharpCode.AvalonEdit.Highlighting`
@@ -584,7 +707,7 @@ public class RelativeTimeConverter : IValueConverter
 
 ---
 
-### Step 5: Streaming Response Display + Auto-Scroll + Message Actions + Error Handling
+### Step 6: Streaming Response Display + Auto-Scroll + Message Actions + Error Handling
 
 - **Library:** `System.Runtime.CompilerServices` (IAsyncEnumerable), `System.Windows.Clipboard`
 - **Import:** `System.Windows.Controls`, `System.Windows.Documents`, `System.Windows.Threading`
@@ -684,7 +807,7 @@ private void CopyRich(Message message)
 
 ---
 
-### Step 6: Chat Header Full Layout + Chat Modes + RTL + Controls
+### Step 7: Chat Header Full Layout + Chat Modes + RTL + Controls
 
 - **Library:** WPF `FlowDocument.BidiAlgorithm`, `System.Globalization.UnicodeCategory`
 - **Import:** `System.Windows.Documents`, `System.Windows.Controls.Primitives`, `System.Globalization`
@@ -811,7 +934,7 @@ private void TogglePinWindow()
 
 ---
 
-### Step 7: QoL Features — File Viewer Tabs, Incognito, Locked Chats, Titling, Favoriting, Cross-Tab Alerts, Message Selection, Right Panel
+### Step 8: QoL Features — File Viewer Tabs, Incognito, Locked Chats, Titling, Favoriting, Cross-Tab Alerts, Message Selection, Right Panel
 
 - **Library:** `System.Security.Cryptography.AesGcm` (.NET 8+), `System.Net.NetworkInformation`
 - **Import:** `System.Security.Cryptography`, `System.IO`, `System.Net.NetworkInformation`
@@ -1022,7 +1145,7 @@ services.AddTransient<FileViewerTabViewModel>();
 
 ---
 
-### Step 8: E2E Tests + Integration Tests + Visual Polish
+### Step 9: E2E Tests + Integration Tests + Visual Polish
 
 - **Library:** `FlaUI.UIA3`, `xUnit` (already in test projects)
 - **Import:** `FlaUI.Core`, `FlaUI.UIA3`, `Xunit`
