@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,14 +11,6 @@ public partial class ChatView : UserControl
 {
     private ChatThreadViewModel? _viewModel;
 
-    public ObservableCollection<SampleMessage> SampleMessages { get; } =
-    [
-        new() { Role = "User", Content = "Explain what dependency injection is in .NET.", Timestamp = "10:32 AM" },
-        new() { Role = "Assistant", Content = "Dependency Injection (DI) is a design pattern where objects receive their dependencies from an external source rather than creating them internally. In .NET, the built-in DI container in Microsoft.Extensions.DependencyInjection manages service lifetimes and resolves dependencies automatically.", Timestamp = "10:32 AM" },
-        new() { Role = "User", Content = "Can you show a code example?", Timestamp = "10:33 AM" },
-        new() { Role = "Assistant", Content = "Sure! Here's a simple example:\n\n```csharp\nvar services = new ServiceCollection();\nservices.AddSingleton<IMyService, MyService>();\nvar provider = services.BuildServiceProvider();\nvar service = provider.GetRequiredService<IMyService>();\n```", Timestamp = "10:33 AM" }
-    ];
-
     public ChatView()
     {
         InitializeComponent();
@@ -30,7 +22,14 @@ public partial class ChatView : UserControl
         // Initialize the ViewModel (load default persona, populate list)
         Loaded += async (_, _) =>
         {
-            await _viewModel.InitializeAsync();
+            try
+            {
+                await _viewModel.InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "ChatView initialization failed");
+            }
         };
 
         // Register Ctrl+N for persona picker dialog
@@ -95,11 +94,4 @@ public class RelayCommandAdapter : ICommand
     public bool CanExecute(object? parameter) => true;
 
     public void Execute(object? parameter) => _execute();
-}
-
-public class SampleMessage
-{
-    public string Role { get; set; } = string.Empty;
-    public string Content { get; set; } = string.Empty;
-    public string Timestamp { get; set; } = string.Empty;
 }
