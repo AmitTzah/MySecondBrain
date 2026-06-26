@@ -70,6 +70,12 @@ public static class DependencyInjectionConfig
         services.AddSingleton<ISettingsRepository, SettingsRepository>();
         services.AddSingleton<ITextActionRepository, TextActionRepository>();
 
+        // === Chat Sub-Services (Singleton — stateless, depend on repos/LLM) ===
+        services.AddSingleton<ChatThreadLifecycleService>();
+        services.AddSingleton<ChatMessageService>();
+        services.AddSingleton<ChatBranchService>();
+        services.AddSingleton<ChatDraftService>();
+
         // === Application Services (Singleton) ===
         services.AddSingleton<ILLMProviderService, LLMProviderService>();
         services.AddSingleton<IChatThreadService, ChatThreadService>();

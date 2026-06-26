@@ -255,7 +255,10 @@ public class ChatWorkflowIntegrationTests : IDisposable
         var modelConfigRepo = new Mock<IModelConfigurationRepository>();
         var usageRepo = new Mock<IUsageRepository>();
         var titleGenMock = new Mock<ILogger<ChatTitleGenerator>>();
-        var loggerMock = new Mock<ILogger<ChatThreadService>>();
+        var lifecycleLoggerMock = new Mock<ILogger<ChatThreadLifecycleService>>();
+        var messageLoggerMock = new Mock<ILogger<ChatMessageService>>();
+        var branchLoggerMock = new Mock<ILogger<ChatBranchService>>();
+        var draftLoggerMock = new Mock<ILogger<ChatDraftService>>();
 
         var persona = new Persona
         {
@@ -294,10 +297,19 @@ public class ChatWorkflowIntegrationTests : IDisposable
             .Returns((ChatThread t, string msg, Persona p, ModelConfiguration c, IReadOnlyList<ToolDefinition>? tools, CancellationToken ct) =>
                 GetStreamForTest(msg, ct));
 
-        var service = new ChatThreadService(
+        var lifecycle = new ChatThreadLifecycleService(
+            threadRepo, personaRepo.Object,
+            modelConfigRepo.Object, lifecycleLoggerMock.Object);
+
+        var messages = new ChatMessageService(
             threadRepo, msgRepo, llmMock.Object,
-            personaRepo.Object, modelConfigRepo.Object,
-            usageRepo.Object, titleGenerator, _db, loggerMock.Object);
+            usageRepo.Object, titleGenerator,
+            lifecycle, messageLoggerMock.Object);
+
+        var branches = new ChatBranchService(msgRepo, branchLoggerMock.Object);
+        var drafts = new ChatDraftService(_db, draftLoggerMock.Object);
+
+        var service = new ChatThreadService(lifecycle, messages, branches, drafts);
 
         // Act — create thread
         var thread = await service.CreateThreadAsync("Integration Test Service Chat", false, persona);
@@ -338,14 +350,26 @@ public class ChatWorkflowIntegrationTests : IDisposable
         var modelConfigRepo = new Mock<IModelConfigurationRepository>();
         var usageRepo = new Mock<IUsageRepository>();
         var titleGenMock = new Mock<ILogger<ChatTitleGenerator>>();
-        var loggerMock = new Mock<ILogger<ChatThreadService>>();
+        var lifecycleLoggerMock = new Mock<ILogger<ChatThreadLifecycleService>>();
+        var messageLoggerMock = new Mock<ILogger<ChatMessageService>>();
+        var branchLoggerMock = new Mock<ILogger<ChatBranchService>>();
+        var draftLoggerMock = new Mock<ILogger<ChatDraftService>>();
 
         var titleGenerator = new ChatTitleGenerator(llmMock.Object, titleGenMock.Object);
 
-        var service = new ChatThreadService(
+        var lifecycle = new ChatThreadLifecycleService(
+            threadRepo, personaRepo.Object,
+            modelConfigRepo.Object, lifecycleLoggerMock.Object);
+
+        var messages = new ChatMessageService(
             threadRepo, msgRepo, llmMock.Object,
-            personaRepo.Object, modelConfigRepo.Object,
-            usageRepo.Object, titleGenerator, _db, loggerMock.Object);
+            usageRepo.Object, titleGenerator,
+            lifecycle, messageLoggerMock.Object);
+
+        var branches = new ChatBranchService(msgRepo, branchLoggerMock.Object);
+        var drafts = new ChatDraftService(_db, draftLoggerMock.Object);
+
+        var service = new ChatThreadService(lifecycle, messages, branches, drafts);
 
         var threadId = "draft-test-thread-001";
 

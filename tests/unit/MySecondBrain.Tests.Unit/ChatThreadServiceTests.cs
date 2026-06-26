@@ -18,11 +18,14 @@ public class ChatThreadServiceTests : IDisposable
     private readonly Mock<IPersonaRepository> _personaRepoMock = new();
     private readonly Mock<IModelConfigurationRepository> _modelConfigRepoMock = new();
     private readonly Mock<IUsageRepository> _usageRepoMock = new();
-    private readonly Mock<ILogger<ChatThreadService>> _loggerMock = new();
     private readonly AppDbContext _db;
     private readonly SqliteConnection _connection;
     private readonly ChatTitleGenerator _titleGenerator;
     private readonly Mock<ILogger<ChatTitleGenerator>> _titleLoggerMock = new();
+    private readonly Mock<ILogger<ChatThreadLifecycleService>> _lifecycleLoggerMock = new();
+    private readonly Mock<ILogger<ChatMessageService>> _messageLoggerMock = new();
+    private readonly Mock<ILogger<ChatBranchService>> _branchLoggerMock = new();
+    private readonly Mock<ILogger<ChatDraftService>> _draftLoggerMock = new();
     private ChatThreadService? _service;
 
     private readonly Persona _defaultPersona = new()
@@ -62,16 +65,30 @@ public class ChatThreadServiceTests : IDisposable
 
     private ChatThreadService CreateService()
     {
-        _service = new ChatThreadService(
+        var lifecycle = new ChatThreadLifecycleService(
+            _threadRepoMock.Object,
+            _personaRepoMock.Object,
+            _modelConfigRepoMock.Object,
+            _lifecycleLoggerMock.Object);
+
+        var messages = new ChatMessageService(
             _threadRepoMock.Object,
             _messageRepoMock.Object,
             _llmServiceMock.Object,
-            _personaRepoMock.Object,
-            _modelConfigRepoMock.Object,
             _usageRepoMock.Object,
             _titleGenerator,
+            lifecycle,
+            _messageLoggerMock.Object);
+
+        var branches = new ChatBranchService(
+            _messageRepoMock.Object,
+            _branchLoggerMock.Object);
+
+        var drafts = new ChatDraftService(
             _db,
-            _loggerMock.Object);
+            _draftLoggerMock.Object);
+
+        _service = new ChatThreadService(lifecycle, messages, branches, drafts);
         return _service;
     }
 
