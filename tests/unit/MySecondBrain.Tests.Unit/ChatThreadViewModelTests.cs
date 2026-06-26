@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 using MySecondBrain.Services;
+using MySecondBrain.Services.Chat;
 using MySecondBrain.UI.ViewModels;
 // Resolve ambiguity with System.Windows.Forms.Message (UseWindowsForms=true)
 using Message = MySecondBrain.Core.Models.Message;
@@ -21,6 +22,7 @@ public class ChatThreadViewModelTests
     private readonly Mock<IConfirmationService> _confirmationServiceMock = new();
     private readonly Mock<IThemeProvider> _themeProviderMock = new();
     private readonly Mock<ILogger<ChatThreadViewModel>> _loggerMock = new();
+    private readonly Mock<MarkdownStreamRenderer> _streamRendererMock = new(Mock.Of<IContentRendererRegistry>(), Mock.Of<ILogger<MarkdownStreamRenderer>>());
 
     private readonly Persona _generalAssistant = new()
     {
@@ -86,7 +88,8 @@ public class ChatThreadViewModelTests
             _skillServiceMock.Object,
             _confirmationServiceMock.Object,
             _themeProviderMock.Object,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            _streamRendererMock.Object);
     }
 
     // ================================================================

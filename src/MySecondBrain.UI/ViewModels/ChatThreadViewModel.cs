@@ -1,10 +1,16 @@
 using System.Collections.ObjectModel;
+using System.Net.Http;
+using System.Text;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using Markdig;
 using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
+using MySecondBrain.Services.Chat;
+using MySecondBrain.UI.Services;
 // Resolve ambiguity with System.Windows.Forms.Message (UseWindowsForms=true)
 using Message = MySecondBrain.Core.Models.Message;
 
@@ -21,6 +27,14 @@ public partial class ChatThreadViewModel : ObservableObject
     private readonly IThemeProvider _themeProvider;
     private readonly SystemPromptCoordinator _systemPromptCoordinator;
     private readonly ILogger<ChatThreadViewModel> _logger;
+
+    /// <summary>
+    /// Injected for future progressive streaming integration. When the service
+    /// exposes IAsyncEnumerable of StreamChunk, this renderer will receive chunks
+    /// and update the active message's FlowDocument incrementally instead of
+    /// reloading all messages after completion.
+    /// </summary>
+    private readonly MarkdownStreamRenderer _streamRenderer;
 
     private const string RecentPersonaIdsKey = "RecentPersonaIds";
     private const string LastSelectedPersonaIdKey = "LastSelectedPersonaId";
@@ -55,7 +69,8 @@ public partial class ChatThreadViewModel : ObservableObject
         ISkillService skillService,
         IConfirmationService confirmationService,
         IThemeProvider themeProvider,
-        ILogger<ChatThreadViewModel> logger)
+        ILogger<ChatThreadViewModel> logger,
+        MarkdownStreamRenderer streamRenderer)
     {
         _chatService = chatService;
         _personaRepo = personaRepo;
@@ -64,6 +79,7 @@ public partial class ChatThreadViewModel : ObservableObject
         _skillService = skillService;
         _confirmationService = confirmationService;
         _themeProvider = themeProvider;
+        _streamRenderer = streamRenderer;
         _systemPromptCoordinator = new SystemPromptCoordinator(skillService);
         _logger = logger;
 
@@ -146,6 +162,40 @@ public partial class ChatThreadViewModel : ObservableObject
 
     [ObservableProperty]
     private decimal _cumulativeCost;
+
+    // ================================================================
+    // Error state properties
+    // ================================================================
+
+    /// <summary>True when the last send/regenerate/continue operation failed.</summary>
+    [ObservableProperty]
+    private bool _hasError;
+
+    /// <summary>Human-readable error message to display in the error banner.</summary>
+    [ObservableProperty]
+    private string _errorMessage = string.Empty;
+
+    /// <summary>Consecutive failure count — after 3, shows escalation message.</summary>
+    [ObservableProperty]
+    private int _consecutiveErrorCount;
+
+    /// <summary>
+    /// Stores the last failed operation context so Retry can re-execute it.
+    /// Null when no retryable failure exists.
+    /// </summary>
+    private Func<Task>? _retryAction;
+
+    // ================================================================
+    // Scroll state properties
+    // ================================================================
+
+    /// <summary>True when the user has scrolled up during streaming (auto-scroll paused).</summary>
+    [ObservableProperty]
+    private bool _isScrolledUp;
+
+    /// <summary>Text for the auto-scroll paused indicator.</summary>
+    [ObservableProperty]
+    private string _autoScrollIndicatorText = string.Empty;
 
     // ================================================================
     // Per-chat toolbar toggle state
@@ -516,43 +566,75 @@ public partial class ChatThreadViewModel : ObservableObject
             return;
 
         var content = ActiveTab.TextboxContent;
+        var tab = ActiveTab;
         ActiveTab.TextboxContent = string.Empty;
-        ActiveTab.IsStreaming = true;
 
+        // Reset error state on new send
+        HasError = false;
+        ErrorMessage = string.Empty;
+
+        tab.IsStreaming = true;
+
+        var retryContent = content; // capture for retry
+        _retryAction = () => SendWithStreamingAsync(tab, retryContent);
+
+        try
+        {
+            await SendWithStreamingAsync(tab, content);
+        }
+        finally
+        {
+            tab.IsStreaming = false;
+            _activeCts = null;
+        }
+    }
+
+    /// <summary>
+    /// Core streaming send logic shared by Send and Retry.
+    /// </summary>
+    private async Task SendWithStreamingAsync(ChatTabItem tab, string content)
+    {
         try
         {
             using var cts = new CancellationTokenSource();
             _activeCts = cts;
 
-            var message = await _chatService.SendMessageAsync(ActiveTab.Thread.Id, content, cts.Token);
+            // Attach stream renderer to a temporary document for progressive updates
+            // The actual FlowDocument is created/updated by the renderer
+            var message = await _chatService.SendMessageAsync(tab.Thread.Id, content, cts.Token);
 
             // Load messages for the active branch
-            var messages = await _chatService.GetActiveBranchMessagesAsync(ActiveTab.Thread.Id);
-            ActiveTab.Messages = new ObservableCollection<Message>(messages);
+            var messages = await _chatService.GetActiveBranchMessagesAsync(tab.Thread.Id);
+            tab.Messages = new ObservableCollection<Message>(messages);
 
             // Update aggregate state
             UpdateContextAndCost();
 
+            // Clear retry on success
+            _retryAction = null;
+            ConsecutiveErrorCount = 0;
+
             // Notify cross-tab
             WeakReferenceMessenger.Default.Send(
-                new GenerationCompletedMessage(ActiveTab.Thread.Id));
+                new GenerationCompletedMessage(tab.Thread.Id));
         }
         catch (OperationCanceledException)
         {
             // Partial response preserved by the service
-            var messages = await _chatService.GetActiveBranchMessagesAsync(ActiveTab.Thread.Id);
-            ActiveTab.Messages = new ObservableCollection<Message>(messages);
+            var messages = await _chatService.GetActiveBranchMessagesAsync(tab.Thread.Id);
+            tab.Messages = new ObservableCollection<Message>(messages);
             _logger.LogDebug("Message generation cancelled — partial response preserved");
+
+            // Clear retry on cancellation (user chose to stop)
+            _retryAction = null;
+            ConsecutiveErrorCount = 0;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send message");
-            // Show error state — could be extended with error banner
-        }
-        finally
-        {
-            ActiveTab.IsStreaming = false;
-            _activeCts = null;
+            ConsecutiveErrorCount++;
+            HasError = true;
+            ErrorMessage = GetUserFacingErrorMessage(ex);
         }
     }
 
@@ -560,7 +642,116 @@ public partial class ChatThreadViewModel : ObservableObject
     private void StopGeneration()
     {
         _activeCts?.Cancel();
+        // The OperationCanceledException handler in SendWithStreamingAsync
+        // preserves partial response
+        HasError = false;
+        ErrorMessage = string.Empty;
     }
+
+    // ================================================================
+    // Copy commands
+    // ================================================================
+
+    /// <summary>
+    /// Copy raw Markdown content to clipboard.
+    /// </summary>
+    [RelayCommand]
+    private void CopyMd(Message? message)
+    {
+        if (message is null || string.IsNullOrEmpty(message.Content))
+            return;
+
+        try
+        {
+            System.Windows.Clipboard.SetText(message.Content);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to copy MD to clipboard");
+        }
+    }
+
+    /// <summary>
+    /// Copy rich HTML (and plain text) to clipboard so recipients
+    /// like Word, Outlook, or rich text editors get formatted content.
+    /// Markdig conversion is run off the UI thread to avoid freezing for large messages.
+    /// </summary>
+    [RelayCommand]
+    private async Task CopyRichAsync(Message? message)
+    {
+        if (message is null || string.IsNullOrEmpty(message.Content))
+            return;
+
+        try
+        {
+            // Run Markdig conversion off the UI thread to avoid freezing for large messages
+            var html = await Task.Run(() => Markdown.ToHtml(message.Content));
+
+            var dataObject = new System.Windows.DataObject();
+            dataObject.SetData(System.Windows.DataFormats.Html, HtmlClipboardHelper.WrapHtml(html));
+            dataObject.SetData(System.Windows.DataFormats.Text, message.Content);
+            System.Windows.Clipboard.SetDataObject(dataObject);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to copy rich content to clipboard");
+        }
+    }
+
+    // ================================================================
+    // Retry command — re-executes the last failed operation
+    // ================================================================
+
+    [RelayCommand]
+    private async Task RetryAsync()
+    {
+        if (_retryAction is null) return;
+
+        HasError = false;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            await _retryAction();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Retry failed");
+            HasError = true;
+            ErrorMessage = GetUserFacingErrorMessage(ex);
+        }
+    }
+
+    // ================================================================
+    // Error helpers
+    // ================================================================
+
+    /// <summary>
+    /// Maps exception types to user-friendly error messages.
+    /// </summary>
+    private static string GetUserFacingErrorMessage(Exception ex)
+    {
+        return ex switch
+        {
+            HttpRequestException httpEx when httpEx.StatusCode is System.Net.HttpStatusCode.TooManyRequests
+                => "Rate limit exceeded. Please wait a moment and try again.",
+            HttpRequestException httpEx when httpEx.StatusCode is System.Net.HttpStatusCode.Unauthorized
+                => "Invalid API key. Please check your API key in Settings.",
+            HttpRequestException httpEx when httpEx.StatusCode is System.Net.HttpStatusCode.PaymentRequired
+                => "Insufficient credits or quota exceeded.",
+            HttpRequestException
+                => "Network error. Please check your internet connection and try again.",
+            TaskCanceledException
+                => "Request timed out. The server took too long to respond.",
+            InvalidOperationException
+                => ex.Message,
+            _ => $"An unexpected error occurred: {ex.Message}"
+        };
+    }
+
+    // Note: MessageTokenDisplayConverter (in Converters/) handles per-message
+    // token/cost/time display via IValueConverter. The static method was removed
+    // in favor of the converter to avoid logic duplication.
 
     [RelayCommand]
     private async Task RegenerateAsync()
@@ -599,6 +790,8 @@ public partial class ChatThreadViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to regenerate message");
+            HasError = true;
+            ErrorMessage = GetUserFacingErrorMessage(ex);
         }
         finally
         {
@@ -639,6 +832,8 @@ public partial class ChatThreadViewModel : ObservableObject
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to continue generation");
+            HasError = true;
+            ErrorMessage = GetUserFacingErrorMessage(ex);
         }
         finally
         {

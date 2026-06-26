@@ -53,6 +53,9 @@ public class Message
     // New fields
     public bool IsFavorited { get; set; }
     public string? ThinkingContent { get; set; }
+    public int? PromptTokens { get; set; }
+    public int? CompletionTokens { get; set; }
+    public int? TotalTokens { get; set; }
 }
 
 public class Persona
