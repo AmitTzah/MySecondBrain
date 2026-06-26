@@ -134,7 +134,7 @@ tests/
 
 ## 5. Execution Steps
 
-### [ ] Step 1: Fill Repository Stubs — ChatThread & Message Data Access
+### [x] Step 1: Fill Repository Stubs — ChatThread & Message Data Access
 - **Goal:** Replace all stub methods in `ChatThreadRepository` and `MessageRepository` with real EF Core queries against `AppDbContext`. Add any missing entity fields to `ChatThread` and `Message` for vision compliance (organization fields: isFavorite, isPinned, isArchived, colorLabel, tags, folderId; locking fields: isLocked, lockSalt on ChatThread; favoriting field: isFavorited on Message). Create the EF Core migration.
 - **Actions:**
   - Add missing properties to `ChatThread` entity: `isFavorite`, `isPinned`, `isArchived`, `colorLabel`, `tags` (JSON string), `folderId`, `isLocked`, `lockSalt`, `lockNonce`
@@ -435,4 +435,9 @@ tests/
 - **Messenger Pattern:** Cross-VM communication via `WeakReferenceMessenger.Default`. Registration in constructor. Key messages: `GenerationCompletedMessage`, `ChatThreadCreatedMessage`, `ChatThreadDeletedMessage`.
 - **Stub Convention:** Services/repos initially stubbed with `Task.FromResult<T?>(null)` / `Task.CompletedTask`. This feature fills those stubs.
 - **File-Scoped Namespaces:** All C# files use `file_scoped` namespaces per `.editorconfig`.
+- **Step 1 — ChatThread Entity Fields (added):** IsFavorite, IsPinned, IsArchived, ColorLabel, Tags (JSON string), FolderId, IsLocked, LockSalt, LockNonce. Migration: `20260626104420_AddChatOrganizationFields`.
+- **Step 1 — Message Entity Fields (added):** IsFavorited, ThinkingContent. New index: `IX_Messages_IsActiveBranch`.
+- **Step 1 — Repository Mapping:** ChatThreadRepository.UpdateAsync/MapToDomain/MapToEntity updated with 9 new fields. MessageRepository.UpdateAsync/MapToDomain/MapToEntity updated with 6 fields (RawContent, EstimatedCost, GenerationTimeMs, Feedback, IsFavorited, ThinkingContent).
+- **Step 1 — Integration Tests:** `ChatWorkflowIntegrationTests.cs` — FullWorkflow (create→messages→active branch→FTS5→soft-delete→trash), BranchingWorkflow (create branches→switch active), ThreadWithLockFields (lock/unlock cycle).
+- **Step 1 — Unit Tests:** 6 new tests in `ChatMessageRepositoryTests.cs` for organization fields (CreateWithOrgFields, UpdateOrgFields, ResetLockFields, CreateWithNewFields, UpdateNewFields, SearchAlongsideNewFields). EntitySchemaTests updated (ChatThread: 26 props, Message: 19 props).
 - **Initial State:** ChatView.xaml has visual layout with static placeholders. ChatThreadService, ChatThreadRepository, MessageRepository are all stubs returning null/empty. Content block renderers are stubs. ChatThreadViewModel has basic persona/tool/skill management but no chat/message/tab functionality. The shell (MainWindow, sidebar, right panel) is fully functional.
