@@ -704,7 +704,7 @@
           The Vision Hasher's vision-summary.md Feature Index will list the correct artifact types for each project type. Use those instead of hardcoding GUI paths.
 
           Also include paths to:
-          - The full planning/ directory (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md) — so the FD Architect understands the architecture and abstractions.
+          - Paths to ALL files in the planning/ directory — list the directory and include every .md file found. The FD Architect uses these to understand the architecture and abstractions.
         </description>
       </element>
       <element name="completion_instruction">
@@ -795,8 +795,8 @@
       [IF RE-PLANNING AFTER VISION DRIFT: The vision documents have been updated after building Features 1 through [N]. Revise the roadmap for the REMAINING features only (Features [N+1] onward). Preserve the wave structure. Re-evaluate generalization: new integration points may need abstraction.
 
       CRITICAL — Refresh ALL planning/ files AND tech-sourcing.md to reconcile with as-built reality:
-      1. Read ALL knowledge/ files (architecture.md, database.md, api-routes.md, frontend-ui.md) — these represent what WAS ACTUALLY BUILT.
-      2. Read ALL planning/ files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, e2e-authoring-guide.md, planning-summary.md) — these represent the ORIGINAL DESIGN INTENT.
+      1. Read ALL files in the knowledge/ directory — list the directory and read every .md file found. These represent what WAS ACTUALLY BUILT.
+      2. Read ALL files in the planning/ directory — list the directory and read every .md file found. These represent the ORIGINAL DESIGN INTENT.
       3. Read agent-workspace/project-director/tech-sourcing.md — the original technology sourcing decisions.
       4. For each planning/ file, reconcile: where knowledge/ (as-built) diverges from planning/ (design intent), knowledge/ takes precedence. Update the planning/ file to reflect what was actually built, while preserving any forward-looking design intent for remaining features.
       5. Check tech-sourcing.md: do the technology sourcing decisions still hold for the remaining features? If new integration points from the re-plan require technologies not covered in tech-sourcing.md, add sourcing recommendations for them. If a previously chosen technology was replaced in practice (visible in knowledge/), update the sourcing decision to match reality.
@@ -834,7 +834,7 @@ Perform a strict architectural review across five dimensions:
 
 4. FEATURE ORDERING: Do dependencies flow forward (later features depend on earlier features, never the reverse)? Can features actually be built in the specified order? Are there features that depend on features in a later wave?
 
-5. PLANNING/ COMPLETENESS: Are all 8 planning files (architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, e2e-authoring-guide.md, planning-summary.md) present and internally consistent? Do the abstraction interfaces in abstractions.md match the integration points in integration-points.md? Does the tech stack in tech-stack.md match the architecture described in architecture.md? Does the E2E authoring guide's framework choice align with the tech stack?
+5. PLANNING/ COMPLETENESS: Are all planning/ files present and internally consistent? List the directory to discover all files, then verify: do abstraction interfaces in abstractions.md match the integration points in integration-points.md? Does the tech stack in tech-stack.md match the architecture described in architecture.md? Does the E2E authoring guide's framework choice align with the tech stack? Are there any broken cross-references between files?
 
 Edit the files to fix any flaws you find. For vision gaps (orphaned requirements or unmoored features), flag them in your completion summary — do NOT edit vision docs.
 
@@ -1048,6 +1048,282 @@ _Not yet configured._
       </section>
     </template>
   </ad_hoc_code_subtask_prompt>
+
+  <!-- ============================================================ -->
+  <!-- PATH B VISION REALIGNMENT PIPELINE PROMPTS                     -->
+  <!-- ============================================================ -->
+
+  <vision_hasher_update_prompt>
+    <name>Vision Hasher Prompt for Vision File Updates (Path B Step B3)</name>
+    <description>
+      Canonical prompt to use when spawning a Vision Hasher to update existing vision files
+      during the Path B Vision Realignment Pipeline. The VH must read all current vision files,
+      interview the user about the changes, and update everything. It must report a delta
+      between what was proposed and what actually changed.
+    </description>
+    <usage>
+      Spawn via new_task in Vision Hasher mode. Include: the aggregated change summary from
+      Step B2, paths to ALL current vision files, and instruction to interview the user.
+    </usage>
+    <template>
+      <section name="context">
+        <item number="1">
+          <title>What Changed</title>
+          [Insert the aggregated change summary from Step B2: what changes, what stays the same, which remaining roadmap features are affected.]
+        </item>
+        <item number="2">
+          <title>Current Vision Files</title>
+          [List ALL vision files the VH must read before interviewing the user. Include every .md file, every deliverable (HTML mocks, OpenAPI YAML, session transcripts, usage examples, Mermaid diagrams), and vision-config.json.]
+        </item>
+        <item number="3">
+          <title>Project Context</title>
+          [Brief summary: what's been built so far (features 1 through current_feature_index), current wave, tech stack from planning/tech-stack.md.]
+        </item>
+      </section>
+
+      <section name="instructions">
+        <item number="1">
+          <title>Read Everything First</title>
+          Read ALL current vision files listed above. Understand the complete current vision before making any changes. Do NOT skip this step — you must know what exists before you can update it.
+        </item>
+        <item number="2">
+          <title>Interview the User</title>
+          Using your standard guided interview methodology, discuss the proposed changes with the user. Confirm each change. Explore implications: "If we change X, does that affect Y?" You may discover implications not in the change summary — explore them with the user. The user may change their mind during the interview — that's expected.
+        </item>
+        <item number="3">
+          <title>Update ALL Affected Vision Files</title>
+          Update every vision file that needs to change. This includes: per-artifact specs (features/, screens/, data/, flows/), atomic templates (app-overview.md, personas.md, feature-inventory.md, edge-cases.md), deliverable files (HTML mocks, OpenAPI YAML, session transcripts, usage examples, Mermaid diagrams), and vision-summary.md. Do NOT leave any file in an inconsistent state.
+        </item>
+        <item number="4">
+          <title>Report the Delta</title>
+          In your completion summary, report EXACTLY what changed vs. the original proposal:
+          - What was added beyond the proposal
+          - What was modified differently than proposed
+          - What was deferred ("⚠️ INCOMPLETE" with reason)
+          - Which vision files were modified (complete list with paths)
+          - Which mocks/deliverables changed (user should review these visually)
+          - Any concerns or contradictions you noticed but couldn't resolve (flag for the VH Critic in the next step)
+        </item>
+      </section>
+    </template>
+  </vision_hasher_update_prompt>
+
+  <vision_hasher_critic_prompt>
+    <name>Vision Hasher Critic Prompt (Path B Step B4)</name>
+    <description>
+      Canonical prompt to use when spawning a Vision Hasher in a CRITIC role to audit
+      recently-updated vision files for internal contradictions. This is a focused audit —
+      NOT a discovery session. The VH must not add new features or expand scope.
+    </description>
+    <usage>
+      Spawn via new_task in Vision Hasher mode. The prompt explicitly instructs the VH to
+      act as a critic, not a discoverer.
+    </usage>
+    <template>
+      <section name="role_override">
+        CRITICAL: You are acting as a VISION CRITIC, not a Vision Hasher. Your role today is to audit completed vision documents for internal consistency. Do NOT conduct discovery interviews. Do NOT suggest new features. Do NOT expand scope. Only find and fix contradictions in existing content.
+      </section>
+
+      <section name="context">
+        <item number="1">
+          <title>What Just Happened</title>
+          The vision files were updated to reflect a mid-project change. [Brief summary of the change from Step B2/B3.] All vision files should now be internally consistent — your job is to verify and fix any remaining issues.
+        </item>
+        <item number="2">
+          <title>Vision Files to Audit</title>
+          [List ALL vision files — the VH Critic must read every one.]
+        </item>
+      </section>
+
+      <section name="instructions">
+        <item number="1">
+          <title>Read ALL Vision Files</title>
+          Read every vision file. Build a mental model of the complete application as described by these files.
+        </item>
+        <item number="2">
+          <title>Find Contradictions</title>
+          Search for:
+          - Features described differently in different files (feature-inventory.md says one thing, features/[name].md says another)
+          - Orphaned references (a screen references a data entity that doesn't exist in data/)
+          - Edge cases that contradict feature descriptions
+          - Screens that describe behaviors not covered by any feature spec
+          - Data entities referenced by features but not defined in data/
+          - Inconsistent terminology (same concept named differently across files)
+          - Deliverable files (HTML mocks, OpenAPI YAML, etc.) that don't match their paired .md specs
+        </item>
+        <item number="3">
+          <title>Fix What You Can</title>
+          For each contradiction found, determine the correct resolution and fix the files. Prefer the more recent/specific description when two files conflict. Update both files if needed for consistency.
+        </item>
+        <item number="4">
+          <title>Flag What You Can't Fix</title>
+          If a contradiction requires NEW discovery to resolve (not just reconciliation of existing content): do NOT resolve it yourself. Flag it as "DEFERRED — requires discovery: [description of the ambiguity and what needs to be decided]." These will be presented to the user.
+        </item>
+        <item number="5">
+          <title>Report</title>
+          In your completion summary:
+          - Number of contradictions found and fixed (with file paths)
+          - Number of DEFERRED items (with descriptions)
+          - Any patterns you noticed (e.g., "3 features all reference 'user preferences' differently")
+          - Do NOT propose new features or scope expansions
+        </item>
+      </section>
+    </template>
+  </vision_hasher_critic_prompt>
+
+  <realignment_architect_prompt>
+    <name>Architect Prompt for Planning/Roadmap/Knowledge Updates (Path B Step B5)</name>
+    <description>
+      Canonical prompt to use when spawning an Architect to propagate vision changes through
+      planning files, roadmap, and knowledge files during the Path B Vision Realignment Pipeline.
+      This is the largest spawn in the pipeline — the Architect must read everything and update
+      everything.
+    </description>
+    <usage>
+      Spawn via new_task in Architect mode. Include: the vision change delta from Step B3,
+      paths to ALL vision files, ALL planning files, roadmap.md, and knowledge/ files.
+    </usage>
+    <template>
+      <section name="context">
+        <item number="1">
+          <title>Vision Changes</title>
+          [Insert the VH delta report from Step B3: exactly what changed in the vision files, including which files were modified and the nature of each change.]
+        </item>
+        <item number="2">
+          <title>Current Project State</title>
+          - Features built: 1 through [current_feature_index]
+          - Current wave: [Wave N]
+          - Tech stack: [from planning/tech-stack.md]
+          - [Brief summary from current-state.md]
+        </item>
+        <item number="3">
+          <title>Files You Must Read</title>
+          - ALL vision files in agent-workspace/project-director/vision/
+          - ALL planning files in agent-workspace/project-director/planning/
+          - roadmap.md
+          - ALL knowledge files in agent-workspace/knowledge/
+        </item>
+      </section>
+
+      <section name="instructions">
+        <item number="1">
+          <title>Read Everything</title>
+          Read ALL vision files, ALL planning files, roadmap.md, and ALL knowledge files. Build a complete understanding of: (a) what the vision now says, (b) what the planned architecture looks like, (c) what has actually been built (from knowledge/ files).
+        </item>
+        <item number="2">
+          <title>Update the Roadmap</title>
+          Revise all FUTURE features (current_feature_index + 1 onwards) to match the updated vision. Do NOT modify past feature entries (1 through current_feature_index) — those represent what was already built. Maintain wave groupings. Update feature names, 1-line descriptions, and dependencies as needed. If a future feature is now irrelevant given the vision change: remove it. If the vision change requires new features: add them in the appropriate wave.
+        </item>
+        <item number="3">
+          <title>Determine Realignment Need</title>
+          Compare the updated vision against what was actually built (knowledge/ files). Is there a gap? Specifically:
+          - Does the new vision require behavior that existing code doesn't support?
+          - Do existing abstractions need their interfaces changed to support the new vision?
+          - Were any already-built features invalidated by the vision change?
+
+          If YES to any: design a REALIGNMENT FEATURE. Insert it as the immediate next feature (current_feature_index + 1). This feature:
+          - Retrofits existing code to match the new vision
+          - Updates affected abstractions, data models, and integration points
+          - Does NOT build new capabilities — it only aligns what exists with the new vision
+          - Includes updating any E2E tests invalidated by the vision change
+          - Name it descriptively: "Feature [N]: Realignment — [what changed]"
+
+          If NO gap exists (future roadmap changes are sufficient): do NOT insert a Realignment Feature. Note in your completion summary why one isn't needed.
+        </item>
+        <item number="4">
+          <title>Update ALL Planning Files</title>
+          Every planning/ .md file that references changed vision concepts must be updated:
+          - architecture.md: if the vision change affects component design or data flow
+          - tech-stack.md: if new technology decisions are implied by the vision change
+          - abstractions.md: if provider interfaces need new methods or new abstractions are needed
+          - data-model.md: if data entities changed, were added, or were removed
+          - integration-points.md: if external integrations changed
+          - platform-notes.md: if platform-specific implications changed
+          - e2e-authoring-guide.md: if E2E patterns or conventions changed
+          - planning-summary.md: update to reflect all changes
+        </item>
+        <item number="5">
+          <title>Update Knowledge Files</title>
+          This is an explicit exception to the normal boundary (PD audits knowledge/ but never edits). During realignment, YOU are authorized to update knowledge/ files to reflect the new vision. Update any knowledge file whose described architecture, patterns, or conventions have changed.
+        </item>
+        <item number="6">
+          <title>Flag E2E Impact</title>
+          Identify which existing E2E tests (tests/e2e/) are invalidated by the vision change. List each test file and why it's affected. If a Realignment Feature was inserted, its E2E spec must include updating these tests.
+        </item>
+        <item number="7">
+          <title>Report</title>
+          In your completion summary:
+          - Roadmap changes: features added/removed/modified (with before/after)
+          - Realignment Feature: [inserted / not needed — why]
+          - Planning files updated: [list with brief description of each change]
+          - Knowledge files updated: [list]
+          - E2E tests invalidated: [list with reasons]
+        </item>
+      </section>
+    </template>
+  </realignment_architect_prompt>
+
+  <realignment_critic_prompt>
+    <name>Architect Critic Prompt for Realignment Review (Path B Step B6)</name>
+    <description>
+      Canonical prompt to use when spawning an Architect in CRITIC role to independently review
+      all changes made during the Vision Realignment Pipeline (Steps B3-B5).
+    </description>
+    <usage>
+      Spawn via new_task in Architect mode. The prompt explicitly instructs the Architect to
+      act as a strict Principal Engineer / Design Critic.
+    </usage>
+    <template>
+      <section name="role_override">
+        CRITICAL: You are acting as a PRINCIPAL ENGINEER / DESIGN CRITIC, not an Architect. Your role today is to audit completed planning and roadmap documents for quality and consistency. Do NOT propose new features. Do NOT expand scope. Only find and report issues in existing content.
+      </section>
+
+      <section name="context">
+        <item number="1">
+          <title>What Just Happened</title>
+          A mid-project vision realignment was performed: vision files were updated (VH), contradictions were fixed (VH Critic), and planning/roadmap/knowledge files were updated (Architect). Your job is to independently audit the result.
+        </item>
+        <item number="2">
+          <title>Files to Audit</title>
+          - ALL vision files in agent-workspace/project-director/vision/
+          - ALL planning files in agent-workspace/project-director/planning/
+          - roadmap.md
+          - ALL knowledge files in agent-workspace/knowledge/
+        </item>
+      </section>
+
+      <section name="instructions">
+        <item number="1">
+          <title>Read Everything</title>
+          Read ALL files listed above. Build a complete understanding of the vision, the planned architecture, the roadmap, and what has been built.
+        </item>
+        <item number="2">
+          <title>Audit for Consistency</title>
+          Check these specific dimensions:
+          - Vision-Planning Alignment: Does every changed vision concept have corresponding updates in planning files? Are there planning references to vision concepts that no longer exist?
+          - Abstraction Coverage: Are there new/changed integration points without provider interfaces? Do existing abstractions still cover what the new vision requires?
+          - Roadmap Integrity: Do all forward dependencies hold? Does any future feature depend on something that was removed or changed? Is the Realignment Feature (if inserted) correctly positioned and scoped?
+          - Realignment Completeness: If a Realignment Feature was inserted, does it cover ALL gaps between as-built code and new vision? Are there gaps it misses?
+          - Planning Internal Consistency: Do architecture.md, abstractions.md, data-model.md, and integration-points.md agree with each other? No contradictions?
+          - E2E Coverage: Are all invalidated E2E tests accounted for in the Realignment Feature's E2E spec?
+        </item>
+        <item number="3">
+          <title>Report Findings</title>
+          For each issue found, report: the specific files involved, what the contradiction or gap is, and a suggested resolution. Categorize as:
+          - CRITICAL: Will cause build failures, broken dependencies, or impossible feature sequences
+          - HIGH: Missing abstraction, incomplete coverage, dependency violation
+          - MEDIUM: Inconsistency that won't block progress but should be fixed
+          - LOW: Naming inconsistency, minor documentation gap
+
+          Do NOT make changes yourself. Report findings only — the PD will decide how to resolve them.
+        </item>
+        <item number="4">
+          <title>Scope Discipline</title>
+          Do NOT propose new features. Do NOT suggest scope expansions. If you notice an opportunity for improvement that goes beyond fixing consistency: note it as "OBSERVATION (out of scope): [description]" — the PD will decide whether to pursue it separately.
+        </item>
+      </section>
+    </template>
+  </realignment_critic_prompt>
 
   <!-- DEPRECATED PROMPTS — kept for backward compatibility reference -->
   <deprecated_prompts>

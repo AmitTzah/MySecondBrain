@@ -151,7 +151,7 @@
     <category name="before_feature_completion">
       <item>All steps are marked [x] in the markdown plan</item>
       <item>`"current_step"` in state.json equals `"total_steps"`</item>
-      <item>state.json has been finalized in-place (`"current_phase": 5`, `"plan_status": "archived"`) in Phase 5 Step 2</item>
+      <item>state.json has been finalized in-place (`"current_phase": 5`, `"plan_status": "archived"`) in Phase 5 Step 3</item>
       <item>Shared Technical Context is complete and accurate</item>
       <item>The partitioned knowledge base (agent-workspace/knowledge/) has been updated</item>
       <item>Plan, Reference, and state.json have all been archived together to agent-workspace/feature/archive/</item>

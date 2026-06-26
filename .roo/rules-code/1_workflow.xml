@@ -367,8 +367,8 @@
           </capability>
 
           <capability name="integration_tests">
-            <description>Run integration tests that exercise the full stack. These verify: database connectivity, API endpoints, service wiring, real file I/O.</description>
-            <step>Run integration test suite (e.g., dotnet test --filter Category=Integration). Verify all pass.</step>
+            <description>Confirm integration tests passed during the quality loop. These verify: database connectivity, API endpoints, service wiring, real file I/O. If the quality loop ran them in this same session, skip re-running — the results are still valid. If resuming from a prior session, re-run the full unfiltered suite.</description>
+            <step>Run the project's full unfiltered test suite (e.g., `dotnet test`, `npm test`, `cargo test` — never use --filter). Verify all pass. This is the SAME command the quality loop uses — run unit AND integration together, unfiltered.</step>
           </capability>
 
           <capability name="cli_verification">

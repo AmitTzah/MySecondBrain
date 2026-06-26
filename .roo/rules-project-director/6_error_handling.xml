@@ -292,7 +292,7 @@
   </error_scenarios>
 
   <scenario name="ad_hoc_code_subtask_fails" priority="high">
-      <trigger>Phase 3, Step 0: A Code subtask spawned for an ad-hoc change returns with errors or fails to complete</trigger>
+      <trigger>Path A (Simple Change): A Code subtask spawned for an ad-hoc change returns with errors or fails to complete</trigger>
       <recovery>
         <step>Read the Code subtask's completion summary. Identify the failure reason.</step>
         <decision_tree>
@@ -301,10 +301,10 @@
             <action>If still failing: escalate to user — "Retry with more context", "I'll fix manually", "Abandon this change and continue with next feature."</action>
           </branch>
           <branch condition="Code subtask reports 'ARCHITECTURAL IMPACT' in its completion summary (touched shared interfaces, provider abstractions, or Wave 1-2 foundation code)">
-            <action>The subtask succeeded but flagged architectural impact. This is distinct from test failure — the code works, but it touched shared infrastructure that other features depend on. Present to user: "This change had architectural impact — it touched [details from completion summary]. I recommend treating this as a proper feature via Feature Developer to ensure full regression testing and architectural audit coverage." Options: "Spawn FD for this as a feature", "Continue with Code subtask result despite architectural impact (PD will reconcile vision/roadmap)", "Revert the change and abandon." If user chooses FD path: reclassify as generalizable_to_feature — spawn Architect to design the feature, insert into roadmap, then spawn FD.</action>
+            <action>The subtask succeeded but flagged architectural impact. This is distinct from test failure — the code works, but it touched shared infrastructure that other features depend on. This matches the Path A escalation trigger in the workflow (1_workflow.xml A2). Present to user: "This change had architectural impact — it touched [details from completion summary]. I recommend reclassifying to Path B (Vision Realignment Pipeline) to ensure the vision and planning files are updated for this infrastructure change." Options: "Reclassify to Path B", "Continue with Path A despite architectural impact (PD will reconcile vision/roadmap)", "Revert the change and abandon." If user chooses Path B: abort Path A, set realignment_loop_count=0 in state.json, re-enter Phase 3 Step 0 triage as Path B.</action>
           </branch>
           <branch condition="The change is larger than expected (touches shared infrastructure, many files — but no explicit ARCHITECTURAL IMPACT flag)">
-            <action>Reclassify: this is NOT a small change. Recommend to user: "This change is more involved than anticipated — it touches [N] files including shared infrastructure. I recommend treating this as a proper feature via Feature Developer." Options: "Spawn FD for this as a feature", "Continue with Code subtask despite the scope", "Abandon."</action>
+            <action>Reclassify: this is NOT a small change. Recommend to user: "This change is more involved than anticipated — it touches [N] files including shared infrastructure. I recommend reclassifying to Path B." Options: "Reclassify to Path B", "Continue with Code subtask despite the scope", "Abandon." If user chooses Path B: abort Path A, set realignment_loop_count=0 in state.json, re-enter Phase 3 Step 0 triage as Path B.</action>
           </branch>
           <branch condition="Code subtask cannot complete (ambiguous request, missing context)">
             <action>Re-spawn with more specific instructions. If still failing: escalate to user.</action>
@@ -321,6 +321,63 @@
       </recovery>
     </scenario>
 
+  <scenario name="path_a_sanity_check_finds_misalignment" priority="high">
+    <trigger>Path A (Simple Change), Step A3: PD sanity check finds the change contradicts vision/planning files or has implications in untouched areas</trigger>
+    <recovery>
+      <step>Document the specific misalignment: which vision/planning files contradict the change or would be affected.</step>
+      <step>Present to user: "This change appears to have implications beyond what was modified. [Specific findings.] Recommend reclassifying to Path B (Vision Realignment Pipeline)." Options: "Reclassify to Path B", "Proceed — I'll address the implications separately."</step>
+      <step>If user selects Path B: abort Path A, re-enter triage as Path B.</step>
+      <step>If user selects Proceed: document the known misalignment in current-state.md as "Known drift — [description]."</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="realignment_pipeline_interrupted" priority="critical">
+    <trigger>Context is lost during the Path B Vision Realignment Pipeline (realignment_step is 1-7 in state.json)</trigger>
+    <recovery>
+      <step>Read realignment_step from state.json. This is the exact step that was in progress.</step>
+      <step>Present to user: "Vision realignment was in progress at Step [N] ([title]). Resume from this step?" Options: "Yes — resume from Step [N]", "Restart the pipeline from Step B1", "Abort realignment — revert and continue with original roadmap."</step>
+      <step>If resume: proceed to the appropriate step in Phase 3 Step 0 Path B pipeline. The step's crash guard (realignment_step set at start) ensures idempotency.</step>
+      <step>If restart: set realignment_step=null, re-enter Phase 3 Step 0 triage as Path B.</step>
+      <step>If abort: set realignment_step=null and realignment_loop_count=0 in state.json. Revert any in-progress file changes (use git if available). Announce: "Realignment aborted. Continuing with original roadmap." Proceed to Phase 3 Step 1.</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="realignment_pipeline_loop_detected" priority="high">
+    <trigger>Path B pipeline loops back to Step B3 more than twice (VH update → VH Critic → Architect → Architect Critic → back to VH update)</trigger>
+    <recovery>
+      <step>Stop the loop. Do NOT spawn another VH or Architect.</step>
+      <step>Read the Critic's latest findings. Identify what keeps causing the loop — is it a fundamental tension between the vision change and the existing architecture?</step>
+      <step>Present to user: "The vision realignment pipeline has looped [X] times without converging. The vision change and the existing architecture may be fundamentally at odds. [Specific tension identified.] Options:" Options: "Restart from Phase 1 (re-vision with Vision Hasher from scratch)", "Accept current state and proceed — I'll handle remaining inconsistencies manually", "Abort realignment — revert to original roadmap."</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="vision_hasher_update_diverges_from_proposal" priority="high">
+    <trigger>Path B Step B3: Vision Hasher's delta report shows major divergence from the Step B2 aggregated summary</trigger>
+    <recovery>
+      <step>Read the VH's delta report carefully. Categorize the divergences: (a) user changed their mind during interview (expected), (b) VH discovered necessary implications the PD missed (good), (c) VH expanded scope beyond what was discussed (scope creep).</step>
+      <step>Present to user: "The Vision Hasher's updates diverged from our plan: [list each divergence with category]. Approve the new direction or revise?" Options: "Approved — proceed with VH's version", "Revise — I'll provide feedback for a VH re-spawn", "Revert specific changes — I'll list what to undo."</step>
+      <step>If user wants revision: re-spawn VH with targeted feedback. Do NOT proceed to Step B4 until the user is satisfied.</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="realignment_architect_cannot_determine_gap" priority="high">
+    <trigger>Path B Step B5: Architect cannot determine whether a Realignment Feature is needed, or the gap analysis is ambiguous</trigger>
+    <recovery>
+      <step>Read the Architect's completion. Identify what's ambiguous: is the gap real but hard to quantify? Are knowledge files incomplete?</step>
+      <step>If knowledge files are incomplete: spawn Architect to backfill knowledge/ files first (use knowledge_backfill_prompt_pattern), then re-spawn the realignment Architect.</step>
+      <step>If the gap is genuinely ambiguous: present to user — "The Architect couldn't definitively determine if existing code needs realignment. [Ambiguity description.] Options:" Options: "Insert a Realignment Feature to be safe", "Skip Realignment Feature — future features will adapt", "I'll manually assess the gap and report back."</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="realignment_critic_finds_vision_issues" priority="high">
+    <trigger>Path B Step B6: Architect Critic finds issues that trace back to vision files (not just planning)</trigger>
+    <recovery>
+      <step>Read the Critic's findings. Identify which vision files have issues.</step>
+      <step>If this is the first or second loop: set realignment_step=3, loop back to Step B3 (VH Update) with the Critic's findings as additional context for the VH.</step>
+      <step>If this is the third loop (max 2 loops exceeded): escalate to user — "The Critic keeps finding vision-level issues after [X] rounds of fixes. The vision change may be fundamentally incompatible. Options:" Options: "Restart from Phase 1 (re-vision from scratch)", "Accept Critic's findings as documented risks and proceed", "I'll manually resolve the contradictions."</step>
+    </recovery>
+  </scenario>
+
   <general_recovery_principles>
     <principle>Never proceed past a failed gate without user confirmation.</principle>
     <principle>agent-workspace/project-director/state.json is the single source of truth for project state. Protect it.</principle>
@@ -331,8 +388,10 @@
     <principle>Vision docs are living documents. After each feature, re-evaluate. Minor drift → edit directly. Major drift → flag for user.</principle>
     <principle>If a feature is fundamentally broken, a roadmap revision (via Architect) is better than repeated failed attempts.</principle>
     <principle>If the same features are re-planned 3+ times, restart from vision discovery — the vision itself may be the problem.</principle>
+    <principle>If the Path B Vision Realignment Pipeline loops 3+ times, restart from vision discovery — the change may be fundamentally incompatible with the existing architecture.</principle>
     <principle>Scope creep goes to backlog.md — keep the main roadmap clean and achievable.</principle>
     <principle>E2E lock-in is a quality gate, not a blocker. If E2E tests cannot pass after reasonable attempts, escalate to the user.</principle>
     <principle>The E2E generation subtask selects the E2E framework — the PD never prescribes one.</principle>
+    <principle>During Path B realignment, the abort hatch is always available — user can revert to original roadmap at any step.</principle>
   </general_recovery_principles>
 </error_handling>

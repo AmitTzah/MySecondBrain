@@ -349,7 +349,7 @@ If any MCP git tool fails, returns an error, or is unavailable at runtime: fall 
 
       <item number="1">
         <title>Read Planning Directory — Cross-Reference Design Intent Against As-Built Reality (If Available)</title>
-        Check if the `agent-workspace/project-director/planning/` directory exists. If it does, read ALL planning/ files: architecture.md, tech-stack.md, abstractions.md, data-model.md, integration-points.md, platform-notes.md, planning-summary.md. These represent the ORIGINAL DESIGN INTENT for the system.
+        Check if the `agent-workspace/project-director/planning/` directory exists. If it does, read ALL files in the planning/ directory — list the directory and read every .md file found. These represent the ORIGINAL DESIGN INTENT for the system.
 
         Then read the partitioned knowledge base (item 1b below) — those knowledge/ files represent what WAS ACTUALLY BUILT.
 
@@ -360,11 +360,7 @@ If any MCP git tool fails, returns an error, or is unavailable at runtime: fall 
 
       <item number="1b">
         <title>Read Partitioned Knowledge Base (If Available)</title>
-        Check if the `agent-workspace/knowledge/` directory exists. If it does, ONLY read the specific partitioned `.md` files that are strictly relevant to the feature you are planning, to prevent context bloat. The four available files are:
-        - `architecture.md` — system-level design decisions and patterns
-        - `database.md` — schemas, models, migrations, data-layer patterns
-        - `api-routes.md` — endpoints, route definitions, middleware patterns
-        - `frontend-ui.md` — components, state management, styling conventions
+        Check if the `agent-workspace/knowledge/` directory exists. If it does, list the directory and read ALL .md files found. Each file's name and content indicate its domain (e.g., architecture.md = system design, database.md = data layer, api-routes.md = endpoints, frontend-ui.md = UI components, etc.). Use the files relevant to your feature — skip files whose domain doesn't intersect with what you're planning.
 
         If the `knowledge/` directory does not exist or is empty, skip this step — this is normal for brand-new projects. The orchestrator-provided context is your primary source in that case.
       </item>
@@ -520,29 +516,18 @@ If any MCP git tool fails, returns an error, or is unavailable at runtime: fall 
     </description>
     <project_type_file_mapping>
       <!--
-        GUI:     architecture.md, database.md, api-routes.md, frontend-ui.md
-        CLI:     architecture.md, database.md, command-reference.md, cli-interface.md
-        API:     architecture.md, database.md, api-routes.md (3 files)
-        Library: architecture.md, database.md, public-api-surface.md, integration-patterns.md
-        Game:    architecture.md, database.md, api-routes.md, frontend-ui.md, game-mechanics.md (5 files)
-        Pipeline: architecture.md, database.md, data-contracts.md, pipeline-topology.md
+        Knowledge files are discovered dynamically by listing the directory.
+        The files below are common examples, not an exhaustive checklist.
+        New files can be added at any time — the Architect discovers and updates them.
       -->
     </project_type_file_mapping>
     <prompt>
-      "Review agent-workspace/feature/plan.md AND agent-workspace/feature/reference.md. Determine the project type from vision/vision-config.json (if missing, default to GUI). Intelligently append new architectural patterns, core data structures, or endpoints to the *specific* partitioned files in agent-workspace/knowledge/ based on the project type:
-      - New architectural patterns, design decisions, or system-level concerns → agent-workspace/knowledge/architecture.md
-      - New database schemas, models, migrations, or data-layer patterns → agent-workspace/knowledge/database.md
-      - [GUI/Game only] New API endpoints, route definitions, middleware patterns, or protocol-level details → agent-workspace/knowledge/api-routes.md
-      - [GUI/Game only] New UI components, frontend patterns, state management structures, or styling conventions → agent-workspace/knowledge/frontend-ui.md
-      - [Game only] New game mechanics, level designs, physics rules, or progression systems → agent-workspace/knowledge/game-mechanics.md
-      - [CLI only] New CLI commands, argument parsing structures, or shell integration patterns → agent-workspace/knowledge/command-reference.md
-      - [CLI only] New terminal output formats, progress indicators, or interactive prompt patterns → agent-workspace/knowledge/cli-interface.md
-      - [Library only] New public API functions, classes, or exported types → agent-workspace/knowledge/public-api-surface.md
-      - [Library only] New integration patterns, plugin architectures, or extension points → agent-workspace/knowledge/integration-patterns.md
-      - [Pipeline only] New data contracts, schemas, or input/output specifications → agent-workspace/knowledge/data-contracts.md
-      - [Pipeline only] New stage definitions, DAG structures, or topology patterns → agent-workspace/knowledge/pipeline-topology.md
+      "Review agent-workspace/feature/plan.md AND agent-workspace/feature/reference.md. List the agent-workspace/knowledge/ directory to discover all existing knowledge files. Read each file to understand its domain and purpose. Then intelligently distribute new architectural patterns, core data structures, endpoints, UI components, or other knowledge from the completed feature across the knowledge files:
 
-      Keep each file clean and structured. Do not include minor feature details, only global knowledge that future features will benefit from. If a file doesn't exist yet, create it. Only update files that are relevant to the project type — do not create GUI files for a pipeline project or vice versa."
+      - For each piece of new knowledge, determine which existing file(s) it belongs in based on domain fit — read the target file to confirm before appending.
+      - Append to files whose domain matches. Do NOT create a separate file if an existing file already covers that domain.
+      - If a genuinely new domain of knowledge emerges that doesn't fit any existing file, create a new appropriately-named .md file for it.
+      - Keep each file clean and structured. Do not include minor feature details, only global knowledge that future features will benefit from."
     </prompt>
   </knowledge_base_update_pattern>
 

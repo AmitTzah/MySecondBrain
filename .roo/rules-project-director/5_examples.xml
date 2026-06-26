@@ -233,106 +233,163 @@
     </key_takeaways>
   </example>
 
-  <example name="ad_hoc_request_interception">
+  <example name="ad_hoc_request_already_covered">
     <scenario>
-      Mid-project, the user makes an ad-hoc request instead of continuing with the next feature. The PD intercepts, analyzes against the roadmap, and presents smart routing options.
+      Mid-project, the user makes an ad-hoc request. PD triages it as "already covered by the next feature" — this is Path A (Simple), no pipeline needed.
     </scenario>
 
     <user_request>Actually, before the next feature — can you fix the date formatting in the invoice table? It's showing UTC timestamps instead of the user's local timezone.</user_request>
 
     <workflow>
       <step number="1">
-        <title>Phase 3 Step 0: Detect Ad-Hoc Intent</title>
+        <title>Phase 3 Step 0: Triage — Read Source Code</title>
         <approach>
-          PD reads state.json: current_phase=3, status="in_progress", current_feature_index=8, total_features=35. The user's request doesn't match resume patterns ("keep working on", "continue", "next feature") — it starts with "Actually, before the next feature..." This is an ad-hoc request. PD proceeds to classification.
+          PD reads state.json: current_phase=3, current_feature_index=8, total_features=35. Request doesn't match resume patterns. PD reads the invoice table component to understand the current date formatting implementation.
         </approach>
       </step>
 
       <step number="2">
-        <title>Phase 3 Step 0: Classify</title>
+        <title>Phase 3 Step 0: Triage — Read Roadmap & Vision</title>
         <approach>
-          PD reads roadmap.md. Feature 9 is "Invoice Management UI" and its description says "Display dates in user's local timezone." Feature 14 is "User Settings & Preferences" and includes timezone configuration.
+          PD reads roadmap.md. Feature 9 is "Invoice Management UI" (immediate next feature) with description "Display dates in user's local timezone." Vision docs confirm this is a core requirement. The request is already covered by the immediate next feature.
 
-          PD reads vision docs: vision/feature-inventory.md lists "Invoice Management" with "date display in user timezone" as a core requirement. The date formatting fix is already covered by Feature 9 — it's just not built yet.
+          PD answers the triage question: this doesn't alter what the app IS — it's an implementation detail already planned. Path A.
 
-          Classification: already_covered. The request is explicitly part of Feature 9 (Invoice Management UI), which is the immediate next feature.
+          PD tries to convince user to wait: "Feature 9 (Invoice Management UI) is literally the next feature and explicitly covers date formatting in user timezone. Building it now solves your request as part of a complete feature rather than as a one-off fix."
 
-          PD presents options:
-          1. "Build Feature 9 (Invoice Management UI) now — it covers the date formatting fix and the full invoice UI"
-          2. "Implement just the date formatting fix now as a quick Code subtask (I'll note this partial completion in the roadmap — Feature 9 will skip this when it runs)"
-          3. "Skip for now — Feature 9 will handle this when it runs next"
+          User agrees: "Build Feature 9 now."
         </approach>
-        <expected_outcome>User selects option 1: "Build Feature 9 now."</expected_outcome>
       </step>
 
       <step number="3">
-        <title>Phase 3 Step 0: Execute — Spawn FD for Feature 9</title>
+        <title>Phase 3 Step 1: Spawn FD for Feature 9</title>
         <approach>
-          Feature 9 is already the next feature (current_feature_index=8, so 8+1=9). No reordering needed. PD proceeds to Step 1, then Step 2-3 to spawn FD for Feature 9 with the standard prompt. The FD Architect reads vision docs, derives acceptance criteria (including date formatting in user timezone), reads planning/ directory for architecture and abstractions, and creates the implementation plan. The ad-hoc request is naturally absorbed into the planned workflow.
+          Feature 9 is already next. No reordering. PD proceeds to normal FD spawn flow. The FD Architect derives acceptance criteria from vision docs including date formatting.
         </approach>
       </step>
     </workflow>
 
     <completion>
-      The ad-hoc date formatting request was classified as "already covered by Feature 9." Rather than doing a quick fix that would be overwritten when Feature 9 runs, the user chose to build Feature 9 now, which handles date formatting as part of its acceptance criteria derived from vision docs. No roadmap changes needed — this was already the next feature.
+      The ad-hoc request was classified as Path A (already covered by the immediate next feature). PD convinced user to wait for Feature 9 rather than doing a premature one-off fix. No pipeline needed — just normal FD flow.
     </completion>
 
     <key_takeaways>
-      <takeaway>PD always checks the roadmap before acting — many ad-hoc requests are already planned.</takeaway>
-      <takeaway>"Build the next feature now" is often the best response to an ad-hoc request that overlaps with upcoming work.</takeaway>
-      <takeaway>Classification requires actually reading the roadmap and vision, not just keyword matching.</takeaway>
-      <takeaway>The FD Architect derives acceptance criteria from vision docs — the wave map only says "Invoice Management UI — Display dates in user's local timezone. Depends on: F8."</takeaway>
+      <takeaway>PD reads source code before classifying — understanding the current implementation enables informed advice.</takeaway>
+      <takeaway>PD tries to convince the user to wait when a request is already covered — premature fixes cause rework.</takeaway>
+      <takeaway>When the covering feature IS the next feature, no pipeline is needed — just continue with normal FD flow.</takeaway>
     </key_takeaways>
   </example>
 
-  <example name="ad_hoc_request_small_code_change">
+  <example name="ad_hoc_request_path_a_simple">
     <scenario>
-      The user requests a small, standalone fix that doesn't map to any upcoming feature. PD spawns a Code subtask directly.
+      The user requests a small, standalone fix. PD triages as Path A (Simple Change) — no vision alteration.
     </scenario>
 
     <user_request>I noticed the sidebar collapses when you resize the window below 900px, but it should stay open until 768px. Can you fix that?</user_request>
 
     <workflow>
       <step number="1">
-        <title>Phase 3 Step 0: Classify</title>
+        <title>Phase 3 Step 0: Triage</title>
         <approach>
-          PD reads roadmap.md: no upcoming feature covers responsive breakpoints — this is a small UI behavior fix. Vision docs don't specify exact breakpoints. The change touches one CSS file and possibly one component.
+          PD reads the sidebar component CSS. Checks roadmap.md: no upcoming feature covers responsive breakpoints. Checks vision docs: no breakpoint specifications at this level. The triage question: does this alter what the app IS? No — it's a CSS behavior refinement within the existing vision. Path A.
 
-          Classification: small_code_change. It's a single-file fix with no architectural impact.
-
-          PD presents options:
-          1. "Spawn a Code subtask to fix the breakpoint directly"
-          2. "Treat this as a refactoring feature and insert into the roadmap"
-          3. "I'll fold this into the next feature's scope"
+          PD recommends Path A. User agrees.
         </approach>
-        <expected_outcome>User selects option 1: "Spawn Code subtask."</expected_outcome>
       </step>
 
       <step number="2">
-        <title>Phase 3 Step 0: Spawn Code Subtask</title>
+        <title>Path A: Execute Code Subtask</title>
         <approach>
-          PD constructs the prompt using ad_hoc_code_subtask_prompt: includes project context (React+Node.js, Wave 1-2 complete, currently in Wave 3), the user's exact request, and context that this is a responsive breakpoint fix in the app shell (Wave 2). Spawns Code mode via new_task. Code subtask fixes the CSS breakpoint, runs tests (all pass), and reports back with no architectural impact.
+          PD spawns Code subtask via ad_hoc_code_subtask_prompt. One CSS file changed. No architectural impact. Tests pass.
         </approach>
       </step>
 
       <step number="3">
-        <title>Phase 3 Step 0: Reconcile Vision/Roadmap</title>
+        <title>Path A: PD Sanity Check</title>
         <approach>
-          PD reads the Code subtask's completion: one file changed (sidebar.css), breakpoint changed from 900px to 768px. No architectural impact. PD checks vision/screens/ for the relevant screen spec — it doesn't specify breakpoints at this level of detail. No vision update needed. PD documents in current-state.md: "Ad-hoc: Fixed sidebar collapse breakpoint (900px → 768px)."
+          Single-file change → PD reviews the changed file + the vision/planning files describing the sidebar. Vision docs don't specify breakpoints at this granularity — no contradiction. Planning files don't reference 900px as a design constraint. Check passes.
 
-          Unit tests pass. PD commits the change. Loops back to Step 1 for the next planned feature.
+          PD documents in current-state.md: "Ad-hoc: Fixed sidebar collapse breakpoint (900px → 768px)." Commits. Continues with next feature.
         </approach>
       </step>
     </workflow>
 
     <completion>
-      A small ad-hoc CSS fix was handled via a direct Code subtask, bypassing the full FD→Architect→Code pipeline. The PD verified no architectural impact and no vision drift, then continued with the next planned feature. Total overhead: one Code subtask and a one-line dashboard update.
+      Path A handled a small CSS fix with minimal overhead: one Code subtask, scoped PD sanity check, one dashboard update.
     </completion>
 
     <key_takeaways>
-      <takeaway>Not every change needs a full feature-development cycle — small, isolated fixes can go direct to Code.</takeaway>
-      <takeaway>The PD must still reconcile the change with vision/roadmap afterwards — even for small changes.</takeaway>
-      <takeaway>If the Code subtask reports "ARCHITECTURAL IMPACT," the PD must escalate — it wasn't as small as it seemed.</takeaway>
+      <takeaway>Path A is for changes that refine implementation without altering what the app IS.</takeaway>
+      <takeaway>PD sanity check scales to change magnitude — single-file change gets a focused review.</takeaway>
+      <takeaway>If Code reports ARCHITECTURAL IMPACT, PD escalates to Path B — the change was bigger than it seemed.</takeaway>
+    </key_takeaways>
+  </example>
+
+  <example name="ad_hoc_request_path_b_vision_realignment">
+    <scenario>
+      Mid-project, the user wants to change a core interaction pattern described in vision docs. PD triages as Path B (Vision Realignment Pipeline) and runs the full 7-step pipeline.
+    </scenario>
+
+    <user_request>I don't like our plan for authentication. We currently have email/password in the vision, but I want to switch to OAuth-only with Google and GitHub. No email/password at all.</user_request>
+
+    <workflow>
+      <step number="1">
+        <title>Phase 3 Step 0: Triage — Path B</title>
+        <approach>
+          PD reads the current auth code (already built in Feature 2 — email/password with JWT). Checks roadmap: Feature 14 is "User Settings & Preferences" which builds on the email/password auth model. Feature 18 is "Team Invites" which sends email invites.
+
+          PD answers the triage question: this ALTERS WHAT THE APP IS. It changes a core interaction pattern (how users sign in), removes a planned capability (email/password), and affects 3+ remaining features (F14, F18, and the Realignment needed for F2's already-built auth). Path B.
+
+          PD discusses: "Switching to OAuth-only means: (1) Feature 2's email/password auth needs realignment, (2) Feature 14's user settings need redesign (no password change flow), (3) Feature 18's team invites need a different mechanism (OAuth-based instead of email). We should also consider: adding a profile picture from OAuth providers, handling account linking (Google + GitHub → same user), and what happens if a provider is down."
+
+          User confirms: OAuth-only, Google + GitHub, account linking via email matching, no fallback auth.
+        </approach>
+      </step>
+
+      <step number="2">
+        <title>Path B Step B2: Aggregate & Present</title>
+        <approach>
+          PD aggregates changes: Auth: OAuth-only (Google, GitHub), remove email/password. Account linking: match by verified email. Affected features: F2 (realign), F14 (redesign user settings), F18 (redesign team invites). Realignment Feature likely needed. User approves.
+        </approach>
+      </step>
+
+      <step number="3">
+        <title>Path B Steps B3-B4: VH Update + Critic</title>
+        <approach>
+          VH interviews user about auth change, updates all vision files (app-overview.md, feature-inventory.md, features/authentication.md, screens/login.md + login.html mock, data/user.md). Reports delta: screens/login.html mock changed (now shows OAuth buttons), data/user.md added provider_linked_accounts entity.
+
+          VH Critic finds: features/team-invites.md still references "send invitation email to user's email" but data/user.md no longer stores unverified email separately. Fixes the contradiction.
+        </approach>
+      </step>
+
+      <step number="5">
+        <title>Path B Steps B5-B6: Architect Update + Critic</title>
+        <approach>
+          Architect reads all files. Analyzes knowledge/ files: Feature 2 built email/password auth with JWT. Gap: existing code doesn't support OAuth. Inserts Realignment Feature as F9: "Realignment — OAuth-Only Authentication."
+
+          Updates roadmap: F14 becomes "User Profile & Linked Accounts," F18 becomes "OAuth-Based Team Invites." Updates planning files: abstractions.md (new OAuth provider interface), data-model.md (provider_linked_accounts entity), integration-points.md (Google OAuth, GitHub OAuth). Flags 2 existing E2E tests invalidated (login-flow.spec.ts, password-reset.spec.ts).
+
+          Architect Critic finds: abstractions.md defines OAuth provider interface but doesn't specify token refresh strategy. Architect fixes. Critic approves.
+        </approach>
+      </step>
+
+      <step number="7">
+        <title>Path B Step B7: PD Final Review</title>
+        <approach>
+          PD reviews all changed files via git diff. Verifies: roadmap forward-dependencies hold (F14 depends on F9 Realignment, F18 depends on F14), total_features updated (35→36), no orphaned references, Realignment Feature properly positioned. Sets realignment_step=null. Proceeds to Phase 3 Step 1 — next feature is F9 (Realignment).
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      A vision-altering mid-project change (email/password → OAuth-only auth) triggered the full 7-step Path B pipeline. VH updated vision files and mocks. VH Critic fixed contradictions. Architect inserted a Realignment Feature (F9) to retrofit existing code, updated roadmap (3 features changed), planning files, and knowledge files. Architect Critic caught missing token refresh strategy. PD's final review confirmed alignment. Total: 4 spawns (VH, VH Critic, Architect, Architect Critic) + PD review.
+    </completion>
+
+    <key_takeaways>
+      <takeaway>Path B is for changes that alter what the app IS — not every mid-project request needs this pipeline.</takeaway>
+      <takeaway>The VH delta report is critical — it catches divergences between what was discussed and what the user actually decided during the interview.</takeaway>
+      <takeaway>Realignment Features retrofit existing code BEFORE new features build on the corrected foundation.</takeaway>
+      <takeaway>The abort hatch is always available — user can revert to original roadmap at any step.</takeaway>
     </key_takeaways>
   </example>
 

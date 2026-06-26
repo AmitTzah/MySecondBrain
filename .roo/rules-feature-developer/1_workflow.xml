@@ -29,11 +29,8 @@
       <path>agent-workspace/feature/archive/</path>
     </area>
     <area name="brain">
-      <purpose>Partitioned global knowledge that persists across features. The exact set of knowledge files adapts to the project type, which is passed to you in your spawn prompt. The 4 files below are the GUI defaults. Project-type mappings: CLI → frontend-ui.md becomes cli-interface.md, api-routes.md becomes command-reference.md. API → remove frontend-ui.md. Library → frontend-ui.md becomes public-api-surface.md, api-routes.md becomes integration-patterns.md. Pipeline → frontend-ui.md becomes pipeline-topology.md, api-routes.md becomes data-contracts.md. Game → add game-mechanics.md. When project_type is absent from your spawn prompt, default to GUI (4 files) — backward compatible. You are caller-agnostic: you do not know or care who spawned you, and you never read another mode's configuration files.</purpose>
-      <path>agent-workspace/knowledge/architecture.md</path>
-      <path>agent-workspace/knowledge/database.md</path>
-      <path>agent-workspace/knowledge/api-routes.md</path>
-      <path>agent-workspace/knowledge/frontend-ui.md</path>
+      <purpose>Partitioned global knowledge that persists across features. The knowledge files are discovered dynamically by listing the directory — there is no hardcoded file checklist. Common files include architecture.md (system design), database.md (data layer), api-routes.md (endpoints), frontend-ui.md (UI components), plus project-type-specific files like command-reference.md (CLI), public-api-surface.md (Library), game-mechanics.md (Game), data-contracts.md (Pipeline), etc. New knowledge files can be added at any time — all workflows discover them dynamically. You are caller-agnostic: you do not know or care who spawned you, and you never read another mode's configuration files.</purpose>
+      <path>agent-workspace/knowledge/</path>
     </area>
     <area name="external_docs">
       <purpose>Permanent local store of external API documentation.</purpose>
@@ -72,6 +69,7 @@
   "skipped_smoke_tests": [
     { "step": number, "name": "string", "classification": "string", "description": "string", "status": "skipped" | "verified" | "failed" }
   ],
+  "e2e_regression_status": "string | null",
   "current_phase": number,
   "plan_status": "string",
   "total_steps": number,
@@ -84,15 +82,16 @@
       <field name="feature_name">The human-readable name of the feature (e.g., "User Authentication").</field>
       <field name="branch_name">The git branch name, or null if git automation is disabled.</field>
       <field name="git_automation_enabled">Whether the orchestrator should run git commands.</field>
-      <field name="hands_off_mode">When true: all user interaction gates are skipped. Model smoke tests are self-verified. HUMAN/SHT smoke tests are skipped and collected for one-at-a-time verification at feature end (Phase 5 Step 0). Architect/Critic already auto-complete (this is the default now). Received in the spawn prompt, or asked of the user if not provided. Defaults to false if never configured.</field>
+      <field name="hands_off_mode">When true: all user interaction gates are skipped. Model smoke tests are self-verified. HUMAN/SHT smoke tests are skipped and collected for one-at-a-time verification at feature end (Phase 5 Step 1, after E2E regression gate). Architect/Critic already auto-complete (this is the default now). Received in the spawn prompt, or asked of the user if not provided. Defaults to false if never configured.</field>
       <field name="smoke_test_automation">Configuration for automated GUI smoke testing via synthetic-human-tester. Smoke testing is only for GUI environments (web, desktop, native) — CLI is self-verified by Code mode. Received in the prompt, or asked of the user if not provided. Contains: enabled (boolean), environments (per-environment config with base_url/app_id/executable_path/window_title + mcp_available/mcp_name/verified populated by MCP verification in Phase 0 Step 4), and missing_prerequisites (list of unavailable MCP names). Passed to implementation in Phase 3 as part of the prompt. Defaults to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] } if never configured.</field>
-      <field name="skipped_smoke_tests">Accumulator for HUMAN/SHT smoke tests that were skipped during hands-off mode. Each entry records: step number, step name, classification, the verbatim Live Smoke Test description, and a status field ("skipped" | "verified" | "failed"). Populated during Phase 4 from Code subtask completion summaries with initial status "skipped". In Phase 5 Step 0, tests are presented to the user one at a time: each verified test transitions from "skipped" to "verified" in state.json (committed immediately if git automation is enabled). Failed tests transition to "failed" and trigger a Debug mode subtask for root cause analysis. Empty array by default.</field>
+      <field name="skipped_smoke_tests">Accumulator for HUMAN/SHT smoke tests that were skipped during hands-off mode. Each entry records: step number, step name, classification, the verbatim Live Smoke Test description, and a status field ("skipped" | "verified" | "failed"). Populated during Phase 4 from Code subtask completion summaries with initial status "skipped". In Phase 5 Step 1 (smoke test verification, after E2E regression gate passes), tests are presented to the user one at a time: each verified test transitions from "skipped" to "verified" in state.json (committed immediately if git automation is enabled). Failed tests transition to "failed" and trigger a Debug mode subtask for root cause analysis. Empty array by default.</field>
       <field name="current_phase">The current major checkpoint: 1 (planning), 3 (execution), 5 (complete). Phases 0, 2, and 4 are transient and not tracked as resume checkpoints.</field>
       <field name="plan_status">One of: "draft", "validated", "archived".</field>
       <field name="total_steps">Number of execution steps in the plan. Populated after Architect finishes in Phase 1. When pivot_in_progress is true, total_steps is set to 0 to signal that the Architect is re-drafting — this is NOT the same as "never drafted"; the resume routing checks pivot_in_progress to distinguish.</field>
       <field name="current_step">The 1-based index of the step currently being executed. 0 means no steps executed yet.</field>
       <field name="pivot_in_progress">Set to true when a major drift or roadblock triggers an Architect re-plan (Phase 4 Step 3). Set back to false after the Architect finishes re-drafting and total_steps is updated. Initialized to false. This flag disambiguates "Architect never drafted" (total_steps=0, pivot_in_progress=false) from "Architect is re-drafting after pivot" (total_steps=0, pivot_in_progress=true). WARNING: total_steps=0 is ambiguous — it means both "Architect never drafted" (pivot_in_progress=false) and "Architect is re-drafting" (pivot_in_progress=true). The pivot_in_progress boolean is the ONLY disambiguator. If state.json is reconstructed, ensure pivot_in_progress is recovered correctly.</field>
-      <field name="phase_5_substep">Tracks progress within Phase 5 for safe resume: null (not started — default, initialized in Phase 1 Step 1. Also used when Phase 5 is entered with no skipped smoke tests to verify), "smoke_tests_verified" (Step 0 done — all skipped smoke tests have been verified by the user, or there were none to begin with), "knowledge_updated" (Step 1 done — Architect completed knowledge base update), "state_finalized" (Step 2 done — state.json finalized to current_phase=5, plan_status="archived"). Set to null after Step 3 archiving completes (state.json is moved to archive/ at that point, so the field is moot). This enables precise resume within Phase 5: if phase_5_substep is null and skipped_smoke_tests has entries with status "skipped", resume at Step 0. If phase_5_substep is "smoke_tests_verified" or null with no pending skipped tests, resume at Step 1.</field>
+      <field name="e2e_regression_status">Records the outcome of the Phase 5 Step 0 E2E regression gate for the caller to verify. One of: null (gate not yet run — default), "passed" (all existing E2E tests passed), "skipped" (no existing E2E tests to run), "failed" (should never persist — E2E failures are resolved before this field is set). Set in Phase 5 Step 0 after E2E regression successfully completes. Persisted in state.json so the caller (e.g., Project Director) can verify E2E regression was performed without relying on ephemeral completion summary text.</field>
+      <field name="phase_5_substep">Tracks progress within Phase 5 for safe resume: null (not started — default, initialized in Phase 1 Step 1. Also used when Phase 5 is entered with no skipped smoke tests to verify), "smoke_tests_verified" (Step 1 done — all skipped smoke tests have been verified by the user, or there were none to begin with), "knowledge_updated" (Step 2 done — Architect completed knowledge base update), "state_finalized" (Step 3 done — state.json finalized to current_phase=5, plan_status="archived"). Set to null after Step 4 archiving completes (state.json is moved to archive/ at that point, so the field is moot). This enables precise resume within Phase 5: if phase_5_substep is null and skipped_smoke_tests has entries with status "skipped", resume at Step 1. If phase_5_substep is "smoke_tests_verified" or null with no pending skipped tests, resume at Step 2.</field>
     </field_meanings>
   </state_json_schema>
 
@@ -353,7 +352,7 @@
           <description>
             Hands-off mode: when enabled, FD skips all user interaction during execution.
             Model smoke tests are self-verified by Code. HUMAN/SHT smoke tests are skipped
-            and collected for one-at-a-time verification at feature end (Phase 5 Step 0).
+            and collected for one-at-a-time verification at feature end (Phase 5 Step 1, after E2E regression).
           </description>
           <decision_tree>
             <branch condition="hands_off_mode was provided in the prompt (boolean)">
@@ -508,17 +507,17 @@
           <route condition="current_phase=5 AND plan_status='archived'">
             <action>Use phase_5_substep from state.json to determine exact resume point:</action>
             <subroute condition="phase_5_substep is null">
-              <action>Phase 5 was entered. Check skipped_smoke_tests in state.json: if any entry has status "skipped", smoke test verification was interrupted — route to Phase 5 Step 0 to resume per-test verification. If no entries have status "skipped" (all are "verified", "failed", or array is empty): route to Phase 5 Step 1 (knowledge update).</action>
+              <action>Phase 5 was entered. The E2E regression gate (Step 0) runs unconditionally first — it is idempotent and safe to re-run. After E2E passes, check skipped_smoke_tests in state.json: if any entry has status "skipped", smoke test verification was interrupted — route to Phase 5 Step 1 to resume per-test verification. If no entries have status "skipped" (all are "verified", "failed", or array is empty): route to Phase 5 Step 2 (knowledge update).</action>
             </subroute>
             <subroute condition="phase_5_substep='smoke_tests_verified'">
-              <action>Smoke test verification completed. Proceed to Phase 5 Step 1 (knowledge update).</action>
+              <action>Smoke test verification completed. Proceed to Phase 5 Step 2 (knowledge update).</action>
             </subroute>
             <subroute condition="phase_5_substep='knowledge_updated'">
-              <action>Knowledge update completed but state.json not yet finalized (Step 2 was interrupted). Proceed to Phase 5 Step 2.</action>
+              <action>Knowledge update completed but state.json not yet finalized (Step 3 was interrupted). Proceed to Phase 5 Step 3.</action>
             </subroute>
             <subroute condition="phase_5_substep='state_finalized'">
               <action>State was finalized. Check if plan.md exists in agent-workspace/feature/.</action>
-              <goto condition="plan.md exists">Phase 5 Step 3 — archive plan, reference, and state.json together</goto>
+              <goto condition="plan.md exists">Phase 5 Step 4 — archive plan, reference, and state.json together</goto>
               <goto condition="plan.md does NOT exist">
                 Plan and reference already archived. Read feature_name from state.json, derive sanitized
                 identifier, move state.json to archive/state-[sanitized-name].json, then restart as fresh feature.
@@ -560,6 +559,7 @@
             Otherwise, read from agent-workspace/testing-environments.json if it exists.
             If none of the above, default to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] }),
             skipped_smoke_tests=[],
+            e2e_regression_status=null,
             current_phase=1, plan_status="draft", total_steps=0, current_step=0, pivot_in_progress=false, phase_5_substep=null.
           </action>
           <action>Proceed to Step 2.</action>
@@ -591,13 +591,12 @@
           3. Verify EVERY step has a Smoke Test Classification field with value "Model" or "HUMAN/SHT REQUIRED". If any step is missing the classification, flag it — the Critic will catch it in Phase 2.
           4. Verify EVERY step has a Unit Tests to Write field (may say "None" or "No new unit tests needed for this step" — that's valid). If any step is missing the field entirely, flag it — the Critic will catch it in Phase 2.
           5. Verify EVERY step has an Integration Tests to Write field (may say "None — [reason]" — that's valid). If any step is missing the field entirely, flag it — the Critic will catch it in Phase 2.
-          6. Verify EVERY step has an Automated Test Commands field (must specify which CLI commands to run — e.g., `npm test`, `npm run test:unit`, `npm run test:integration`, `npm run lint`). If any step is missing the field entirely, flag it — the Critic will catch it in Phase 2.
-          7. NON-GUI SMOKE TEST CLASSIFICATION GUARD: Determine project_type from your spawn prompt. If project_type is cli, api, library, or pipeline: verify ALL smoke test classifications are "Model." If any step is classified as "HUMAN/SHT REQUIRED," flag as potential error via ask_followup_question: "[N] steps classified as HUMAN/SHT REQUIRED for a non-GUI project. Humans cannot visually verify CLI/API/library behavior. All steps should be Model. Options: Re-classify all as Model, I will manually review the classifications, Proceed anyway." If user selects "Re-classify": spawn Architect to re-classify those steps as Model. If user selects "Proceed anyway": note the anomaly and continue. If project_type is gui, game, or unknown (default — backward compatible): skip this guard — HUMAN/SHT REQUIRED is valid for GUI projects.
-          8. Update state.json: set "total_steps" to the count.
-          9. Verify agent-workspace/feature/reference.md exists and is non-empty.
-          10. Verify that any external documentation the Architect was instructed to save was actually written to agent-workspace/external-docs/ (check for new or modified .md files).
-          11. Leave current_phase=1, plan_status="draft" — Critic phase advances these.
-          12. Proceed directly to Phase 2. Do NOT ask the user for plan approval.
+          6. NON-GUI SMOKE TEST CLASSIFICATION GUARD: Determine project_type from your spawn prompt. If project_type is cli, api, library, or pipeline: verify ALL smoke test classifications are "Model." If any step is classified as "HUMAN/SHT REQUIRED," flag as potential error via ask_followup_question: "[N] steps classified as HUMAN/SHT REQUIRED for a non-GUI project. Humans cannot visually verify CLI/API/library behavior. All steps should be Model. Options: Re-classify all as Model, I will manually review the classifications, Proceed anyway." If user selects "Re-classify": spawn Architect to re-classify those steps as Model. If user selects "Proceed anyway": note the anomaly and continue. If project_type is gui, game, or unknown (default — backward compatible): skip this guard — HUMAN/SHT REQUIRED is valid for GUI projects.
+          7. Update state.json: set "total_steps" to the count.
+          8. Verify agent-workspace/feature/reference.md exists and is non-empty.
+          9. Verify that any external documentation the Architect was instructed to save was actually written to agent-workspace/external-docs/ (check for new or modified .md files).
+          10. Leave current_phase=1, plan_status="draft" — Critic phase advances these.
+          11. Proceed directly to Phase 2. Do NOT ask the user for plan approval.
         </post_architect_action>
       </step>
     </steps>
@@ -615,10 +614,9 @@
           has a testable Live Smoke Test, EVERY step has a Smoke Test Classification ("Model" or
           "HUMAN/SHT REQUIRED"), every step has a Unit Tests to Write field (may specify "none" if
           no new tests are needed), every step has an Integration Tests to Write field (may say
-          "None — [reason]" if no infrastructure dependencies), every step has an Automated Test
-          Commands field (must specify CLI commands to run — e.g., `npm test`, `npm run test:unit`,
-          `npm run test:integration`, `npm run lint`), reference has an H3 heading for
-          every plan step.</action>
+          "None — [reason]" if no infrastructure dependencies), Section 6 includes a "Project Test
+          Commands" entry listing the project's unfiltered CLI test commands,
+          reference has an H3 heading for every plan step.</action>
         <action>If validation fails, note the issues to pass to the Critic.</action>
       </step>
 
@@ -749,7 +747,7 @@
         <action>Always include: project context (plan §1), feature context (plan §2), architecture and extensibility
           (plan §3), relevant Shared Technical Context (plan §6), a step-summary of ALL steps from Section 5
           (one-sentence per step with the current step clearly marked), step details (Goal, Actions,
-          Unit Tests to Write, Integration Tests to Write, Automated Test Commands, Live Smoke Test,
+          Unit Tests to Write, Integration Tests to Write, Live Smoke Test,
           Smoke Test Classification, Commit Message), and the reference_materials instruction to
           read reference.md.</action>
         <action priority="high">Inject the step's Smoke Test Classification from plan.md into the subtask prompt as a literal line: "smoke_test_classification: Model" or "smoke_test_classification: HUMAN/SHT REQUIRED". Read the classification from the current step in plan.md Section 5. Select the correct Instruction 2 variant from the subtask_prompt_pattern:
@@ -876,7 +874,6 @@
                - Actions: For each file, specify which logical sections to extract and where (new file paths). When a split produces 3 or more related files that form a logical group, create a new subdirectory for them rather than dumping them in the parent directory. Name the directory after the group's purpose.
                - Unit Tests to Write: None — pure structural change, existing tests cover behavior.
                - Integration Tests to Write: None — no infrastructure changes.
-               - Automated Test Commands: Run the full unfiltered test suite after splitting.
                - Live Smoke Test: 'Run full test suite — verify zero failures. Check that all imports resolve correctly (build succeeds).'
                - Smoke Test Classification: Model (self-verifiable via terminal).
                - Suggested Commit Message: 'refactor: split [filenames] into focused modules'
@@ -1013,7 +1010,105 @@
     <trigger>When current_step equals total_steps</trigger>
 
     <steps>
+      <!-- ============================================================ -->
+      <!-- E2E REGRESSION GATE — runs unconditionally, before anything   -->
+      <!-- else in Phase 5. Must pass before smoke tests are presented.   -->
+      <!-- ============================================================ -->
       <step number="0" priority="critical">
+        <title>E2E Regression Gate — Run Existing E2E Suite</title>
+        <description>
+          Run the full existing E2E test suite to verify this feature hasn't broken any
+          previously-locked-in behavior. This gate runs ALWAYS (regardless of hands-off mode)
+          and MUST pass before smoke tests are presented to the user. The FD does not complete
+          until E2E is green — smoke tests are never presented with broken E2E underneath.
+
+          When hands-off mode is enabled: Debug mode is instructed to never ask the user questions.
+          It keeps investigating and fixing autonomously until all E2E tests pass.
+        </description>
+
+        <action>Check if tests/e2e/ directory exists and contains any test files. If the directory
+          is empty or doesn't exist (first feature, or no E2E tests generated yet): note
+          "No existing E2E tests — regression gate skipped (nothing to regress)." Set
+          e2e_regression_status="skipped" in state.json. Proceed to Step 1 (Smoke Test Verification).</action>
+
+        <action>Determine the E2E run command. Read planning/e2e-authoring-guide.md (passed in
+          your spawn prompt via planning/ paths) for the framework and run command. If the guide
+          is unavailable: scan tests/e2e/ for existing test files, infer the framework from file
+          extensions (.spec.ts → Playwright, .cs → .NET, .py → pytest, etc.), and construct the
+          run command. If the command cannot be determined: note "⚠️ Cannot determine E2E run
+          command — regression gate skipped." Proceed to Step 1.</action>
+
+        <action priority="critical">Run the full E2E suite (all existing tests).</action>
+
+        <decision_tree>
+          <branch condition="ALL existing E2E tests PASS">
+            <action>Announce: "✅ E2E Regression: All [N] existing tests pass. No regressions."</action>
+            <action>Set e2e_regression_status="passed" in state.json.</action>
+            <action>Proceed to Step 1 (Smoke Test Verification).</action>
+          </branch>
+
+          <branch condition="EXISTING E2E tests FAIL">
+            <action priority="critical">TRUE REGRESSION — the new feature broke previously-locked-in
+              behavior. The EXISTING test is the authority. Do NOT modify the E2E test.</action>
+            <action>Spawn a DEBUG mode subtask (not Code) to investigate and fix. Debug mode is
+              the correct choice because a failed E2E regression requires systematic root cause
+              analysis, not just implementation. Construct the Debug prompt with:
+              - The failing E2E test output (full terminal output).
+              - The feature name and branch name from state.json.
+              - Paths to plan.md Section 1-4 and 6 for full feature context.
+              - Path to reference.md for library/snippet context.
+              - The planning/ directory paths (from your spawn prompt) so Debug can read
+                e2e-authoring-guide.md and understand E2E conventions.
+              - If hands_off_mode is true from state.json: inject "hands_off_mode: true" as a
+                literal line AND inject this instruction verbatim:
+                "Do NOT ask the user any questions. Your goal is to make ALL E2E tests pass.
+                 Investigate root cause, fix the application code, add a regression test that
+                 reproduces the original failure, verify E2E passes. Keep trying until all E2E
+                 tests pass. No user interaction allowed."
+              - If hands_off_mode is false: inject "hands_off_mode: false". Debug may ask the
+                user a focused question only if genuinely stuck.
+              - Instruction: "Existing E2E tests are failing after the latest feature was built.
+                The E2E tests define expected behavior — fix the APPLICATION CODE to restore
+                that behavior. Do NOT change what the E2E tests assert. However, you MAY make
+                trivial, non-behavioral updates to E2E test files if the test itself has a
+                mechanical issue caused by the feature (e.g., renamed parameter, shifted import
+                path, updated selector label). If you modify any E2E test file, document the
+                change and justification in your completion summary. Run the full E2E suite
+                after all fixes to confirm."
+              - Include Instruction 1 (don't read state.json), Instruction 4 (git commit behavior
+                based on git_automation_enabled), and Instruction 5 (git tools based on
+                mcp-config.json).
+            </action>
+            <action>Wait for Debug subtask to complete.</action>
+            <action priority="critical">Re-run the full E2E suite.</action>
+            <decision_tree>
+              <branch condition="All E2E tests now pass">
+                <action>Announce: "✅ E2E Regression: Debug resolved failures. All [N] tests pass."</action>
+                <action>Set e2e_regression_status="passed" in state.json.</action>
+                <action>Proceed to Step 1 (Smoke Test Verification).</action>
+              </branch>
+              <branch condition="E2E tests still fail">
+                <action priority="critical">Re-spawn Debug mode with the new failure output AND
+                  the previous Debug attempt's findings. Debug must try a different approach.
+                  Include the same hands-off instruction as before.</action>
+                <action>Wait for Debug. Re-run E2E. If still failing: re-spawn Debug again.
+                  No limit — Debug keeps trying until E2E passes. The FD does not complete
+                  until this gate is green.</action>
+                <action priority="high">After 3 consecutive Debug attempts with no progress
+                  (same tests failing, no improvement): the Debug mode may be stuck in a loop.
+                  If hands_off_mode is false: escalate to user with the failure history and
+                  Debug findings. If hands_off_mode is true: continue re-spawning Debug with
+                  explicit instruction "Previous [N] attempts failed with the same errors.
+                  You MUST try a fundamentally different approach. Consider: reverting the
+                  feature's changes that caused the regression, consulting the E2E test to
+                  understand expected behavior, or restructuring the fix."</action>
+              </branch>
+            </decision_tree>
+          </branch>
+        </decision_tree>
+      </step>
+
+      <step number="1" priority="critical">
         <title>Verify Skipped Smoke Tests One-at-a-Time (Hands-Off Mode)</title>
         <trigger>Only when hands_off_mode is true in state.json AND skipped_smoke_tests array is non-empty.</trigger>
         <description>
@@ -1025,11 +1120,11 @@
         </description>
 
         <prerequisites>
-          <item>Read hands_off_mode from state.json. If false: skip this step entirely, proceed to Step 1.</item>
-          <item>Read skipped_smoke_tests from state.json. If the array is empty: skip this step, proceed to Step 1.</item>
-          <item priority="critical">If phase_5_substep is "knowledge_updated" or "state_finalized": we are past smoke test verification (Step 1 or Step 2 already completed). Skip this step entirely. Route to Phase 5 Step 1 (if "knowledge_updated") or Phase 5 Step 2 (if "state_finalized") as appropriate. Do NOT re-enter the verification loop and do NOT overwrite phase_5_substep.</item>
-          <item>If phase_5_substep is "smoke_tests_verified": all tests were already verified (resume after crash where Step 0 completed but knowledge update not yet started). Skip this step, proceed to Step 1.</item>
-          <item>Filter skipped_smoke_tests to entries where status is "skipped" (not yet verified). IMPORTANT: if any entry is missing the "status" field entirely (old-format entry from before per-test tracking was introduced), treat it as status="skipped" — default to requiring verification. If no entries match: all tests have been resolved. If phase_5_substep is null: set phase_5_substep="smoke_tests_verified" in state.json, commit if git enabled. Proceed to Step 1.</item>
+          <item>Read hands_off_mode from state.json. If false: skip this step entirely, proceed to Step 2 (Knowledge Base Update).</item>
+          <item>Read skipped_smoke_tests from state.json. If the array is empty: skip this step, proceed to Step 2 (Knowledge Base Update).</item>
+          <item priority="critical">If phase_5_substep is "knowledge_updated" or "state_finalized": we are past smoke test verification (Step 2 or Step 3 already completed). Skip this step entirely. Route to Phase 5 Step 2 (if "knowledge_updated") or Phase 5 Step 3 (if "state_finalized") as appropriate. Do NOT re-enter the verification loop and do NOT overwrite phase_5_substep.</item>
+          <item>If phase_5_substep is "smoke_tests_verified": all tests were already verified (resume after crash where Step 1 completed but knowledge update not yet started). Skip this step, proceed to Step 2 (Knowledge Base Update).</item>
+          <item>Filter skipped_smoke_tests to entries where status is "skipped" (not yet verified). IMPORTANT: if any entry is missing the "status" field entirely (old-format entry from before per-test tracking was introduced), treat it as status="skipped" — default to requiring verification. If no entries match: all tests have been resolved. If phase_5_substep is null: set phase_5_substep="smoke_tests_verified" in state.json, commit if git enabled. Proceed to Step 2 (Knowledge Base Update).</item>
         </prerequisites>
 
         <verification_loop>
@@ -1041,7 +1136,7 @@
           <loop_body>
             <action number="1">
               <title>Select Next Unverified Test</title>
-              <action>Find the first entry in skipped_smoke_tests where status is "skipped". If none: all done — set phase_5_substep="smoke_tests_verified" in state.json, commit if git enabled, proceed to Step 1.</action>
+              <action>Find the first entry in skipped_smoke_tests where status is "skipped". If none: all done — set phase_5_substep="smoke_tests_verified" in state.json, commit if git enabled, proceed to Step 2 (Knowledge Base Update).</action>
               <action>Count how many tests have already been verified (status "verified") and how many total tests exist.</action>
               <action priority="medium">Validate description: if the selected entry's description is empty, blank, or truncated (ends with "..."), the verbatim description was lost during collection. Fall back: read plan.md Section 5, locate the step by number, extract the full Live Smoke Test text, use it as the description, and update the entry in state.json. If unrecoverable from plan.md: present "[Description unavailable — see plan.md Step [N]]" and note data loss in completion summary.</action>
             </action>
@@ -1141,31 +1236,31 @@
           <action>Count entries with status "failed". If any exist: note them in the completion summary as "⚠️ [N] smoke tests failed and were not resolved: [list step numbers and names]."</action>
           <action>Set phase_5_substep="smoke_tests_verified" in state.json.</action>
           <action>If git_automation_enabled: commit state.json with message "docs: smoke test verification complete — [verified_count] verified, [failed_count] unresolved".</action>
-          <action>Proceed to Step 1 (Update Knowledge Base).</action>
+          <action>Proceed to Step 2 (Update Knowledge Base).</action>
         </completion_gate>
 
         <note>If hands_off_mode is false: this step is skipped — smoke tests were verified inline during execution.</note>
       </step>
 
-      <step number="1">
+      <step number="2">
         <title>Update Partitioned Knowledge Base</title>
-        <action>Before spawning Architect: read state.json. If phase_5_substep is "knowledge_updated" or "state_finalized": skip this step — knowledge base was already updated (resume after crash). Proceed to Step 2.</action>
+        <action>Before spawning Architect: read state.json. If phase_5_substep is "knowledge_updated" or "state_finalized": skip this step — knowledge base was already updated (resume after crash). Proceed to Step 3 (Finalize state.json).</action>
         <action>If phase_5_substep is null or "smoke_tests_verified": determine the project-type-relevant knowledge files using the project_type from your spawn prompt (same logic as Phase 0 Step 4). Spawn Architect via new_task using the knowledge_base_update_pattern from common patterns. Include the project-type-relevant file list in the prompt so the Architect only updates files that are relevant to this project type (e.g., do NOT spawn an update for frontend-ui.md on a CLI project, do NOT spawn an update for api-routes.md on a pipeline project).</action>
         <action>Wait for completion. After Architect returns: set phase_5_substep="knowledge_updated" in state.json (crash guard: if context is lost after knowledge update, resume skips re-update).</action>
       </step>
 
-      <step number="2" priority="critical">
+      <step number="3" priority="critical">
         <title>Finalize state.json In-Place</title>
         <rationale>
           state.json is finalized BEFORE plan/reference files are moved. If a crash occurs mid-archiving,
           the resume logic can detect the finalized state and safely complete archiving.
         </rationale>
-        <action>If phase_5_substep is already "state_finalized" (resume after Step 2 already completed): skip to Step 3.</action>
+        <action>If phase_5_substep is already "state_finalized" (resume after Step 3 already completed): skip to Step 4 (Archive).</action>
         <action>Otherwise, update agent-workspace/feature/state.json: current_phase=5, plan_status="archived", phase_5_substep="state_finalized".
           Do NOT move or rename state.json yet.</action>
       </step>
 
-      <step number="3">
+      <step number="4">
         <title>Archive Plan, Reference, and state.json Together</title>
         <action>Determine sanitized identifier: if branch_name exists, convert slashes to hyphens
           (e.g., "feature/user-auth" → "feature-user-auth"). Otherwise, use feature_name lowercased
@@ -1183,7 +1278,7 @@
         </critical_rule>
       </step>
 
-      <step number="4">
+      <step number="5">
         <title>Final Commit and Announce</title>
         <action>Read git_automation_enabled from the archived state.json at
           archive/state-[sanitized-name].json.</action>

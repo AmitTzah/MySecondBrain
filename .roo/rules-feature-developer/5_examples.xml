@@ -21,7 +21,7 @@
       <step number="0">
         <description>Phase 0: Knowledge Base Check</description>
         <approach>
-          Check if agent-workspace/knowledge/ directory exists with all 4 core files.
+          Check if agent-workspace/knowledge/ directory exists. List the directory to discover knowledge files.
           It does — architecture.md, database.md, api-routes.md, and frontend-ui.md are present.
           Proceed to Phase 1.
         </approach>
@@ -137,11 +137,11 @@
       <step number="5">
         <description>Phase 5: Feature Completion</description>
         <approach>
-          Spawns Architect to update the partitioned knowledge base:
-          - User model schema → agent-workspace/knowledge/database.md
-          - Auth API endpoints → agent-workspace/knowledge/api-routes.md
-          - JWT auth pattern → agent-workspace/knowledge/architecture.md
-          - AuthContext + login/register forms → agent-workspace/knowledge/frontend-ui.md
+          Spawns Architect to update the partitioned knowledge base. The Architect lists the knowledge/ directory, reads each file to understand its domain, then distributes new knowledge:
+          - User model schema → database.md (data layer domain)
+          - Auth API endpoints → api-routes.md (endpoints domain)
+          - JWT auth pattern → architecture.md (system design domain)
+          - AuthContext + login/register forms → frontend-ui.md (UI components domain)
           Finalizes state.json in-place: current_phase = 5, plan_status = "archived".
           Archives plan as agent-workspace/feature/archive/plan-feature-user-auth.md.
           Archives reference as agent-workspace/feature/archive/ref-feature-user-auth.md.

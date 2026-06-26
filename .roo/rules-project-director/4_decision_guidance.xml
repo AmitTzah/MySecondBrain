@@ -17,10 +17,12 @@
       <answer>
         <case>Phase 1, Step 2: Conducting the initial vision discovery interview (use vision_hasher_subtask_prompt).</case>
         <case>Phase 1, Step 3: Revising the vision based on user feedback at the approval gate.</case>
-        <case>Phase 4, Step 5: Major vision drift detected — user wants to revise vision before re-planning. Only if the user wants a fresh interview; otherwise PD edits vision docs directly.</case>
+        <case>Path B (Vision Realignment Pipeline), Step B3: Updating vision files based on aggregated change summary (use vision_hasher_update_prompt).</case>
+        <case>Path B (Vision Realignment Pipeline), Step B4: Critic review of updated vision files for contradictions (use vision_hasher_critic_prompt).</case>
+        <case>Phase 4, Step 7: Major vision drift detected — user wants to revise vision before re-planning. Only if the user wants a fresh interview; otherwise PD handles via Path B pipeline or direct edits for minor drift.</case>
       </answer>
       <never>
-        <case>Do not spawn Vision Hasher for minor vision doc edits — PD edits those directly.</case>
+        <case>Do not spawn Vision Hasher for minor vision doc edits — PD edits those directly (minor drift).</case>
         <case>Do not spawn Vision Hasher for technical architecture decisions — that's the Architect's domain.</case>
       </never>
     </decision>
@@ -35,13 +37,14 @@
         <case>Phase 2, Step 6: Critic review of planning/ directory and roadmap (spawn Architect in Critic role using execution_plan_critic_prompt).</case>
         <case>Phase 2, Step 7: Revising features for generalization (re-spawn Architect with specific targets).</case>
         <case>Phase 2, Step 8: Revising the plan based on user feedback (use roadmap_revision_prompt_pattern).</case>
-        <case>Phase 4, Step 5: Re-planning remaining features after major vision drift.</case>
+        <case>Path B (Vision Realignment Pipeline), Step B5: Updating planning files, roadmap, and knowledge files after vision changes (use realignment_architect_prompt).</case>
+        <case>Path B (Vision Realignment Pipeline), Step B6: Critic review of all planning/roadmap/knowledge changes (use realignment_critic_prompt).</case>
+        <case>Phase 4, Step 3: Re-planning remaining features after major vision drift.</case>
         <case>Phase 4 error recovery: Backfilling knowledge files the feature-developer failed to update (use knowledge_backfill_prompt_pattern).</case>
-        <case>User requests out-of-scope feature: Updating plan and roadmap to expand scope.</case>
       </answer>
       <never>
         <case>Do not spawn Architect for code-level decisions — that's the feature-developer's domain.</case>
-        <case>Do not spawn Architect to "check" completed work — the PD performs architectural audits directly. Exception: Phase 2 Step 6 Critic review is an Architect subtask specifically for planning/ + roadmap quality assurance.</case>
+        <case>Do not spawn Architect to "check" completed work — the PD performs architectural audits directly. Exception: Phase 2 Step 6 and Path B Step B6 Critic reviews are Architect subtasks specifically for planning/ + roadmap quality assurance.</case>
         <case>Do not spawn Architect for vision discovery — that's the Vision Hasher's domain.</case>
       </never>
     </decision>
@@ -49,10 +52,10 @@
     <decision id="when_to_spawn_code_subtask">
       <question>When should the PD spawn a code subtask?</question>
       <answer>
-        <case>Phase 3, Step 0: Ad-hoc small code change (bug fix, single-file refactor, minor logic adjustment) — use ad_hoc_code_subtask_prompt.</case>
+        <case>Path A (Simple Change), Step A1: Ad-hoc logic change (bug fix, refinement, small enhancement) — use ad_hoc_code_subtask_prompt.</case>
         <case>Phase 4, Step 1: Unit/integration tests fail after feature integration (use test_fix_prompt_pattern).</case>
-        <case>Phase 4, Step 2: Generate E2E tests for the just-completed feature (use e2e_test_generation_prompt).</case>
-        <case>Phase 4, Step 3: E2E tests fail — spawn code subtask to fix either the test (if new test is broken) or the application code (if existing tests regressed).</case>
+        <case>Phase 4, Step 4: Generate E2E tests for the just-completed feature (use e2e_test_generation_prompt).</case>
+        <case>Phase 4, Step 5: E2E tests fail — spawn code subtask to fix either the test (if new test is broken) or the application code (if existing tests regressed).</case>
         <case>Phase 4, Step 1: Tests still fail after first fix attempt — escalate to user with options (retry, skip, manual fix). The user may consent to one additional retry; do not spawn a third time.</case>
       </answer>
       <never>
@@ -65,7 +68,7 @@
     <decision id="when_to_spawn_ui_designer">
       <question>When should the PD spawn a UI Designer subtask?</question>
       <answer>
-        <case>Phase 3, Step 0: Ad-hoc visual-only change (colors, spacing, typography, layout, animations) — the user explicitly asks for a cosmetic change with no logic impact.</case>
+        <case>Path A (Simple Change), Step A1: Ad-hoc visual-only change (colors, spacing, typography, layout, animations) — the user explicitly asks for a cosmetic change with no logic impact.</case>
       </answer>
       <never>
         <case>Do not spawn UI Designer if the change might touch logic — use Code subtask instead.</case>
@@ -372,8 +375,8 @@
   <scope_creep_decisions>
     <decision id="scope_creep_handling">
       <rule>All scope-creep ideas go to agent-workspace/project-director/backlog.md with date and proposed-by fields.</rule>
-      <rule>If the user insists on immediate implementation: check against vision docs out-of-scope boundaries first. If it contradicts the vision, flag: "This conflicts with the established vision out-of-scope. Would you like to update the vision docs (re-spawn Vision Hasher), or add to backlog?"</rule>
       <rule>Never silently expand scope — always make the tradeoff visible to the user.</rule>
+      <rule>Scope creep during mid-project changes is routed through the ad-hoc triage gate: if the idea alters what the app IS → Path B (Vision Realignment Pipeline). If it's a refinement → Path A (Simple Change) or backlog.</rule>
     </decision>
   </scope_creep_decisions>
 
@@ -394,104 +397,329 @@
     </scenario>
   </ask_clarifying_questions_when>
 
-  <ad_hoc_request_classification>
-    <decision id="classify_ad_hoc_request">
-      <question>When the user makes an ad-hoc request mid-execution, how should PD classify and route it?</question>
+  <!-- ============================================================ -->
+  <!-- AD-HOC REQUEST TRIAGE: BINARY GATE                             -->
+  <!-- ============================================================ -->
+  <ad_hoc_request_triage>
+    <decision id="triage_ad_hoc_request">
+      <question>When the user makes an ad-hoc request mid-execution, how should PD triage it?</question>
       <description>
-        The PD must analyze the user's request against the roadmap, vision docs, and current state
-        to determine where it fits and what the best routing option is. This is NOT a simple keyword
-        match — PD must actually read the roadmap and vision to make an informed classification.
+        The PD must answer one question: "Does this change alter what the app IS, or just how it WORKS?"
+        This is a binary gate — every ad-hoc request routes to either Path A (Simple Change) or Path B (Vision Realignment Pipeline).
+
+        PD analyzes the request, recommends a path with reasoning, but the USER is the final authority on which path to take.
       </description>
 
-      <classification_process>
+      <triage_process>
         <step number="1">
-          <title>Read the Roadmap</title>
-          <action>Scan all upcoming features (current_feature_index + 1 through total_features). For each, read its description and dependencies from the wave map. Cross-reference the vision docs to understand the feature's intended scope. Ask: "Does this feature already cover what the user is asking for?"</action>
-          <signals>
-            <signal>The user's request uses the same domain language as a roadmap feature (e.g., "password reset" in a "User Authentication" feature)</signal>
-            <signal>The feature's description and dependencies align with what the user is asking for</signal>
-            <signal>Cross-reference the vision docs for this feature — does the vision's feature spec describe what the user is asking for?</signal>
-          </signals>
-          <outcome>If yes: classify as "already_covered." Note which feature number and wave.</outcome>
+          <title>Read Relevant Source Code</title>
+          <action priority="critical">Before analyzing roadmap/vision, read the actual source code for the area being discussed. PD must understand the current implementation to give informed advice. If the user wants to change the sidebar, read the sidebar code. If they want to add a feature, read the related modules. Without codebase awareness, PD's advice is speculative.</action>
         </step>
 
         <step number="2">
-          <title>Read the Vision Docs</title>
-          <action>Read vision/feature-inventory.md and vision/app-overview.md. Ask: "Is this request already in the vision but not yet decomposed into a roadmap feature? Or is it entirely new?"</action>
-          <signals>
-            <signal>The request is in the feature inventory as a core or secondary feature → it should already be in the roadmap; if not, the Architect missed it</signal>
-            <signal>The request is NOT in the vision at all → it's new scope</signal>
-            <signal>The request contradicts an "Explicitly Out of Scope" item → out_of_scope</signal>
-          </signals>
-          <outcome>If in vision but not roadmap: classify as "generalizable_to_feature" (the Architect needs to add it). If not in vision at all: also "generalizable_to_feature" but may need Vision Hasher input first.</outcome>
+          <title>Read Roadmap and Vision</title>
+          <action>Read roadmap.md: scan all upcoming features (current_feature_index + 1 through total_features). Cross-reference vision docs. Ask: "Is this already covered by an upcoming feature, or already implemented?"</action>
+          <action>Read vision docs (at minimum vision-summary.md and feature-inventory.md) to understand the full scope and out-of-scope boundaries.</action>
         </step>
 
         <step number="3">
-          <title>Assess Scope and Impact</title>
-          <action>Determine the magnitude of the request. Ask:</action>
-          <assessment_criteria>
-            <criterion name="file_count">How many files would this touch? 1-2 files → small. 5+ files across multiple domains → larger.</criterion>
-            <criterion name="logic_vs_visual">Is this purely visual (colors, spacing, typography, layout, animations) with no logic changes? → ui_only_change.</criterion>
-            <criterion name="architecture_impact">Does this touch shared interfaces, provider abstractions, or Wave 1-2 foundation code? If yes: this is NOT small — even a single-line change to a core abstraction is architecturally significant.</criterion>
-            <criterion name="test_impact">Will this likely break existing tests? If high risk of regressions: prefer the FD path (FD handles test fixes via its quality loop).</criterion>
-            <criterion name="cross_feature_impact">Will this affect features that are already built (1 through current_feature_index)? If yes: regression risk is higher — tests must be run.</criterion>
-          </assessment_criteria>
-          <outcome>1-2 files, no logic changes, visual-only → "ui_only_change." 1-3 files, logic changes, no shared infrastructure → "small_code_change." Everything else → consider "generalizable_to_feature" or full FD path.</outcome>
+          <title>Answer the Triage Question</title>
+          <action>Does this change alter what the app IS (its vision, identity, feature-set, core interaction patterns) or just how it WORKS (implementation details within the existing vision)?</action>
+
+          <path_b_signals>
+            <description>These signals point to Path B — the change is vision-altering:</description>
+            <signal>The request adds, removes, or replaces a feature from the roadmap</signal>
+            <signal>The request changes a core interaction pattern described in vision docs</signal>
+            <signal>The request would affect 3+ remaining roadmap features</signal>
+            <signal>User explicitly says "I don't like our plan for..." or "I want to change how we handle..."</signal>
+            <signal>The request touches Wave 1-2 foundation abstractions in a way that changes their contract</signal>
+            <signal>The request contradicts an "Explicitly Out of Scope" vision boundary</signal>
+            <signal>The request is for something entirely new that doesn't fit any existing wave</signal>
+          </path_b_signals>
+
+          <path_a_signals>
+            <description>These signals point to Path A — the change is an implementation refinement:</description>
+            <signal>Bug fixes in already-built features</signal>
+            <signal>UI polish within existing screens (colors, spacing, typography, layout, animations)</signal>
+            <signal>Small refinements that don't change feature scope (e.g., "add a loading state to X")</signal>
+            <signal>The request fits naturally into an upcoming feature's existing scope</signal>
+            <signal>Single-file or few-file changes with no architectural ripple effects</signal>
+          </path_a_signals>
         </step>
 
         <step number="4">
-          <title>Select the Best Classification</title>
-          <action>Use the most specific classification that matches. When uncertain between two categories, prefer the more conservative option (generalizable_to_feature over small_code_change) — it's safer to over-structure than to under-structure.</action>
+          <title>Handle "Already Covered" Cases</title>
+          <action>If the request is already covered by an upcoming feature: PD should try to convince the user to wait for that feature. Explain which feature covers it, when it's scheduled, and why building it in sequence is better than a premature fix. If the user insists on acting now and the covering feature isn't the immediate next one (requires roadmap reordering): this becomes Path B — reordering the roadmap is a vision-level change.</action>
+          <action>If the covering feature IS the immediate next feature: this is not an ad-hoc request at all — it's "continue with next feature." Route to Phase 3 Step 1 (normal FD flow).</action>
         </step>
-      </classification_process>
 
-      <classification_matrix>
-        <row>
-          <category>already_covered</category>
-          <route>Offer to build the covering feature now (may reorder roadmap).</route>
-          <risk>Low — the work was planned anyway.</risk>
-        </row>
-        <row>
-          <category>generalizable_to_feature</category>
-          <route>Spawn Architect to design the feature → insert into roadmap → spawn FD.</route>
-          <risk>Medium — adds scope, may extend timeline.</risk>
-        </row>
-        <row>
-          <category>small_code_change</category>
-          <route>Spawn Code subtask directly → PD reconciles vision/roadmap afterwards.</route>
-          <risk>Medium-High — bypasses FD quality loop and knowledge updates; PD must handle reconciliation.</risk>
-        </row>
-        <row>
-          <category>ui_only_change</category>
-          <route>Spawn UI Designer subtask directly → PD runs tests → updates vision docs if visual design changed.</route>
-          <risk>Low — UI Designer enforces visual-only boundary. Tests catch any violations.</risk>
-        </row>
-        <row>
-          <category>out_of_scope</category>
-          <route>Flag the conflict → offer vision update or backlog.</route>
-          <risk>High if forced — contradicts established boundaries.</risk>
-        </row>
-      </classification_matrix>
+        <step number="5">
+          <title>Check Mid-FD Collision</title>
+          <action>Check fd_status in state.json. If "spawned" (FD is mid-execution): flag to user — "A feature is currently being built. How should I handle this?" Options: "Finish the current feature first, then handle this request", "Abort the current feature and handle this now", "Pause — I'll come back to this after the current feature completes."</action>
+          <action>If user selects "Finish current feature first": note the request. After FD completes and Phase 4-5 are done, re-enter the triage gate with the deferred request before spawning the next FD.</action>
+        </step>
+
+        <step number="6">
+          <title>Present Recommendation</title>
+          <action>Present the analysis and recommended path (A or B) with reasoning. Include: what the request changes, why it is/isn't vision-altering, what the implications are for the roadmap and timeline.</action>
+          <action priority="critical">User is the final authority. Use ask_followup_question with options tailored to the recommendation. Always include the alternative path as an option so the user can override.</action>
+        </step>
+      </triage_process>
+    </decision>
+  </ad_hoc_request_triage>
+
+  <!-- ============================================================ -->
+  <!-- PATH A: SIMPLE CHANGE                                          -->
+  <!-- ============================================================ -->
+  <path_a_simple_change>
+    <decision id="execute_simple_change">
+      <question>How does PD execute a Path A (Simple Change)?</question>
+
+      <execution>
+        <step number="A1">
+          <title>Execute the Change</title>
+          <action condition="logic change">Spawn Code subtask via new_task using the ad_hoc_code_subtask_prompt from common patterns. Include: the user's exact request, relevant roadmap/vision context, and the instruction to report back with what was changed and any architectural implications.</action>
+          <action condition="visual-only change">Spawn UI Designer subtask via new_task. Include: the user's exact visual change request, relevant context from vision docs.</action>
+          <action>Wait for completion.</action>
+        </step>
+
+        <step number="A2">
+          <title>Check for Escalation Signals</title>
+          <action>If Code subtask reports "ARCHITECTURAL IMPACT" in its completion summary: the change touched shared infrastructure. Present to user — "This change had architectural impact. I recommend reclassifying to Path B." Options: "Reclassify to Path B", "Continue with Path A despite architectural impact."</action>
+          <action>If >5 files were touched (even without ARCHITECTURAL IMPACT flag): warn user — "This change touched [N] files. It may be larger than a typical simple change. Proceed or reclassify?" Options: "Proceed — it's still a simple change", "Reclassify to Path B."</action>
+        </step>
+
+        <step number="A3">
+          <title>PD Sanity Check — Scoped to Change Magnitude</title>
+          <description>
+            PD must verify the change doesn't contradict vision/planning documents and doesn't introduce misalignment. The review scope scales with the change:
+          </description>
+          <review_scopes>
+            <scope name="single_file_change">
+              <action>Review: the changed file + its direct dependencies + the vision/planning files that describe the affected area (e.g., if sidebar changed, read vision docs describing the sidebar and planning files covering the UI architecture).</action>
+            </scope>
+            <scope name="multi_file_change">
+              <action>Review: all touched domains + their integration points + all vision/planning files that reference those domains.</action>
+            </scope>
+            <scope name="foundation_code_touched">
+              <action>Review: all consumers of that abstraction + ALL vision files + ALL planning files. Foundation changes have the highest ripple risk.</action>
+            </scope>
+          </review_scopes>
+          <action>If the sanity check finds misalignment in untouched files: flag to user — "This change appears to have implications beyond what was modified. [Specific findings.] Recommend reclassifying to Path B." Options: "Reclassify to Path B", "Proceed — I'll address the implications separately."</action>
+        </step>
+
+        <step number="A4">
+          <title>Run Tests and Document</title>
+          <action>Before running unit tests: check the Code subtask's completion summary for pre-existing test failure flags. If flagged: skip unit test run — these failures predate the change. Note in current-state.md.</action>
+          <action>If no pre-existing flags: run unit tests. If they fail: spawn Code subtask to fix regressions. If still failing after retry: escalate to user.</action>
+          <action>Document the change in current-state.md under "Vision Updates": what changed, which files, any implications.</action>
+          <action>Commit the change if git_automation_enabled.</action>
+          <action>Loop back to Phase 3 Step 1 for the next planned feature.</action>
+        </step>
+      </execution>
 
       <escalation_triggers>
-        <trigger>The request touches Wave 1-2 foundation code (shared interfaces, provider abstractions, data model core). Even a "small" change here can ripple across all features.</trigger>
-        <trigger>The request would affect 3+ already-built features (current_feature_index features).</trigger>
-        <trigger>The request is ambiguous and PD cannot confidently classify it after reading roadmap and vision.</trigger>
-        <trigger>The user disputes the classification and wants a different routing than recommended.</trigger>
+        <trigger>Code subtask reports ARCHITECTURAL IMPACT</trigger>
+        <trigger>>5 files touched</trigger>
+        <trigger>PD sanity check finds misalignment in untouched files</trigger>
+        <trigger>Tests fail and cannot be fixed after retry</trigger>
+        <trigger>User disputes the Path A classification mid-execution</trigger>
       </escalation_triggers>
     </decision>
-  </ad_hoc_request_classification>
+  </path_a_simple_change>
+
+  <!-- ============================================================ -->
+  <!-- PATH B: VISION REALIGNMENT PIPELINE (7 STEPS)                  -->
+  <!-- ============================================================ -->
+  <vision_realignment_pipeline>
+    <decision id="execute_vision_realignment">
+      <question>How does PD execute the Path B Vision Realignment Pipeline?</question>
+      <description>
+        The 7-step pipeline ensures that vision-altering changes are systematically propagated through
+        vision docs, planning files, roadmap, and knowledge files — with critic reviews at each layer
+        and a final PD comprehensive review. State is tracked via realignment_step in state.json for
+        crash recovery.
+      </description>
+
+      <state_tracking>
+        <rule>State.json fields: realignment_step (1-7, null when not in pipeline) and realignment_loop_count (0-based, persistent loop counter). realignment_step is set at the start of each step for crash recovery. realignment_loop_count is incremented on each B6→B3 loop.</rule>
+        <rule>Loop detection: realignment_loop_count is persisted in state.json. On each B6→B3 loop, increment realignment_loop_count. If realignment_loop_count >= 2 (third B3 pass), escalate to user — "The vision and implementation may be fundamentally at odds. Consider restarting from Phase 1." Reset realignment_loop_count to 0 when realignment_step is set to null (pipeline completes or aborts).</rule>
+        <rule>Abort hatch: user can abort at any step. PD sets realignment_step=null and realignment_loop_count=0 in state.json, reverts any in-progress changes, and continues with the original roadmap.</rule>
+      </state_tracking>
+
+      <step name="B1" number="1">
+        <title>Discussion & Analysis</title>
+        <description>
+          PD discusses the request with the user before any files change. This is the most important step —
+          a thorough discussion prevents scope surprises later in the pipeline.
+        </description>
+        <actions>
+          <action priority="critical">PD must have already read the relevant source code (from the triage gate). If not, do so now.</action>
+          <action>Discuss the request with the user. PD must:
+            - Confirm understanding of what the user wants to change
+            - Check if this is already covered by a future feature or already implemented
+            - Assess whether the request generalizes to something larger ("if we're adding X, we should also consider Y and Z because...")
+            - Advise for/against based on architectural impact, ripple effects on remaining features, and roadmap coherence
+            - Suggest related changes that would be natural to bundle together
+            - Surface any hidden implications the user may not have considered
+          </action>
+          <action>If fd_status="spawned" (FD mid-execution): this was already flagged in the triage gate. If not yet resolved, resolve now before proceeding.</action>
+        </actions>
+      </step>
+
+      <step name="B2" number="2">
+        <title>Aggregate & Present</title>
+        <description>
+          PD aggregates ALL changes discussed in Step B1 into a structured summary. This is the contract
+          for what follows — the Vision Hasher will use this as its starting point.
+        </description>
+        <actions>
+          <action>Compile a structured summary:
+            - What changes: specific features, screens, behaviors, data entities
+            - What stays the same: explicitly confirm unchanged areas
+            - Which remaining roadmap features are affected
+            - Whether a Realignment Feature will likely be needed (preliminary assessment)
+            - Any deferred decisions or open questions
+          </action>
+          <action>Present to user for approval. User may revise. This must be approved before proceeding.</action>
+          <action priority="critical">Abort hatch: user can say "never mind — continue with original plan." PD sets realignment_step=null and realignment_loop_count=0 in state.json, and returns to Phase 3 Step 1 (no files changed at this stage).</action>
+        </actions>
+      </step>
+
+      <step name="B3" number="3">
+        <title>Vision Hasher — Update Vision Files</title>
+        <description>
+          Spawn Vision Hasher to update ALL vision files. The VH reads the current vision files,
+          interviews the user about the changes from Step B2, and updates everything. The VH may
+          discover implications not in the summary — it should explore them with the user.
+        </description>
+        <actions>
+          <action priority="critical">Set realignment_step=3 in state.json (crash guard).</action>
+          <action>Spawn Vision Hasher via new_task using the vision_hasher_update_prompt from common patterns. Include:
+            - The aggregated change summary from Step B2
+            - Paths to ALL current vision files (VH must read them all)
+            - Instruction: "Interview the user about these changes. Update ALL vision files that need to change. You may discover implications not in the summary — explore them with the user."
+          </action>
+          <action>Wait for VH to complete.</action>
+        </actions>
+        <post_vh_actions>
+          <action priority="critical">VH must report a delta: what actually changed vs. the Step B2 summary. This includes: what was added beyond the proposal, what was modified differently than proposed, what was deferred ("⚠️ INCOMPLETE"), which vision files were modified, and which mocks/deliverables changed (user should review these).</action>
+          <action>PD reads the VH completion and delta. If the delta reveals major divergence from Step B2: present to user for intermediate approval before proceeding. "The Vision Hasher's updates diverged from our plan in these ways: [list]. Approve the new direction or revise?"</action>
+        </post_vh_actions>
+      </step>
+
+      <step name="B4" number="4">
+        <title>Vision Hasher Critic — Fix Contradictions</title>
+        <description>
+          Spawn Vision Hasher in a Critic role to find and fix internal contradictions in the
+          updated vision files. This is a focused audit — not a discovery session.
+        </description>
+        <actions>
+          <action priority="critical">Set realignment_step=4 in state.json (crash guard).</action>
+          <action>Spawn Vision Hasher via new_task using the vision_hasher_critic_prompt from common patterns. The prompt instructs VH to act as a critic:
+            - Read ALL vision files
+            - Find and fix: internal contradictions, orphaned references, features described differently in different files, screens that reference data entities that don't exist, edge cases that contradict feature descriptions
+            - Do NOT add new features or expand scope
+            - If something requires NEW discovery (not just contradiction fixing): flag as "DEFERRED — requires discovery" rather than resolving it
+          </action>
+          <action>Wait for VH Critic to complete.</action>
+          <action>If VH Critic flagged "DEFERRED" items: present to user. Options: "Address deferred items now (re-spawn VH for discovery)", "Accept and proceed — flagged items will be noted in vision docs", "I'll resolve them manually."</action>
+        </actions>
+      </step>
+
+      <step name="B5" number="5">
+        <title>Architect — Update Planning, Roadmap & Knowledge</title>
+        <description>
+          Spawn Architect to propagate vision changes through planning files, roadmap, and knowledge
+          files. This is the largest step — the Architect must read everything and update everything.
+        </description>
+        <actions>
+          <action priority="critical">Set realignment_step=5 in state.json (crash guard).</action>
+          <action>Spawn Architect via new_task using the realignment_architect_prompt from common patterns. The prompt instructs Architect to:
+            1. Read ALL vision files and ALL planning files
+            2. Analyze current state of codebase by reading knowledge/ files
+            3. Update roadmap: revise all FUTURE features (current_feature_index + 1 onwards) to match updated vision. Do NOT modify past feature entries.
+            4. Determine Realignment Need: compare updated vision against as-built code (knowledge/ files). If there's a gap: design a Realignment Feature — insert it as the immediate next feature (current_feature_index + 1). This feature retrofits existing code to match the new vision BEFORE new features build on it.
+            5. Update ALL planning files: every planning/ .md file that references changed vision concepts must be updated.
+            6. Update knowledge files: if realignment changes what knowledge/ files should describe, update them. This is an explicit exception to the normal boundary (PD audits, never edits knowledge/) — applies ONLY during realignment.
+            7. Flag which existing E2E tests are invalidated by the vision change.
+          </action>
+          <action>Wait for Architect to complete.</action>
+        </actions>
+        <post_architect_actions>
+          <action>PD reads the Architect's completion. Verify:
+            - Roadmap: future features updated, Realignment Feature inserted (if needed), total feature count updated
+            - Planning files: all changed vision concepts reflected
+            - Knowledge files: updated (if realignment required it)
+            - E2E impact: invalidated tests flagged
+          </action>
+          <action>Update state.json: total_features to match new roadmap count. Increment total_replans.</action>
+          <action>If a Realignment Feature was inserted: present to user — "A Realignment Feature has been inserted as the next feature to retrofit existing code to the new vision. [Summary of what it will change.] Approve?" Options: "Approved — proceed", "I want to review the Realignment Feature design", "Skip Realignment Feature — I'll handle the gap manually."</action>
+        </post_architect_actions>
+      </step>
+
+      <step name="B6" number="6">
+        <title>Architect Critic — Review All Changes</title>
+        <description>
+          Independent Architect critic reviews the complete set of changes from Steps B3-B5.
+        </description>
+        <actions>
+          <action priority="critical">Set realignment_step=6 in state.json (crash guard).</action>
+          <action>Spawn Architect in Critic role via new_task using the realignment_critic_prompt from common patterns. The prompt instructs Critic to read ALL vision files, ALL planning files, and the updated roadmap, and check for:
+            - Contradictions between vision and planning
+            - Missing abstraction coverage for new/changed integration points
+            - Roadmap dependency violations (does any future feature depend on something that changed?)
+            - Realignment Feature completeness (does it cover all gaps between as-built and new vision?)
+            - Planning file internal consistency
+            - Do NOT propose new features or expand scope
+          </action>
+          <action>Wait for Critic to complete.</action>
+          <action>If Critic finds issues that trace back to vision: increment realignment_loop_count in state.json. If realignment_loop_count < 2 (first or second loop): loop to Step B3. If realignment_loop_count >= 2 (third B3 pass): escalate to user — "The Critic keeps finding vision-level issues after [X] rounds. The vision change may be fundamentally incompatible." Options: "Restart from Phase 1 (re-vision from scratch)", "Accept Critic's findings as documented risks and proceed to B7", "I'll manually resolve the contradictions." Do NOT loop again.</action>
+          <action>If Critic finds issues in planning only: re-spawn Architect (Step B5) with targeted fixes.</action>
+        </actions>
+      </step>
+
+      <step name="B7" number="7">
+        <title>PD Final Review — Comprehensive Alignment Check</title>
+        <description>
+          PD performs a final review of ALL modified files to ensure complete alignment.
+        </description>
+        <actions>
+          <action priority="critical">Set realignment_step=7 in state.json (crash guard).</action>
+          <action>Determine what was modified: use git diff against pre-pipeline state, or if git unavailable, track files from all completion summaries in Steps B3-B6.</action>
+          <action>Read and verify:
+            - Every changed vision file (confirm changes match intent)
+            - Every changed planning file (confirm alignment with vision)
+            - The updated roadmap — ALL features, not just changed ones (verify forward dependencies hold, no gaps)
+            - current-state.md (update with vision realignment summary)
+            - state.json (verify total_features matches roadmap, realignment_step is about to be cleared)
+          </action>
+          <action>Verification checklist:
+            <item>Roadmap forward-dependencies still hold (no feature depends on a later-numbered feature)</item>
+            <item>total_features in state.json matches roadmap.md count</item>
+            <item>No orphaned references in vision or planning files</item>
+            <item>Realignment Feature (if inserted) is properly numbered and positioned</item>
+            <item>No contradictions between vision and planning</item>
+            <item>E2E impact documented in current-state.md</item>
+          </action>
+          <action>Set realignment_step=null and realignment_loop_count=0 in state.json.</action>
+          <action>Proceed to Phase 3 Step 1 — the next feature (which may be the Realignment Feature).</action>
+        </actions>
+      </step>
+    </decision>
+  </vision_realignment_pipeline>
 
   <boundaries>
     <rule>The PD owns agent-workspace/project-director/ exclusively. Never write to agent-workspace/feature/ or agent-workspace/knowledge/.</rule>
-    <rule>The PD audits knowledge/ files but never edits them. If issues are found, spawn an Architect to fix.</rule>
+    <rule>The PD audits knowledge/ files but never edits them — EXCEPTION: during Path B (Vision Realignment Pipeline) Step B5, the Architect is authorized to update knowledge/ files as part of realignment. This is the only time knowledge/ files are edited outside of the FD pipeline.</rule>
     <rule>The PD runs commands (tests, git) but delegates all code changes — including E2E test creation (delegated to code-mode E2E generation subtask).</rule>
-    <rule>Vision discovery belongs to the Vision Hasher. Execution planning belongs to the Architect. Feature execution belongs to the feature-developer. E2E test generation belongs to the E2E generation subtask (code mode). The PD orchestrates the pipeline between them.</rule>
-    <rule>The PD owns the E2E regression suite: it spawns E2E generation subtasks to write tests, runs the suite, and enforces the "locked in" quality gate.</rule>
-    <rule>The PD owns vision and planning document maintenance: after each feature, re-evaluate vision and planning/ docs (including e2e-authoring-guide.md). Minor drift → PD edits vision/ and planning/ .md files directly to reconcile with reality. Major drift → flag for user, potentially re-plan (delegated to Architect, who refreshes all planning/ files from knowledge/).</rule>
+    <rule>Vision discovery belongs to the Vision Hasher. Execution planning belongs to the Architect. Feature execution belongs to the feature-developer. E2E regression belongs to the feature-developer (runs before completing). E2E test generation belongs to the E2E generation subtask (code mode). Mid-project vision changes go through the Path B Vision Realignment Pipeline (VH update → VH Critic → Architect update → Architect Critic → PD final review). The PD orchestrates all pipelines.</rule>
+    <rule>The PD owns new E2E test generation and lock-in: it spawns E2E generation subtasks to write tests and enforces the "locked in" quality gate. The FD owns E2E regression: it runs the existing suite before completing and guarantees no regressions.</rule>
+    <rule>The PD owns vision and planning document maintenance: after each feature, re-evaluate vision and planning/ docs (including e2e-authoring-guide.md). Minor drift → PD edits vision/ and planning/ .md files directly to reconcile with reality. Major drift → flag for user, potentially re-plan (delegated to Architect, who refreshes all planning/ files from knowledge/). User-initiated mid-project changes that alter the vision → Path B Vision Realignment Pipeline.</rule>
     <rule>The PD maintains the E2E authoring guide (planning/e2e-authoring-guide.md) as a living document: after each feature's E2E test is generated and validated (Phase 4 Step 5), check if new E2E patterns emerged that should be added to the guide (new selector conventions, discovered test infrastructure quirks, helper methods that proved useful, AutomationId naming patterns discovered during implementation). Minor additions → PD edits the guide directly in Phase 4 Step 3 or Step 7 alongside vision/planning drift reconciliation. If the feature revealed a fundamentally different E2E approach than what the guide describes → flag as major drift and discuss with user.</rule>
     <rule>Tests/unit/ and tests/integration/ are the feature-developer's domain (unit and integration tests per feature). Tests/e2e/ is the PD's domain (cross-feature regression tests). These directories must not overlap.</rule>
     <rule>The PD may write vision template files and planning template files within agent-workspace/project-director/.</rule>
+    <rule priority="high">During Path B Vision Realignment Pipeline Step B5, the Architect must flag which existing E2E tests are invalidated by the vision change. The Realignment Feature's E2E spec must include updating those tests.</rule>
   </boundaries>
 
   <validation>
@@ -502,5 +730,6 @@
     <rule>After any file edit by the PD, re-read the file to confirm the change was applied correctly.</rule>
     <rule>After the E2E lock-in gate, verify the feature's E2E test file exists at tests/e2e/feature-[sanitized-name].* and is tracked in current-state.md.</rule>
     <rule>After Phase 4 drift reconciliation, verify that any new E2E patterns discovered during the feature (selector conventions, helper methods, infrastructure quirks) are captured in planning/e2e-authoring-guide.md. The guide should reflect the current state of E2E testing — not the original planning assumptions.</rule>
+    <rule>After Path B Vision Realignment Pipeline: verify realignment_step is null, total_features matches roadmap.md, and the Realignment Feature (if inserted) is tracked in current-state.md.</rule>
   </validation>
 </decision_guidance>
