@@ -395,7 +395,7 @@ tests/
 
 ---
 
-### [ ] Step 9: E2E Tests + Integration Tests + Visual Polish
+### [x] Step 9: E2E Tests + Integration Tests + Visual Polish
 - **Goal:** Create comprehensive E2E test suite covering all Studio Chat workflows. Write integration tests for cross-component chat scenarios. Polish visual details and edge cases. Verify the full feature against all acceptance criteria from vision docs.
 - **Actions:**
   - Create [`StudioChatE2ETests.cs`](tests/e2e/MySecondBrain.Tests.E2E/StudioChatE2ETests.cs): ~15 test cases following the self-cleaning pattern (create→verify→delete via 🗑️):

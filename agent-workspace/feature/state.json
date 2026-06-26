@@ -16,13 +16,14 @@
     { "step": 5, "name": "Conversation View & Markdown", "classification": "HUMAN/SHT REQUIRED", "description": "Markdown: headings, bold/italic, code blocks w/ syntax highlighting, lists, links, tables, blockquotes, HR. Chat themes. Timestamps.", "status": "skipped" },
     { "step": 6, "name": "Streaming + Auto-Scroll + Actions + Errors", "classification": "HUMAN/SHT REQUIRED", "description": "Stream tokens, auto-scroll pause, scroll-to-bottom, Stop preserves partial, Copy MD/Rich, Regenerate, error banner+Retry.", "status": "skipped" },
     { "step": 7, "name": "Chat Header + Modes + RTL", "classification": "HUMAN/SHT REQUIRED", "description": "12 header elements, persona popover, theme, API History, context bar, dark mode, pin, three-dot menu, Clear, Thinking, Hebrew RTL, code LTR.", "status": "skipped" },
-    { "step": 8, "name": "QoL Features", "classification": "HUMAN/SHT REQUIRED", "description": "Ctrl+O file viewer, drag-drop, incognito toggle, lock chat w/ password, auto-titling, summarize, star favoriting, cross-tab green dot, message selection w/ bulk actions, offline indicator, close confirmation.", "status": "skipped" }
+    { "step": 8, "name": "QoL Features", "classification": "HUMAN/SHT REQUIRED", "description": "Ctrl+O file viewer, drag-drop, incognito toggle, lock chat w/ password, auto-titling, summarize, star favoriting, cross-tab green dot, message selection w/ bulk actions, offline indicator, close confirmation.", "status": "skipped" },
+    { "step": 9, "name": "E2E Tests + Visual Polish", "classification": "HUMAN/SHT REQUIRED", "description": "Visual polish: message spacing across 3 chat themes, code block copy button on hover, scroll-to-bottom animation, RTL alignment/padding mirroring, empty states, dark/light transition, font size reactivity.", "status": "skipped" }
   ],
   "e2e_regression_status": null,
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 9,
-  "current_step": 8,
+  "current_step": 9,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }
