@@ -91,6 +91,7 @@ public static class DependencyInjectionConfig
         services.AddSingleton<IAutoCleanupService, PeriodicAutoCleanupService>();
         services.AddSingleton<IEncryptionService, DpapiEncryptionService>();
         services.AddSingleton<IChatEncryptionService, AesGcmChatEncryptionService>();
+        services.AddSingleton<LockedChatService>();
         services.AddSingleton<IWikiFileWatcher, FileSystemWatcherAdapter>();
         services.AddSingleton<ILocalWebSocketServer, KestrelWebSocketServer>();
         services.AddSingleton<ISystemTrayService, WinFormsSystemTrayService>();

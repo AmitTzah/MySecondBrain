@@ -228,6 +228,16 @@
                             <MenuItem Header="Make Temporary"
                                       Command="{Binding ToggleTemporaryCommand}"
                                       Style="{StaticResource ThreeDotMenuStyle}"/>
+                            <Separator/>
+                            <MenuItem Header="Select Messages"
+                                      Command="{Binding ToggleSelectionModeCommand}"
+                                      Style="{StaticResource ThreeDotMenuStyle}"/>
+                            <MenuItem Header="Lock Chat"
+                                      Command="{Binding LockChatCommand}"
+                                      Style="{StaticResource ThreeDotMenuStyle}"/>
+                            <MenuItem Header="Unlock Chat"
+                                      Command="{Binding UnlockChatCommand}"
+                                      Style="{StaticResource ThreeDotMenuStyle}"/>
                         </ContextMenu>
                     </Button.ContextMenu>
                 </Button>

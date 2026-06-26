@@ -4,6 +4,7 @@ using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 using MySecondBrain.Services;
 using MySecondBrain.Services.Chat;
+using MySecondBrain.Services.Encryption;
 using MySecondBrain.UI.ViewModels;
 // Resolve ambiguity with System.Windows.Forms.Message (UseWindowsForms=true)
 using Message = MySecondBrain.Core.Models.Message;
@@ -23,6 +24,11 @@ public class ChatThreadViewModelTests
     private readonly Mock<IThemeProvider> _themeProviderMock = new();
     private readonly Mock<ILogger<ChatThreadViewModel>> _loggerMock = new();
     private readonly Mock<MarkdownStreamRenderer> _streamRendererMock = new(Mock.Of<IContentRendererRegistry>(), Mock.Of<ILogger<MarkdownStreamRenderer>>());
+    private readonly Mock<LockedChatService> _lockedChatServiceMock = new(
+        Mock.Of<IChatEncryptionService>(),
+        Mock.Of<IChatThreadRepository>(),
+        Mock.Of<IMessageRepository>(),
+        Mock.Of<ILogger<LockedChatService>>());
 
     private readonly Persona _generalAssistant = new()
     {
@@ -89,7 +95,8 @@ public class ChatThreadViewModelTests
             _confirmationServiceMock.Object,
             _themeProviderMock.Object,
             _loggerMock.Object,
-            _streamRendererMock.Object);
+            _streamRendererMock.Object,
+            _lockedChatServiceMock.Object);
     }
 
     // ================================================================

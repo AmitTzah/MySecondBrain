@@ -14,11 +14,19 @@
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <converters:TokenCountToColorConverter x:Key="TokenCountToColorConverter"/>
         <converters:MessageTokenDisplayConverter x:Key="MessageTokenDisplayConverter"/>
+        <converters:BoolToFavoriteConverter x:Key="BoolToFavoriteConverter"/>
 
         <!-- ─── User Message Template ─────────────────────────── -->
         <DataTemplate x:Key="UserMessageTemplate">
             <Border Margin="0,4,0,4" Padding="0">
                 <StackPanel FlowDirection="RightToLeft">
+                    <!-- Selection checkbox (visible in selection mode) -->
+                    <CheckBox Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.ToggleMessageSelectionCommand}"
+                              CommandParameter="{Binding}"
+                              Visibility="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.IsSelectionMode, Converter={StaticResource BoolToVisibilityConverter}}"
+                              Margin="4,8,4,0"
+                              VerticalAlignment="Top"
+                              AutomationProperties.AutomationId="MessageSelectionCheckBox"/>
                     <!-- Role label -->
                     <TextBlock Text="You"
                                FontSize="11" FontWeight="SemiBold"
@@ -50,6 +58,16 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,2,12,0">
                         <TextBlock Text="{Binding CreatedAt, Converter={StaticResource RelativeTimeConverter}}"
                                    FontSize="10" Foreground="{DynamicResource SubtleBrush}"/>
+                        <!-- Favorite star -->
+                        <Button Content="{Binding IsFavorited, Converter={StaticResource BoolToFavoriteConverter}}"
+                                FontSize="12"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource StarBrush}"
+                                Padding="2,0" Margin="2,0,0,0"
+                                Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.ToggleFavoriteCommand}"
+                                CommandParameter="{Binding}"
+                                ToolTip="Toggle favorite"
+                                AutomationProperties.AutomationId="FavoriteBtn"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -89,8 +107,18 @@
                         </FlowDocumentScrollViewer>
                     </Border>
 
-                    <!-- Action buttons (Copy MD, Copy Rich, Regenerate, Continue) -->
+                    <!-- Action buttons (Copy MD, Copy Rich, Regenerate, Continue, Favorite) -->
                     <StackPanel Orientation="Horizontal" Margin="12,2,0,0">
+                        <!-- Favorite star -->
+                        <Button Content="{Binding IsFavorited, Converter={StaticResource BoolToFavoriteConverter}}"
+                                FontSize="12"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource StarBrush}"
+                                Padding="2,0" Margin="0,0,4,0"
+                                Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.ToggleFavoriteCommand}"
+                                CommandParameter="{Binding}"
+                                ToolTip="Toggle favorite"
+                                AutomationProperties.AutomationId="FavoriteBtn"/>
                         <TextBlock Text="{Binding CreatedAt, Converter={StaticResource RelativeTimeConverter}}"
                                    FontSize="10" Foreground="{DynamicResource SubtleBrush}"
                                    VerticalAlignment="Center"/>
@@ -134,6 +162,45 @@
             </Border>
         </DataTemplate>
 
+        <!-- Selection mode checkbox converter -->
+        <!-- ─── Bulk Actions Bar Template ─────────────────────── -->
+        <DataTemplate x:Key="BulkActionsTemplate">
+            <Border Background="{DynamicResource AccentBrush}" Padding="8,6"
+                    CornerRadius="4" Margin="8,4">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.SelectedCount, StringFormat='{}{0} selected'}"
+                               FontSize="12" FontWeight="SemiBold"
+                               Foreground="{DynamicResource AccentForeground}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"/>
+                    <Button Content="Copy" FontSize="11"
+                            Background="Transparent" BorderThickness="0"
+                            Foreground="{DynamicResource AccentForeground}"
+                            Padding="8,3" Margin="2,0"
+                            Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.CopySelectedMessagesCommand}"
+                            AutomationProperties.AutomationId="BulkCopyBtn"/>
+                    <Button Content="Delete" FontSize="11"
+                            Background="Transparent" BorderThickness="0"
+                            Foreground="{DynamicResource AccentForeground}"
+                            Padding="8,3" Margin="2,0"
+                            Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.DeleteSelectedMessagesCommand}"
+                            AutomationProperties.AutomationId="BulkDeleteBtn"/>
+                    <Button Content="Quote" FontSize="11"
+                            Background="Transparent" BorderThickness="0"
+                            Foreground="{DynamicResource AccentForeground}"
+                            Padding="8,3" Margin="2,0"
+                            Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.QuoteSelectedMessagesCommand}"
+                            AutomationProperties.AutomationId="BulkQuoteBtn"/>
+                    <Button Content="Cancel" FontSize="11"
+                            Background="Transparent" BorderThickness="0"
+                            Foreground="{DynamicResource AccentForeground}"
+                            Padding="8,3" Margin="2,0"
+                            Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.ToggleSelectionModeCommand}"
+                            AutomationProperties.AutomationId="BulkCancelBtn"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
         <!-- ─── System Message Template ───────────────────────── -->
         <DataTemplate x:Key="SystemMessageTemplate">
             <Border Margin="0,4,0,4" Padding="8,4"
@@ -162,6 +229,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -169,8 +237,23 @@
         <!-- Row 0: Chat Header Bar — standalone ChatHeaderBar control -->
         <local:ChatHeaderBar Grid.Row="0"/>
 
-        <!-- Row 1: Conversation Area (VirtualizingStackPanel) -->
-        <Border Grid.Row="1" Background="{DynamicResource ContentBackground}">
+        <!-- Bulk actions bar (visible in selection mode) -->
+        <ContentPresenter Grid.Row="0"
+                          Content="{Binding}"
+                          ContentTemplate="{StaticResource BulkActionsTemplate}"
+                          Visibility="{Binding IsSelectionMode, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+        <!-- Row 1: Offline banner (visible when network unavailable) -->
+        <Border Grid.Row="1" Background="#FFF44336" Padding="12,4"
+                Visibility="{Binding IsOffline, Converter={StaticResource BoolToVisibilityConverter}}"
+                AutomationProperties.AutomationId="OfflineBanner">
+            <TextBlock Text="You are offline. AI responses are unavailable."
+                       FontSize="11" Foreground="White"
+                       TextAlignment="Center"/>
+        </Border>
+
+        <!-- Row 2: Conversation Area (VirtualizingStackPanel) -->
+        <Border Grid.Row="2" Background="{DynamicResource ContentBackground}">
             <Grid>
                 <!-- Empty state (visible when no messages) -->
                 <StackPanel Visibility="{Binding ActiveTab.Messages.Count, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"
@@ -277,8 +360,8 @@
             </Grid>
         </Border>
 
-        <!-- Row 2: Input Area -->
-        <Border Grid.Row="2" Background="{DynamicResource InputBackground}"
+        <!-- Row 3: Input Area -->
+        <Border Grid.Row="3" Background="{DynamicResource InputBackground}"
                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0"
                 Padding="8,4,8,6">
             <StackPanel>

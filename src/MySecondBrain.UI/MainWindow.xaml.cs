@@ -1,7 +1,9 @@
 using System.ComponentModel;
 using System.Windows.Input;
+using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.UI.ViewModels;
+using MySecondBrain.UI.Views;
 
 namespace MySecondBrain.UI;
 
@@ -9,21 +11,29 @@ public partial class MainWindow : Window
 {
     private readonly MainWindowViewModel _viewModel;
     private readonly ISystemTrayService _systemTrayService;
+    private readonly IConfirmationService _confirmationService;
+    private readonly ILogger<MainWindow> _logger;
     private readonly bool _minimizeToTray;
 
     public MainWindow(
         MainWindowViewModel viewModel,
         ISystemTrayService systemTrayService,
-        ISettingsRepository settingsRepository)
+        ISettingsRepository settingsRepository,
+        IConfirmationService confirmationService,
+        ILogger<MainWindow> logger)
     {
         ArgumentNullException.ThrowIfNull(viewModel);
         ArgumentNullException.ThrowIfNull(systemTrayService);
         ArgumentNullException.ThrowIfNull(settingsRepository);
+        ArgumentNullException.ThrowIfNull(confirmationService);
+        ArgumentNullException.ThrowIfNull(logger);
 
         InitializeComponent();
         DataContext = viewModel;
         _viewModel = viewModel;
         _systemTrayService = systemTrayService;
+        _confirmationService = confirmationService;
+        _logger = logger;
 
         // Cache minimize-to-tray setting at construction (read-once during startup)
         var minimizeSetting = settingsRepository.GetAsync("MinimizeToTray")
@@ -49,6 +59,11 @@ public partial class MainWindow : Window
                 case Key.W:
                     _viewModel.ChatThreadViewModel?.CloseTabCommand.Execute(
                         _viewModel.ChatThreadViewModel.ActiveTab);
+                    e.Handled = true;
+                    break;
+                case Key.O:
+                    // Ctrl+O: Open file in file viewer tab
+                    OpenFileInViewer();
                     e.Handled = true;
                     break;
                 case Key.Tab:
@@ -89,6 +104,46 @@ public partial class MainWindow : Window
         }
 
         base.OnKeyDown(e);
+    }
+
+    /// <summary>
+    /// Opens a file picker dialog and loads the selected file into a file viewer tab.
+    /// Called via Ctrl+O.
+    /// </summary>
+    private async void OpenFileInViewer()
+    {
+        try
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Open File in Viewer",
+                Multiselect = false,
+                CheckFileExists = true,
+                Filter = "All Files (*.*)|*.*|Text Files (*.txt)|*.txt|Markdown (*.md)|*.md|" +
+                         "Code Files (*.cs;*.py;*.js;*.ts;*.json;*.xml;*.html;*.css)|*.cs;*.py;*.js;*.ts;*.json;*.xml;*.html;*.css"
+            };
+
+            if (dialog.ShowDialog(this) == true)
+            {
+                var vm = await FileViewerTabViewModel.FromFileAsync(dialog.FileName);
+                var chatVm = _viewModel.ChatThreadViewModel;
+                if (chatVm is null) return;
+
+                // Create a tab for the file viewer
+                var thread = await chatVm.NewFileViewerTab(vm);
+                if (thread is not null)
+                {
+                    _logger.LogInformation("Opened file viewer tab: {Path}", dialog.FileName);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open file in viewer");
+            System.Windows.MessageBox.Show(this,
+                $"Failed to open file: {ex.Message}",
+                "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
     }
 
     protected override void OnClosing(CancelEventArgs e)

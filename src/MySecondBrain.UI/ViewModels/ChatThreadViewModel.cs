@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -10,7 +11,9 @@ using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 using MySecondBrain.Services.Chat;
+using MySecondBrain.Services.Encryption;
 using MySecondBrain.UI.Services;
+using MySecondBrain.UI.Views;
 // Resolve ambiguity with System.Windows.Forms.Message (UseWindowsForms=true)
 using Message = MySecondBrain.Core.Models.Message;
 
@@ -26,6 +29,7 @@ public partial class ChatThreadViewModel : ObservableObject
     private readonly IConfirmationService _confirmationService;
     private readonly IThemeProvider _themeProvider;
     private readonly SystemPromptCoordinator _systemPromptCoordinator;
+    private readonly LockedChatService _lockedChatService;
     private readonly ILogger<ChatThreadViewModel> _logger;
 
     /// <summary>
@@ -70,7 +74,8 @@ public partial class ChatThreadViewModel : ObservableObject
         IConfirmationService confirmationService,
         IThemeProvider themeProvider,
         ILogger<ChatThreadViewModel> logger,
-        MarkdownStreamRenderer streamRenderer)
+        MarkdownStreamRenderer streamRenderer,
+        LockedChatService lockedChatService)
     {
         _chatService = chatService;
         _personaRepo = personaRepo;
@@ -80,6 +85,7 @@ public partial class ChatThreadViewModel : ObservableObject
         _confirmationService = confirmationService;
         _themeProvider = themeProvider;
         _streamRenderer = streamRenderer;
+        _lockedChatService = lockedChatService;
         _systemPromptCoordinator = new SystemPromptCoordinator(skillService);
         _logger = logger;
 
@@ -95,6 +101,14 @@ public partial class ChatThreadViewModel : ObservableObject
             if (tab is not null && tab != ActiveTab)
                 tab.HasCompletionAlert = true;
         });
+
+        // Register for network availability changes
+        NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
+
+        // Set initial network status
+        _networkStatus = System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable()
+            ? NetworkStatus.Online
+            : NetworkStatus.Offline;
     }
 
     // ================================================================
@@ -120,6 +134,9 @@ public partial class ChatThreadViewModel : ObservableObject
             value.HasCompletionAlert = false;
 
         OnPropertyChanged(nameof(IsStreaming));
+        OnPropertyChanged(nameof(IsTemporary));
+        OnPropertyChanged(nameof(IsLocked));
+        OnPropertyChanged(nameof(TabStateIcon));
 
         // Restore per-tab state from the thread
         if (value?.Thread is not null)
@@ -491,6 +508,9 @@ public partial class ChatThreadViewModel : ObservableObject
     // Tab commands
     // ================================================================
 
+    /// <summary>
+    /// Creates a new chat tab. Called by the NewChat command and by MainWindow for file viewer tabs.
+    /// </summary>
     [RelayCommand]
     private async Task NewChatAsync()
     {
@@ -534,6 +554,18 @@ public partial class ChatThreadViewModel : ObservableObject
                 _activeCts?.Cancel();
         }
 
+        // If it's a file viewer tab, just remove it without thread operations
+        if (tab.Thread is null)
+        {
+            _lastClosedTab = tab;
+            ChatTabs.Remove(tab);
+            if (ActiveTab is null && ChatTabs.Count > 0)
+                ActiveTab = ChatTabs[^1];
+            if (ChatTabs.Count == 0)
+                StopDraftTimer();
+            return;
+        }
+
         // Preserve for reopen
         _lastClosedTab = tab;
 
@@ -554,6 +586,15 @@ public partial class ChatThreadViewModel : ObservableObject
     private async Task ReopenLastClosedTabAsync()
     {
         if (_lastClosedTab is null) return;
+
+        // Guard: file viewer tabs have null Thread — cannot reopen via service
+        if (_lastClosedTab.Thread is null)
+        {
+            ChatTabs.Add(_lastClosedTab);
+            ActiveTab = _lastClosedTab;
+            _lastClosedTab = null;
+            return;
+        }
 
         // Re-create the thread if it was soft-deleted
         try
@@ -947,6 +988,326 @@ public partial class ChatThreadViewModel : ObservableObject
     /// </summary>
     public bool IsTemporary => ActiveTab?.Thread.IsTransient ?? false;
 
+    /// <summary>Indicator icon for the tab based on state.</summary>
+    public string TabStateIcon => IsTemporary ? "🕶️" : (IsLocked ? "🔒" : string.Empty);
+
+    /// <summary>True when the active chat is locked.</summary>
+    public bool IsLocked => ActiveTab?.Thread.IsLocked ?? false;
+
+    // ================================================================
+    // Network status (C19)
+    // ================================================================
+
+    [ObservableProperty]
+    private NetworkStatus _networkStatus = NetworkStatus.Online;
+
+    partial void OnNetworkStatusChanged(NetworkStatus value)
+    {
+        OnPropertyChanged(nameof(IsOffline));
+        OnPropertyChanged(nameof(IsOnline));
+    }
+
+    /// <summary>True when the network is unavailable.</summary>
+    public bool IsOffline => NetworkStatus == NetworkStatus.Offline;
+
+    /// <summary>True when the network is available.</summary>
+    public bool IsOnline => NetworkStatus == NetworkStatus.Online;
+
+    private void OnNetworkAvailabilityChanged(object? sender, NetworkAvailabilityEventArgs e)
+    {
+        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+        {
+            NetworkStatus = e.IsAvailable ? NetworkStatus.Online : NetworkStatus.Offline;
+        });
+    }
+
+    // ================================================================
+    // Message favoriting (C33)
+    // ================================================================
+
+    [RelayCommand]
+    private async Task ToggleFavoriteAsync(Message? message)
+    {
+        if (message is null) return;
+
+        try
+        {
+            message.IsFavorited = !message.IsFavorited;
+            // Persist the IsFavorited flag by editing the message with same content
+            await _chatService.EditMessageAsync(message.Id, message.Content, false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to toggle favorite for message '{MessageId}'", message.Id);
+        }
+    }
+
+    // ================================================================
+    // Message selection mode (C18)
+    // ================================================================
+
+    [ObservableProperty]
+    private bool _isSelectionMode;
+
+    [ObservableProperty]
+    private ObservableCollection<Message> _selectedMessages = [];
+
+    /// <summary>Number of currently selected messages.</summary>
+    public int SelectedCount => SelectedMessages.Count;
+
+    partial void OnSelectedMessagesChanged(ObservableCollection<Message> value)
+    {
+        OnPropertyChanged(nameof(SelectedCount));
+    }
+
+    /// <summary>
+    /// Creates a file viewer tab from a FileViewerTabViewModel and adds it to the tab list.
+    /// Called by MainWindow on Ctrl+O.
+    /// </summary>
+    public async Task<ChatTabItem?> NewFileViewerTab(FileViewerTabViewModel fileVm)
+    {
+        try
+        {
+            var persona = ActivePersona ?? PersonaList.FirstOrDefault();
+            if (persona is null)
+            {
+                // Create a dummy thread for the file viewer tab
+                var thread = new ChatThread
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    Title = fileVm.FileName,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    LastActivityAt = DateTimeOffset.UtcNow,
+                    IsTransient = true
+                };
+
+                var tab = new ChatTabItem(thread);
+                ChatTabs.Add(tab);
+                ActiveTab = tab;
+
+                // Populate file content as a system message
+                if (!string.IsNullOrEmpty(fileVm.FileContent))
+                {
+                    var contentMsg = new Message
+                    {
+                        Id = Guid.NewGuid().ToString("N"),
+                        ThreadId = thread.Id,
+                        Role = "system",
+                        Content = fileVm.FileContent,
+                        CreatedAt = DateTimeOffset.UtcNow
+                    };
+                    tab.Messages.Add(contentMsg);
+                }
+
+                // Start auto-save timer on first tab creation
+                if (_draftTimer is null)
+                    StartDraftTimer();
+
+                _logger.LogDebug("Opened file viewer tab for '{FileName}' ({Type})",
+                    fileVm.FileName, fileVm.FileType);
+                return tab;
+            }
+
+            var chatThread = await _chatService.CreateThreadAsync(fileVm.FileName, true, persona);
+            var chatTab = new ChatTabItem(chatThread);
+            ChatTabs.Add(chatTab);
+            ActiveTab = chatTab;
+
+            // Populate file content as a system message
+            if (!string.IsNullOrEmpty(fileVm.FileContent))
+            {
+                var contentMsg = new Message
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    ThreadId = chatThread.Id,
+                    Role = "system",
+                    Content = fileVm.FileContent,
+                    CreatedAt = DateTimeOffset.UtcNow
+                };
+                chatTab.Messages.Add(contentMsg);
+            }
+
+            if (_draftTimer is null)
+                StartDraftTimer();
+
+            _logger.LogDebug("Opened file viewer tab for '{FileName}' ({Type})",
+                fileVm.FileName, fileVm.FileType);
+            return chatTab;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create file viewer tab");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Toggle selection of a specific message. Called via checkbox in the message template.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleMessageSelection(Message? message)
+    {
+        if (message is null) return;
+
+        if (SelectedMessages.Contains(message))
+            SelectedMessages.Remove(message);
+        else
+            SelectedMessages.Add(message);
+
+        OnPropertyChanged(nameof(SelectedCount));
+    }
+
+    /// <summary>
+    /// Enter or exit message selection mode.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleSelectionMode()
+    {
+        IsSelectionMode = !IsSelectionMode;
+        if (!IsSelectionMode)
+        {
+            SelectedMessages.Clear();
+            OnPropertyChanged(nameof(SelectedCount));
+        }
+    }
+
+    /// <summary>
+    /// Delete all selected messages.
+    /// </summary>
+    [RelayCommand]
+    private async Task DeleteSelectedMessagesAsync()
+    {
+        var toDelete = SelectedMessages.ToList();
+        foreach (var msg in toDelete)
+        {
+            try
+            {
+                await _chatService.DeleteMessageAsync(msg.Id);
+                ActiveTab?.Messages.Remove(msg);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete selected message '{MessageId}'", msg.Id);
+            }
+        }
+        SelectedMessages.Clear();
+        OnPropertyChanged(nameof(SelectedCount));
+        IsSelectionMode = false;
+    }
+
+    /// <summary>
+    /// Copy all selected messages as Markdown.
+    /// </summary>
+    [RelayCommand]
+    private void CopySelectedMessages()
+    {
+        if (SelectedMessages.Count == 0) return;
+
+        var sb = new StringBuilder();
+        foreach (var msg in SelectedMessages)
+        {
+            sb.AppendLine($"## {msg.Role}");
+            sb.AppendLine(msg.Content);
+            sb.AppendLine();
+        }
+
+        try
+        {
+            System.Windows.Clipboard.SetText(sb.ToString());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to copy selected messages to clipboard");
+        }
+    }
+
+    /// <summary>
+    /// Quote selected messages into the textbox.
+    /// </summary>
+    [RelayCommand]
+    private void QuoteSelectedMessages()
+    {
+        if (SelectedMessages.Count == 0 || ActiveTab is null) return;
+
+        var sb = new StringBuilder();
+        foreach (var msg in SelectedMessages)
+        {
+            sb.AppendLine($"> **{msg.Role}**: {msg.Content}");
+            sb.AppendLine();
+        }
+
+        ActiveTab.TextboxContent = sb.ToString() + ActiveTab.TextboxContent;
+        IsSelectionMode = false;
+        SelectedMessages.Clear();
+        OnPropertyChanged(nameof(SelectedCount));
+    }
+
+    // ================================================================
+    // Lock/Unlock chat (C31)
+    // ================================================================
+
+    [RelayCommand]
+    private async Task LockChatAsync()
+    {
+        if (ActiveTab is null) return;
+
+        try
+        {
+            var dialog = new LockedChatPasswordDialog(
+                new LockedChatViewModel(ActiveTab.Thread.Id, true));
+            dialog.Owner = System.Windows.Application.Current?.MainWindow;
+
+            if (dialog.ShowDialog() == true)
+            {
+                var vm = (LockedChatViewModel)dialog.DataContext;
+                await _lockedChatService.LockChatAsync(ActiveTab.Thread.Id, vm.Password);
+                ActiveTab.Thread.IsLocked = true;
+                OnPropertyChanged(nameof(IsLocked));
+                OnPropertyChanged(nameof(TabStateIcon));
+                _logger.LogInformation("Chat '{ThreadId}' locked", ActiveTab.Thread.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to lock chat");
+        }
+    }
+
+    [RelayCommand]
+    private async Task UnlockChatAsync()
+    {
+        if (ActiveTab is null) return;
+
+        try
+        {
+            var dialog = new LockedChatPasswordDialog(
+                new LockedChatViewModel(ActiveTab.Thread.Id, false));
+            dialog.Owner = System.Windows.Application.Current?.MainWindow;
+
+            if (dialog.ShowDialog() == true)
+            {
+                var vm = (LockedChatViewModel)dialog.DataContext;
+                await _lockedChatService.UnlockChatAsync(ActiveTab.Thread.Id, vm.Password);
+
+                // Reload messages
+                var messages = await _chatService.GetActiveBranchMessagesAsync(ActiveTab.Thread.Id);
+                ActiveTab.Messages = new ObservableCollection<Message>(messages);
+                ActiveTab.Thread.IsLocked = false;
+                OnPropertyChanged(nameof(IsLocked));
+                OnPropertyChanged(nameof(TabStateIcon));
+                _logger.LogInformation("Chat '{ThreadId}' unlocked", ActiveTab.Thread.Id);
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _logger.LogWarning("Incorrect password attempt for chat '{ThreadId}'", ActiveTab.Thread.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to unlock chat");
+        }
+    }
+
     // ================================================================
     // Chat mode command — switches between Standard and TextCompletion
     // ================================================================
@@ -1152,8 +1513,46 @@ public partial class ChatThreadViewModel : ObservableObject
                 return;
             }
 
-            // Stub: full implementation will use LLM to summarize
-            _logger.LogDebug("Summarize chat requested for thread '{ThreadId}' ({Count} messages)",
+            // Build conversation summary and insert as a system message
+            var sb = new StringBuilder();
+            sb.AppendLine("📝 **Chat Summary**");
+            sb.AppendLine();
+            sb.AppendLine($"**Messages**: {messages.Count}");
+            sb.AppendLine($"**First message**: {messages[0].CreatedAt:g}");
+            sb.AppendLine($"**Last message**: {messages[^1].CreatedAt:g}");
+            sb.AppendLine();
+
+            var userMsgs = messages.Count(m => m.Role == "user");
+            var assistantMsgs = messages.Count(m => m.Role == "assistant");
+            sb.AppendLine($"**User messages**: {userMsgs}");
+            sb.AppendLine($"**Assistant messages**: {assistantMsgs}");
+
+            // Show first few user messages as summary preview
+            var previewMsgs = messages.Where(m => m.Role == "user").Take(3).ToList();
+            if (previewMsgs.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("**Preview**:");
+                foreach (var msg in previewMsgs)
+                {
+                    var preview = msg.Content?.Length > 100
+                        ? msg.Content[..100] + "..."
+                        : msg.Content;
+                    sb.AppendLine($"> {preview}");
+                }
+            }
+
+            var summaryMsg = new Message
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                ThreadId = ActiveTab.Thread.Id,
+                Role = "system",
+                Content = sb.ToString(),
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+
+            ActiveTab.Messages.Add(summaryMsg);
+            _logger.LogDebug("Chat summary generated for thread '{ThreadId}' ({Count} messages)",
                 ActiveTab.Thread.Id, messages.Count);
         }
         catch (Exception ex)
@@ -1186,6 +1585,7 @@ public partial class ChatThreadViewModel : ObservableObject
             }
 
             OnPropertyChanged(nameof(IsTemporary));
+            OnPropertyChanged(nameof(TabStateIcon));
         }
         catch (Exception ex)
         {
@@ -1339,6 +1739,7 @@ public partial class ChatThreadViewModel : ObservableObject
         _activeCts?.Dispose();
 
         WeakReferenceMessenger.Default.Unregister<GenerationCompletedMessage>(this);
+        NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
     }
 
     // ================================================================
