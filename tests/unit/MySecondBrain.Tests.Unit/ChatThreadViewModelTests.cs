@@ -1337,4 +1337,188 @@ public class ChatThreadViewModelTests
         // Assert
         Assert.Null(exception);
     }
+
+    // ================================================================
+    // Step 7: Chat Header, Chat Modes, System Message Editor
+    // ================================================================
+
+    [Fact]
+    public void SwitchChatMode_FromStandardToTextCompletion_WarnsAboutHistoryLoss()
+    {
+        // Arrange
+        _confirmationServiceMock.Setup(c => c.Confirm(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(true);
+        var vm = CreateViewModel();
+
+        // Act
+        vm.SwitchChatModeCommand.Execute(null);
+
+        // Assert
+        Assert.Equal(ChatMode.TextCompletion, vm.ChatMode);
+        _confirmationServiceMock.Verify(c => c.Confirm(
+            It.Is<string>(s => s.Contains("Text Completion")),
+            It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
+    public void SwitchChatMode_FromTextCompletionToStandard_NoWarning()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        vm.ChatMode = ChatMode.TextCompletion;
+
+        // Act
+        vm.SwitchChatModeCommand.Execute(null);
+
+        // Assert
+        Assert.Equal(ChatMode.Standard, vm.ChatMode);
+        // Switching from TextCompletion → Standard does not require confirmation
+        _confirmationServiceMock.Verify(c => c.Confirm(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public void EditSystemMessage_PrePopulatesFromActivePersona()
+    {
+        // Arrange
+        _personaRepoMock.Setup(r => r.GetDefaultAsync())
+            .ReturnsAsync(_generalAssistant);
+        _personaRepoMock.Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper });
+        _settingsRepoMock.Setup(r => r.GetAsync<string>(It.IsAny<string>()))
+            .ReturnsAsync((string?)null);
+        var vm = CreateViewModel();
+
+        // Set active persona
+        vm.SelectPersonaCommand.Execute(_generalAssistant);
+
+        // Act
+        vm.EditSystemMessageCommand.Execute(null);
+
+        // Assert
+        Assert.Equal(_generalAssistant.SystemPrompt, vm.EditingSystemMessage);
+        Assert.True(vm.IsSystemMessageEditorOpen);
+    }
+
+    [Fact]
+    public void SaveSystemMessage_StoresOnThread()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        var thread = new ChatThread { Id = "t1" };
+        var tab = new ChatTabItem(thread);
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+        vm.EditingSystemMessage = "Custom system prompt";
+
+        // Act
+        vm.SaveSystemMessageCommand.Execute(null);
+
+        // Assert
+        Assert.Equal("Custom system prompt", tab.Thread.SystemMessage);
+        Assert.False(vm.IsSystemMessageEditorOpen);
+    }
+
+    [Fact]
+    public void ResetSystemMessage_RestoresPersonaDefault()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        vm.SelectPersonaCommand.Execute(_generalAssistant);
+        vm.EditingSystemMessage = "Modified prompt";
+
+        // Act
+        vm.ResetSystemMessageCommand.Execute(null);
+
+        // Assert
+        Assert.Equal(_generalAssistant.SystemPrompt, vm.EditingSystemMessage);
+    }
+
+    [Fact]
+    public void ClearConversation_RemovesMessagesAndResetsCost()
+    {
+        // Arrange
+        _confirmationServiceMock.Setup(c => c.Confirm(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(true);
+        var vm = CreateViewModel();
+        var thread = new ChatThread { Id = "t1" };
+        var tab = new ChatTabItem(thread);
+        tab.Messages.Add(new Message { Content = "Hello", Role = "user" });
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+        vm.CumulativeCost = 0.42m;
+        vm.ContextTokens = 150;
+
+        // Act
+        vm.ClearConversationCommand.Execute(null);
+
+        // Assert
+        Assert.Empty(tab.Messages);
+        Assert.Equal(0, vm.CumulativeCost);
+        Assert.Equal(0, vm.ContextTokens);
+    }
+
+    [Fact]
+    public void ClearConversation_WithoutConfirmation_DoesNothing()
+    {
+        // Arrange
+        _confirmationServiceMock.Setup(c => c.Confirm(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(false);
+        var vm = CreateViewModel();
+        var thread = new ChatThread { Id = "t1" };
+        var tab = new ChatTabItem(thread);
+        tab.Messages.Add(new Message { Content = "Hello", Role = "user" });
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        // Act
+        vm.ClearConversationCommand.Execute(null);
+
+        // Assert
+        Assert.Single(tab.Messages);
+    }
+
+    [Fact]
+    public void ToggleTemporary_MakesChatTemporary()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        var thread = new ChatThread { Id = "t1", IsTransient = false };
+        var tab = new ChatTabItem(thread);
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        _chatServiceMock.Setup(s => s.SoftDeleteThreadAsync(It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        vm.ToggleTemporaryCommand.Execute(null);
+
+        // Assert
+        Assert.True(tab.Thread.IsTransient);
+    }
+
+    [Fact]
+    public void PinWindow_TogglesTopmost()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+
+        // We can't easily test MainWindow.Topmost in unit tests,
+        // but the command should not throw
+        var exception = Record.Exception(() => vm.TogglePinWindowCommand.Execute(null));
+
+        // Assert
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void ShowHelpCommands_DoNotThrow()
+    {
+        var vm = CreateViewModel();
+
+        // These commands should never throw — they're informational
+        Assert.Null(Record.Exception(() => vm.ShowAppDataLocationsCommand.Execute(null)));
+        Assert.Null(Record.Exception(() => vm.ShowKeyboardShortcutsCommand.Execute(null)));
+        Assert.Null(Record.Exception(() => vm.ShowAboutCommand.Execute(null)));
+    }
 }

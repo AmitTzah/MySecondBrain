@@ -29,6 +29,21 @@ public class ChatThread
     public string? LockSalt { get; set; } // Base64
     public string? LockNonce { get; set; } // Base64
 
+    // Chat mode & system message fields
+    public string? SystemMessage { get; set; }
+    public string ChatMode { get; set; } = "Standard";
+    public bool ThinkingEnabled { get; set; }
+    public bool IsMuted { get; set; }
+
+    // Source context fields (for [Apply] button)
+    public string? SourceHWND { get; set; }
+    public string? SourceAppName { get; set; }
+    public string? SourceDocTitle { get; set; }
+    public string? OriginalHighlightedText { get; set; }
+
+    // Soft-delete
+    public DateTimeOffset? DeletedAt { get; set; }
+
     public ICollection<Message> Messages { get; set; } = new List<Message>();
 }
 

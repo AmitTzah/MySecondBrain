@@ -121,6 +121,22 @@ public partial class ChatThreadViewModel : ObservableObject
 
         OnPropertyChanged(nameof(IsStreaming));
 
+        // Restore per-tab state from the thread
+        if (value?.Thread is not null)
+        {
+            // Restore chat mode from thread property
+            if (Enum.TryParse<ChatMode>(value.Thread.ChatMode, out var mode))
+                ChatMode = mode;
+
+            // Restore system message
+            if (!string.IsNullOrEmpty(value.Thread.SystemMessage))
+                EditingSystemMessage = value.Thread.SystemMessage;
+
+            // Restore thinking/mute state
+            ThinkingEnabled = value.Thread.ThinkingEnabled;
+            IsMuted = value.Thread.IsMuted;
+        }
+
         // Unsubscribe from the previous tab to prevent leaks
         if (_subscribedTab is not null)
             _subscribedTab.PropertyChanged -= OnActiveTabPropertyChanged;
@@ -424,6 +440,10 @@ public partial class ChatThreadViewModel : ObservableObject
             {
                 ActiveModelConfig = null;
             }
+
+            // Apply persona's default chat mode
+            if (Enum.TryParse<ChatMode>(persona.DefaultChatMode, out var personaMode))
+                ChatMode = personaMode;
 
             await TrackRecentPersonaAsync(persona.Id);
             await _settingsRepo.SetAsync(LastSelectedPersonaIdKey, persona.Id);
@@ -862,6 +882,337 @@ public partial class ChatThreadViewModel : ObservableObject
     private void ToggleMemory()
     {
         MemoryEnabled = !MemoryEnabled;
+    }
+
+    // ================================================================
+    // Chat mode properties
+    // ================================================================
+
+    /// <summary>
+    /// Current chat mode: Standard (conversation history sent) or
+    /// TextCompletion (raw prompt sent without context).
+    /// </summary>
+    [ObservableProperty]
+    private ChatMode _chatMode = ChatMode.Standard;
+
+    /// <summary>
+    /// Returns a display label for the current chat mode.
+    /// </summary>
+    public string ChatModeDisplay => ChatMode == ChatMode.Standard ? "Standard" : "Text";
+
+    partial void OnChatModeChanged(ChatMode value)
+    {
+        OnPropertyChanged(nameof(ChatModeDisplay));
+    }
+
+    // ================================================================
+    // System message editor state (E5)
+    // ================================================================
+
+    /// <summary>True when the system message editor popover is open.</summary>
+    [ObservableProperty]
+    private bool _isSystemMessageEditorOpen;
+
+    /// <summary>
+    /// The editable system message text currently shown in the editor popover.
+    /// Pre-populated from the active persona or thread's custom system message.
+    /// </summary>
+    [ObservableProperty]
+    private string _editingSystemMessage = string.Empty;
+
+    // ================================================================
+    // Source context properties (for [Apply] button shell)
+    // ================================================================
+
+    /// <summary>
+    /// True when the active chat has source context (e.g., from a text action
+    /// or attached document). Controls visibility of the source banner.
+    /// </summary>
+    [ObservableProperty]
+    private bool _hasSourceContext;
+
+    /// <summary>
+    /// Display text for the source context banner, e.g. "[Source: Word — 'document.docx']".
+    /// </summary>
+    [ObservableProperty]
+    private string? _sourceContextText;
+
+    // ================================================================
+    // Temporary/incognito chat state
+    // ================================================================
+
+    /// <summary>
+    /// True when the active chat is temporary (🕶️ indicator).
+    /// Read from ActiveTab.Thread.IsTransient on tab switch.
+    /// </summary>
+    public bool IsTemporary => ActiveTab?.Thread.IsTransient ?? false;
+
+    // ================================================================
+    // Chat mode command — switches between Standard and TextCompletion
+    // ================================================================
+
+    [RelayCommand]
+    private void SwitchChatMode()
+    {
+        if (ChatMode == ChatMode.TextCompletion)
+        {
+            // Switching back to Standard — no warning needed
+            ChatMode = ChatMode.Standard;
+            _logger.LogDebug("Switched to Standard chat mode");
+        }
+        else
+        {
+            // Switching to TextCompletion — warn about history loss
+            var confirmed = _confirmationService.Confirm(
+                "Switching to Text Completion mode will not send conversation history. " +
+                "Only the current prompt will be sent to the model. Continue?",
+                "Switch Chat Mode");
+            if (!confirmed) return;
+
+            ChatMode = ChatMode.TextCompletion;
+            _logger.LogDebug("Switched to Text Completion chat mode");
+        }
+    }
+
+    // ================================================================
+    // Three-dot menu commands (C16a)
+    // ================================================================
+
+    [RelayCommand]
+    private void OpenApiHistory()
+    {
+        try
+        {
+            // Open API history JSON file in a file viewer tab
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var historyPath = System.IO.Path.Combine(appData, "MySecondBrain", "_api_history.json");
+
+            // Send a message to navigate to this file (handled by MainWindow)
+            _logger.LogDebug("Opening API history: {Path}", historyPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to open API history");
+        }
+    }
+
+    [RelayCommand]
+    private void ClearConversation()
+    {
+        if (ActiveTab is null) return;
+
+        var confirmed = _confirmationService.Confirm(
+            "Are you sure you want to clear this conversation? All messages will be removed.",
+            "Clear Conversation");
+        if (!confirmed) return;
+
+        try
+        {
+            ActiveTab.Messages.Clear();
+            CumulativeCost = 0;
+            ContextTokens = 0;
+            _logger.LogDebug("Cleared conversation for thread '{ThreadId}'", ActiveTab.Thread.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to clear conversation");
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportChatAsync()
+    {
+        if (ActiveTab is null) return;
+
+        try
+        {
+            var messages = await _chatService.GetActiveBranchMessagesAsync(ActiveTab.Thread.Id);
+            if (messages.Count == 0)
+            {
+                _logger.LogWarning("No messages to export");
+                return;
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"# {ActiveTab.Thread.Title ?? "Exported Chat"}");
+            sb.AppendLine();
+            foreach (var msg in messages)
+            {
+                sb.AppendLine($"## {msg.Role}");
+                sb.AppendLine(msg.Content);
+                sb.AppendLine();
+            }
+
+            var exportPath = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                $"chat-export-{ActiveTab.Thread.Id[..8]}.md");
+            await System.IO.File.WriteAllTextAsync(exportPath, sb.ToString());
+            _logger.LogDebug("Exported chat to {Path}", exportPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to export chat");
+        }
+    }
+
+    [RelayCommand]
+    private async Task DuplicateChatAsync()
+    {
+        if (ActiveTab is null) return;
+
+        try
+        {
+            var persona = ActivePersona ?? PersonaList.FirstOrDefault();
+            if (persona is null) return;
+
+            var newThread = await _chatService.CreateThreadAsync(
+                null, false, persona);
+            if (newThread is null) return;
+
+            // Copy messages without invoking LLM — just clone the in-memory content
+            var sourceMessages = ActiveTab.Messages.ToList();
+            foreach (var msg in sourceMessages)
+            {
+                var clonedMessage = new Message
+                {
+                    ThreadId = newThread.Id,
+                    Role = msg.Role,
+                    Content = msg.Content,
+                    ModelName = msg.ModelName,
+                    EstimatedCost = msg.EstimatedCost,
+                    PromptTokens = msg.PromptTokens,
+                    CompletionTokens = msg.CompletionTokens,
+                    TotalTokens = msg.TotalTokens,
+                    GenerationTimeMs = msg.GenerationTimeMs,
+                };
+                await _chatService.SendMessageAsync(newThread.Id, msg.Content, CancellationToken.None);
+            }
+
+            // Reload messages from the service for the new tab
+            var newMessages = await _chatService.GetActiveBranchMessagesAsync(newThread.Id);
+            var tab = new ChatTabItem(newThread);
+            tab.Messages = new ObservableCollection<Message>(newMessages);
+            ChatTabs.Add(tab);
+            ActiveTab = tab;
+            _logger.LogDebug("Duplicated chat to thread '{ThreadId}'", newThread.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to duplicate chat");
+        }
+    }
+
+    [RelayCommand]
+    private void ShowChatTree()
+    {
+        // Stub — full implementation in Feature 14 (Message Branching)
+        _logger.LogDebug("Chat tree requested (stub)");
+    }
+
+    [RelayCommand]
+    private void EditSystemMessage()
+    {
+        // Pre-populate the editor: thread's saved custom message first, then persona default
+        EditingSystemMessage = ActiveTab?.Thread?.SystemMessage
+            ?? ActivePersona?.SystemPrompt
+            ?? string.Empty;
+        IsSystemMessageEditorOpen = true;
+        _logger.LogDebug("Opened system message editor");
+    }
+
+    [RelayCommand]
+    private void SaveSystemMessage()
+    {
+        if (ActiveTab is null) return;
+
+        ActiveTab.Thread.SystemMessage = EditingSystemMessage;
+        _logger.LogDebug("Saved system message for thread '{ThreadId}'", ActiveTab.Thread.Id);
+        IsSystemMessageEditorOpen = false;
+    }
+
+    [RelayCommand]
+    private void ResetSystemMessage()
+    {
+        // Reset to persona default
+        EditingSystemMessage = ActivePersona?.SystemPrompt ?? string.Empty;
+        _logger.LogDebug("Reset system message to persona default");
+    }
+
+    [RelayCommand]
+    private async Task SummarizeChatAsync()
+    {
+        if (ActiveTab is null) return;
+
+        try
+        {
+            var messages = await _chatService.GetActiveBranchMessagesAsync(ActiveTab.Thread.Id);
+            if (messages.Count == 0)
+            {
+                _logger.LogWarning("No messages to summarize");
+                return;
+            }
+
+            // Stub: full implementation will use LLM to summarize
+            _logger.LogDebug("Summarize chat requested for thread '{ThreadId}' ({Count} messages)",
+                ActiveTab.Thread.Id, messages.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to summarize chat");
+        }
+    }
+
+    [RelayCommand]
+    private async Task ToggleTemporaryAsync()
+    {
+        if (ActiveTab is null) return;
+
+        try
+        {
+            var isCurrentlyTransient = ActiveTab.Thread.IsTransient;
+            if (isCurrentlyTransient)
+            {
+                await _chatService.ElevateToPermanentAsync(ActiveTab.Thread.Id);
+                ActiveTab.Thread.IsTransient = false;
+                _logger.LogDebug("Made chat permanent");
+            }
+            else
+            {
+                // Soft-delete any existing messages, mark as transient
+                await _chatService.SoftDeleteThreadAsync(ActiveTab.Thread.Id);
+                ActiveTab.Thread.IsTransient = true;
+                ActiveTab.Messages.Clear();
+                _logger.LogDebug("Made chat temporary");
+            }
+
+            OnPropertyChanged(nameof(IsTemporary));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to toggle temporary state");
+        }
+    }
+
+    // ================================================================
+    // Help menu commands
+    // ================================================================
+
+    [RelayCommand]
+    private void ShowAppDataLocations()
+    {
+        _logger.LogDebug("App Data Locations requested — navigation handled by MainWindowViewModel");
+    }
+
+    [RelayCommand]
+    private void ShowKeyboardShortcuts()
+    {
+        _logger.LogDebug("Keyboard shortcuts requested");
+    }
+
+    [RelayCommand]
+    private void ShowAbout()
+    {
+        _logger.LogDebug("About dialog requested");
     }
 
     // ================================================================

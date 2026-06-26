@@ -166,79 +166,8 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Row 0: Chat Header Bar -->
-        <Border Grid.Row="0" Background="{DynamicResource HeaderBackground}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
-                Padding="12,8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Left: Persona name + context bar + cost -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal"
-                            VerticalAlignment="Center">
-                    <TextBlock Text="{Binding ActivePersona.DisplayName, FallbackValue='Select Persona'}"
-                               FontSize="14" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ContentForeground}"
-                               VerticalAlignment="Center"/>
-                    <controls:TokenContextBar ContextTokens="{Binding ContextTokens}"
-                                              ContextMaxTokens="{Binding ContextMaxTokens}"
-                                              Margin="12,0,0,0"
-                                              VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding CumulativeCost, StringFormat='${0:F2} total'}"
-                               VerticalAlignment="Center"
-                               FontSize="11" Foreground="{DynamicResource SubtleBrush}"
-                               Margin="12,0,0,0"/>
-                </StackPanel>
-
-                <!-- Right: Action buttons -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal"
-                            VerticalAlignment="Center">
-                    <ComboBox ItemsSource="{Binding DataContext.ChatThemeOptions, RelativeSource={RelativeSource AncestorType=Window}}"
-                              SelectedItem="{Binding DataContext.CurrentChatTheme, RelativeSource={RelativeSource AncestorType=Window}}"
-                              FontSize="11" Width="90" Margin="0,0,6,0"
-                              Background="{DynamicResource InputBackground}"
-                              Foreground="{DynamicResource ContentForeground}"
-                              BorderBrush="{DynamicResource BorderBrush}"
-                              AutomationProperties.AutomationId="ChatThemeCombo">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}"/>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                    <Button Content="A⁻" Background="Transparent" BorderThickness="0"
-                            Foreground="{DynamicResource SubtleBrush}" FontSize="13"
-                            ToolTip="Decrease font size" Padding="4,2"
-                            Command="{Binding DataContext.DecreaseFontCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                            AutomationProperties.AutomationId="DecreaseFontBtn"/>
-                    <TextBlock Text="{Binding DataContext.FontSizeDisplay, RelativeSource={RelativeSource AncestorType=Window}}"
-                                VerticalAlignment="Center"
-                                FontSize="11" Foreground="{DynamicResource SubtleBrush}"
-                                MinWidth="20" TextAlignment="Center"
-                                AutomationProperties.AutomationId="FontSizeDisplay"/>
-                    <Button Content="A⁺" Background="Transparent" BorderThickness="0"
-                            Foreground="{DynamicResource SubtleBrush}" FontSize="13"
-                            ToolTip="Increase font size" Padding="4,2"
-                            Command="{Binding DataContext.IncreaseFontCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                            AutomationProperties.AutomationId="IncreaseFontBtn"/>
-                    <Button Command="{Binding DataContext.ToggleThemeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                            Content="{Binding DataContext.ThemeToggleIcon, RelativeSource={RelativeSource AncestorType=Window}}"
-                            Background="Transparent" BorderThickness="0"
-                            Foreground="{DynamicResource SubtleBrush}" FontSize="14"
-                            ToolTip="Toggle dark/light mode" Padding="4,2" Margin="4,0,0,0"
-                            AutomationProperties.AutomationId="ThemeToggleBtn"/>
-                    <Button Content="📌" Background="Transparent" BorderThickness="0"
-                            Foreground="{DynamicResource SubtleBrush}" FontSize="14"
-                            ToolTip="Pin chat" Padding="4,2"/>
-                    <Button Content="⋯" Background="Transparent" BorderThickness="0"
-                            Foreground="{DynamicResource SubtleBrush}" FontSize="14"
-                            ToolTip="More options" Padding="4,2"/>
-                </StackPanel>
-            </Grid>
-        </Border>
+        <!-- Row 0: Chat Header Bar — standalone ChatHeaderBar control -->
+        <local:ChatHeaderBar Grid.Row="0"/>
 
         <!-- Row 1: Conversation Area (VirtualizingStackPanel) -->
         <Border Grid.Row="1" Background="{DynamicResource ContentBackground}">
@@ -366,15 +295,39 @@
                               Padding="4,2" Margin="2"
                               VerticalContentAlignment="Center"
                               AutomationProperties.AutomationId="PersonaSelector"/>
+                    <!-- Chat Mode Selector -->
+                    <Border BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1" CornerRadius="4" Margin="2"
+                            Padding="0">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="{Binding ChatModeDisplay}"
+                                    FontSize="10"
+                                    Padding="6,3"
+                                    Background="{DynamicResource AccentBrush}"
+                                    Foreground="{DynamicResource AccentForeground}"
+                                    BorderThickness="0"
+                                    Command="{Binding SwitchChatModeCommand}"
+                                    ToolTip="{Binding ChatModeDisplay, StringFormat='Current: {0}'}"
+                                    AutomationProperties.AutomationId="ChatModeBtn"/>
+                            <TextBlock Text="{Binding ChatModeDisplay}"
+                                       FontSize="9"
+                                       Foreground="{DynamicResource SubtleBrush}"
+                                       VerticalAlignment="Center"
+                                       Margin="4,0,4,0"/>
+                        </StackPanel>
+                    </Border>
+
                     <Button Content="🧠 Thinking" FontSize="10"
                             Background="Transparent" BorderBrush="{DynamicResource AccentBrush}"
                             BorderThickness="1" Foreground="{DynamicResource AccentBrush}"
                             Padding="6,3" Margin="2"
+                            Command="{Binding ToggleThinkingCommand}"
                             AutomationProperties.AutomationId="ThinkingToggleBtn"/>
                     <Button Content="🔇 Mute" FontSize="10"
                             Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
                             Padding="6,3" Margin="2"
+                            Command="{Binding ToggleMuteCommand}"
                             AutomationProperties.AutomationId="MuteToggleBtn"/>
 
                     <ToggleButton x:Name="ToolsDropdownBtn" Content="🔧 Tools ▼" FontSize="10"

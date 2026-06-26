@@ -83,6 +83,16 @@ public enum ContextOverflowStrategy
     HardStop
 }
 
+/// <summary>
+/// Chat mode — Standard sends conversation history; TextCompletion sends raw
+/// prompt-to-completion API requests without conversation context.
+/// </summary>
+public enum ChatMode
+{
+    Standard,
+    TextCompletion
+}
+
 public enum SettingsCategory
 {
     Providers,

@@ -1,0 +1,348 @@
+<UserControl x:Class="MySecondBrain.UI.Views.ChatHeaderBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:MySecondBrain.UI.Controls"
+             xmlns:models="clr-namespace:MySecondBrain.Core.Models;assembly=MySecondBrain.Core"
+             Background="{DynamicResource HeaderBackground}"
+             AutomationProperties.AutomationId="ChatHeaderBar">
+
+    <UserControl.Resources>
+        <Style x:Key="HeaderButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <Style x:Key="ThreeDotMenuStyle" TargetType="MenuItem">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource ContentForeground}"/>
+            <Setter Property="Background" Value="{DynamicResource ContentBackground}"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+                Padding="12,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 1. Persona name (clickable → system message popover) -->
+                <Button Grid.Column="0"
+                        x:Name="PersonaNameBtn"
+                        Content="{Binding ActivePersona.DisplayName, FallbackValue='Select Persona'}"
+                        FontSize="13" FontWeight="SemiBold"
+                        Foreground="{DynamicResource ContentForeground}"
+                        Background="Transparent" BorderThickness="0"
+                        Padding="4,2" Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                        Cursor="Hand"
+                        ToolTip="Click to edit system message"
+                        Click="PersonaNameBtn_Click"
+                        AutomationProperties.AutomationId="PersonaNameBtn"/>
+
+                <!-- 2. Chat Theme Selector -->
+                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding DataContext.ChatThemeOptions, RelativeSource={RelativeSource AncestorType=Window}}"
+                          SelectedItem="{Binding DataContext.CurrentChatTheme, RelativeSource={RelativeSource AncestorType=Window}}"
+                          FontSize="11" Width="90"
+                          Margin="0,0,6,0"
+                          VerticalAlignment="Center"
+                          Background="{DynamicResource InputBackground}"
+                          Foreground="{DynamicResource ContentForeground}"
+                          BorderBrush="{DynamicResource BorderBrush}"
+                          AutomationProperties.AutomationId="ChatThemeCombo">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <!-- 3. 📡 API History -->
+                <Button Grid.Column="2"
+                        Content="📡"
+                        Style="{StaticResource HeaderButtonStyle}"
+                        ToolTip="View API History Log"
+                        Command="{Binding OpenApiHistoryCommand}"
+                        AutomationProperties.AutomationId="ApiHistoryBtn"/>
+
+                <!-- 4. Token Context Bar -->
+                <controls:TokenContextBar Grid.Column="3"
+                                           ContextTokens="{Binding ContextTokens}"
+                                           ContextMaxTokens="{Binding ContextMaxTokens}"
+                                           Margin="6,0"
+                                           VerticalAlignment="Center"/>
+
+                <!-- 5. Cumulative Cost -->
+                <TextBlock Grid.Column="4"
+                           Text="{Binding CumulativeCost, StringFormat='${0:F2} total'}"
+                           VerticalAlignment="Center"
+                           FontSize="11"
+                           Foreground="{DynamicResource SubtleBrush}"
+                           Margin="6,0,8,0"/>
+
+                <!-- 6. Source Banner (visible when chat has source context) -->
+                <Border Grid.Column="5"
+                        x:Name="SourceBanner"
+                        Background="{DynamicResource InputBackground}"
+                        CornerRadius="4"
+                        Padding="6,2"
+                        Margin="0,0,4,0"
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed"
+                        AutomationProperties.AutomationId="SourceBanner">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="SourceContextTextBlock"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource ContentForeground}"
+                                   VerticalAlignment="Center"/>
+                        <!-- 7. [Apply Latest] Button (grayed out) -->
+                        <Button Content="[Apply Latest]"
+                                FontSize="11"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Foreground="{DynamicResource SubtleBrush}"
+                                Padding="4,1" Margin="4,0,0,0"
+                                IsEnabled="False"
+                                ToolTip="Text action integration coming in a future update"
+                                AutomationProperties.AutomationId="ApplyLatestBtn"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 8. Spacer (auto-fills via * column) -->
+
+                <!-- 9. Font size controls -->
+                <StackPanel Grid.Column="8" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="A⁻"
+                            Style="{StaticResource HeaderButtonStyle}"
+                            FontSize="13"
+                            ToolTip="Decrease font size"
+                            Command="{Binding DecreaseFontCommand}"
+                            AutomationProperties.AutomationId="DecreaseFontBtn"/>
+                    <TextBlock Text="{Binding DataContext.FontSizeDisplay, RelativeSource={RelativeSource AncestorType=Window}}"
+                               VerticalAlignment="Center"
+                               FontSize="11"
+                               Foreground="{DynamicResource SubtleBrush}"
+                               MinWidth="20"
+                               TextAlignment="Center"
+                               AutomationProperties.AutomationId="FontSizeDisplay"/>
+                    <Button Content="A⁺"
+                            Style="{StaticResource HeaderButtonStyle}"
+                            FontSize="13"
+                            ToolTip="Increase font size"
+                            Command="{Binding IncreaseFontCommand}"
+                            AutomationProperties.AutomationId="IncreaseFontBtn"/>
+                </StackPanel>
+
+                <!-- 10. Dark Mode Toggle -->
+                <Button Grid.Column="9"
+                        Content="{Binding DataContext.ThemeToggleIcon, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Style="{StaticResource HeaderButtonStyle}"
+                        FontSize="14"
+                        ToolTip="Toggle dark/light mode"
+                        Command="{Binding ToggleThemeCommand}"
+                        AutomationProperties.AutomationId="ThemeToggleBtn"/>
+
+                <!-- 11. Pin Window Toggle -->
+                <Button Grid.Column="10"
+                        Content="📌"
+                        Style="{StaticResource HeaderButtonStyle}"
+                        FontSize="14"
+                        ToolTip="Pin window to stay on top"
+                        Command="{Binding TogglePinWindowCommand}"
+                        AutomationProperties.AutomationId="PinWindowBtn"/>
+
+                <!-- 12. Help Button (with dropdown) -->
+                <Button Grid.Column="11"
+                        x:Name="HelpBtn"
+                        Content="?"
+                        Style="{StaticResource HeaderButtonStyle}"
+                        FontSize="14" FontWeight="Bold"
+                        ToolTip="Help"
+                        Click="HelpBtn_Click"
+                        AutomationProperties.AutomationId="HelpBtn">
+                    <Button.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="App Data Locations"
+                                      Command="{Binding ShowAppDataLocationsCommand}"
+                                      Style="{StaticResource ThreeDotMenuStyle}"/>
+                            <MenuItem Header="Keyboard Shortcuts"
+                                      Command="{Binding ShowKeyboardShortcutsCommand}"
+                                      Style="{StaticResource ThreeDotMenuStyle}"/>
+                            <Separator/>
+                            <MenuItem Header="About MySecondBrain"
+                                      Command="{Binding ShowAboutCommand}"
+                                      Style="{StaticResource ThreeDotMenuStyle}"/>
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
+
+                <!-- 13. Three-Dot Menu -->
+                <Button Grid.Column="12"
+                        x:Name="ThreeDotBtn"
+                        Content="⋯"
+                        Style="{StaticResource HeaderButtonStyle}"
+                        FontSize="18"
+                        ToolTip="More options"
+                        Click="ThreeDotBtn_Click"
+                        AutomationProperties.AutomationId="ThreeDotBtn">
+                    <Button.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Clear Conversation"
+                                      Command="{Binding ClearConversationCommand}"
+                                      Style="{StaticResource ThreeDotMenuStyle}"/>
+                            <MenuItem Header="Export Chat"
+                                      Command="{Binding ExportChatCommand}"
+                                      Style="{StaticResource ThreeDotMenuStyle}"/>
+                            <MenuItem Header="Duplicate Chat"
+                                      Command="{Binding DuplicateChatCommand}"
+                                      Style="{StaticResource ThreeDotMenuStyle}"/>
+                            <MenuItem Header="Chat Tree"
+                                      Command="{Binding ShowChatTreeCommand}"
+                                      Style="{StaticResource ThreeDotMenuStyle}"/>
+                            <MenuItem Header="Edit System Message"
+                                      Command="{Binding EditSystemMessageCommand}"
+                                      Style="{StaticResource ThreeDotMenuStyle}"/>
+                            <MenuItem Header="Summarize Chat"
+                                      Command="{Binding SummarizeChatCommand}"
+                                      Style="{StaticResource ThreeDotMenuStyle}"/>
+                            <Separator/>
+                            <MenuItem Header="Make Temporary"
+                                      Command="{Binding ToggleTemporaryCommand}"
+                                      Style="{StaticResource ThreeDotMenuStyle}"/>
+                        </ContextMenu>
+                    </Button.ContextMenu>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- System Message Editor Popover (E5) — appears below the persona name button -->
+        <Popup x:Name="SystemMessagePopup"
+               IsOpen="{Binding IsSystemMessageEditorOpen, Mode=TwoWay}"
+               StaysOpen="False"
+               PlacementTarget="{Binding ElementName=PersonaNameBtn}"
+               Placement="Bottom"
+               AllowsTransparency="True"
+               PopupAnimation="Fade"
+               AutomationProperties.AutomationId="SystemMessagePopup">
+            <Border Background="{DynamicResource ContentBackground}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Width="420"
+                    Padding="12"
+                    Effect="{DynamicResource DropShadowEffect}">
+                <StackPanel>
+                    <TextBlock Text="System Message"
+                               FontSize="13" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="0,0,0,8"/>
+                    <TextBox Text="{Binding EditingSystemMessage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             AcceptsReturn="True"
+                             Height="150"
+                             TextWrapping="Wrap"
+                             FontSize="12"
+                             Foreground="{DynamicResource ContentForeground}"
+                             Background="{DynamicResource InputBackground}"
+                             BorderBrush="{DynamicResource BorderBrush}"
+                             BorderThickness="1"
+                             Padding="6,4"
+                             VerticalScrollBarVisibility="Auto"
+                             AutomationProperties.AutomationId="SystemMessageEditor"/>
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Margin="0,8,0,0">
+                        <Button Content="Reset to Persona Default"
+                                FontSize="11"
+                                Background="Transparent"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                Foreground="{DynamicResource ContentForeground}"
+                                Padding="10,4"
+                                Command="{Binding ResetSystemMessageCommand}"
+                                AutomationProperties.AutomationId="ResetSystemMessageBtn"/>
+                        <Button Content="Save"
+                                FontSize="11"
+                                Padding="10,4"
+                                Margin="8,0,0,0"
+                                Background="{DynamicResource AccentBrush}"
+                                Foreground="{DynamicResource AccentForeground}"
+                                BorderThickness="0"
+                                Command="{Binding SaveSystemMessageCommand}"
+                                AutomationProperties.AutomationId="SaveSystemMessageBtn"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Help overlay content (Keyboard Shortcuts) — shown via popup -->
+        <Popup x:Name="HelpOverlayPopup"
+               IsOpen="False"
+               StaysOpen="False"
+               Placement="Center"
+               AllowsTransparency="True"
+               PopupAnimation="Fade"
+               AutomationProperties.AutomationId="HelpOverlayPopup">
+            <Border Background="{DynamicResource ContentBackground}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Width="400"
+                    Padding="16"
+                    Effect="{DynamicResource DropShadowEffect}">
+                <StackPanel>
+                    <TextBlock Text="Keyboard Shortcuts"
+                               FontSize="16" FontWeight="Bold"
+                               Foreground="{DynamicResource ContentForeground}"
+                               Margin="0,0,0,12"/>
+                    <TextBlock FontSize="12" Foreground="{DynamicResource ContentForeground}">
+                        <Run FontWeight="SemiBold">Ctrl+N</Run>
+                        <Run> — New Chat</Run>
+                        <LineBreak/>
+                        <Run FontWeight="SemiBold">Ctrl+W</Run>
+                        <Run> — Close Tab</Run>
+                        <LineBreak/>
+                        <Run FontWeight="SemiBold">Ctrl+Shift+T</Run>
+                        <Run> — Reopen Last Closed Tab</Run>
+                        <LineBreak/>
+                        <Run FontWeight="SemiBold">Ctrl+T</Run>
+                        <Run> — Next Tab</Run>
+                        <LineBreak/>
+                        <Run FontWeight="SemiBold">Ctrl+Shift+Tab</Run>
+                        <Run> — Previous Tab</Run>
+                        <LineBreak/>
+                        <Run FontWeight="SemiBold">Ctrl+O</Run>
+                        <Run> — Open File Viewer</Run>
+                        <LineBreak/>
+                        <Run FontWeight="SemiBold">Ctrl+/</Run>
+                        <Run> — Toggle Sidebar</Run>
+                        <LineBreak/>
+                        <Run FontWeight="SemiBold">Enter</Run>
+                        <Run> — Send Message</Run>
+                        <LineBreak/>
+                        <Run FontWeight="SemiBold">Shift+Enter</Run>
+                        <Run> — New Line</Run>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>
