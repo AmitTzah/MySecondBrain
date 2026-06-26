@@ -482,4 +482,34 @@ Repeating one more time the core loop here for emphasis:
 
 Please add steps to your TodoList, if you have such a thing, to make sure you don't forget. If you're in Cowork, please specifically put "Create evals JSON and run `eval-viewer/generate_review.py` so human can review test cases" in your TodoList to make sure it happens.
 
+---
+
+## MySecondBrain-Specific Instructions
+
+MySecondBrain is a native Windows desktop app with a single-agent chat model. It does not have subagent spawning, Claude CLI (`claude -p`), or a Unix shell environment. Adapt as follows:
+
+**What works:**
+- Drafting and editing SKILL.md files via `write_to_file` / `apply_diff`
+- Running Python scripts via `bash` using absolute paths from `<skill_resources>` (skills directory is allow-listed for read/execute)
+- Running test cases sequentially (model reads the skill-under-test and follows its instructions itself — see Claude.ai fallback mode above)
+- Inline review: present test outputs directly in chat for user feedback
+- Packaging: `python -m scripts.package_skill <path>` works with Python installed
+- The `assets/eval_review.html` template can be written to workspace and opened via `present_files` in the WebView2 panel
+
+**What does NOT work (skip these):**
+- Subagent spawning: no parallel test runs, no baseline comparisons, no grading agents
+- Quantitative benchmarking: skip `aggregate_benchmark.py` and benchmark.json generation
+- Description optimization: `run_loop.py` / `run_eval.py` require `claude -p` (Claude CLI) — not available
+- Blind comparison: requires subagents — skip
+- Unix commands: `nohup`, `cp -r`, `kill`, `/tmp/` paths — adapt to Windows equivalents (use `copy` / `xcopy`, workspace paths, skip `nohup`)
+
+**Eval viewer:** Use `--static <output_path>` with `generate_review.py` to produce a standalone HTML file, then call `present_files` to surface it in the WebView2 artifacts panel. The interactive feedback mechanism (auto-save textbox, Submit All Reviews button) requires a running server — skip it. Instead, ask the user for inline feedback in chat.
+
+**Core loop (MySecondBrain):**
+1. Interview user → draft SKILL.md
+2. Run test cases one at a time (model acts as the skill executor, not spawned agents)
+3. Present results inline in chat → get user feedback
+4. Improve the skill → repeat
+5. Package via `package_skill.py` when done
+
 Good luck!
