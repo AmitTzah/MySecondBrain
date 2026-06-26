@@ -183,7 +183,7 @@ tests/
 
 ---
 
-### [ ] Step 3: Structural Refactoring — Split ChatThreadService into Focused Modules
+### [x] Step 3: Structural Refactoring — Split ChatThreadService into Focused Modules
 - **Goal:** Split oversized ChatThreadService (634 lines) into focused, single-concern service classes without changing behavior.
 - **Actions:**
   - Extract from ChatThreadService into new files:
