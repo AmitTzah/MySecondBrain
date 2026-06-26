@@ -158,8 +158,11 @@ public partial class App : Application
             var wizardWindow = _serviceProvider.GetRequiredService<OnboardingWizardWindow>();
             var wizardVm = (OnboardingWizardViewModel)wizardWindow.DataContext;
 
+            var studioWasLaunched = false;
+
             wizardVm.LaunchStudioRequested += () =>
             {
+                studioWasLaunched = true;
                 Current.Dispatcher.Invoke(() =>
                 {
                     try
@@ -182,6 +185,15 @@ public partial class App : Application
                         throw;
                     }
                 });
+            };
+
+            wizardWindow.Closed += (_, _) =>
+            {
+                if (ShouldShutdownOnWizardClose(studioWasLaunched))
+                {
+                    startupLogger.LogInformation("Wizard closed without launching studio — shutting down");
+                    Current.Shutdown();
+                }
             };
 
             wizardWindow.Show();
@@ -232,6 +244,13 @@ public partial class App : Application
             }
         });
     }
+
+    /// <summary>
+    /// Determines whether the application should shut down when the onboarding wizard closes.
+    /// </summary>
+    /// <param name="studioWasLaunched"><c>true</c> if the studio was successfully launched via <c>LaunchStudioRequested</c>.</param>
+    /// <returns><c>true</c> if the wizard was abandoned and the process should terminate.</returns>
+    public static bool ShouldShutdownOnWizardClose(bool studioWasLaunched) => !studioWasLaunched;
 
     protected override async void OnExit(ExitEventArgs e)
     {

@@ -38,6 +38,8 @@
 
 Feature 8: Built as envisioned with minor architectural improvement (ApiKeyRedactionEnricher replaced IDestructuringPolicy). Feature 9: E2E Test Suite Rewrite — testing infrastructure only, no user-facing changes. Vision docs remain accurate — no re-plan needed.
 
+**2026-06-26 — Ad-hoc fix:** Onboarding wizard X-button close now calls `Application.Current.Shutdown()` instead of leaving orphaned dotnet.exe processes. Root cause: `ShutdownMode="OnExplicitShutdown"` combined with no explicit shutdown on wizard abandonment. Fix in [`App.xaml.cs`](src/MySecondBrain.UI/App.xaml.cs:161-197): `studioWasLaunched` flag + `Closed` event handler + static `ShouldShutdownOnWizardClose()` helper. 2 new unit tests in [`AppShutdownTests.cs`](tests/unit/MySecondBrain.Tests.Unit/AppShutdownTests.cs).
+
 ## 5. E2E Regression Suite
 
 | Framework | Run Command | Test Files | Locked-In Features |
@@ -49,6 +51,6 @@ Feature 8: Built as envisioned with minor architectural improvement (ApiKeyRedac
 
 | Project | Tests | Status |
 |---------|-------|--------|
-| tests/unit/ | 429 | ✅ All passing |
+| tests/unit/ | 678 | ✅ All passing |
 | tests/e2e/ | 62 | ✅ 62 passed (FlaUI.UIA3, ICollectionFixture) |
 | tests/integration/ | 25 | ✅ All passing |
