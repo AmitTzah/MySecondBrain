@@ -135,10 +135,11 @@ Anthropic `bash_20250124` schema. Model executes shell commands in a workspace-i
 - **Execution:** `cmd.exe` on Windows. `.sh` scripts use Git Bash (`C:\Program Files\Git\bin\bash.exe`) or WSL (`wsl bash -c`) fallback.
 - **Workspace:** `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/`. Each chat gets its own sandbox — no conflicts between chats. Working directory locked to the chat's subdirectory.
 - **Safety:** Writes outside workspace require explicit user confirmation via `ask_user_input` (H14). This is a hard-coded override — cannot be auto-approved. Wiki directory is read-only from bash.
+- **Skills directory:** `%LOCALAPPDATA%/MySecondBrain/skills/` is allow-listed for read/execute. When a skill is loaded via `skill_load`, its `<skill_resources>` block provides absolute paths to bundled scripts. The model uses these absolute paths in `bash` commands, and the path blocker permits read/execute operations within the skills directory. Writes to the skills directory are blocked (user-managed content).
 - **Blocked paths:** `C:\Windows\`, `C:\Program Files\`, `.env` files, registry hives — always denied, cannot be overridden.
 - **Workspace lifecycle:** Workspace persists as long as the chat exists — no time-based cleanup. On chat deletion: workspace/{chat-id}/ is deleted along with SQLite records and artifacts/{chat-id}/. On startup: orphaned workspace directories (no matching chat in SQLite) are cleaned up.
 - **bash availability:** Detected at startup. Communicated to model via system prompt: "You are running on Windows. Shell commands use cmd.exe. Python, pip, npm work as expected. .sh scripts require Git Bash or WSL."
-- **Skills integration:** Skills' bundled scripts (Python, Node.js) run via bash. Model follows skill instructions, writes code, executes it, verifies output.
+- **Skills integration:** Skills' bundled scripts (Python, Node.js) run via bash using absolute paths resolved from the skill's base directory (provided in `<skill_resources>`). Model follows skill instructions, writes code, executes it, verifies output.
 
 ---
 
@@ -275,6 +276,7 @@ Parallel tool execution appears sequentially in the chat as each tool completes:
 | **Workspace** | Auto-approved | Auto-approved | Auto-approved (within workspace) |
 | **Artifacts directory** | Auto-approved | Auto-approved | Auto-approved (writes: ask) |
 | **Wiki directory** | Auto-approved | Blocked (N8) | Read-only |
+| **Skills directory** (`%LOCALAPPDATA%/MySecondBrain/skills/`) | Auto-approved | Blocked (N/A — skills are user-managed) | Read/Execute allowed (script execution via absolute paths); Writes blocked |
 | **Outside workspace** | Configurable: Auto-Approve / Ask (default) / Disabled | ALWAYS blocked | Writes: ALWAYS ask (hard-coded override) |
 | **Blocked paths** (C:\Windows\, C:\Program Files\, .env, registry) | ALWAYS denied | ALWAYS denied | ALWAYS denied |
 

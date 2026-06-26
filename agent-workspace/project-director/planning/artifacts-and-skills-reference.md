@@ -65,7 +65,7 @@ MySecondBrain uses a per-chat two-zone model:
 | `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/` | **Read/write** | Scratch/working space — bash execution, temp files, intermediate work. Invisible to user. | On chat deletion; orphan cleanup on startup | Claude's `/home/claude/` |
 | `%LOCALAPPDATA%/MySecondBrain/artifacts/{chat-id}/` | **Read/write** | Final deliverables — presented files land here. Watched by side panel. | On chat deletion | Claude's `/mnt/user-data/outputs/` |
 | Wiki directory (user-chosen) | **Read-only** from bash | User's personal `.md` knowledge base. Writes only via apply_diff/write_to_file + N5 pipeline. | N/A (user-managed) | No Claude equivalent |
-| `%LOCALAPPDATA%/MySecondBrain/skills/` | **Read-only** | User-added community skills | Survives app updates | Claude's `/mnt/skills/private/` |
+| `%LOCALAPPDATA%/MySecondBrain/skills/` | **Read/Execute** | User-added community skills. bash can read and execute scripts from this directory (absolute paths from `<skill_resources>`). Writes blocked. | Survives app updates | Claude's `/mnt/skills/private/` |
 
 ### The `present_files` Bridge
 
@@ -73,7 +73,7 @@ Model writes to per-chat workspace (scratch zone), calls `present_files(["file"]
 
 ### Workspace Isolation (bash)
 
-All `bash` commands execute in the per-chat workspace directory `workspace/{chat-id}/`. Absolute paths outside workspace blocked pre-execution. Wiki read-only from bash. Workspace created on chat creation, deleted on chat deletion. Orphan workspace directories (no matching chat in SQLite) cleaned up on app startup.
+All `bash` commands execute in the per-chat workspace directory `workspace/{chat-id}/`. Absolute paths outside workspace blocked pre-execution, with one exception: paths under `%LOCALAPPDATA%/MySecondBrain/skills/` are allow-listed for read/execute when a skill is loaded, enabling skill script execution via absolute paths from `<skill_resources>`. Wiki read-only from bash. Workspace created on chat creation, deleted on chat deletion. Orphan workspace directories (no matching chat in SQLite) cleaned up on app startup.
 
 ---
 

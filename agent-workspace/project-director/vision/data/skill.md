@@ -12,6 +12,7 @@ Metadata about an installed Agent Skill. Skills are Markdown instruction files (
 | `description` | string | Required | Extracted from SKILL.md YAML frontmatter. Must be non-empty for skill to be usable (required for disclosure in system prompt catalog). |
 | `source` | enum | Required | `built-in` (embedded in app DLL), `user` (%LOCALAPPDATA%/skills/), `cross-client` (~/.agents/skills/ or ~/.claude/skills/) |
 | `location` | string | Required | Path to the SKILL.md file (filesystem path or embedded resource identifier) |
+| `scripts_base_path` | string | Required | Absolute path to the skill's root directory on the filesystem. Used to resolve bundled script paths into absolute paths for bash commands. null for embedded-resource skills (scripts extracted to temp). |
 | `enabled` | boolean | Required | Whether the skill is enabled globally (Settings → Skills) or per-chat (toolbar override) |
 | `dependencies` | object | Optional | Package dependencies (Python packages, Node.js packages), system tool requirements (LibreOffice, pandoc). Populated from skill content analysis or explicit dependency metadata. |
 

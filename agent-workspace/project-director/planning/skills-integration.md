@@ -157,11 +157,12 @@ A user may ask you to create, edit, or analyze the contents of an .xlsx file...
 [full SKILL.md body minus YAML frontmatter]
 
 <skill_resources>
-  <file>scripts/recalc.py</file>
-  <file>scripts/office/unpack.py</file>
-  <file>scripts/office/pack.py</file>
-  <file>scripts/office/soffice.py</file>
-  <file>scripts/office/validate.py</file>
+  <skill_base_path>C:\Users\[User]\AppData\Local\MySecondBrain\skills\xlsx</skill_base_path>
+  <resource type="script" path="scripts/recalc.py">C:\Users\[User]\AppData\Local\MySecondBrain\skills\xlsx\scripts\recalc.py</resource>
+  <resource type="script" path="scripts/office/unpack.py">C:\Users\[User]\AppData\Local\MySecondBrain\skills\xlsx\scripts\office\unpack.py</resource>
+  <resource type="script" path="scripts/office/pack.py">C:\Users\[User]\AppData\Local\MySecondBrain\skills\xlsx\scripts\office\pack.py</resource>
+  <resource type="script" path="scripts/office/soffice.py">C:\Users\[User]\AppData\Local\MySecondBrain\skills\xlsx\scripts\office\soffice.py</resource>
+  <resource type="script" path="scripts/office/validate.py">C:\Users\[User]\AppData\Local\MySecondBrain\skills\xlsx\scripts\office\validate.py</resource>
 </skill_resources>
 </skill_content>
 ```
@@ -169,8 +170,9 @@ A user may ask you to create, edit, or analyze the contents of an .xlsx file...
 Benefits of structured wrapping:
 - The model can clearly distinguish skill instructions from conversation content
 - The app can identify skill content during context compaction (protect from pruning)
-- Bundled resources are surfaced without being eagerly loaded
-- The model resolves relative paths against the skill's base directory
+- Bundled resources are surfaced with both relative paths (as referenced in SKILL.md) and absolute paths (for bash commands)
+- The `<skill_base_path>` provides the root; each `<resource>` maps the SKILL.md-relative path to its absolute filesystem location
+- The bash path blocker allows read/execute within the skills directory, so absolute paths from `<skill_resources>` are permitted
 
 The wrapper strips the YAML frontmatter (already extracted during discovery) and returns only the Markdown body plus resource listing.
 
@@ -269,7 +271,7 @@ The model follows the skill's rule: `sheet['F2'] = '=SUM(B2:E2)'` — formula, n
 → tool_result (bash): "Command completed. budget.xlsx created."
 
 → stop_reason: "tool_use"
-→ tool_use: bash("python skills/xlsx/scripts/recalc.py budget.xlsx")
+→ tool_use: bash("python C:\Users\[User]\AppData\Local\MySecondBrain\skills\xlsx\scripts\recalc.py budget.xlsx")
 ```
 
 The model follows the skill's mandatory step: "Recalculate formulas (MANDATORY IF USING FORMULAS)."
@@ -450,9 +452,9 @@ The tool description tells the model:
 All `bash` commands run inside `%LOCALAPPDATA%/MySecondBrain/workspace/`:
 
 - Working directory set to workspace path before execution
-- Absolute paths outside workspace are detected and blocked pre-execution
+- Absolute paths outside workspace are detected and blocked pre-execution. **Exception:** paths under `%LOCALAPPDATA%/MySecondBrain/skills/` are allow-listed for read/execute when a skill is loaded — enabling skill script execution via absolute paths from `<skill_resources>`.
 - Wiki directory is read-only from bash; writes go through `apply_diff`/`write_to_file` + Write-to-Wiki pipeline
-- Files created by skills land in the per-chat workspace; the model uses `write_to_file`/`apply_diff` to save them to user-chosen destinations
+- Files created by skills land in the per-chat workspace; the model uses `write_to_file`/`apply_diff` to save them to user-chosen destinations. Skill scripts are accessed directly from the skills directory — not copied to workspace.
 
 ### WebView2 for artifacts panel
 

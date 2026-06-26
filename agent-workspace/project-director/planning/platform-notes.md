@@ -682,14 +682,14 @@ bash tool receives command
 - Store availability in tool description for model awareness
 - If neither available: model adapts — uses write_to_file/apply_diff for file writes, skips .sh scripts
 
-**Shared scripts between skills:** The `scripts/office/` directory is identical in both docx and xlsx skills. At runtime, the skill loader copies bundled scripts to the per-chat workspace so both skills can reference them.
+**Shared scripts between skills:** The `scripts/office/` directory is identical in both docx and xlsx skills. Skill scripts are accessed directly from the skills directory via absolute paths provided in the `skill_load` response's `<skill_resources>` block — no copying to workspace needed. Shared scripts remain at their authoritative source location, and the bash path blocker allows read/execute within `%LOCALAPPDATA%/MySecondBrain/skills/`.
 
 ### Workspace Isolation
 
 All `bash` commands execute in per-chat `%LOCALAPPDATA%/MySecondBrain/workspace/{chat-id}/`:
 
 - Working directory set to per-chat workspace path via `Process.StartInfo.WorkingDirectory`
-- Absolute paths outside workspace detected and blocked pre-execution (scan for `C:\`, `%`, `~`)
+- Absolute paths outside workspace detected and blocked pre-execution (scan for `C:\`, `%`, `~`). **Exception:** paths under `%LOCALAPPDATA%/MySecondBrain/skills/` are allow-listed for read/execute when a skill is loaded.
 - Wiki directory read-only from bash
 - Wiki writes blocked from bash; must go through apply_diff/write_to_file + Write-to-Wiki pipeline
 - Workspace created on chat creation, deleted on chat deletion

@@ -462,7 +462,8 @@ For every feature group in [`feature-inventory.md`](feature-inventory.md), edge 
 - **present_files called for non-existent workspace file:** "Cannot present '[filename]': file not found in workspace."
 - **present_files tool disabled in chat:** Tool not in tools array. Model cannot call it. Artifacts can still be created if model writes directly to artifacts directory via write_to_file.
 - **Workspace cleanup during chat deletion:** Chat deletion terminates any active bash processes. Workspace/{chat-id}/ deleted with all files.
-- **bash tries to access path outside workspace:** Blocked pre-execution. "Cannot access path outside workspace: [path]. Use write_to_file to save files to workspace or artifacts directory."
+- **bash tries to access path outside workspace (non-skills):** Blocked pre-execution. "Cannot access path outside workspace: [path]. Use write_to_file to save files to workspace or artifacts directory."
+- **bash references a skill script that doesn't exist at the resolved absolute path:** "Skill script not found: [path]. The skill may have been removed or is incomplete. Disable and re-enable the skill in Settings → Skills to refresh." Model should fall back to informing the user rather than retrying.
 - **bash .sh script requires Git Bash or WSL but neither available:** "This command requires Git Bash or WSL. Install Git for Windows or enable WSL."
 - **Workspace disk full:** bash commands fail with "No space left on device." Workspace cleanup runs immediately to free space. Notification to user: "Workspace disk is full. Old workspace files have been cleaned up."
 - **Memory tool — duplicate key storage:** Model stores a key that already exists → overwrites previous value (upsert). UpdatedAt refreshed. No duplicate entries.

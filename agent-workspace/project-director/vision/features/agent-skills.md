@@ -111,11 +111,12 @@ A user may ask you to create, edit, or analyze the contents of an .xlsx file...
 [full SKILL.md body, YAML frontmatter stripped]
 
 <skill_resources>
-  <file>scripts/recalc.py</file>
-  <file>scripts/office/unpack.py</file>
-  <file>scripts/office/pack.py</file>
-  <file>scripts/office/soffice.py</file>
-  <file>scripts/office/validate.py</file>
+  <skill_base_path>C:\Users\[User]\AppData\Local\MySecondBrain\skills\xlsx</skill_base_path>
+  <resource type="script" path="scripts/recalc.py">C:\Users\[User]\AppData\Local\MySecondBrain\skills\xlsx\scripts\recalc.py</resource>
+  <resource type="script" path="scripts/office/unpack.py">C:\Users\[User]\AppData\Local\MySecondBrain\skills\xlsx\scripts\office\unpack.py</resource>
+  <resource type="script" path="scripts/office/pack.py">C:\Users\[User]\AppData\Local\MySecondBrain\skills\xlsx\scripts\office\pack.py</resource>
+  <resource type="script" path="scripts/office/soffice.py">C:\Users\[User]\AppData\Local\MySecondBrain\skills\xlsx\scripts\office\soffice.py</resource>
+  <resource type="script" path="scripts/office/validate.py">C:\Users\[User]\AppData\Local\MySecondBrain\skills\xlsx\scripts\office\validate.py</resource>
 </skill_resources>
 </skill_content>
 ```
@@ -123,8 +124,9 @@ A user may ask you to create, edit, or analyze the contents of an .xlsx file...
 Benefits of structured wrapping:
 - Model can clearly distinguish skill instructions from conversation content
 - App can identify skill content during context compaction (protect from pruning — W10)
-- Bundled resources are surfaced without being eagerly loaded
-- Model resolves relative paths against the skill's base directory
+- Bundled resources are surfaced with both relative paths (as referenced in SKILL.md) and absolute paths (for bash commands)
+- The `<skill_base_path>` provides the root for constructing paths; each `<resource>` element maps the SKILL.md-relative path to its absolute filesystem location
+- The bash path blocker allows read/execute access within the skills directory, so absolute paths from `<skill_resources>` are permitted
 
 **Deduplication:** Track which skills have been activated in the current session. If the model attempts to load a skill already in context, skip re-injection to avoid duplicate instructions. Activations reset on new chat creation.
 

@@ -358,7 +358,7 @@ These five tools replace the former single `TextEditorToolExecutor` (Anthropic `
 | `WriteToFileToolExecutor` | `write_to_file` | `System.IO.File.WriteAllText`; overwrite flag; auto-creates parent dirs | Medium (creates/overwrites files) | Workspace + artifacts only |
 
 **Approval model for read tools (read_file, list_files, search_files):**
-- Workspace/artifacts/wiki paths: Auto-approved
+- Workspace/artifacts/wiki/skills paths: Auto-approved
 - Outside workspace: Configurable per-tool (Auto-Approve / Ask [default] / Disabled)
 - Blocked paths (`C:\Windows\`, `C:\Program Files\`, `.env`): Always denied
 
