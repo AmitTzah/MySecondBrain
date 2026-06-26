@@ -91,6 +91,18 @@ public class Message
     /// </summary>
     public bool? IsDirectTransformation { get; set; }
 
+    // -- New fields --
+
+    /// <summary>
+    /// Whether the user has favorited this message.
+    /// </summary>
+    public bool IsFavorited { get; set; }
+
+    /// <summary>
+    /// AI's thinking/reasoning content (e.g., chain-of-thought).
+    /// </summary>
+    public string? ThinkingContent { get; set; }
+
     // -- Timestamp --
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

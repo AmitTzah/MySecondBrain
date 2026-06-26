@@ -41,6 +41,8 @@ public class ChatThread
 
     public bool IsMuted { get; set; }
 
+    // -- Organization fields --
+
     public bool IsFavorite { get; set; }
 
     public bool IsPinned { get; set; }
@@ -62,6 +64,25 @@ public class ChatThread
     /// Parent folder identifier.
     /// </summary>
     public string? FolderId { get; set; }
+
+    // -- Locked chat fields --
+
+    /// <summary>
+    /// Whether this chat is password-protected.
+    /// </summary>
+    public bool IsLocked { get; set; }
+
+    /// <summary>
+    /// Base64-encoded cryptographic salt for password-based key derivation.
+    /// </summary>
+    public string? LockSalt { get; set; }
+
+    /// <summary>
+    /// Base64-encoded nonce for AES-GCM encryption of locked messages.
+    /// </summary>
+    public string? LockNonce { get; set; }
+
+    // -- Soft-delete --
 
     /// <summary>
     /// Soft-delete flag.

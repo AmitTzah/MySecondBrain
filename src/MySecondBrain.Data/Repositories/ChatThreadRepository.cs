@@ -98,6 +98,15 @@ public class ChatThreadRepository : IChatThreadRepository
         entity.PersonaId = thread.PersonaId;
         entity.ModelConfigId = thread.ModelConfigId;
         entity.LastActivityAt = thread.LastActivityAt;
+        entity.IsFavorite = thread.IsFavorite;
+        entity.IsPinned = thread.IsPinned;
+        entity.IsArchived = thread.IsArchived;
+        entity.ColorLabel = thread.ColorLabel;
+        entity.Tags = thread.Tags;
+        entity.FolderId = thread.FolderId;
+        entity.IsLocked = thread.IsLocked;
+        entity.LockSalt = thread.LockSalt;
+        entity.LockNonce = thread.LockNonce;
 
         _db.Entry(entity).State = EntityState.Modified;
         await _db.SaveChangesAsync();
@@ -193,6 +202,15 @@ public class ChatThreadRepository : IChatThreadRepository
             LastActivityAt = entity.LastActivityAt,
             PersonaId = entity.PersonaId,
             ModelConfigId = entity.ModelConfigId,
+            IsFavorite = entity.IsFavorite,
+            IsPinned = entity.IsPinned,
+            IsArchived = entity.IsArchived,
+            ColorLabel = entity.ColorLabel,
+            Tags = entity.Tags,
+            FolderId = entity.FolderId,
+            IsLocked = entity.IsLocked,
+            LockSalt = entity.LockSalt,
+            LockNonce = entity.LockNonce,
         };
     }
 
@@ -208,6 +226,15 @@ public class ChatThreadRepository : IChatThreadRepository
             LastActivityAt = model.LastActivityAt,
             PersonaId = model.PersonaId,
             ModelConfigId = model.ModelConfigId,
+            IsFavorite = model.IsFavorite,
+            IsPinned = model.IsPinned,
+            IsArchived = model.IsArchived,
+            ColorLabel = model.ColorLabel,
+            Tags = model.Tags,
+            FolderId = model.FolderId,
+            IsLocked = model.IsLocked,
+            LockSalt = model.LockSalt,
+            LockNonce = model.LockNonce,
         };
     }
 }

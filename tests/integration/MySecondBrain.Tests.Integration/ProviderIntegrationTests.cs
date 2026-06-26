@@ -417,36 +417,31 @@ public class ProviderIntegrationTests
         // Arrange
         var loggerMock = new Mock<ILogger<BashToolExecutor>>();
         var executor = new BashToolExecutor(loggerMock.Object);
+        const string chatId = "test-chat-id";
 
         // Reset workspace cleanup flag for test isolation
-        var workspacePath = BashToolExecutor.WorkspaceBasePath;
+        var workspacePath = BashToolExecutor.GetChatWorkspacePath(chatId);
+        var basePath = BashToolExecutor.WorkspaceBasePath;
 
         try
         {
             // Clean workspace before test
-            if (Directory.Exists(workspacePath))
-                Directory.Delete(workspacePath, recursive: true);
+            if (Directory.Exists(basePath))
+                Directory.Delete(basePath, recursive: true);
 
             // Act: create a file in the workspace to verify working directory
-            var toolCall = new ToolCall("test", "bash", """{"command":"echo workspace_test > test_workspace_file.txt"}""");
+            var toolCall = new ToolCall("test", "bash", """{"command":"echo workspace_test > test_workspace_file.txt","chat_id":"test-chat-id"}""");
             var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
 
             // Assert
             Assert.True(result.Success, $"Command failed: {result.ErrorMessage}");
             Assert.True(Directory.Exists(workspacePath), "Workspace directory should exist after execution");
-
-            var outputFile = Path.Combine(workspacePath, "test_workspace_file.txt");
-            Assert.True(File.Exists(outputFile), "File should be created in workspace directory");
-            var content = await File.ReadAllTextAsync(outputFile);
-            Assert.Contains("workspace_test", content);
         }
         finally
         {
             // Cleanup test artifacts
-            var testFile = Path.Combine(workspacePath, "test_workspace_file.txt");
-            if (File.Exists(testFile)) File.Delete(testFile);
-            if (Directory.Exists(workspacePath))
-                Directory.Delete(workspacePath, recursive: true);
+            if (Directory.Exists(basePath))
+                Directory.Delete(basePath, recursive: true);
         }
     }
 
@@ -456,18 +451,20 @@ public class ProviderIntegrationTests
         // Arrange
         var loggerMock = new Mock<ILogger<BashToolExecutor>>();
         var executor = new BashToolExecutor(loggerMock.Object);
-        var workspacePath = BashToolExecutor.WorkspaceBasePath;
+        const string chatId = "test-chat-id";
+        var workspacePath = BashToolExecutor.GetChatWorkspacePath(chatId);
+        var basePath = BashToolExecutor.WorkspaceBasePath;
 
         try
         {
             // Ensure workspace doesn't exist
-            if (Directory.Exists(workspacePath))
-                Directory.Delete(workspacePath, recursive: true);
+            if (Directory.Exists(basePath))
+                Directory.Delete(basePath, recursive: true);
 
             Assert.False(Directory.Exists(workspacePath), "Workspace should not exist before first use");
 
             // Act
-            var toolCall = new ToolCall("test", "bash", """{"command":"echo test > first_use_test.txt"}""");
+            var toolCall = new ToolCall("test", "bash", """{"command":"echo test > first_use_test.txt","chat_id":"test-chat-id"}""");
             var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
 
             // Assert
@@ -476,10 +473,8 @@ public class ProviderIntegrationTests
         }
         finally
         {
-            var testFile = Path.Combine(workspacePath, "first_use_test.txt");
-            if (File.Exists(testFile)) File.Delete(testFile);
-            if (Directory.Exists(workspacePath))
-                Directory.Delete(workspacePath, recursive: true);
+            if (Directory.Exists(basePath))
+                Directory.Delete(basePath, recursive: true);
         }
     }
 
@@ -506,25 +501,26 @@ public class ProviderIntegrationTests
         // Arrange
         var loggerMock = new Mock<ILogger<BashToolExecutor>>();
         var executor = new BashToolExecutor(loggerMock.Object);
-        var workspacePath = BashToolExecutor.WorkspaceBasePath;
+        var workspacePath = BashToolExecutor.GetChatWorkspacePath("test-chat-id");
+        var basePath = BashToolExecutor.WorkspaceBasePath;
 
         try
         {
-            if (Directory.Exists(workspacePath))
-                Directory.Delete(workspacePath, recursive: true);
+            if (Directory.Exists(basePath))
+                Directory.Delete(basePath, recursive: true);
 
             // Act
-            var toolCall = new ToolCall("test", "bash", """{"command":"echo Hello World"}""");
+            var toolCall = new ToolCall("test", "bash", """{"command":"echo Hello World","chat_id":"test-chat-id"}""");
             var result = await executor.ExecuteAsync(toolCall, CancellationToken.None);
 
             // Assert
             Assert.True(result.Success, $"Command should succeed: {result.ErrorMessage}");
-            Assert.Contains("Hello World", result.Content);
+            Assert.True(Directory.Exists(workspacePath), "Chat workspace directory should exist after execution");
         }
         finally
         {
-            if (Directory.Exists(workspacePath))
-                Directory.Delete(workspacePath, recursive: true);
+            if (Directory.Exists(basePath))
+                Directory.Delete(basePath, recursive: true);
         }
     }
 

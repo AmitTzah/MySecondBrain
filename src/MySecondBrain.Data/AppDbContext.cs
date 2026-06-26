@@ -235,6 +235,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Message>()
             .HasIndex(m => m.CreatedAt);
 
+        modelBuilder.Entity<Message>()
+            .HasIndex(m => m.IsActiveBranch);
+
         modelBuilder.Entity<ChatThread>()
             .HasIndex(t => t.LastActivityAt);
 

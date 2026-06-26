@@ -15,6 +15,20 @@ public class ChatThread
     public DateTimeOffset LastActivityAt { get; set; } = DateTimeOffset.UtcNow;
     public string? PersonaId { get; set; }
     public string? ModelConfigId { get; set; }
+
+    // Organization fields
+    public bool IsFavorite { get; set; }
+    public bool IsPinned { get; set; }
+    public bool IsArchived { get; set; }
+    public string? ColorLabel { get; set; }
+    public string? Tags { get; set; } // JSON array as string
+    public string? FolderId { get; set; }
+
+    // Locked chat fields
+    public bool IsLocked { get; set; }
+    public string? LockSalt { get; set; } // Base64
+    public string? LockNonce { get; set; } // Base64
+
     public ICollection<Message> Messages { get; set; } = new List<Message>();
 }
 
@@ -35,6 +49,10 @@ public class Message
     public string? Feedback { get; set; }
     public decimal? EstimatedCost { get; set; }
     public long? GenerationTimeMs { get; set; }
+
+    // New fields
+    public bool IsFavorited { get; set; }
+    public string? ThinkingContent { get; set; }
 }
 
 public class Persona

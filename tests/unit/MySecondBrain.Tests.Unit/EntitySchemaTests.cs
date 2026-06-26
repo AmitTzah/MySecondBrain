@@ -27,9 +27,9 @@ public class EntitySchemaTests : DataLayerTestBase
             // Scalar (non-navigation) property counts per vision spec reference.md checklist
             [typeof(ApiKey)] = 9,               // Id, DisplayName, Provider, CustomProviderName?, CustomEndpointUrl?, KeyValue, IsValid, LastTestedAt?, CreatedAt
             [typeof(Artifact)] = 7,              // Id, Name, Type, ThreadId, VersionCount, CreatedAt, UpdatedAt
-            [typeof(ChatThread)] = 23,           // Id, Title?, IsTransient, PersonaId?, ModelConfigId?, SystemMessage?, ChatMode, ThinkingEnabled, IsMuted, IsFavorite, IsPinned, IsArchived, ColorLabel?, Tags?, FolderId?, IsDeleted, DeletedAt?, SourceHWND?, SourceAppName?, SourceDocTitle?, OriginalHighlightedText?, CreatedAt, LastActivityAt
+            [typeof(ChatThread)] = 26,           // Id, Title?, IsTransient, PersonaId?, ModelConfigId?, SystemMessage?, ChatMode, ThinkingEnabled, IsMuted, IsFavorite, IsPinned, IsArchived, ColorLabel?, Tags?, FolderId?, IsLocked, LockSalt?, LockNonce?, IsDeleted, DeletedAt?, SourceHWND?, SourceAppName?, SourceDocTitle?, OriginalHighlightedText?, CreatedAt, LastActivityAt
             [typeof(MediaItem)] = 15,            // Id, FileName, FilePath, MediaType, MimeType, FileSize, Source, ThreadId, MessageId?, GeneratedPrompt?, IsSavedToDisk, IsSavedToWiki, IsDeleted, DeletedAt?, CreatedAt
-            [typeof(Message)] = 17,              // Id, ThreadId, Role, Content, RawContent?, PersonaId?, ModelConfigId?, TokenCount?, EstimatedCost?, GenerationTimeMs?, Feedback?, ParentMessageId?, VersionNumber, BranchId, IsActiveBranch, IsDirectTransformation?, CreatedAt
+            [typeof(Message)] = 19,              // Id, ThreadId, Role, Content, RawContent?, PersonaId?, ModelConfigId?, TokenCount?, EstimatedCost?, GenerationTimeMs?, Feedback?, ParentMessageId?, VersionNumber, BranchId, IsActiveBranch, IsDirectTransformation?, IsFavorited, ThinkingContent?, CreatedAt
             [typeof(ModelConfiguration)] = 16,   // Id, DisplayName, Provider, ApiKeyId?, ModelIdentifier?, Temperature, MaxOutputTokens, MaxContextWindow, ThinkingEnabled, PricingInputPer1K?, PricingOutputPer1K?, PricingCacheHitPer1K?, PricingCacheMissPer1K?, ContextOverflowStrategy, CreatedAt, UpdatedAt
             [typeof(Persona)] = 8,               // Id, DisplayName, SystemPrompt?, DefaultModelConfigId?, DefaultChatMode, IsBuiltIn, CreatedAt, UpdatedAt
             [typeof(PromptTemplate)] = 7,        // Id, Name, Text, Tags?, FolderId?, CreatedAt, UpdatedAt
@@ -141,11 +141,16 @@ public class EntitySchemaTests : DataLayerTestBase
         Assert.Equal("Standard", chatThread.ChatMode);
         Assert.False(chatThread.IsTransient);
         Assert.False(chatThread.IsDeleted);
+        Assert.False(chatThread.IsLocked);
+        Assert.Null(chatThread.LockSalt);
+        Assert.Null(chatThread.LockNonce);
 
         var message = new Message();
         Assert.Equal(1, message.VersionNumber);
         Assert.True(message.IsActiveBranch);
         Assert.NotEmpty(message.BranchId);
+        Assert.False(message.IsFavorited);
+        Assert.Null(message.ThinkingContent);
 
         var persona = new Persona();
         Assert.Equal("Standard", persona.DefaultChatMode);

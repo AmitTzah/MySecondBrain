@@ -96,6 +96,12 @@ public class MessageRepository : IMessageRepository
         entity.BranchId = message.BranchId ?? entity.BranchId;
         entity.ParentMessageId = message.ParentMessageId;
         entity.IsActiveBranch = message.IsActiveBranch;
+        entity.RawContent = message.RawContent;
+        entity.EstimatedCost = message.EstimatedCost;
+        entity.GenerationTimeMs = message.GenerationTimeMs;
+        entity.Feedback = message.Feedback;
+        entity.IsFavorited = message.IsFavorited;
+        entity.ThinkingContent = message.ThinkingContent;
 
         _db.Entry(entity).State = EntityState.Modified;
         await _db.SaveChangesAsync();
@@ -165,6 +171,8 @@ public class MessageRepository : IMessageRepository
             Feedback = entity.Feedback,
             EstimatedCost = entity.EstimatedCost,
             GenerationTimeMs = entity.GenerationTimeMs,
+            IsFavorited = entity.IsFavorited,
+            ThinkingContent = entity.ThinkingContent,
         };
     }
 
@@ -186,6 +194,8 @@ public class MessageRepository : IMessageRepository
             Feedback = model.Feedback,
             EstimatedCost = model.EstimatedCost,
             GenerationTimeMs = model.GenerationTimeMs,
+            IsFavorited = model.IsFavorited,
+            ThinkingContent = model.ThinkingContent,
         };
     }
 }

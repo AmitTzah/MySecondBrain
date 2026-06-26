@@ -443,4 +443,190 @@ public class ChatMessageRepositoryTests : DataLayerTestBase
             Assert.True(chainAfter.All(m => m.Content != "Branch A response"));
         }
     }
+
+    // ════════════════════════════════════════════════════════════════
+    // ChatThread organization and locking fields
+    // ════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task ChatThreadRepository_CreateAsync_WithOrganizationFields_ReturnsMappedThread()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var repo = new ChatThreadRepository(db);
+            var thread = new CoreModels.ChatThread
+            {
+                Title = "Org Test",
+                IsFavorite = true,
+                IsPinned = true,
+                IsArchived = false,
+                ColorLabel = "red",
+                Tags = """["tag1","tag2"]""",
+                FolderId = "folder-123",
+                IsLocked = false
+            };
+            var result = await repo.CreateAsync(thread);
+            Assert.NotNull(result);
+            Assert.True(result.IsFavorite);
+            Assert.True(result.IsPinned);
+            Assert.False(result.IsArchived);
+            Assert.Equal("red", result.ColorLabel);
+            Assert.Equal("""["tag1","tag2"]""", result.Tags);
+            Assert.Equal("folder-123", result.FolderId);
+            Assert.False(result.IsLocked);
+            Assert.Null(result.LockSalt);
+            Assert.Null(result.LockNonce);
+        }
+    }
+
+    [Fact]
+    public async Task ChatThreadRepository_UpdateAsync_UpdatesOrganizationFields()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var repo = new ChatThreadRepository(db);
+            var thread = await repo.CreateAsync(new CoreModels.ChatThread { Title = "Org Update" });
+            thread.IsFavorite = true;
+            thread.IsPinned = true;
+            thread.ColorLabel = "blue";
+            thread.Tags = """["updated"]""";
+            thread.FolderId = "folder-updated";
+            thread.IsLocked = true;
+            thread.LockSalt = "test-salt";
+            thread.LockNonce = "test-nonce";
+            await repo.UpdateAsync(thread);
+
+            var updated = await repo.GetByIdAsync(thread.Id);
+            Assert.NotNull(updated);
+            Assert.True(updated!.IsFavorite);
+            Assert.True(updated.IsPinned);
+            Assert.Equal("blue", updated.ColorLabel);
+            Assert.Equal("""["updated"]""", updated.Tags);
+            Assert.Equal("folder-updated", updated.FolderId);
+            Assert.True(updated.IsLocked);
+            Assert.Equal("test-salt", updated.LockSalt);
+            Assert.Equal("test-nonce", updated.LockNonce);
+        }
+    }
+
+    [Fact]
+    public async Task ChatThreadRepository_UpdateAsync_ResetsLockFields()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var repo = new ChatThreadRepository(db);
+            var thread = await repo.CreateAsync(new CoreModels.ChatThread
+            {
+                Title = "Lock Reset",
+                IsLocked = true,
+                LockSalt = "salt-123",
+                LockNonce = "nonce-456"
+            });
+            thread.IsLocked = false;
+            thread.LockSalt = null;
+            thread.LockNonce = null;
+            await repo.UpdateAsync(thread);
+
+            var updated = await repo.GetByIdAsync(thread.Id);
+            Assert.NotNull(updated);
+            Assert.False(updated!.IsLocked);
+            Assert.Null(updated.LockSalt);
+            Assert.Null(updated.LockNonce);
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // Message new fields
+    // ════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public async Task MessageRepository_CreateAsync_WithNewFields_ReturnsMappedMessage()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var threadRepo = new ChatThreadRepository(db);
+            var thread = await threadRepo.CreateAsync(new CoreModels.ChatThread { Title = "Msg New Fields" });
+            var repo = new MessageRepository(db);
+            var result = await repo.CreateAsync(new CoreModels.Message
+            {
+                ThreadId = thread.Id,
+                Role = "Assistant",
+                Content = "Test content",
+                BranchId = Guid.NewGuid().ToString("N"),
+                IsFavorited = true,
+                ThinkingContent = "I think, therefore I am."
+            });
+            Assert.NotNull(result);
+            Assert.True(result.IsFavorited);
+            Assert.Equal("I think, therefore I am.", result.ThinkingContent);
+        }
+    }
+
+    [Fact]
+    public async Task MessageRepository_UpdateAsync_UpdatesNewFields()
+    {
+        var (db, connection) = CreateTestDbContext();
+        using (db)
+        using (connection)
+        {
+            var threadRepo = new ChatThreadRepository(db);
+            var thread = await threadRepo.CreateAsync(new CoreModels.ChatThread { Title = "Msg Update New" });
+            var repo = new MessageRepository(db);
+            var msg = await repo.CreateAsync(new CoreModels.Message
+            {
+                ThreadId = thread.Id,
+                Role = "User",
+                Content = "Original",
+                BranchId = Guid.NewGuid().ToString("N")
+            });
+
+            msg.IsFavorited = true;
+            msg.ThinkingContent = "New thinking content";
+            await repo.UpdateAsync(msg);
+
+            var updated = await repo.GetByIdAsync(msg.Id);
+            Assert.NotNull(updated);
+            Assert.True(updated!.IsFavorited);
+            Assert.Equal("New thinking content", updated.ThinkingContent);
+        }
+    }
+
+    [Fact]
+    public async Task MessageRepository_SearchAsync_Fts5_SearchAlongsideNewFields()
+    {
+        var (db, connection) = CreateTestDbContextWithMigration();
+        using (db)
+        using (connection)
+        {
+            var thread = new ChatThread { Id = Guid.NewGuid().ToString("N"), ChatMode = "Standard", Title = "FTS5 New Fields" };
+            db.ChatThreads.Add(thread);
+            db.Messages.Add(new Message
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                ThreadId = thread.Id,
+                Role = "Assistant",
+                Content = "The main response about deep learning",
+                ThinkingContent = "Deep reasoning about neural networks",
+                BranchId = Guid.NewGuid().ToString("N"),
+                IsFavorited = true
+            });
+            await db.SaveChangesAsync();
+
+            var repo = new MessageRepository(db);
+
+            // FTS5 indexes the Content column, so search for content text
+            var results = await repo.SearchAsync("deep learning", 10);
+            Assert.Single(results);
+            Assert.Contains("deep learning", results[0].Content);
+            Assert.True(results[0].IsFavorited);
+        }
+    }
 }

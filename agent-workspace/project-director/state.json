@@ -4,7 +4,7 @@
     "total_features":  24,
     "current_feature_index":  11,
     "status":  "in_progress",
-    "fd_status":  "idle",
+    "fd_status":  "spawned",
     "phase_2_substep":  null,
     "phase_4_substep":  null,
     "phase_5_substep":  null,
