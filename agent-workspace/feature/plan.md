@@ -323,7 +323,7 @@ tests/
 
 ---
 
-### [ ] Step 8: QoL Features — File Viewer Tabs, Incognito, Locked Chats, Titling, Favoriting, Cross-Tab Alerts, Message Selection, Right Panel
+### [x] Step 8: QoL Features — File Viewer Tabs, Incognito, Locked Chats, Titling, Favoriting, Cross-Tab Alerts, Message Selection, Right Panel
 - **Goal:** Implement the remaining quality-of-life features: generic file viewer tabs, incognito/temporary chat toggle, locked chat encryption (AES-256-GCM), AI-powered chat auto-titling, chat summarization, message favoriting (★), cross-tab completion alert (green dot), message selection mode with bulk actions, offline/network status indicator, close confirmation during active generation, and right panel layout (Artifacts top + Chat Nav bottom with resizable divider).
 - **Actions:**
   - **File Viewer Tabs (C39):**
