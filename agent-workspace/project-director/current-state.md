@@ -40,6 +40,8 @@ Feature 8: Built as envisioned with minor architectural improvement (ApiKeyRedac
 
 **2026-06-26 — Ad-hoc fix:** Onboarding wizard X-button close now calls `Application.Current.Shutdown()` instead of leaving orphaned dotnet.exe processes. Root cause: `ShutdownMode="OnExplicitShutdown"` combined with no explicit shutdown on wizard abandonment. Fix in [`App.xaml.cs`](src/MySecondBrain.UI/App.xaml.cs:161-197): `studioWasLaunched` flag + `Closed` event handler + static `ShouldShutdownOnWizardClose()` helper. 2 new unit tests in [`AppShutdownTests.cs`](tests/unit/MySecondBrain.Tests.Unit/AppShutdownTests.cs).
 
+**2026-06-26 — Wiki search design refinements (Feature 19):** Three enhancements folded into vision and planning docs: (1) FTS5 porter stemming for plural/tense matching in wiki search, (2) `wiki_search` tool returns index.md catalog alongside FTS5 matches for complete wiki awareness in a single call, (3) trigram fuzzy fallback on zero results with "Did you mean...?" suggestions. Updated: [`personal-wiki.md`](vision/features/personal-wiki.md) (N2, N3), [`tool-use-agents.md`](vision/features/tool-use-agents.md) (H10), [`roadmap.md`](roadmap.md) (F19), [`abstractions.md`](planning/abstractions.md) (IWikiService, WikiSearchToolExecutor), [`architecture.md`](planning/architecture.md) (WikiSearchService).
+
 ## 5. E2E Regression Suite
 
 | Framework | Run Command | Test Files | Locked-In Features |

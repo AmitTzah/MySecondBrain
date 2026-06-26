@@ -380,7 +380,7 @@ These five tools replace the former single `TextEditorToolExecutor` (Anthropic `
 
 | Implementation | Tool | Execution Mechanism | Risk |
 |---------------|------|---------------------|------|
-| `WikiSearchToolExecutor` | `wiki_search` | Local SQLite FTS5 query | Low (read-only) |
+| `WikiSearchToolExecutor` | `wiki_search` | Local SQLite FTS5 query (porter-stemmed) + index.md catalog return; trigram fuzzy fallback on zero results | Low (read-only) |
 | `SkillLoadToolExecutor` | `skill_load` | Reads SKILL.md from embedded resources or `%LOCALAPPDATA%/MySecondBrain/skills/`; returns structured wrapped content | Low |
 | `AskUserInputToolExecutor` | `ask_user_input` | Shows native WPF dialog with structured options; returns user selection. **Always available** — cannot be disabled. | Low |
 | `PresentFilesToolExecutor` | `present_files` | Copies files from **per-chat workspace** to **per-chat artifacts** `artifacts/{chat-id}/`; triggers WebView2 side panel refresh. Version tracking by filename within chat. | Low |
@@ -930,8 +930,11 @@ public interface IWikiService
     Task IndexAllAsync(CancellationToken ct);
     Task IndexFileAsync(string relativePath, CancellationToken ct);
 
-    // Search
-    Task<IReadOnlyList<WikiSearchResult>> SearchAsync(string query, int maxResults);
+    // Search (returns FTS5-ranked matches + index.md catalog for complete wiki map)
+    Task<WikiSearchResultSet> SearchAsync(string query, int maxResults);
+    // WikiSearchResultSet contains:
+    //   - Matches: IReadOnlyList<WikiSearchResult> (FTS5-ranked, porter-stemmed)
+    //   - Catalog: string (raw index.md content — all files, all headings, cross-links)
 
     // Wiki Browser data
     Task<IReadOnlyList<WikiFileTree>> GetFileTreeAsync();

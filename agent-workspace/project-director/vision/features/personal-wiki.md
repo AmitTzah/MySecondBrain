@@ -26,7 +26,7 @@ The user builds and maintains a personal knowledge base of `.md` files on their 
 On startup and on file change (detected via file system watcher):
 - Scans all `.md` files in the wiki directory
 - Extracts: filename, H1/H2/H3 headings and their text, full file content
-- Builds in-memory and SQLite full-text search index (FTS5)
+- Builds in-memory and SQLite full-text search index (FTS5 with `porter` stemming tokenizer — plural/singular and tense variants match, e.g., "strings" ↔ "string", "covered" ↔ "cover")
 - Index updates are incremental when possible (single file change), full re-index on app startup
 - Zero API cost — purely local computation
 
@@ -35,7 +35,8 @@ On startup and on file change (detected via file system watcher):
 - **Access:** Dedicated search scope (separate from chat search L3). Accessed from Studio sidebar or Wiki Browser.
 - **Results:** Matching `.md` filenames, matching headings (with level indicator), content snippets with highlighted terms
 - **Click:** Opens file in Wiki Browser (N4), scrolled to matching section
-- **Empty State:** "No wiki files found matching [query]"
+- **Fuzzy Fallback:** If FTS5 query returns zero results, falls back to trigram-based fuzzy matching. Matches surfaced with "Did you mean...?" suggestions.
+- **Empty State:** "No wiki files found matching [query]. Try different terms."
 
 ### N4. Wiki Browser
 

@@ -176,11 +176,12 @@ Google Image Search or Bing Image Search API. Separate from `web_search` — ded
 
 ### H10. wiki_search
 
-Queries the local SQLite FTS5 wiki index to find relevant `.md` files.
+Queries the local SQLite FTS5 wiki index to find relevant `.md` files. Results include the full `index.md` catalog (N11) alongside FTS5-ranked matches, giving the model a complete wiki structure map in a single tool call.
 
-- **Query:** Model sends search query → app queries FTS5 wiki index → returns matching filenames, headings, and content snippets.
-- **Cost:** Zero API cost — purely local FTS5 query.
+- **Query:** Model sends search query → app queries FTS5 wiki index → returns matching filenames, headings, content snippets, AND the full `index.md` catalog (all files, all headings, cross-links, recently modified, orphan pages).
+- **Cost:** Zero API cost — purely local FTS5 query + local file read of `index.md`.
 - **Restrictions:** Read-only. AI cannot modify wiki files through this tool (N8).
+- **Post-Search Read:** After finding a file via `wiki_search`, the model can call `read_file` on the file's absolute path to retrieve full content. Wiki directory reads are auto-approved (no user confirmation needed). Writes to wiki files are blocked (N8).
 
 ---
 
