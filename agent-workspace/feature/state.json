@@ -6,29 +6,22 @@
   "smoke_test_automation": {
     "enabled": false,
     "environments": {
-      "web": null,
-      "native": null,
-      "desktop": {
-        "executable_path": "src\\MySecondBrain.UI\\bin\\Debug\\net8.0-windows10.0.17763.0\\MySecondBrain.UI.exe",
-        "window_title": "MySecondBrain",
-        "launch_args": null,
-        "mcp_available": true,
-        "mcp_name": "windows-mcp",
-        "verified": true
-      }
+      "web": null, "native": null,
+      "desktop": { "executable_path": "src\\MySecondBrain.UI\\bin\\Debug\\net8.0-windows10.0.17763.0\\MySecondBrain.UI.exe", "window_title": "MySecondBrain", "launch_args": null, "mcp_available": true, "mcp_name": "windows-mcp", "verified": true }
     },
     "missing_prerequisites": []
   },
   "skipped_smoke_tests": [
-    { "step": 4, "name": "ChatThreadViewModel", "classification": "HUMAN/SHT REQUIRED", "description": "Launch app. Ctrl+N new tab, select Persona, send message, Ctrl+N second tab, switch tabs, close tab, Ctrl+Shift+T reopen, toggle Thinking/Mute, font size buttons.", "status": "skipped" },
-    { "step": 5, "name": "Conversation View & Markdown Rendering", "classification": "HUMAN/SHT REQUIRED", "description": "Verify Markdown rendering: headings H1-H6, bold/italic, inline code, fenced code blocks with syntax highlighting, lists, links, tables, blockquotes, horizontal rules. Verify chat themes (Classic/Compact/Bubble). Verify relative timestamps.", "status": "skipped" },
-    { "step": 6, "name": "Streaming Response + Auto-Scroll + Message Actions + Error Handling", "classification": "HUMAN/SHT REQUIRED", "description": "Send message to LLM — verify streaming tokens. Scroll up during streaming — auto-scroll pause indicator. Scroll-to-bottom button. Stop preserves partial response. Copy MD/Rich. Regenerate. Disconnect internet — error banner with Retry. Reconnect — Retry works.", "status": "skipped" }
+    { "step": 4, "name": "ChatThreadViewModel", "classification": "HUMAN/SHT REQUIRED", "description": "Launch app. Ctrl+N new tab, select Persona, send message, second tab, switch tabs, close tab, Ctrl+Shift+T reopen, toggle Thinking/Mute, font size.", "status": "skipped" },
+    { "step": 5, "name": "Conversation View & Markdown Rendering", "classification": "HUMAN/SHT REQUIRED", "description": "Verify Markdown: headings, bold/italic, inline code, syntax-highlighted code blocks, lists, links, tables, blockquotes, HR. Chat themes. Relative timestamps.", "status": "skipped" },
+    { "step": 6, "name": "Streaming + Auto-Scroll + Message Actions + Errors", "classification": "HUMAN/SHT REQUIRED", "description": "Stream tokens. Auto-scroll pause. Scroll-to-bottom. Stop preserves partial. Copy MD/Rich. Regenerate. Disconnect→error banner→Retry. Reconnect→Retry works.", "status": "skipped" },
+    { "step": 7, "name": "Chat Header + Modes + RTL", "classification": "HUMAN/SHT REQUIRED", "description": "All 12 header elements. Persona popover→system message edit. Theme ComboBox. API History. Context bar. Dark mode. Pin. Three-dot menu. Clear Conversation. Thinking toggle. Hebrew RTL. Code blocks LTR.", "status": "skipped" }
   ],
   "e2e_regression_status": null,
   "current_phase": 3,
   "plan_status": "validated",
   "total_steps": 9,
-  "current_step": 6,
+  "current_step": 7,
   "pivot_in_progress": false,
   "phase_5_substep": null
 }

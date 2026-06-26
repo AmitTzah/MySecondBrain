@@ -283,7 +283,7 @@ tests/
 
 ---
 
-### [ ] Step 7: Chat Header Full Layout + Chat Modes + RTL + Controls
+### [x] Step 7: Chat Header Full Layout + Chat Modes + RTL + Controls
 - **Goal:** Build the complete chat header bar with all 12 elements specified in C29. Implement chat modes: Standard mode, Text Completion mode, Thinking toggle with collapsible reasoning display, Mute notifications toggle, dynamic system message editing. Implement Hebrew RTL auto-detection with per-message `FlowDirection` and code block LTR enforcement. Wire all header controls to ViewModel commands.
 - **Actions:**
   - Create [`ChatHeaderBar.xaml`](src/MySecondBrain.UI/Views/ChatHeaderBar.xaml): standalone `UserControl` containing (left to right):
