@@ -79,6 +79,9 @@ public partial class ChatThreadViewModel : ObservableObject
     /// <summary>Guards against re-entrant streaming subscription.</summary>
     private bool _isStreamingSubscribed;
 
+    /// <summary>Periodic DispatcherTimer that increments TimeRefreshToken to keep relative timestamps fresh.</summary>
+    private System.Windows.Threading.DispatcherTimer? _timeRefreshTimer;
+
     public ChatThreadViewModel(
         IChatThreadService chatService,
         IPersonaRepository personaRepo,
@@ -130,6 +133,16 @@ public partial class ChatThreadViewModel : ObservableObject
         _networkStatus = System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable()
             ? NetworkStatus.Online
             : NetworkStatus.Offline;
+
+        // Periodic timer for refreshing relative timestamps (e.g., "just now" → "2 min ago").
+        // IMultiValueConverter bindings on TimeRefreshToken force WPF to re-evaluate
+        // the RelativeTimeConverter every 30 seconds without rebuilding the message list.
+        _timeRefreshTimer = new System.Windows.Threading.DispatcherTimer(
+            TimeSpan.FromSeconds(30),
+            System.Windows.Threading.DispatcherPriority.Normal,
+            (_, _) => TimeRefreshToken++,
+            System.Windows.Application.Current?.Dispatcher ?? System.Windows.Threading.Dispatcher.CurrentDispatcher);
+        _timeRefreshTimer.Start();
     }
 
     // ================================================================
@@ -303,6 +316,15 @@ public partial class ChatThreadViewModel : ObservableObject
 
     [ObservableProperty]
     private decimal _cumulativeCost;
+
+    /// <summary>
+    /// Monotonically-increasing token incremented every 30 seconds by a
+    /// DispatcherTimer. XAML MultiBindings on message timestamps include
+    /// this token so the RelativeTimeConverter re-evaluates and keeps
+    /// relative timestamps fresh (e.g., "just now" → "2 min ago").
+    /// </summary>
+    [ObservableProperty]
+    private long _timeRefreshToken;
 
     // ================================================================
     // Error state properties
@@ -840,6 +862,22 @@ public partial class ChatThreadViewModel : ObservableObject
     /// </summary>
     private async Task SendWithStreamingAsync(ChatTabItem tab, string content)
     {
+        // ── Add user message to UI immediately before the LLM call ──
+        // This ensures the user sees their message right away, even while
+        // the assistant response is still streaming. The service persists
+        // the user message to the database inside SendMessageAsync, and
+        // the full reload below replaces this in-memory copy with the
+        // DB-persisted version (same content, with proper IDs).
+        var userMessage = new Message
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            ThreadId = tab.Thread.Id,
+            Role = "User",
+            Content = content,
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+        tab.Messages.Add(userMessage);
+
         try
         {
             using var cts = new CancellationTokenSource();

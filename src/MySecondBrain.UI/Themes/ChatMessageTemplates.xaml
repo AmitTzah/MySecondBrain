@@ -31,8 +31,14 @@
                 </FlowDocumentScrollViewer>
             </Border>
             <TextBlock FontSize="10" Foreground="{DynamicResource SubtleBrush}"
-                       Text="{Binding CreatedAt, Converter={StaticResource ThemeRelativeTimeConverter}}"
-                       Margin="0,2,0,0" HorizontalAlignment="Right"/>
+                       Margin="0,2,0,0" HorizontalAlignment="Right">
+                <TextBlock.Text>
+                    <MultiBinding Converter="{StaticResource ThemeRelativeTimeConverter}">
+                        <Binding Path="CreatedAt"/>
+                        <Binding Path="DataContext.TimeRefreshToken" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                    </MultiBinding>
+                </TextBlock.Text>
+            </TextBlock>
         </StackPanel>
     </DataTemplate>
 
@@ -58,8 +64,14 @@
                 </FlowDocumentScrollViewer>
             </Border>
             <TextBlock FontSize="10" Foreground="{DynamicResource SubtleBrush}"
-                       Text="{Binding CreatedAt, Converter={StaticResource ThemeRelativeTimeConverter}}"
-                       Margin="0,2,0,0"/>
+                       Margin="0,2,0,0">
+                <TextBlock.Text>
+                    <MultiBinding Converter="{StaticResource ThemeRelativeTimeConverter}">
+                        <Binding Path="CreatedAt"/>
+                        <Binding Path="DataContext.TimeRefreshToken" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                    </MultiBinding>
+                </TextBlock.Text>
+            </TextBlock>
         </StackPanel>
     </DataTemplate>
 
@@ -121,10 +133,16 @@
                             </Style>
                         </FlowDocumentScrollViewer.Style>
                     </FlowDocumentScrollViewer>
-                    <TextBlock Text="{Binding CreatedAt, Converter={StaticResource ThemeRelativeTimeConverter}}"
-                               FontSize="9"
+                    <TextBlock FontSize="9"
                                Foreground="{DynamicResource SubtleBrush}"
-                               HorizontalAlignment="Left" Margin="0,4,0,0"/>
+                               HorizontalAlignment="Left" Margin="0,4,0,0">
+                        <TextBlock.Text>
+                            <MultiBinding Converter="{StaticResource ThemeRelativeTimeConverter}">
+                                <Binding Path="CreatedAt"/>
+                                <Binding Path="DataContext.TimeRefreshToken" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                            </MultiBinding>
+                        </TextBlock.Text>
+                    </TextBlock>
                 </StackPanel>
             </Border>
         </Grid>
@@ -148,10 +166,16 @@
                             </Style>
                         </FlowDocumentScrollViewer.Style>
                     </FlowDocumentScrollViewer>
-                    <TextBlock Text="{Binding CreatedAt, Converter={StaticResource ThemeRelativeTimeConverter}}"
-                               FontSize="9"
+                    <TextBlock FontSize="9"
                                Foreground="{DynamicResource SubtleBrush}"
-                               HorizontalAlignment="Right" Margin="0,4,0,0"/>
+                               HorizontalAlignment="Right" Margin="0,4,0,0">
+                        <TextBlock.Text>
+                            <MultiBinding Converter="{StaticResource ThemeRelativeTimeConverter}">
+                                <Binding Path="CreatedAt"/>
+                                <Binding Path="DataContext.TimeRefreshToken" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                            </MultiBinding>
+                        </TextBlock.Text>
+                    </TextBlock>
                 </StackPanel>
             </Border>
         </Grid>
@@ -214,10 +238,16 @@
                             </Style>
                         </FlowDocumentScrollViewer.Style>
                     </FlowDocumentScrollViewer>
-                    <TextBlock Text="{Binding CreatedAt, Converter={StaticResource ThemeRelativeTimeConverter}}"
-                               FontSize="9"
+                    <TextBlock FontSize="9"
                                Foreground="{DynamicResource SubtleBrush}"
-                               HorizontalAlignment="Right" Margin="0,4,0,0"/>
+                               HorizontalAlignment="Right" Margin="0,4,0,0">
+                        <TextBlock.Text>
+                            <MultiBinding Converter="{StaticResource ThemeRelativeTimeConverter}">
+                                <Binding Path="CreatedAt"/>
+                                <Binding Path="DataContext.TimeRefreshToken" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                            </MultiBinding>
+                        </TextBlock.Text>
+                    </TextBlock>
                 </StackPanel>
             </Border>
         </Grid>

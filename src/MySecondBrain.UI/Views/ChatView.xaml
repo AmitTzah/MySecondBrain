@@ -58,8 +58,14 @@
 
                     <!-- Timestamp + action bar -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,2,12,0">
-                        <TextBlock Text="{Binding CreatedAt, Converter={StaticResource RelativeTimeConverter}}"
-                                   FontSize="10" Foreground="{DynamicResource SubtleBrush}"/>
+                        <TextBlock FontSize="10" Foreground="{DynamicResource SubtleBrush}">
+                            <TextBlock.Text>
+                                <MultiBinding Converter="{StaticResource RelativeTimeConverter}">
+                                    <Binding Path="CreatedAt"/>
+                                    <Binding Path="DataContext.TimeRefreshToken" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
                         <!-- Favorite star -->
                         <Button Content="{Binding IsFavorited, Converter={StaticResource BoolToFavoriteConverter}}"
                                 FontSize="12"
@@ -119,9 +125,15 @@
                                 CommandParameter="{Binding}"
                                 ToolTip="Toggle favorite"
                                 AutomationProperties.AutomationId="FavoriteBtn"/>
-                        <TextBlock Text="{Binding CreatedAt, Converter={StaticResource RelativeTimeConverter}}"
-                                   FontSize="10" Foreground="{DynamicResource SubtleBrush}"
-                                   VerticalAlignment="Center"/>
+                        <TextBlock FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                   VerticalAlignment="Center">
+                            <TextBlock.Text>
+                                <MultiBinding Converter="{StaticResource RelativeTimeConverter}">
+                                    <Binding Path="CreatedAt"/>
+                                    <Binding Path="DataContext.TimeRefreshToken" RelativeSource="{RelativeSource AncestorType=UserControl}"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
                         <Button Content="📋 MD" FontSize="10"
                                 Background="Transparent" BorderThickness="0"
                                 Foreground="{DynamicResource SubtleBrush}"

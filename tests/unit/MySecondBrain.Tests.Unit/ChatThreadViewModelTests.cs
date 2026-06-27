@@ -1117,6 +1117,128 @@ public class ChatThreadViewModelTests
         _chatServiceMock.Verify(s => s.SendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>
+    /// Regression test: user message must appear in the Messages collection
+    /// BEFORE the LLM service call completes. The user should see their message
+    /// immediately, not wait for the assistant to finish streaming.
+    /// </summary>
+    [Fact]
+    public async Task SendMessage_UserMessageAppearsImmediately_BeforeServiceCallCompletes()
+    {
+        // Arrange
+        var thread = new ChatThread { Id = "thread-1" };
+        var tab = new ChatTabItem(thread) { TextboxContent = "Hello" };
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        // Use TaskCompletionSource to delay SendMessageAsync — simulating
+        // a slow LLM call so we can inspect tab.Messages mid-flight
+        var tcs = new TaskCompletionSource<Message>();
+        _chatServiceMock.Setup(s => s.SendMessageAsync("thread-1", "Hello", It.IsAny<CancellationToken>()))
+            .Returns(tcs.Task);
+        _chatServiceMock.Setup(s => s.GetActiveBranchMessagesAsync("thread-1"))
+            .ReturnsAsync(new List<Message>());
+
+        // Act — start sending without awaiting
+        var sendTask = vm.SendMessageCommand.ExecuteAsync(null);
+
+        // Allow the async method to reach the point where it adds the user message
+        // to tab.Messages (before it awaits the service call)
+        await Task.Delay(200);
+
+        // Assert — user message must already be visible in the collection
+        Assert.Single(tab.Messages);
+        Assert.Equal("User", tab.Messages[0].Role);
+        Assert.Equal("Hello", tab.Messages[0].Content);
+
+        // Complete the service and wait for cleanup
+        tcs.SetResult(new Message { Id = "msg-1", Role = "Assistant", Content = "Hi there!", ThreadId = "thread-1" });
+        await sendTask;
+    }
+
+    /// <summary>
+    /// Regression test: the user message created in-memory must have a valid
+    /// CreatedAt timestamp so the RelativeTimeConverter can render it.
+    /// </summary>
+    [Fact]
+    public async Task SendMessage_UserMessageHasCreatedAtSet_ForTimestampRendering()
+    {
+        // Arrange
+        var thread = new ChatThread { Id = "thread-1" };
+        var tab = new ChatTabItem(thread) { TextboxContent = "Hello" };
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        var tcs = new TaskCompletionSource<Message>();
+        _chatServiceMock.Setup(s => s.SendMessageAsync("thread-1", "Hello", It.IsAny<CancellationToken>()))
+            .Returns(tcs.Task);
+        _chatServiceMock.Setup(s => s.GetActiveBranchMessagesAsync("thread-1"))
+            .ReturnsAsync(new List<Message>());
+
+        // Act
+        var sendTask = vm.SendMessageCommand.ExecuteAsync(null);
+        await Task.Delay(200);
+
+        // Assert — user message must have a recent CreatedAt (not default/min value)
+        var userMsg = tab.Messages[0];
+        var diff = DateTimeOffset.UtcNow - userMsg.CreatedAt;
+        Assert.True(diff.TotalSeconds < 10,
+            $"CreatedAt should be recent (within 10s), but was {diff.TotalSeconds:F1}s ago. " +
+            $"Value: {userMsg.CreatedAt:O}");
+
+        tcs.SetResult(new Message { Id = "msg-1", Role = "Assistant", Content = "Hi!", ThreadId = "thread-1" });
+        await sendTask;
+    }
+
+    /// <summary>
+    /// Regression test: after the full SendMessageAsync pipeline completes,
+    /// all messages loaded from the database must retain their CreatedAt
+    /// timestamps (the reload must not strip them).
+    /// </summary>
+    [Fact]
+    public async Task SendMessage_MessagesReloadedFromDb_RetainCreatedAtTimestamps()
+    {
+        // Arrange
+        var thread = new ChatThread { Id = "thread-1" };
+        var tab = new ChatTabItem(thread) { TextboxContent = "Hello" };
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        var now = DateTimeOffset.UtcNow;
+        var assistantMessage = new Message
+        {
+            Id = "msg-2",
+            Role = "Assistant",
+            Content = "Hi there!",
+            ThreadId = "thread-1",
+            CreatedAt = now,
+        };
+
+        _chatServiceMock.Setup(s => s.SendMessageAsync("thread-1", "Hello", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(assistantMessage);
+        _chatServiceMock.Setup(s => s.GetActiveBranchMessagesAsync("thread-1"))
+            .ReturnsAsync(new List<Message>
+            {
+                new() { Id = "msg-1", Role = "User", Content = "Hello", ThreadId = "thread-1", CreatedAt = now.AddSeconds(-5) },
+                assistantMessage,
+            });
+
+        // Act
+        await vm.SendMessageCommand.ExecuteAsync(null);
+
+        // Assert — all messages in the collection have valid CreatedAt
+        Assert.Equal(2, tab.Messages.Count);
+        foreach (var msg in tab.Messages)
+        {
+            Assert.NotEqual(default(DateTimeOffset), msg.CreatedAt);
+            Assert.True(msg.CreatedAt > DateTimeOffset.MinValue.AddDays(1),
+                $"Message '{msg.Role}' has an invalid CreatedAt: {msg.CreatedAt:O}");
+        }
+    }
+
     // ================================================================
     // Stop generation tests
     // ================================================================
