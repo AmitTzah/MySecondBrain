@@ -7,7 +7,7 @@
   "skipped_smoke_tests": [
     { "step": 4, "name": "ChatThreadViewModel", "classification": "HUMAN/SHT REQUIRED", "description": "Tab bar, new tab, persona, send, switch tabs, close, reopen, Thinking/Mute/font size.", "status": "verified" },
     { "step": 5, "name": "Conversation View & Markdown", "classification": "HUMAN/SHT REQUIRED", "description": "Markdown rendering, chat themes, timestamps, tab independence.", "status": "verified" },
-    { "step": 6, "name": "Streaming + Auto-Scroll + Actions + Errors", "classification": "HUMAN/SHT REQUIRED", "description": "Stream tokens, auto-scroll, Stop, Copy, Regenerate, error+Retry.", "status": "skipped" },
+    { "step": 6, "name": "Streaming + Auto-Scroll + Actions + Errors", "classification": "HUMAN/SHT REQUIRED", "description": "Stream tokens, auto-scroll, Stop, Copy, Regenerate, error+Retry.", "status": "failed" },
     { "step": 7, "name": "Chat Header + Modes + RTL", "classification": "HUMAN/SHT REQUIRED", "description": "Header elements, modes, RTL.", "status": "skipped" },
     { "step": 8, "name": "QoL Features", "classification": "HUMAN/SHT REQUIRED", "description": "File viewer, locked chats, etc.", "status": "skipped" },
     { "step": 9, "name": "E2E Tests + Visual Polish", "classification": "HUMAN/SHT REQUIRED", "description": "Visual polish.", "status": "skipped" }
