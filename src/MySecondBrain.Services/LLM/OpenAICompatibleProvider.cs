@@ -227,7 +227,8 @@ public class OpenAICompatibleProvider : ILLMProvider
 
         if (string.IsNullOrEmpty(endpointUrl))
         {
-            _logger.LogWarning("[ListModels] {Provider}: no endpoint URL — cannot fetch", ProviderName);
+            _logger.LogWarning("[ListModels] {Provider}: no endpoint URL — cannot fetch models (firstKey.CustomEndpointUrl={CustomEp}, foundUnderType={FoundType})",
+                ProviderName, firstKey?.CustomEndpointUrl ?? "(null)", foundUnderType);
             return Array.Empty<ModelInfo>();
         }
 
