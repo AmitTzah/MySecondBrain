@@ -263,7 +263,8 @@ public partial class ChatThreadViewModel : ObservableObject
                     var idx = tab.Messages.IndexOf(_streamingMessage);
                     if (idx >= 0)
                     {
-                        tab.Messages[idx] = _streamingMessage;
+                        tab.Messages.RemoveAt(idx);
+                        tab.Messages.Insert(idx, _streamingMessage);
                         StreamingContent = _streamingMessage.Content;
                     }
                 }
