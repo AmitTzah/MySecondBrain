@@ -415,18 +415,46 @@
                         </StackPanel>
                     </Border>
 
-                    <Button Content="🧠 Thinking" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource AccentBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource AccentBrush}"
-                            Padding="6,3" Margin="2"
-                            Command="{Binding ToggleThinkingCommand}"
-                            AutomationProperties.AutomationId="ThinkingToggleBtn"/>
-                    <Button Content="🔇 Mute" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
-                            Padding="6,3" Margin="2"
-                            Command="{Binding ToggleMuteCommand}"
-                            AutomationProperties.AutomationId="MuteToggleBtn"/>
+                    <ToggleButton Content="🧠 Thinking" FontSize="10"
+                                  BorderThickness="1"
+                                  Padding="6,3" Margin="2"
+                                  IsChecked="{Binding ThinkingEnabled}"
+                                  AutomationProperties.AutomationId="ThinkingToggleBtn">
+                        <ToggleButton.Style>
+                            <Style TargetType="ToggleButton">
+                                <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentForeground}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ToggleButton.Style>
+                    </ToggleButton>
+                    <ToggleButton Content="🔇 Mute" FontSize="10"
+                                  BorderThickness="1"
+                                  Padding="6,3" Margin="2"
+                                  IsChecked="{Binding IsMuted}"
+                                  AutomationProperties.AutomationId="MuteToggleBtn">
+                        <ToggleButton.Style>
+                            <Style TargetType="ToggleButton">
+                                <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentForeground}"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ToggleButton.Style>
+                    </ToggleButton>
 
                     <ToggleButton x:Name="ToolsDropdownBtn" Content="🔧 Tools ▼" FontSize="10"
                             BorderBrush="{DynamicResource BorderBrush}"

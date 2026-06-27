@@ -120,6 +120,25 @@ public partial class ChatView : UserControl
                 _viewModel.ActiveTab?.Title ?? "(null)",
                 _viewModel.ActiveTab?.Messages?.Count ?? -1);
         }
+
+        // Refresh message list when font size changes so the converter re-runs
+        // with the new font size from IThemeProvider.
+        if (e.PropertyName == nameof(ChatThreadViewModel.FontSizeVersion) && _viewModel is not null)
+        {
+            Log.Debug("[FontDiag] ChatView #{InstanceId} font size changed to {FontSize}, refreshing messages",
+                _instanceId, _themeProvider?.FontSize);
+
+            var listBox = MessageScrollViewer?.Content as System.Windows.Controls.ListBox;
+            if (listBox is not null)
+            {
+                var bindingExpr = listBox.GetBindingExpression(System.Windows.Controls.ItemsControl.ItemsSourceProperty);
+                if (bindingExpr?.ParentBindingBase is { } binding)
+                {
+                    listBox.ItemsSource = null;
+                    listBox.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty, binding);
+                }
+            }
+        }
     }
 
     /// <summary>

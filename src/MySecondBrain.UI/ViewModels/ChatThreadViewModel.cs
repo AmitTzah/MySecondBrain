@@ -1030,10 +1030,38 @@ public partial class ChatThreadViewModel : ObservableObject
         ThinkingEnabled = !ThinkingEnabled;
     }
 
+    /// <summary>
+    /// Syncs the <see cref="ThinkingEnabled"/> toggle to the active tab's thread
+    /// so the state persists across tab switches.
+    /// </summary>
+    partial void OnThinkingEnabledChanged(bool value)
+    {
+        if (ActiveTab?.Thread is not null)
+        {
+            ActiveTab.Thread.ThinkingEnabled = value;
+            _logger.LogDebug("ThinkingEnabled changed to {Value} for thread '{ThreadId}'",
+                value, ActiveTab.Thread.Id);
+        }
+    }
+
     [RelayCommand]
     private void ToggleMute()
     {
         IsMuted = !IsMuted;
+    }
+
+    /// <summary>
+    /// Syncs the <see cref="IsMuted"/> toggle to the active tab's thread
+    /// so the state persists across tab switches.
+    /// </summary>
+    partial void OnIsMutedChanged(bool value)
+    {
+        if (ActiveTab?.Thread is not null)
+        {
+            ActiveTab.Thread.IsMuted = value;
+            _logger.LogDebug("IsMuted changed to {Value} for thread '{ThreadId}'",
+                value, ActiveTab.Thread.Id);
+        }
     }
 
     [RelayCommand]
@@ -1748,12 +1776,22 @@ public partial class ChatThreadViewModel : ObservableObject
     // Global commands (delegate to IThemeProvider / ISettingsRepository)
     // ================================================================
 
+    /// <summary>
+    /// Monotonically increasing version number incremented on every font size change.
+    /// ChatView subscribes to PropertyChanged for this property and refreshes the
+    /// message ListBox so the converter re-runs with the new font size.
+    /// </summary>
+    [ObservableProperty]
+    private int _fontSizeVersion;
+
     [RelayCommand]
     private void IncreaseFont()
     {
         var current = _themeProvider.FontSize;
         if (current >= 24) return;
         _themeProvider.SetFontSettings(_themeProvider.FontFamily, current + 1, _themeProvider.FontWeight);
+        FontSizeVersion++;
+        NotifyFontSizeChanged();
     }
 
     [RelayCommand]
@@ -1762,6 +1800,25 @@ public partial class ChatThreadViewModel : ObservableObject
         var current = _themeProvider.FontSize;
         if (current <= 10) return;
         _themeProvider.SetFontSettings(_themeProvider.FontFamily, current - 1, _themeProvider.FontWeight);
+        FontSizeVersion++;
+        NotifyFontSizeChanged();
+    }
+
+    /// <summary>
+    /// Updates MainWindowViewModel.FontSizeDisplay so the font size label
+    /// in ChatHeaderBar (bound to Window DataContext) shows the current value.
+    /// Falls back silently if no MainWindow is available (e.g. in unit tests).
+    /// </summary>
+    private void NotifyFontSizeChanged()
+    {
+        if (System.Windows.Application.Current?.MainWindow?.DataContext is MainWindowViewModel mainVm)
+        {
+            mainVm.FontSizeDisplay = _themeProvider.FontSize.ToString("F0");
+        }
+        else
+        {
+            _logger.LogDebug("NotifyFontSizeChanged: MainWindow.DataContext is not MainWindowViewModel — FontSizeDisplay not updated");
+        }
     }
 
     [RelayCommand]

@@ -4,6 +4,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Media;
 using Markdig.Syntax;
+using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Utilities;
 using WpfColor = System.Windows.Media.Color;
 using WpfFontFamily = System.Windows.Media.FontFamily;
@@ -19,6 +20,32 @@ namespace MySecondBrain.UI.Converters;
 /// </summary>
 public class MarkdownToFlowDocumentConverter : IValueConverter
 {
+    /// <summary>
+    /// Resolves the current theme font size so rendered message text
+    /// reflects user preferences set via the A⁻/A⁺ buttons.
+    /// </summary>
+    private static double GetFontSize()
+    {
+        try
+        {
+            var provider = (App.ServiceProvider as System.IServiceProvider)
+                ?.GetService(typeof(IThemeProvider)) as IThemeProvider;
+            if (provider is null)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    "[MarkdownToFlowDocumentConverter] IThemeProvider not available — using fallback font size 14");
+                return 14.0;
+            }
+            return provider.FontSize;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[MarkdownToFlowDocumentConverter] Failed to resolve font size: {ex.Message}");
+            return 14.0;
+        }
+    }
+
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is not string markdown || string.IsNullOrEmpty(markdown))
@@ -27,7 +54,7 @@ public class MarkdownToFlowDocumentConverter : IValueConverter
         var doc = new FlowDocument
         {
             PagePadding = new Thickness(0),
-            FontSize = 14
+            FontSize = GetFontSize()
         };
 
         try

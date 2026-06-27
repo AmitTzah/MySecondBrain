@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Windows;
 using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
@@ -1201,6 +1202,167 @@ public class ChatThreadViewModelTests
 
         vm.MemoryEnabled = true;
         Assert.True(vm.MemoryEnabled);
+    }
+
+    // ================================================================
+    // Font size commands
+    // ================================================================
+
+    [Fact]
+    public void IncreaseFont_CallsThemeProviderAndIncrementsVersion()
+    {
+        // Arrange
+        _themeProviderMock.SetupGet(t => t.FontSize).Returns(14.0);
+        _themeProviderMock.Setup(t => t.SetFontSettings(It.IsAny<string>(), It.IsAny<double>(), It.IsAny<FontWeight>()));
+        var vm = CreateViewModel();
+        var initialVersion = vm.FontSizeVersion;
+
+        // Act
+        vm.IncreaseFontCommand.Execute(null);
+
+        // Assert
+        _themeProviderMock.Verify(t => t.SetFontSettings(
+            _themeProviderMock.Object.FontFamily, 15.0, _themeProviderMock.Object.FontWeight), Times.Once);
+        // FontSizeVersion should have incremented to trigger message refresh
+        Assert.Equal(initialVersion + 1, vm.FontSizeVersion);
+    }
+
+    [Fact]
+    public void IncreaseFont_AtMaxSize_DoesNothing()
+    {
+        // Arrange
+        _themeProviderMock.SetupGet(t => t.FontSize).Returns(24.0);
+        var vm = CreateViewModel();
+        var initialVersion = vm.FontSizeVersion;
+
+        // Act
+        vm.IncreaseFontCommand.Execute(null);
+
+        // Assert — no call to SetFontSettings
+        _themeProviderMock.Verify(t => t.SetFontSettings(
+            It.IsAny<string>(), It.IsAny<double>(), It.IsAny<FontWeight>()), Times.Never);
+        Assert.Equal(initialVersion, vm.FontSizeVersion);
+    }
+
+    [Fact]
+    public void DecreaseFont_CallsThemeProviderAndIncrementsVersion()
+    {
+        // Arrange
+        _themeProviderMock.SetupGet(t => t.FontSize).Returns(14.0);
+        _themeProviderMock.Setup(t => t.SetFontSettings(It.IsAny<string>(), It.IsAny<double>(), It.IsAny<FontWeight>()));
+        var vm = CreateViewModel();
+        var initialVersion = vm.FontSizeVersion;
+
+        // Act
+        vm.DecreaseFontCommand.Execute(null);
+
+        // Assert
+        _themeProviderMock.Verify(t => t.SetFontSettings(
+            _themeProviderMock.Object.FontFamily, 13.0, _themeProviderMock.Object.FontWeight), Times.Once);
+        Assert.Equal(initialVersion + 1, vm.FontSizeVersion);
+    }
+
+    [Fact]
+    public void DecreaseFont_AtMinSize_DoesNothing()
+    {
+        // Arrange
+        _themeProviderMock.SetupGet(t => t.FontSize).Returns(10.0);
+        var vm = CreateViewModel();
+        var initialVersion = vm.FontSizeVersion;
+
+        // Act
+        vm.DecreaseFontCommand.Execute(null);
+
+        // Assert — no call to SetFontSettings
+        _themeProviderMock.Verify(t => t.SetFontSettings(
+            It.IsAny<string>(), It.IsAny<double>(), It.IsAny<FontWeight>()), Times.Never);
+        Assert.Equal(initialVersion, vm.FontSizeVersion);
+    }
+
+    // ================================================================
+    // Thinking/Mute toggle syncs to thread
+    // ================================================================
+
+    [Fact]
+    public void ToggleThinking_SyncsToActiveTabThread()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        var thread = new ChatThread { Id = "t1" };
+        var tab = new ChatTabItem(thread);
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+        Assert.False(tab.Thread.ThinkingEnabled);
+
+        // Act
+        vm.ToggleThinkingCommand.Execute(null);
+
+        // Assert — syncs to thread
+        Assert.True(vm.ThinkingEnabled);
+        Assert.True(tab.Thread.ThinkingEnabled);
+    }
+
+    [Fact]
+    public void ToggleMute_SyncsToActiveTabThread()
+    {
+        // Arrange
+        var vm = CreateViewModel();
+        var thread = new ChatThread { Id = "t1" };
+        var tab = new ChatTabItem(thread);
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+        Assert.False(tab.Thread.IsMuted);
+
+        // Act
+        vm.ToggleMuteCommand.Execute(null);
+
+        // Assert — syncs to thread
+        Assert.True(vm.IsMuted);
+        Assert.True(tab.Thread.IsMuted);
+    }
+
+    [Fact]
+    public void ToggleThinking_WithoutActiveTab_DoesNotThrow()
+    {
+        // Arrange — no active tab
+        var vm = CreateViewModel();
+
+        // Act & Assert
+        var exception = Record.Exception(() => vm.ToggleThinkingCommand.Execute(null));
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void ToggleMute_WithoutActiveTab_DoesNotThrow()
+    {
+        var vm = CreateViewModel();
+        var exception = Record.Exception(() => vm.ToggleMuteCommand.Execute(null));
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void SwitchingTabs_RestoresThinkingAndMuteFromThread()
+    {
+        // Arrange
+        var thread1 = new ChatThread { Id = "t1", ThinkingEnabled = true, IsMuted = false };
+        var thread2 = new ChatThread { Id = "t2", ThinkingEnabled = false, IsMuted = true };
+        var tab1 = new ChatTabItem(thread1);
+        var tab2 = new ChatTabItem(thread2);
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab1);
+        vm.ChatTabs.Add(tab2);
+        vm.ActiveTab = tab1;
+
+        // Assert — tab1's state restored
+        Assert.True(vm.ThinkingEnabled);
+        Assert.False(vm.IsMuted);
+
+        // Act — switch to tab2
+        vm.ActiveTab = tab2;
+
+        // Assert — tab2's state restored
+        Assert.False(vm.ThinkingEnabled);
+        Assert.True(vm.IsMuted);
     }
 
     // ================================================================
