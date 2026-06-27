@@ -583,4 +583,152 @@ public class SettingsViewModelModelConfigPersonaTests : SettingsViewModelTestBas
 
         _personaRepoMock.Verify(r => r.DeleteAsync(It.IsAny<string>()), Times.Never);
     }
+
+    // ================================================================
+    // SelectedModelConfigApiKey changes sync SelectedModelConfigProvider
+    // Regression: after selecting a DeepSeek API key, the provider type
+    // selector must update so SaveModelConfigAsync saves the correct type.
+    // ================================================================
+
+    [Fact]
+    public async Task SelectApiKey_SyncsSelectedModelConfigProvider()
+    {
+        _apiKeyRepoMock
+            .Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<ApiKey>());
+
+        await _sut.AddModelConfigCommand.ExecuteAsync(null);
+
+        // Initially defaults to OpenAI
+        Assert.Equal(ProviderType.OpenAI, _sut.SelectedModelConfigProvider);
+
+        // Clear any pending FetchModels tasks from constructor setup
+        _llmProviderServiceMock
+            .Setup(s => s.ListModelsAsync(It.IsAny<ModelConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ModelInfo>());
+
+        // Simulate selecting a DeepSeek API key
+        _apiKeyRepoMock
+            .Setup(r => r.GetByIdAsync("deepseek-key"))
+            .ReturnsAsync(new ApiKey
+            {
+                Id = "deepseek-key",
+                ProviderType = ProviderType.DeepSeek,
+                EncryptedValue = "enc",
+            });
+
+        _sut.SelectedModelConfigApiKey = new ApiKeyDisplayItem
+        {
+            Id = "deepseek-key",
+            ProviderType = ProviderType.DeepSeek,
+        };
+
+        // SelectedModelConfigProvider is set synchronously by OnSelectedModelConfigApiKeyChanged
+        Assert.Equal(ProviderType.DeepSeek, _sut.SelectedModelConfigProvider);
+    }
+
+    [Fact]
+    public async Task ChangeProvider_ToIncompatible_ClearsApiKey()
+    {
+        _apiKeyRepoMock
+            .Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<ApiKey>());
+
+        await _sut.AddModelConfigCommand.ExecuteAsync(null);
+
+        // Set a DeepSeek API key
+        _apiKeyRepoMock
+            .Setup(r => r.GetByIdAsync("deepseek-key"))
+            .ReturnsAsync(new ApiKey
+            {
+                Id = "deepseek-key",
+                ProviderType = ProviderType.DeepSeek,
+                EncryptedValue = "enc",
+            });
+
+        _llmProviderServiceMock
+            .Setup(s => s.ListModelsAsync(It.IsAny<ModelConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ModelInfo>());
+
+        _sut.SelectedModelConfigApiKey = new ApiKeyDisplayItem
+        {
+            Id = "deepseek-key",
+            ProviderType = ProviderType.DeepSeek,
+        };
+
+        Assert.NotNull(_sut.SelectedModelConfigApiKey);
+
+        // Manually change provider to OpenAI — should clear incompatible API key
+        // This simulates the user selecting a different provider from the dropdown
+        _sut.SelectedModelConfigProvider = ProviderType.OpenAI;
+
+        Assert.Null(_sut.SelectedModelConfigApiKey);
+    }
+
+    [Fact]
+    public async Task SaveModelConfigCommand_WithDeepSeekApiKey_SavesCorrectProviderType()
+    {
+        _apiKeyRepoMock
+            .Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<ApiKey>());
+
+        await _sut.AddModelConfigCommand.ExecuteAsync(null);
+
+        // Create config WITHOUT setting ProviderType (defaults to OpenAI=0)
+        _sut.EditingModelConfig = new ModelConfiguration
+        {
+            DisplayName = "DeepSeek Flash",
+            ModelIdentifier = "deepseek-v4-flash",
+            Temperature = 1.0,
+            ContextOverflowStrategy = "SlidingWindow",
+        };
+
+        _apiKeyRepoMock
+            .Setup(r => r.GetByIdAsync("ds-key"))
+            .ReturnsAsync(new ApiKey
+            {
+                Id = "ds-key",
+                ProviderType = ProviderType.DeepSeek,
+                EncryptedValue = "enc-deepseek",
+            });
+
+        _llmProviderServiceMock
+            .Setup(s => s.ListModelsAsync(It.IsAny<ModelConfiguration>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ModelInfo>
+            {
+                new("deepseek-v4-flash", "DeepSeek Flash", 128000),
+            });
+
+        _sut.SelectedModelConfigApiKey = new ApiKeyDisplayItem
+        {
+            Id = "ds-key",
+            ProviderType = ProviderType.DeepSeek,
+        };
+
+        // Verify the API key selection was synced
+        Assert.Equal(ProviderType.DeepSeek, _sut.SelectedModelConfigProvider);
+
+        // Verify SelectedModelConfigApiKey is not null before save
+        Assert.NotNull(_sut.SelectedModelConfigApiKey);
+        Assert.Equal(ProviderType.DeepSeek, _sut.SelectedModelConfigApiKey!.ProviderType);
+
+        ModelConfiguration? capturedConfig = null;
+        _modelConfigRepoMock
+            .Setup(r => r.CreateAsync(It.IsAny<ModelConfiguration>()))
+            .ReturnsAsync((ModelConfiguration c) =>
+            {
+                capturedConfig = c;
+                return c;
+            });
+
+        _modelConfigRepoMock
+            .Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<ModelConfiguration>());
+
+        await _sut.SaveModelConfigCommand.ExecuteAsync(null);
+
+        Assert.NotNull(capturedConfig);
+        Assert.Equal("DeepSeek Flash", capturedConfig!.DisplayName);
+        Assert.Equal(ProviderType.DeepSeek, capturedConfig!.ProviderType);
+    }
 }

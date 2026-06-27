@@ -244,10 +244,14 @@ public partial class SettingsViewModel
             config.Temperature = Math.Clamp(config.Temperature, 0.0, 2.0);
             config.UpdatedAt = DateTimeOffset.UtcNow;
 
-            if (SelectedModelConfigApiKey is not null && SelectedModelConfigApiKey.ProviderType == ProviderType.OpenAICompatible)
+            // Sync the ProviderType from the selected API key's provider
+            if (SelectedModelConfigApiKey is not null)
             {
+                config.ProviderType = SelectedModelConfigApiKey.ProviderType;
+
+                // Copy endpoint URL from API key for remapped types (DeepSeek, MiMo, etc.)
                 var selectedKey = await _apiKeyRepo.GetByIdAsync(SelectedModelConfigApiKey.Id);
-                if (selectedKey is not null)
+                if (selectedKey is not null && !string.IsNullOrEmpty(selectedKey.CustomEndpointUrl))
                 {
                     config.EndpointUrl = selectedKey.CustomEndpointUrl;
                 }
@@ -624,7 +628,17 @@ public partial class SettingsViewModel
 
     partial void OnSelectedModelConfigProviderChanged(ProviderType value)
     {
-        SelectedModelConfigApiKey = null;
+        // Only clear the API key if it is incompatible with the new provider.
+        // When this change originates from OnSelectedModelConfigApiKeyChanged (the
+        // API key selection syncs the provider), the key's ProviderType matches the
+        // new value and we must not nullify it — doing so creates a re-entrant
+        // cascade that destroys the selection.
+        if (SelectedModelConfigApiKey is not null &&
+            SelectedModelConfigApiKey.ProviderType != value)
+        {
+            SelectedModelConfigApiKey = null;
+        }
+
         AvailableModels = [];
     }
 
@@ -632,6 +646,10 @@ public partial class SettingsViewModel
     {
         if (value is not null)
         {
+            // Sync the provider type selector to match the selected API key's provider.
+            // This ensures the model config saves with the correct ProviderType
+            // (e.g. DeepSeek, MiMo) instead of the default (OpenAI).
+            SelectedModelConfigProvider = value.ProviderType;
             _ = FetchModelsForProviderAsync(value.ProviderType, value.Id);
         }
         else

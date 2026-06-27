@@ -12,6 +12,14 @@ namespace MySecondBrain.Services.LLM;
 public class OpenAICompatibleProvider : ILLMProvider
 {
     private const string ChatCompletionsPath = "/chat/completions";
+    private static readonly ProviderType[] RemappedProviderTypes =
+    [
+        ProviderType.OpenAICompatible,
+        ProviderType.DeepSeek,
+        ProviderType.MiMo,
+        ProviderType.Moonshot,
+        ProviderType.Mistral,
+    ];
     private readonly IApiKeyRepository _apiKeyRepo;
     private readonly IEncryptionService _encryptionService;
     private readonly ILogger<OpenAICompatibleProvider> _logger;
@@ -172,18 +180,9 @@ public class OpenAICompatibleProvider : ILLMProvider
         // DeepSeek, MiMo, Moonshot, and Mistral are all remapped to OpenAICompatible
         // by LLMProviderFactory. Their API keys are stored under their original
         // provider type, not OpenAICompatible. Query all remapped types.
-        var remappedTypes = new[]
-        {
-            ProviderType.OpenAICompatible,
-            ProviderType.DeepSeek,
-            ProviderType.MiMo,
-            ProviderType.Moonshot,
-            ProviderType.Mistral,
-        };
-
         ApiKey? firstKey = null;
         ProviderType foundUnderType = ProviderType.OpenAICompatible;
-        foreach (var pt in remappedTypes)
+        foreach (var pt in RemappedProviderTypes)
         {
             var keys = await _apiKeyRepo.GetByProviderAsync(pt);
             var keyList = keys?.ToList() ?? new List<ApiKey>();
@@ -353,9 +352,22 @@ public class OpenAICompatibleProvider : ILLMProvider
     /// </summary>
     public async Task<bool> ValidateKeyAsync(string apiKey, CancellationToken ct)
     {
-        var apiKeys = await _apiKeyRepo.GetByProviderAsync(ProviderType.OpenAICompatible);
-        var firstKey = apiKeys?.FirstOrDefault();
-        var endpointUrl = firstKey?.CustomEndpointUrl ?? "http://localhost:1234";
+        // Query across all remapped provider types (DeepSeek, MiMo, Moonshot,
+        // Mistral, OpenAICompatible) since keys are stored under their original type.
+        string? endpointUrl = null;
+        foreach (var pt in RemappedProviderTypes)
+        {
+            var keys = await _apiKeyRepo.GetByProviderAsync(pt);
+            var firstKey = keys?.FirstOrDefault();
+            if (firstKey is not null)
+            {
+                endpointUrl = firstKey.CustomEndpointUrl
+                    ?? GetDefaultEndpointForProvider(pt);
+                break;
+            }
+        }
+
+        endpointUrl ??= "http://localhost:1234";
         return await ValidateKeyInternalAsync(apiKey, endpointUrl, ct);
     }
 
@@ -419,7 +431,11 @@ public class OpenAICompatibleProvider : ILLMProvider
 
     /// <summary>
     /// Resolves the endpoint base URL from ModelConfig.EndpointUrl or the
-    /// stored API key's CustomEndpointUrl. Falls back to http://localhost:1234.
+    /// stored API key's CustomEndpointUrl. Queries across all remapped provider
+    /// types (DeepSeek, MiMo, Moonshot, Mistral, OpenAICompatible) since their
+    /// API keys are stored under their original ProviderType, not OpenAICompatible.
+    /// Falls back to the well-known default endpoint for the config's provider type,
+    /// then to http://localhost:1234.
     /// </summary>
     private async Task<string?> ResolveEndpointUrlAsync(ModelConfiguration config)
     {
@@ -427,23 +443,33 @@ public class OpenAICompatibleProvider : ILLMProvider
         if (!string.IsNullOrEmpty(config.EndpointUrl))
             return config.EndpointUrl;
 
-        // Check stored key's custom endpoint
-        var keys = await _apiKeyRepo.GetByProviderAsync(ProviderType.OpenAICompatible);
-        var firstKey = keys?.FirstOrDefault();
-        if (!string.IsNullOrEmpty(firstKey?.CustomEndpointUrl))
-            return firstKey.CustomEndpointUrl;
+        // Check stored key's custom endpoint across all remapped types
+        foreach (var pt in RemappedProviderTypes)
+        {
+            var keys = await _apiKeyRepo.GetByProviderAsync(pt);
+            var firstKey = keys?.FirstOrDefault();
+            if (firstKey is not null && !string.IsNullOrEmpty(firstKey.CustomEndpointUrl))
+                return firstKey.CustomEndpointUrl;
+        }
 
-        // Fallback for local servers
+        // Fallback to well-known default for the config's provider type
+        var defaultEndpoint = GetDefaultEndpointForProvider(config.ProviderType);
+        if (!string.IsNullOrEmpty(defaultEndpoint))
+            return defaultEndpoint;
+
+        // Final fallback for local servers
         return "http://localhost:1234";
     }
 
     /// <summary>
-    /// Resolves the decrypted API key. Returns null for local servers
+    /// Resolves the decrypted API key. Queries across all remapped provider types
+    /// (DeepSeek, MiMo, Moonshot, Mistral, OpenAICompatible) since API keys are
+    /// stored under their original ProviderType. Returns null for local servers
     /// that don't require authentication.
     /// </summary>
     private async Task<string?> ResolveApiKeyAsync(ModelConfiguration config)
     {
-        // Try specific key by ID
+        // Try specific key by ID (works regardless of ProviderType)
         if (!string.IsNullOrEmpty(config.ApiKeyId))
         {
             var key = await _apiKeyRepo.GetByIdAsync(config.ApiKeyId);
@@ -455,13 +481,17 @@ public class OpenAICompatibleProvider : ILLMProvider
             }
         }
 
-        // Fall back to first key by provider type
-        var keys = await _apiKeyRepo.GetByProviderAsync(ProviderType.OpenAICompatible);
-        var firstKey = keys?.FirstOrDefault();
-        if (firstKey is not null)
+        // Fall back to first key across all remapped provider types
+        foreach (var pt in RemappedProviderTypes)
         {
-            var decrypted = _encryptionService.UnprotectString(firstKey.EncryptedValue);
-            return decrypted; // May be empty for local servers
+            var keys = await _apiKeyRepo.GetByProviderAsync(pt);
+            var firstKey = keys?.FirstOrDefault();
+            if (firstKey is not null)
+            {
+                var decrypted = _encryptionService.UnprotectString(firstKey.EncryptedValue);
+                if (!string.IsNullOrEmpty(decrypted))
+                    return decrypted;
+            }
         }
 
         return null;
