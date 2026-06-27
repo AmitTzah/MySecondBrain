@@ -137,6 +137,10 @@ public partial class ChatThreadViewModel : ObservableObject
 
     partial void OnActiveTabChanged(ChatTabItem? value)
     {
+        _logger.LogDebug(
+            "[ThemeDiag] OnActiveTabChanged: newTab.Title={NewTitle}, newTab.ChatVisualTheme={NewTheme}, ChatTabs.Count={Count}",
+            value?.Title ?? "(null)", value?.ChatVisualTheme.ToString() ?? "(null)", ChatTabs.Count);
+
         // When user clicks a tab from any screen, navigate to Chats
         if (value is not null && System.Windows.Application.Current?.MainWindow?.DataContext is MainWindowViewModel mainVm
             && mainVm.SelectedScreen != ScreenType.Chats)
@@ -183,6 +187,8 @@ public partial class ChatThreadViewModel : ObservableObject
                 _isSettingActivePersona = true;
                 ActivePersona = value.ActivePersona;
                 ActiveModelConfig = value.ActiveModelConfig;
+                // Restore per-tab chat visual theme
+                CurrentChatVisualTheme = value.ChatVisualTheme;
             }
             finally
             {
@@ -364,6 +370,35 @@ public partial class ChatThreadViewModel : ObservableObject
     [ObservableProperty]
     private ModelConfiguration? _activeModelConfig;
 
+    /// <summary>
+    /// Per-tab chat visual theme (Classic/Compact/Bubble).
+    /// Mirrors ActiveTab.ChatVisualTheme and restores on tab switch.
+    /// When changed, updates the active tab's stored theme and notifies the UI.
+    /// </summary>
+    [ObservableProperty]
+    private ChatTheme _currentChatVisualTheme = ChatTheme.Classic;
+
+    partial void OnCurrentChatVisualThemeChanged(ChatTheme value)
+    {
+        _logger.LogDebug(
+            "[ThemeDiag] ChatThreadViewModel.OnCurrentChatVisualThemeChanged: theme={Theme}, ActiveTab.Title={Title}, ChatTabs.Count={Count}",
+            value, ActiveTab?.Title ?? "(null)", ChatTabs.Count);
+
+        if (ActiveTab is not null)
+        {
+            ActiveTab.ChatVisualTheme = value;
+            _logger.LogDebug(
+                "[ThemeDiag] Stored ChatVisualTheme={Theme} on tab '{Title}'",
+                value, ActiveTab.Title);
+        }
+
+        // Per-tab theme: ChatView listens to PropertyChanged on this VM for
+        // nameof(CurrentChatVisualTheme) and calls ApplyChatTheme locally.
+        // We do NOT call _themeProvider.SetChatTheme here because that fires
+        // a global ChatThemeChanged event that would hit ALL ChatView instances.
+        _logger.LogDebug("[ThemeDiag] Per-tab theme set (no global SetChatTheme call)");
+    }
+
     [ObservableProperty]
     private string _personaPickerSearchText = string.Empty;
 
@@ -397,6 +432,15 @@ public partial class ChatThreadViewModel : ObservableObject
 
         try
         {
+            // Initialize the per-tab theme from the globally persisted preference.
+            // New tabs will inherit this value until the user changes it per-tab.
+            if (_themeProvider.CurrentChatTheme != CurrentChatVisualTheme)
+            {
+                _logger.LogDebug("[ThemeDiag] InitializeAsync: seeding CurrentChatVisualTheme from global={Global}",
+                    _themeProvider.CurrentChatTheme);
+                CurrentChatVisualTheme = _themeProvider.CurrentChatTheme;
+            }
+
             await RefreshPersonaListAsync();
 
             var savedPersonaId = await _settingsRepo.GetAsync(LastSelectedPersonaIdKey);
@@ -584,10 +628,11 @@ public partial class ChatThreadViewModel : ObservableObject
             _logger.LogDebug("NewChatAsync: creating thread with persona '{Persona}'", persona.DisplayName);
             var thread = await _chatService.CreateThreadAsync(null, false, persona);
             var tab = new ChatTabItem(thread);
-            // Store the current persona and model config on the tab so each tab
-            // maintains its own persona state independently.
+            // Store the current persona, model config, and theme on the tab so each tab
+            // maintains its own state independently.
             tab.ActivePersona = ActivePersona;
             tab.ActiveModelConfig = ActiveModelConfig;
+            tab.ChatVisualTheme = CurrentChatVisualTheme;
             ChatTabs.Add(tab);
             ActiveTab = tab;
 
@@ -625,9 +670,10 @@ public partial class ChatThreadViewModel : ObservableObject
         if (tab.Thread is null)
         {
             _lastClosedTab = tab;
+            var wasActiveFileTab = tab == ActiveTab;
             ChatTabs.Remove(tab);
-            if (ActiveTab is null && ChatTabs.Count > 0)
-                ActiveTab = ChatTabs[^1];
+            if (wasActiveFileTab)
+                ActiveTab = ChatTabs.Count > 0 ? ChatTabs[^1] : null;
             if (ChatTabs.Count == 0)
                 StopDraftTimer();
             return;
@@ -636,11 +682,17 @@ public partial class ChatThreadViewModel : ObservableObject
         // Preserve for reopen
         _lastClosedTab = tab;
 
+        // If the tab being closed is the active tab, we need to select a new one
+        // or clear the active tab if no tabs remain
+        var wasActive = tab == ActiveTab;
+
         ChatTabs.Remove(tab);
 
-        // Select another tab if available
-        if (ActiveTab is null && ChatTabs.Count > 0)
-            ActiveTab = ChatTabs[^1];
+        if (wasActive)
+        {
+            // Select another tab if available, otherwise clear to show empty state
+            ActiveTab = ChatTabs.Count > 0 ? ChatTabs[^1] : null;
+        }
 
         // Stop draft timer when all tabs are closed
         if (ChatTabs.Count == 0)
@@ -1147,9 +1199,10 @@ public partial class ChatThreadViewModel : ObservableObject
                 };
 
                 var tab = new ChatTabItem(thread);
-                // Store the current persona (null in this branch) on the tab
+                // Store the current persona, model config, and theme on the tab
                 tab.ActivePersona = ActivePersona;
                 tab.ActiveModelConfig = ActiveModelConfig;
+                tab.ChatVisualTheme = CurrentChatVisualTheme;
                 ChatTabs.Add(tab);
                 ActiveTab = tab;
 
@@ -1178,9 +1231,10 @@ public partial class ChatThreadViewModel : ObservableObject
 
             var chatThread = await _chatService.CreateThreadAsync(fileVm.FileName, true, persona);
             var chatTab = new ChatTabItem(chatThread);
-            // Store the current persona and model config on the tab
+            // Store the current persona, model config, and theme on the tab
             chatTab.ActivePersona = ActivePersona;
             chatTab.ActiveModelConfig = ActiveModelConfig;
+            chatTab.ChatVisualTheme = CurrentChatVisualTheme;
             ChatTabs.Add(chatTab);
             ActiveTab = chatTab;
 
@@ -1524,9 +1578,10 @@ public partial class ChatThreadViewModel : ObservableObject
             var newMessages = await _chatService.GetActiveBranchMessagesAsync(newThread.Id);
             var tab = new ChatTabItem(newThread);
             tab.Messages = new ObservableCollection<Message>(newMessages);
-            // Preserve the source tab's persona on the duplicated tab
+            // Preserve the source tab's persona and theme on the duplicated tab
             tab.ActivePersona = ActivePersona;
             tab.ActiveModelConfig = ActiveModelConfig;
+            tab.ChatVisualTheme = CurrentChatVisualTheme;
             ChatTabs.Add(tab);
             ActiveTab = tab;
             _logger.LogDebug("Duplicated chat to thread '{ThreadId}'", newThread.Id);

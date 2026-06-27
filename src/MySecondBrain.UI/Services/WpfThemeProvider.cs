@@ -62,9 +62,13 @@ public class WpfThemeProvider : IThemeProvider
 
     public void SetChatTheme(ChatTheme theme)
     {
+        _logger.LogDebug("[ThemeDiag] WpfThemeProvider.SetChatTheme: requested={Requested}, current={Current}",
+            theme, _currentChatTheme);
         if (theme == _currentChatTheme) return;
         _currentChatTheme = theme;
         PersistAndLog("ChatTheme", theme.ToString());
+        _logger.LogDebug("[ThemeDiag] WpfThemeProvider firing ChatThemeChanged: theme={Theme}, subscriberCount≈?",
+            theme);
         ChatThemeChanged?.Invoke(this, theme);
     }
 

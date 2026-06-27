@@ -72,6 +72,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void OnChatThemeChanged(object? sender, ChatTheme theme)
     {
+        _logger.LogDebug("[ThemeDiag] MainWindowViewModel.OnChatThemeChanged: theme={Theme}, current={Current}",
+            theme, CurrentChatTheme);
         CurrentChatTheme = theme;
     }
 

@@ -58,10 +58,10 @@
                         Click="PersonaNameBtn_Click"
                         AutomationProperties.AutomationId="PersonaNameBtn"/>
 
-                <!-- 2. Chat Theme Selector -->
+                <!-- 2. Chat Theme Selector (per-tab via ChatThreadViewModel) -->
                 <ComboBox Grid.Column="1"
                           ItemsSource="{Binding DataContext.ChatThemeOptions, RelativeSource={RelativeSource AncestorType=Window}}"
-                          SelectedItem="{Binding DataContext.CurrentChatTheme, RelativeSource={RelativeSource AncestorType=Window}}"
+                          SelectedItem="{Binding CurrentChatVisualTheme}"
                           FontSize="11" Width="90"
                           Margin="0,0,6,0"
                           VerticalAlignment="Center"

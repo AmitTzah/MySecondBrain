@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 using MySecondBrain.UI.ViewModels;
+using Serilog;
 using UserControl = System.Windows.Controls.UserControl;
 
 namespace MySecondBrain.UI.Views;
@@ -16,6 +18,8 @@ public partial class ChatView : UserControl
     private ChatThreadViewModel? _viewModel;
     private bool _isAutoScrolling;
     private IThemeProvider? _themeProvider;
+    private static int s_instanceCounter;
+    private readonly int _instanceId = Interlocked.Increment(ref s_instanceCounter);
 
     public ChatView()
     {
@@ -26,12 +30,30 @@ public partial class ChatView : UserControl
         _themeProvider = App.ServiceProvider.GetService<IThemeProvider>();
         DataContext = _viewModel;
 
-        // Subscribe to chat theme changes to swap message templates dynamically
-        if (_themeProvider is not null)
+        Log.Debug("[ThemeDiag] ChatView #{InstanceId} constructed, DataContext={DC}, current global theme={Theme}",
+            _instanceId, DataContext?.GetType().Name, _themeProvider?.CurrentChatTheme);
+
+        // Per-tab theme handling: subscribe to ViewModel property changes
+        // instead of the global IThemeProvider.ChatThemeChanged event.
+        // Multiple ChatView instances exist (one for tab content, one for
+        // screen navigation template) and the global event would fire to ALL
+        // of them, causing theme "duplication" across tabs.
+        if (_viewModel is not null)
         {
-            _themeProvider.ChatThemeChanged += OnChatThemeChanged;
-            // Set initial templates from saved theme
-            Unloaded += (_, _) => _themeProvider.ChatThemeChanged -= OnChatThemeChanged;
+            _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+            Unloaded += (_, _) =>
+            {
+                Log.Debug("[ThemeDiag] ChatView #{InstanceId} unloading, unsubscribing from ViewModel.PropertyChanged",
+                    _instanceId);
+                if (_viewModel is not null)
+                    _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            };
+
+            // Theme is applied via PropertyChanged when InitializeAsync seeds
+            // CurrentChatVisualTheme from the global preference (or when the
+            // user changes it via the ComboBox). Do NOT call ApplyChatTheme
+            // in the constructor — it resets ListBox.ItemsSource before WPF
+            // bindings are fully active, causing messages to not appear.
         }
 
         // Initialize the ViewModel (load default persona, populate list)
@@ -39,7 +61,27 @@ public partial class ChatView : UserControl
         {
             try
             {
-                await _viewModel.InitializeAsync();
+                Log.Debug("[MsgDiag] ChatView #{InstanceId} Loaded: ActiveTab={ActiveTab}, ChatTabs.Count={Count}, Messages.Count={MsgCount}",
+                    _instanceId,
+                    _viewModel?.ActiveTab?.Title ?? "(null)",
+                    _viewModel?.ChatTabs.Count ?? 0,
+                    _viewModel?.ActiveTab?.Messages?.Count ?? -1);
+
+                if (_viewModel is not null)
+                    await _viewModel.InitializeAsync();
+
+                Log.Debug("[MsgDiag] ChatView #{InstanceId} after InitializeAsync: ActiveTab={ActiveTab}, ChatTabs.Count={Count}, Messages.Count={MsgCount}",
+                    _instanceId,
+                    _viewModel?.ActiveTab?.Title ?? "(null)",
+                    _viewModel?.ChatTabs.Count ?? 0,
+                    _viewModel?.ActiveTab?.Messages?.Count ?? -1);
+
+                // Check ListBox state
+                var lb = MessageScrollViewer?.Content as System.Windows.Controls.ListBox;
+                Log.Debug("[MsgDiag] ChatView #{InstanceId} ListBox: hasItemsSource={HasSource}, itemCount={ItemCount}",
+                    _instanceId,
+                    lb?.ItemsSource != null,
+                    lb?.Items.Count ?? -1);
             }
             catch (Exception ex)
             {
@@ -47,23 +89,49 @@ public partial class ChatView : UserControl
             }
         };
 
-        // Register Ctrl+N for persona picker dialog
-        var openPickerBinding = new KeyBinding
+        // Register Ctrl+N to create a new chat (always — persona picker is a separate action)
+        var newChatBinding = new KeyBinding
         {
             Key = Key.N,
             Modifiers = ModifierKeys.Control,
-            Command = new RelayCommandAdapter(ShowPersonaPickerDialog)
+            Command = new RelayCommandAdapter(() => _viewModel?.NewChatCommand.Execute(null))
         };
-        InputBindings.Add(openPickerBinding);
+        InputBindings.Add(newChatBinding);
     }
 
     /// <summary>
-    /// Called when the chat theme changes (Classic / Compact / Bubble).
+    /// Listens for ViewModel property changes. When CurrentChatVisualTheme changes,
+    /// swaps message templates for this ChatView instance only (not globally).
+    /// </summary>
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ChatThreadViewModel.CurrentChatVisualTheme) && _viewModel is not null)
+        {
+            Log.Debug("[ThemeDiag] ChatView #{InstanceId} detected CurrentChatVisualTheme change to {Theme}",
+                _instanceId, _viewModel.CurrentChatVisualTheme);
+            ApplyChatTheme(_viewModel.CurrentChatVisualTheme);
+        }
+
+        // Also log ActiveTab changes for diagnostics
+        if (e.PropertyName == nameof(ChatThreadViewModel.ActiveTab) && _viewModel is not null)
+        {
+            Log.Debug("[MsgDiag] ChatView #{InstanceId} ActiveTab changed: Title={Title}, Messages.Count={MsgCount}",
+                _instanceId,
+                _viewModel.ActiveTab?.Title ?? "(null)",
+                _viewModel.ActiveTab?.Messages?.Count ?? -1);
+        }
+    }
+
+    /// <summary>
+    /// Applies the given chat theme to this ChatView's message templates.
     /// Dynamically swaps the User and Assistant message templates in the
     /// MessageDataTemplateSelector and refreshes the ListBox items.
     /// </summary>
-    private void OnChatThemeChanged(object? sender, ChatTheme newTheme)
+    private void ApplyChatTheme(ChatTheme newTheme)
     {
+        Log.Debug("[ThemeDiag] ChatView #{InstanceId} applying theme: {NewTheme}",
+            _instanceId, newTheme);
+
         if (_themeProvider is null) return;
 
         var selector = Resources["MessageTemplateSelector"] as MessageDataTemplateSelector;
@@ -99,13 +167,18 @@ public partial class ChatView : UserControl
             }
         }
 
-        // Force the ListBox to re-evaluate its items
+        // Force the ListBox to re-evaluate its ItemTemplateSelector.
+        // Must preserve the binding — setting ItemsSource=null and back to the
+        // raw Binding object (not the evaluated value) keeps the binding alive.
         var listBox = MessageScrollViewer?.Content as System.Windows.Controls.ListBox;
         if (listBox is not null)
         {
-            var itemsSource = listBox.ItemsSource;
-            listBox.ItemsSource = null;
-            listBox.ItemsSource = itemsSource;
+            var bindingExpr = listBox.GetBindingExpression(System.Windows.Controls.ItemsControl.ItemsSourceProperty);
+            if (bindingExpr?.ParentBindingBase is { } binding)
+            {
+                listBox.ItemsSource = null;
+                listBox.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty, binding);
+            }
         }
     }
 

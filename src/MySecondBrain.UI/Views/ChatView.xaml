@@ -255,13 +255,28 @@
         <!-- Row 2: Conversation Area (VirtualizingStackPanel) -->
         <Border Grid.Row="2" Background="{DynamicResource ContentBackground}">
             <Grid>
-                <!-- Empty state (visible when no messages) -->
-                <StackPanel Visibility="{Binding ActiveTab.Messages.Count, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"
-                            VerticalAlignment="Center" HorizontalAlignment="Center">
+                <!-- Empty state: shown when no tabs exist OR active tab has no messages -->
+                <!-- When all tabs are closed, ActiveTab is null — show "no chats" message -->
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ActiveTab}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ChatTabs.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ActiveTab.Messages.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </Style>
+                    </StackPanel.Style>
                     <TextBlock Text="No chats yet. Press Ctrl+N to start."
                                FontSize="16" Foreground="{DynamicResource SubtleBrush}"
-                               TextAlignment="Center"
-                               Visibility="{Binding ActiveTab, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                               TextAlignment="Center"/>
                     <TextBlock Text="Start typing below."
                                FontSize="14" Foreground="{DynamicResource SubtleBrush}"
                                TextAlignment="Center" Margin="0,8,0,0"/>

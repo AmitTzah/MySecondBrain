@@ -48,6 +48,14 @@ public partial class ChatTabItem : ObservableObject
     private Persona? _activePersona;
 
     /// <summary>
+    /// The chat visual theme (Classic/Compact/Bubble) for this tab.
+    /// Each tab maintains its own theme so changing it in one tab
+    /// doesn't affect others.
+    /// </summary>
+    [ObservableProperty]
+    private ChatTheme _chatVisualTheme = ChatTheme.Classic;
+
+    /// <summary>
     /// The model configuration resolved from <see cref="ActivePersona"/>'s
     /// <see cref="Persona.DefaultModelConfigId"/>. Stored per-tab so that
     /// each tab uses the model associated with its persona.
