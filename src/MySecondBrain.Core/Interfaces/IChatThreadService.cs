@@ -4,6 +4,12 @@ namespace MySecondBrain.Core.Interfaces;
 
 public interface IChatThreadService
 {
+    /// <summary>
+    /// Raised when a stream chunk is received during SendMessageAsync / RegenerateAsync / ContinueGenerationAsync.
+    /// Subscribers (e.g., the ViewModel) can forward these to the MarkdownStreamRenderer for progressive rendering.
+    /// </summary>
+    event Action<StreamChunk>? OnStreamChunk;
+
     Task<ChatThread> CreateThreadAsync(string? title, bool isTransient, Persona persona);
     Task<ChatThread?> GetThreadAsync(string threadId);
     Task<IReadOnlyList<ChatThread>> GetPermanentThreadsAsync(ChatSortOrder sort);

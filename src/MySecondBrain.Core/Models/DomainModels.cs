@@ -94,7 +94,11 @@ public class ModelConfiguration
     public string? EndpointUrl { get; set; }
     public string? ApiKeyId { get; set; }
     public double Temperature { get; set; } = 1.0;
-    public int MaxOutputTokens { get; set; } = 131072;
+    /// <summary>
+    /// Maximum response tokens. Set to 0 to omit (let the model decide).
+    /// Sent as the <c>max_tokens</c> parameter when > 0.
+    /// </summary>
+    public int MaxOutputTokens { get; set; } = 16384;
     public int MaxContextWindow { get; set; } = 1000000;
     public bool ThinkingEnabled { get; set; }
     public int? ThinkingTokens { get; set; }

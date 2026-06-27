@@ -36,8 +36,17 @@ public class LLMProviderService : ILLMProviderService
             yield break;
         }
 
+        _logger.LogInformation(
+            "ChatStreamAsync: provider={ProviderName}, type={ProviderType}, endpoint={Endpoint}, model={Model}",
+            provider.ProviderName, modelConfig.ProviderType, modelConfig.EndpointUrl ?? "(default)",
+            modelConfig.ModelIdentifier);
+
         var messages = BuildMessages(persona, userMessage);
         var request = new ChatRequest(messages, modelConfig, tools, persona.SystemPrompt);
+
+        _logger.LogInformation(
+            "ChatStreamAsync: built request for {Provider}, messages={MsgCount}, sysPrompt={SysLen}chars",
+            provider.ProviderName, messages.Count, persona.SystemPrompt?.Length ?? 0);
 
         await foreach (var chunk in provider.ChatStreamAsync(request, ct))
             yield return chunk;

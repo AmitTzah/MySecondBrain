@@ -100,8 +100,13 @@ public class ChatMessageService
         };
         await _messageRepo.CreateAsync(assistantMsg);
 
+        _logger.LogInformation(
+            "SendMessageAsync: calling LLM streaming — thread={ThreadId}, persona={Persona}, config={Config}, model={Model}",
+            threadId, persona.DisplayName, modelConfig.DisplayName, modelConfig.ModelIdentifier);
+
         var responseBuilder = new StringBuilder();
         var stopwatch = Stopwatch.StartNew();
+        var chunkCount = 0;
         int promptTokens = 0, completionTokens = 0;
 
         try
@@ -109,6 +114,7 @@ public class ChatMessageService
             await foreach (var chunk in _llmService.ChatStreamAsync(
                 thread, content, persona, modelConfig, tools, ct))
             {
+                chunkCount++;
                 if (chunk.ContentDelta is not null)
                 {
                     responseBuilder.Append(chunk.ContentDelta);
@@ -123,18 +129,22 @@ public class ChatMessageService
                 OnStreamChunk?.Invoke(chunk);
             }
             stopwatch.Stop();
+            _logger.LogInformation(
+                "SendMessageAsync: stream completed for thread {ThreadId} — {ChunkCount} chunks, {ResponseLen} chars, {TimeMs}ms",
+                threadId, chunkCount, responseBuilder.Length, stopwatch.ElapsedMilliseconds);
         }
         catch (OperationCanceledException)
         {
             stopwatch.Stop();
             _logger.LogInformation(
-                "SendMessageAsync cancelled for thread {ThreadId}. Partial response preserved ({Length} chars).",
-                threadId, responseBuilder.Length);
+                "SendMessageAsync cancelled for thread {ThreadId}. Partial response preserved ({Length} chars), {ChunkCount} chunks received.",
+                threadId, responseBuilder.Length, chunkCount);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "SendMessageAsync failed for thread {ThreadId}", threadId);
+            _logger.LogError(ex, "SendMessageAsync failed for thread {ThreadId} after {ChunkCount} chunks",
+                threadId, chunkCount);
             responseBuilder.Append($"[Error: {ex.GetType().Name} — {ex.Message}]");
         }
 

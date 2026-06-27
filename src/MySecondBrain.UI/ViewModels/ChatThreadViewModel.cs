@@ -73,6 +73,12 @@ public partial class ChatThreadViewModel : ObservableObject
     /// <summary>Tracks the tab subscribed to PropertyChanged for cleanup on switch.</summary>
     private ChatTabItem? _subscribedTab;
 
+    /// <summary>Tracks the placeholder message being progressively streamed.</summary>
+    private Message? _streamingMessage;
+
+    /// <summary>Guards against re-entrant streaming subscription.</summary>
+    private bool _isStreamingSubscribed;
+
     public ChatThreadViewModel(
         IChatThreadService chatService,
         IPersonaRepository personaRepo,
@@ -101,6 +107,13 @@ public partial class ChatThreadViewModel : ObservableObject
         InitializeToolToggles();
         InitializeSkillToggles();
         InitializeMemoryToggle();
+
+        // Subscribe to progressive stream chunks
+        if (!_isStreamingSubscribed)
+        {
+            _chatService.OnStreamChunk += OnStreamChunkReceived;
+            _isStreamingSubscribed = true;
+        }
 
         // Register for cross-tab completion alerts
         WeakReferenceMessenger.Default.Register<GenerationCompletedMessage>(this, (r, m) =>
@@ -211,6 +224,58 @@ public partial class ChatThreadViewModel : ObservableObject
     {
         if (e.PropertyName == nameof(ChatTabItem.IsStreaming))
             OnPropertyChanged(nameof(IsStreaming));
+    }
+
+    /// <summary>
+    /// Handles progressive stream chunks. Updates the active tab's last
+    /// assistant message content incrementally so the user sees text
+    /// appearing in real-time.
+    /// </summary>
+    private void OnStreamChunkReceived(StreamChunk chunk)
+    {
+        if (chunk.ContentDelta is null && !chunk.IsFinal)
+            return;
+
+        System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+        {
+            var tab = ActiveTab;
+            if (tab?.Thread is null) return;
+
+            // First chunk with content — create or update placeholder message
+            if (chunk.ContentDelta is not null)
+            {
+                if (_streamingMessage is null)
+                {
+                    _streamingMessage = new Message
+                    {
+                        Id = Guid.NewGuid().ToString("N"),
+                        ThreadId = tab.Thread.Id,
+                        Role = "Assistant",
+                        Content = chunk.ContentDelta,
+                        CreatedAt = DateTimeOffset.UtcNow,
+                    };
+                    tab.Messages.Add(_streamingMessage);
+                }
+                else
+                {
+                    // Append delta and replace item in collection to trigger UI refresh
+                    _streamingMessage.Content += chunk.ContentDelta;
+                    var idx = tab.Messages.IndexOf(_streamingMessage);
+                    if (idx >= 0)
+                    {
+                        tab.Messages[idx] = _streamingMessage;
+                        StreamingContent = _streamingMessage.Content;
+                    }
+                }
+            }
+
+            // Final chunk — clear placeholder tracking
+            if (chunk.IsFinal)
+            {
+                _streamingMessage = null;
+                StreamingContent = string.Empty;
+            }
+        });
     }
 
     // ================================================================
@@ -1493,16 +1558,21 @@ public partial class ChatThreadViewModel : ObservableObject
     // ================================================================
 
     [RelayCommand]
-    private void OpenApiHistory()
+    private async Task OpenApiHistory()
     {
         try
         {
-            // Open API history JSON file in a file viewer tab
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var historyPath = System.IO.Path.Combine(appData, "MySecondBrain", "_api_history.json");
+            var historyPath = MySecondBrain.Services.LLM.ApiHistoryHelper.GetHistoryPath();
 
-            // Send a message to navigate to this file (handled by MainWindow)
-            _logger.LogDebug("Opening API history: {Path}", historyPath);
+            // Ensure the file exists
+            if (!System.IO.File.Exists(historyPath))
+            {
+                await System.IO.File.WriteAllTextAsync(historyPath, "[]");
+            }
+
+            var fileVm = await FileViewerTabViewModel.FromFileAsync(historyPath);
+            await NewFileViewerTab(fileVm);
+            _logger.LogInformation("Opened API history: {Path}", historyPath);
         }
         catch (Exception ex)
         {
@@ -1930,6 +2000,12 @@ public partial class ChatThreadViewModel : ObservableObject
         StopDraftTimer();
         _activeCts?.Cancel();
         _activeCts?.Dispose();
+
+        if (_isStreamingSubscribed)
+        {
+            _chatService.OnStreamChunk -= OnStreamChunkReceived;
+            _isStreamingSubscribed = false;
+        }
 
         WeakReferenceMessenger.Default.Unregister<GenerationCompletedMessage>(this);
         NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;

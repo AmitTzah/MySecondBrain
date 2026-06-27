@@ -44,6 +44,10 @@ public class OpenAICompatibleProvider : ILLMProvider
     {
         // ── 1. Resolve endpoint URL ─────────────────────────────────
         var endpointBase = await ResolveEndpointUrlAsync(request.ModelConfig);
+        _logger.LogInformation(
+            "{Provider}: endpoint resolved to {Endpoint} for config {Config} (model={Model})",
+            ProviderName, endpointBase ?? "(null)", request.ModelConfig.DisplayName, request.ModelConfig.ModelIdentifier);
+
         if (string.IsNullOrEmpty(endpointBase))
         {
             _logger.LogWarning("No endpoint URL configured for {Provider} — cannot send chat request", ProviderName);
@@ -52,9 +56,14 @@ public class OpenAICompatibleProvider : ILLMProvider
         }
 
         var url = $"{endpointBase.TrimEnd('/')}{ChatCompletionsPath}";
+        _logger.LogInformation("{Provider}: sending stream to {Url}", ProviderName, url);
 
         // ── 2. Resolve API key (optional for local servers) ─────────
         var apiKey = await ResolveApiKeyAsync(request.ModelConfig);
+        _logger.LogInformation(
+            "{Provider}: API key {KeyStatus} for config {Config}",
+            ProviderName, string.IsNullOrEmpty(apiKey) ? "NOT SET (local auth)" : "resolved",
+            request.ModelConfig.DisplayName);
 
         // ── 3. Build HTTP request ──────────────────────────────────
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
@@ -68,8 +77,7 @@ public class OpenAICompatibleProvider : ILLMProvider
         var requestBodyJson = BuildRequestBody(request);
         httpRequest.Content = new StringContent(requestBodyJson, Encoding.UTF8, "application/json");
 
-        _logger.LogDebug("Sending chat stream to {Provider} at {Url} (model={Model}, messages={MsgCount}, auth={HasAuth})",
-            ProviderName, url, request.ModelConfig.ModelIdentifier, request.Messages.Count, !string.IsNullOrEmpty(apiKey));
+        var historyPath = ApiHistoryHelper.GetHistoryPath();
 
         // ── 4. Send with streaming response ────────────────────────
         HttpResponseMessage? response = null;
@@ -79,11 +87,14 @@ public class OpenAICompatibleProvider : ILLMProvider
         {
             response = await http.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
             response.EnsureSuccessStatusCode();
+            _logger.LogInformation("{Provider}: HTTP {Status} — stream starting", ProviderName, (int)response.StatusCode);
         }
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "HTTP error sending chat request to {Provider} at {Url} (status={Status})",
                 ProviderName, url, ex.StatusCode);
+            await ApiHistoryHelper.AppendEntryAsync(historyPath, url, requestBodyJson,
+                $"HTTP {(int?)ex.StatusCode ?? 0}: {ex.Message}", "error", ct);
             errorChunk = new StreamChunk(
                 null, null, null,
                 ex.StatusCode == System.Net.HttpStatusCode.Unauthorized ? "auth_error" : "network_error",
@@ -92,6 +103,7 @@ public class OpenAICompatibleProvider : ILLMProvider
         catch (TaskCanceledException)
         {
             _logger.LogWarning("Chat request to {Provider} timed out or was cancelled", ProviderName);
+            await ApiHistoryHelper.AppendEntryAsync(historyPath, url, requestBodyJson, "timeout", "timeout", ct);
             errorChunk = new StreamChunk(null, null, null, "timeout", null, true);
         }
 
@@ -105,6 +117,9 @@ public class OpenAICompatibleProvider : ILLMProvider
         using var responseStream = await response.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(responseStream);
 
+        var fullResponse = new StringBuilder();
+        var chunkCount = 0;
+
         while (!reader.EndOfStream)
         {
             ct.ThrowIfCancellationRequested();
@@ -117,6 +132,10 @@ public class OpenAICompatibleProvider : ILLMProvider
             var data = line.Substring(6);
             if (data == "[DONE]")
             {
+                await ApiHistoryHelper.AppendEntryAsync(historyPath, url, requestBodyJson, fullResponse.ToString(), "stop", ct);
+                _logger.LogInformation(
+                    "{Provider}: stream complete — {ChunkCount} chunks, {TotalLen} chars",
+                    ProviderName, chunkCount, fullResponse.Length);
                 yield return new StreamChunk(null, null, null, "stop", null, true);
                 break;
             }
@@ -131,6 +150,10 @@ public class OpenAICompatibleProvider : ILLMProvider
                 _logger.LogWarning(ex, "Failed to parse SSE data chunk from {Provider}", ProviderName);
                 continue;
             }
+
+            chunkCount++;
+            if (chunk.ContentDelta is not null)
+                fullResponse.Append(chunk.ContentDelta);
 
             yield return chunk;
         }

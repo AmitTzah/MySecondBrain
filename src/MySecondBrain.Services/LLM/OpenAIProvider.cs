@@ -45,6 +45,11 @@ public class OpenAIProvider : ILLMProvider
     {
         // ── 1. Resolve API key ──────────────────────────────────────
         var apiKey = await ResolveApiKeyAsync(request.ModelConfig);
+        _logger.LogInformation(
+            "{Provider}: API key {KeyStatus} for config {Config} (model={Model})",
+            ProviderName, string.IsNullOrEmpty(apiKey) ? "MISSING" : "resolved",
+            request.ModelConfig.DisplayName, request.ModelConfig.ModelIdentifier);
+
         if (string.IsNullOrEmpty(apiKey))
         {
             _logger.LogWarning("No API key available for {Provider} — cannot send chat request", ProviderName);
@@ -55,6 +60,7 @@ public class OpenAIProvider : ILLMProvider
         // ── 2. Build HTTP request ──────────────────────────────────
         var endpointBase = (request.ModelConfig.EndpointUrl ?? "https://api.openai.com/v1").TrimEnd('/');
         var url = $"{endpointBase}{ChatCompletionsPath}";
+        _logger.LogInformation("{Provider}: sending stream to {Url}", ProviderName, url);
 
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
         using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url);
@@ -63,12 +69,15 @@ public class OpenAIProvider : ILLMProvider
         var requestBodyJson = BuildRequestBody(request);
         httpRequest.Content = new StringContent(requestBodyJson, Encoding.UTF8, "application/json");
 
+        var historyPath = ApiHistoryHelper.GetHistoryPath();
+
         _logger.LogDebug("Sending chat stream to {Provider} at {Url} (model={Model}, messages={MsgCount})",
             ProviderName, url, request.ModelConfig.ModelIdentifier, request.Messages.Count);
 
         // ── 3. Send with streaming response ────────────────────────
         HttpResponseMessage? response = null;
         StreamChunk? errorChunk = null;
+        var responseContent = new StringBuilder();
 
         try
         {
@@ -79,6 +88,7 @@ public class OpenAIProvider : ILLMProvider
         {
             _logger.LogError(ex, "HTTP error sending chat request to {Provider} (status={Status})",
                 ProviderName, ex.StatusCode);
+            await ApiHistoryHelper.AppendEntryAsync(historyPath, url, requestBodyJson, $"HTTP {(int?)ex.StatusCode ?? 0}: {ex.Message}", "error", ct);
             errorChunk = new StreamChunk(
                 null, null, null,
                 ex.StatusCode == System.Net.HttpStatusCode.Unauthorized ? "auth_error" : "network_error",
@@ -87,6 +97,7 @@ public class OpenAIProvider : ILLMProvider
         catch (TaskCanceledException)
         {
             _logger.LogWarning("Chat request to {Provider} timed out or was cancelled", ProviderName);
+            await ApiHistoryHelper.AppendEntryAsync(historyPath, url, requestBodyJson, "timeout", "timeout", ct);
             errorChunk = new StreamChunk(null, null, null, "timeout", null, true);
         }
 
@@ -99,6 +110,9 @@ public class OpenAIProvider : ILLMProvider
         // ── 4. Read SSE stream ─────────────────────────────────────
         using var responseStream = await response.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(responseStream);
+
+        var fullResponse = new StringBuilder();
+        var chunkCount = 0;
 
         while (!reader.EndOfStream)
         {
@@ -113,6 +127,10 @@ public class OpenAIProvider : ILLMProvider
             if (data == "[DONE]")
             {
                 // Final marker from OpenAI — yield a terminal chunk
+                await ApiHistoryHelper.AppendEntryAsync(historyPath, url, requestBodyJson, fullResponse.ToString(), "stop", ct);
+                _logger.LogInformation(
+                    "{Provider}: stream complete — {ChunkCount} chunks, {TotalLen} chars",
+                    ProviderName, chunkCount, fullResponse.Length);
                 yield return new StreamChunk(null, null, null, "stop", null, true);
                 break;
             }
@@ -127,6 +145,10 @@ public class OpenAIProvider : ILLMProvider
                 _logger.LogWarning(ex, "Failed to parse SSE data chunk from {Provider}", ProviderName);
                 continue;
             }
+
+            chunkCount++;
+            if (chunk.ContentDelta is not null)
+                fullResponse.Append(chunk.ContentDelta);
 
             yield return chunk;
         }
