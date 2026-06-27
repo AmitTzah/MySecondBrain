@@ -238,6 +238,38 @@ public partial class ChatView : UserControl
     // ================================================================
 
     /// <summary>
+    /// Forwards mouse wheel events from any FlowDocumentScrollViewer child
+    /// (which would otherwise capture them for internal scrolling) to the
+    /// outer MessageScrollViewer. The scroll is deferred via BeginInvoke at
+    /// Background priority so it executes after all pending data-binding and
+    /// layout updates — preventing RemoveAt/Insert layout passes in
+    /// OnStreamChunkReceived from overriding the user's scroll position.
+    /// </summary>
+    private void OnMessagePreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        // Mark handled immediately to prevent FlowDocumentScrollViewer's
+        // internal ScrollViewer from capturing the wheel event.
+        e.Handled = true;
+
+        if (MessageScrollViewer is null) return;
+
+        var delta = e.Delta;
+        var sv = MessageScrollViewer;
+
+        // Defer to Background priority — runs after DataBind, Render, Loaded,
+        // and all Normal-priority operations (including Dispatcher.Invoke from
+        // OnStreamChunkReceived). This ensures ScrollableHeight is accurate
+        // and no pending RemoveAt/Insert will override the offset.
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            // Delta is typically ±120 per notch. Divide to get ~40px per tick.
+            var newOffset = sv.VerticalOffset - (delta / 3.0);
+            newOffset = Math.Max(0, Math.Min(newOffset, sv.ScrollableHeight));
+            sv.ScrollToVerticalOffset(newOffset);
+        }), System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    /// <summary>
     /// Handles ScrollChanged on the message ListBox/ScrollViewer.
     /// When the user scrolls up during streaming, pauses auto-scroll
     /// and shows a "Auto-scroll paused" indicator.

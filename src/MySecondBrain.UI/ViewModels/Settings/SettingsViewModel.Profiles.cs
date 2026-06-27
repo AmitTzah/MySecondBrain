@@ -548,6 +548,9 @@ public partial class SettingsViewModel
         _fetchModelsCts = new CancellationTokenSource();
         var ct = _fetchModelsCts.Token;
 
+        _logger.LogInformation("[ListModels] SettingsVM: fetching models for providerType={ProviderType}, apiKeyId={KeyId}",
+            providerType, apiKeyId);
+
         IsFetchingModels = true;
         AvailableModels = [];
         FetchModelsErrorMessage = string.Empty;
@@ -559,10 +562,20 @@ public partial class SettingsViewModel
             var apiKey = await _apiKeyRepo.GetByIdAsync(apiKeyId);
             if (apiKey is null)
             {
+                _logger.LogWarning("[ListModels] SettingsVM: API key {KeyId} not found", apiKeyId);
                 FetchModelsErrorMessage = "API key not found for model fetching.";
                 IsFetchingModels = false;
                 return;
             }
+
+            // Resolve endpoint: stored CustomEndpointUrl takes priority,
+            // then fall back to the well-known endpoint for this provider type.
+            var endpointUrl = !string.IsNullOrEmpty(apiKey.CustomEndpointUrl)
+                ? apiKey.CustomEndpointUrl
+                : GetProviderEndpoint(apiKey.ProviderType);
+
+            _logger.LogDebug("[ListModels] SettingsVM: resolved API key — provider={Provider}, label={Label}, hasStoredEndpoint={HasStoredEndpoint}, finalEndpoint={FinalEndpoint}",
+                apiKey.ProviderType, apiKey.Label ?? "(none)", !string.IsNullOrEmpty(apiKey.CustomEndpointUrl), endpointUrl ?? "(null)");
 
             ct.ThrowIfCancellationRequested();
 
@@ -572,30 +585,35 @@ public partial class SettingsViewModel
                 ProviderType = providerType,
                 ApiKeyId = apiKeyId,
                 ModelIdentifier = string.Empty,
-                EndpointUrl = apiKey.CustomEndpointUrl,
+                EndpointUrl = endpointUrl,
             };
+
+            _logger.LogDebug("[ListModels] SettingsVM: calling LLMProviderService.ListModelsAsync with endpoint={Endpoint}",
+                apiKey.CustomEndpointUrl ?? "(null)");
 
             var models = await _llmProviderService.ListModelsAsync(tempConfig, ct);
             ct.ThrowIfCancellationRequested();
 
             if (models.Count == 0)
             {
+                _logger.LogWarning("[ListModels] SettingsVM: 0 models returned for {Provider} — check endpoint URL and API key",
+                    providerType);
                 FetchModelsErrorMessage = "No models returned by the provider. Check API key validity.";
             }
             else
             {
+                _logger.LogInformation("[ListModels] SettingsVM: got {Count} models for {Provider}: {ModelList}",
+                    models.Count, providerType, string.Join(", ", models.Take(10).Select(m => m.Id)));
                 AvailableModels = new ObservableCollection<string>(models.Select(m => m.Id));
             }
-
-            _logger.LogDebug("Fetched {Count} models for {Provider}", models.Count, providerType);
         }
         catch (OperationCanceledException)
         {
-            _logger.LogDebug("Model fetch cancelled for {Provider}", providerType);
+            _logger.LogDebug("[ListModels] SettingsVM: fetch cancelled for {Provider}", providerType);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch models for {Provider}", providerType);
+            _logger.LogError(ex, "[ListModels] SettingsVM: failed to fetch models for {Provider}", providerType);
             FetchModelsErrorMessage = "Failed to fetch models. Check API key validity.";
         }
         finally

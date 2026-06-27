@@ -111,23 +111,9 @@ public class ChatMessageService
 
         try
         {
-            await foreach (var chunk in _llmService.ChatStreamAsync(
-                thread, content, persona, modelConfig, tools, ct))
-            {
-                chunkCount++;
-                if (chunk.ContentDelta is not null)
-                {
-                    responseBuilder.Append(chunk.ContentDelta);
-                }
-
-                if (chunk.Usage is not null)
-                {
-                    promptTokens = chunk.Usage.PromptTokens;
-                    completionTokens = chunk.Usage.CompletionTokens;
-                }
-
-                OnStreamChunk?.Invoke(chunk);
-            }
+            (chunkCount, promptTokens, completionTokens) = await ConsumeStreamAsync(
+                _llmService.ChatStreamAsync(thread, content, persona, modelConfig, tools, ct),
+                responseBuilder, ct);
             stopwatch.Stop();
             _logger.LogInformation(
                 "SendMessageAsync: stream completed for thread {ThreadId} — {ChunkCount} chunks, {ResponseLen} chars, {TimeMs}ms",
@@ -263,20 +249,9 @@ public class ChatMessageService
 
         try
         {
-            await foreach (var chunk in _llmService.ChatStreamAsync(
-                thread, userContent, persona, modelConfig, tools, ct))
-            {
-                if (chunk.ContentDelta is not null)
-                    responseBuilder.Append(chunk.ContentDelta);
-
-                if (chunk.Usage is not null)
-                {
-                    promptTokens = chunk.Usage.PromptTokens;
-                    completionTokens = chunk.Usage.CompletionTokens;
-                }
-
-                OnStreamChunk?.Invoke(chunk);
-            }
+            (_, promptTokens, completionTokens) = await ConsumeStreamAsync(
+                _llmService.ChatStreamAsync(thread, userContent, persona, modelConfig, tools, ct),
+                responseBuilder, ct);
             stopwatch.Stop();
         }
         catch (OperationCanceledException)
@@ -330,20 +305,9 @@ public class ChatMessageService
 
         try
         {
-            await foreach (var chunk in _llmService.ChatStreamAsync(
-                thread, continuationPrompt, persona, modelConfig, tools, ct))
-            {
-                if (chunk.ContentDelta is not null)
-                    responseBuilder.Append(chunk.ContentDelta);
-
-                if (chunk.Usage is not null)
-                {
-                    promptTokens = chunk.Usage.PromptTokens;
-                    completionTokens = chunk.Usage.CompletionTokens;
-                }
-
-                OnStreamChunk?.Invoke(chunk);
-            }
+            (_, promptTokens, completionTokens) = await ConsumeStreamAsync(
+                _llmService.ChatStreamAsync(thread, continuationPrompt, persona, modelConfig, tools, ct),
+                responseBuilder, ct);
             stopwatch.Stop();
         }
         catch (OperationCanceledException)
@@ -429,5 +393,43 @@ public class ChatMessageService
             _logger.LogWarning(ex, "Failed to record usage for thread {ThreadId}, message {MessageId}",
                 thread.Id, message.Id);
         }
+    }
+
+    /// <summary>
+    /// Consumes an SSE stream on a thread pool thread to avoid starving
+    /// WPF rendering on the UI thread. Fires <see cref="OnStreamChunk" />
+    /// for each chunk so the ViewModel can marshal updates via Dispatcher.
+    /// </summary>
+    /// <param name="stream">The async enumerable of stream chunks.</param>
+    /// <param name="responseBuilder">Accumulates content deltas across chunks.</param>
+    /// <param name="ct">Cancellation token forwarded to Task.Run and the stream.</param>
+    /// <returns>Tuple of chunk count, prompt tokens, and completion tokens.</returns>
+    private async Task<(int chunkCount, int promptTokens, int completionTokens)> ConsumeStreamAsync(
+        IAsyncEnumerable<StreamChunk> stream,
+        StringBuilder responseBuilder,
+        CancellationToken ct)
+    {
+        var chunkCount = 0;
+        int promptTokens = 0, completionTokens = 0;
+
+        await Task.Run(async () =>
+        {
+            await foreach (var chunk in stream)
+            {
+                chunkCount++;
+                if (chunk.ContentDelta is not null)
+                    responseBuilder.Append(chunk.ContentDelta);
+
+                if (chunk.Usage is not null)
+                {
+                    promptTokens = chunk.Usage.PromptTokens;
+                    completionTokens = chunk.Usage.CompletionTokens;
+                }
+
+                OnStreamChunk?.Invoke(chunk);
+            }
+        }, ct);
+
+        return (chunkCount, promptTokens, completionTokens);
     }
 }

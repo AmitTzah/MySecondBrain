@@ -847,6 +847,9 @@ public partial class ChatThreadViewModel : ObservableObject
 
             var message = await _chatService.SendMessageAsync(tab.Thread.Id, content, cts.Token);
 
+            // If the user switched tabs during streaming, skip the reload
+            if (tab != ActiveTab) return;
+
             // Load messages for the active branch
             var messages = await _chatService.GetActiveBranchMessagesAsync(tab.Thread.Id);
             tab.Messages = new ObservableCollection<Message>(messages);
@@ -865,8 +868,11 @@ public partial class ChatThreadViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             // Partial response preserved by the service
-            var messages = await _chatService.GetActiveBranchMessagesAsync(tab.Thread.Id);
-            tab.Messages = new ObservableCollection<Message>(messages);
+            if (tab == ActiveTab)
+            {
+                var messages = await _chatService.GetActiveBranchMessagesAsync(tab.Thread.Id);
+                tab.Messages = new ObservableCollection<Message>(messages);
+            }
             _logger.LogDebug("Message generation cancelled — partial response preserved");
 
             // Clear retry on cancellation (user chose to stop)
@@ -1008,7 +1014,8 @@ public partial class ChatThreadViewModel : ObservableObject
         var lastMsg = ActiveTab.Messages[^1];
         if (lastMsg.Role != "assistant") return;
 
-        ActiveTab.IsStreaming = true;
+        var tab = ActiveTab;
+        tab.IsStreaming = true;
 
         try
         {
@@ -1017,9 +1024,12 @@ public partial class ChatThreadViewModel : ObservableObject
 
             await _chatService.RegenerateAsync(lastMsg.Id, cts.Token);
 
+            // If the user switched tabs during streaming, skip the reload
+            if (tab != ActiveTab) return;
+
             // Reload messages
-            var messages = await _chatService.GetActiveBranchMessagesAsync(ActiveTab.Thread.Id);
-            ActiveTab.Messages = new ObservableCollection<Message>(messages);
+            var messages = await _chatService.GetActiveBranchMessagesAsync(tab.Thread.Id);
+            tab.Messages = new ObservableCollection<Message>(messages);
             UpdateContextAndCost();
 
             // Notify cross-tab
@@ -1028,8 +1038,11 @@ public partial class ChatThreadViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            var messages = await _chatService.GetActiveBranchMessagesAsync(ActiveTab.Thread.Id);
-            ActiveTab.Messages = new ObservableCollection<Message>(messages);
+            if (tab == ActiveTab)
+            {
+                var messages = await _chatService.GetActiveBranchMessagesAsync(tab.Thread.Id);
+                tab.Messages = new ObservableCollection<Message>(messages);
+            }
         }
         catch (Exception ex)
         {
@@ -1039,7 +1052,7 @@ public partial class ChatThreadViewModel : ObservableObject
         }
         finally
         {
-            ActiveTab.IsStreaming = false;
+            tab.IsStreaming = false;
             _activeCts = null;
         }
     }
@@ -1051,17 +1064,21 @@ public partial class ChatThreadViewModel : ObservableObject
 
         if (ActiveTab.IsStreaming) return;
 
-        ActiveTab.IsStreaming = true;
+        var tab = ActiveTab;
+        tab.IsStreaming = true;
 
         try
         {
             using var cts = new CancellationTokenSource();
             _activeCts = cts;
 
-            await _chatService.ContinueGenerationAsync(ActiveTab.Thread.Id, cts.Token);
+            await _chatService.ContinueGenerationAsync(tab.Thread.Id, cts.Token);
 
-            var messages = await _chatService.GetActiveBranchMessagesAsync(ActiveTab.Thread.Id);
-            ActiveTab.Messages = new ObservableCollection<Message>(messages);
+            // If the user switched tabs during streaming, skip the reload
+            if (tab != ActiveTab) return;
+
+            var messages = await _chatService.GetActiveBranchMessagesAsync(tab.Thread.Id);
+            tab.Messages = new ObservableCollection<Message>(messages);
             UpdateContextAndCost();
 
             // Notify cross-tab
@@ -1070,8 +1087,11 @@ public partial class ChatThreadViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            var messages = await _chatService.GetActiveBranchMessagesAsync(ActiveTab.Thread.Id);
-            ActiveTab.Messages = new ObservableCollection<Message>(messages);
+            if (tab == ActiveTab)
+            {
+                var messages = await _chatService.GetActiveBranchMessagesAsync(tab.Thread.Id);
+                tab.Messages = new ObservableCollection<Message>(messages);
+            }
         }
         catch (Exception ex)
         {
@@ -1081,7 +1101,7 @@ public partial class ChatThreadViewModel : ObservableObject
         }
         finally
         {
-            ActiveTab.IsStreaming = false;
+            tab.IsStreaming = false;
             _activeCts = null;
         }
     }

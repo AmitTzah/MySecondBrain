@@ -74,15 +74,24 @@ public class LLMProviderService : ILLMProviderService
 
     public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(ModelConfiguration config, CancellationToken ct)
     {
+        _logger.LogDebug("[ListModels] LLMProviderService: resolving provider for type={ProviderType}, endpoint={Endpoint}",
+            config.ProviderType, config.EndpointUrl ?? "(null)");
+
         var provider = _providerFactory.GetProvider(config.ProviderType, config.EndpointUrl);
         if (provider == null)
         {
-            _logger.LogWarning("No provider found for type {ProviderType}", config.ProviderType);
+            _logger.LogWarning("[ListModels] LLMProviderService: no provider found for type {ProviderType}",
+                config.ProviderType);
             return Array.Empty<ModelInfo>();
         }
 
-        _logger.LogDebug("Listing models for {Provider} via LLMProviderService", provider.ProviderName);
-        return await provider.ListModelsAsync(ct);
+        _logger.LogInformation("[ListModels] LLMProviderService: resolved provider={ProviderName} (type={ProviderType}), fetching models",
+            provider.ProviderName, provider.Type);
+
+        var models = await provider.ListModelsAsync(ct);
+        _logger.LogInformation("[ListModels] LLMProviderService: got {Count} models from {Provider}",
+            models.Count, provider.ProviderName);
+        return models;
     }
 
     public async Task<bool> ValidateApiKeyAsync(

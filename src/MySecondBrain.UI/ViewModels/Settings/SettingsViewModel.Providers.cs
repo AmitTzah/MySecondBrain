@@ -207,6 +207,12 @@ public partial class SettingsViewModel
         {
             var encrypted = _encryptionService.ProtectString(plaintext);
 
+            // Resolve endpoint URL: explicit UI value takes priority,
+            // then fall back to well-known endpoint for this provider type.
+            var endpointUrl = !string.IsNullOrWhiteSpace(CustomEndpointUrlValue)
+                ? CustomEndpointUrlValue
+                : GetProviderEndpoint(SelectedProviderType);
+
             if (EditingApiKey is not null)
             {
                 EditingApiKey.ProviderType = SelectedProviderType;
@@ -219,12 +225,11 @@ public partial class SettingsViewModel
                 EditingApiKey.CustomProviderName = string.IsNullOrWhiteSpace(CustomProviderNameValue)
                     ? null
                     : CustomProviderNameValue;
-                EditingApiKey.CustomEndpointUrl = string.IsNullOrWhiteSpace(CustomEndpointUrlValue)
-                    ? null
-                    : CustomEndpointUrlValue;
+                EditingApiKey.CustomEndpointUrl = endpointUrl;
 
                 await _apiKeyRepo.UpdateAsync(EditingApiKey);
-                _logger.LogInformation("Updated API key {KeyId}", EditingApiKey.Id);
+                _logger.LogInformation("Updated API key {KeyId} (endpoint: {Endpoint})",
+                    EditingApiKey.Id, endpointUrl ?? "(null)");
             }
             else
             {
@@ -239,16 +244,15 @@ public partial class SettingsViewModel
                     CustomProviderName = string.IsNullOrWhiteSpace(CustomProviderNameValue)
                         ? null
                         : CustomProviderNameValue,
-                    CustomEndpointUrl = string.IsNullOrWhiteSpace(CustomEndpointUrlValue)
-                        ? null
-                        : CustomEndpointUrlValue,
+                    CustomEndpointUrl = endpointUrl,
                     IsValid = IsTestSuccess,
                     LastTestedAt = IsTestSuccess ? DateTimeOffset.UtcNow : null,
                     CreatedAt = DateTimeOffset.UtcNow,
                 };
 
                 await _apiKeyRepo.CreateAsync(newKey);
-                _logger.LogInformation("Created new API key for {Provider}", newKey.ProviderType);
+                _logger.LogInformation("Created new API key for {Provider} (endpoint: {Endpoint})",
+                    newKey.ProviderType, endpointUrl ?? "(null)");
             }
 
             await RefreshKeyListAsync();

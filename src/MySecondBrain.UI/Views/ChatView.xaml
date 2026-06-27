@@ -44,10 +44,10 @@
                             MaxWidth="600"
                             HorizontalAlignment="Right">
                         <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource MarkdownToFlowDocumentConverter}}"
-                                                  FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
-                                                  VerticalScrollBarVisibility="Hidden"
-                                                  HorizontalScrollBarVisibility="Disabled"
-                                                  MinHeight="20" MaxHeight="400">
+                                                   FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
+                                                   VerticalScrollBarVisibility="Hidden"
+                                                   HorizontalScrollBarVisibility="Disabled"
+                                                   MinHeight="20">
                             <FlowDocumentScrollViewer.Style>
                                 <Style TargetType="FlowDocumentScrollViewer">
                                     <Setter Property="Background" Value="Transparent"/>
@@ -95,10 +95,10 @@
                             BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1">
                         <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource MarkdownToFlowDocumentConverter}}"
-                                                  FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
-                                                  VerticalScrollBarVisibility="Hidden"
-                                                  HorizontalScrollBarVisibility="Disabled"
-                                                  MinHeight="20" MaxHeight="400">
+                                                   FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
+                                                   VerticalScrollBarVisibility="Hidden"
+                                                   HorizontalScrollBarVisibility="Disabled"
+                                                   MinHeight="20">
                             <FlowDocumentScrollViewer.Style>
                                 <Style TargetType="FlowDocumentScrollViewer">
                                     <Setter Property="Background" Value="Transparent"/>
@@ -292,7 +292,8 @@
                               Grid.Row="1"
                               HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto"
-                              ScrollChanged="MessageScrollViewer_ScrollChanged">
+                              ScrollChanged="MessageScrollViewer_ScrollChanged"
+                              PreviewMouseWheel="OnMessagePreviewMouseWheel">
                     <ListBox ItemsSource="{Binding ActiveTab.Messages}"
                              ItemTemplateSelector="{StaticResource MessageTemplateSelector}"
                              VirtualizingStackPanel.IsVirtualizing="True"

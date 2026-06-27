@@ -160,10 +160,189 @@ public class OpenAICompatibleProvider : ILLMProvider
     }
 
     /// <summary>
-    /// B6 spec: "No auto-fetch — user always enters manually". Returns empty list.
+    /// Fetches available models from the OpenAI-compatible /models endpoint.
+    /// Resolves the endpoint URL and API key from stored keys (same pattern as
+    /// ValidateKeyAsync). Supports DeepSeek, MiMo, Moonshot, Mistral, and
+    /// custom OpenAI-compatible providers.
     /// </summary>
-    public Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<ModelInfo>>(Array.Empty<ModelInfo>());
+    public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken ct)
+    {
+        _logger.LogInformation("[ListModels] {Provider}: ====== starting model list fetch ======", ProviderName);
+
+        // DeepSeek, MiMo, Moonshot, and Mistral are all remapped to OpenAICompatible
+        // by LLMProviderFactory. Their API keys are stored under their original
+        // provider type, not OpenAICompatible. Query all remapped types.
+        var remappedTypes = new[]
+        {
+            ProviderType.OpenAICompatible,
+            ProviderType.DeepSeek,
+            ProviderType.MiMo,
+            ProviderType.Moonshot,
+            ProviderType.Mistral,
+        };
+
+        ApiKey? firstKey = null;
+        ProviderType foundUnderType = ProviderType.OpenAICompatible;
+        foreach (var pt in remappedTypes)
+        {
+            var keys = await _apiKeyRepo.GetByProviderAsync(pt);
+            var keyList = keys?.ToList() ?? new List<ApiKey>();
+            _logger.LogInformation("[ListModels] {Provider}: queried providerType={QueryType}, found {Count} key(s)",
+                ProviderName, pt, keyList.Count);
+
+            foreach (var k in keyList)
+            {
+                _logger.LogInformation("[ListModels] {Provider}:   key detail: id={KeyId}, provider={KeyProv}, hasEndpoint={HasEp}, endpoint={Ep}, hasEncrypted={HasEnc}",
+                    ProviderName, k.Id, k.ProviderType, !string.IsNullOrEmpty(k.CustomEndpointUrl),
+                    k.CustomEndpointUrl ?? "(null)", !string.IsNullOrEmpty(k.EncryptedValue));
+            }
+
+            firstKey = keyList.FirstOrDefault();
+            if (firstKey is not null)
+            {
+                foundUnderType = pt;
+                _logger.LogInformation("[ListModels] {Provider}: >>> SELECTED key id={KeyId} under {KeyProvider}, storedEndpoint={StoredEp}",
+                    ProviderName, firstKey.Id, pt, firstKey.CustomEndpointUrl ?? "(null)");
+                break;
+            }
+        }
+
+        if (firstKey is null)
+        {
+            _logger.LogWarning("[ListModels] {Provider}: NO keys found across all 5 provider types", ProviderName);
+            return Array.Empty<ModelInfo>();
+        }
+
+        // Resolve endpoint: stored CustomEndpointUrl first, then well-known default
+        var endpointUrl = firstKey.CustomEndpointUrl;
+        if (string.IsNullOrEmpty(endpointUrl))
+        {
+            endpointUrl = GetDefaultEndpointForProvider(foundUnderType);
+            _logger.LogInformation("[ListModels] {Provider}: no stored endpoint → using default for {KeyProvider}: {Endpoint}",
+                ProviderName, foundUnderType, endpointUrl ?? "(null)");
+        }
+
+        _logger.LogInformation("[ListModels] {Provider}: final endpoint={Endpoint}, foundUnderType={FoundType}",
+            ProviderName, endpointUrl ?? "(null)", foundUnderType);
+
+        if (string.IsNullOrEmpty(endpointUrl))
+        {
+            _logger.LogWarning("[ListModels] {Provider}: no endpoint URL — cannot fetch", ProviderName);
+            return Array.Empty<ModelInfo>();
+        }
+
+        var apiKey = firstKey is not null
+            ? _encryptionService.UnprotectString(firstKey.EncryptedValue)
+            : null;
+
+        _logger.LogInformation("[ListModels] {Provider}: API key status={KeyStatus}, calling {Url}/models",
+            ProviderName,
+            string.IsNullOrEmpty(apiKey) ? "NOT SET" : $"present (masked: {ApiKeyHelper.MaskKey(apiKey!)})",
+            endpointUrl.TrimEnd('/'));
+
+        return await ListModelsInternalAsync(endpointUrl, apiKey, ct);
+    }
+
+    /// <summary>
+    /// Returns the well-known API endpoint for providers that are remapped
+    /// to OpenAICompatible. Used as fallback when the stored key has no
+    /// CustomEndpointUrl (e.g., existing keys created before auto-save was added).
+    /// </summary>
+    private static string? GetDefaultEndpointForProvider(ProviderType type)
+    {
+        return type switch
+        {
+            ProviderType.DeepSeek => "https://api.deepseek.com",
+            ProviderType.Mistral => "https://api.mistral.ai",
+            ProviderType.Moonshot => "https://api.moonshot.ai/v1",
+            ProviderType.MiMo => "https://api.xiaomimimo.com/v1",
+            _ => null
+        };
+    }
+
+    private async Task<IReadOnlyList<ModelInfo>> ListModelsInternalAsync(
+        string endpointUrl, string? apiKey, CancellationToken ct)
+    {
+        try
+        {
+            var url = $"{endpointUrl.TrimEnd('/')}/models";
+            _logger.LogDebug("[ListModels] {Provider}: GET {Url}", ProviderName, url);
+
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+
+            if (!string.IsNullOrEmpty(apiKey))
+            {
+                request.Headers.Add("Authorization", $"Bearer {apiKey}");
+            }
+
+            using var response = await http.SendAsync(request, ct);
+            _logger.LogDebug("[ListModels] {Provider}: HTTP {Status} from {Url}",
+                ProviderName, (int)response.StatusCode, url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(ct);
+                var truncatedBody = errorBody.Length > 500 ? errorBody[..500] + "..." : errorBody;
+                _logger.LogWarning("[ListModels] {Provider}: non-success status {Status}, body={Body}",
+                    ProviderName, (int)response.StatusCode, truncatedBody);
+                return Array.Empty<ModelInfo>();
+            }
+
+            var json = await response.Content.ReadAsStringAsync(ct);
+            var preview = json.Length > 1000 ? json[..1000] + "..." : json;
+            _logger.LogInformation("[ListModels] {Provider}: HTTP {Status}, {Len} bytes. Response preview: {Preview}",
+                ProviderName, (int)response.StatusCode, json.Length, preview);
+
+            var models = ParseModelsResponse(json);
+            _logger.LogInformation("[ListModels] {Provider}: parsed {Count} models: {ModelList}",
+                ProviderName, models.Count, string.Join(", ", models.Select(m => m.Id)));
+
+            return models;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "[ListModels] {Provider}: HTTP error fetching models from {Url}",
+                ProviderName, endpointUrl);
+            return Array.Empty<ModelInfo>();
+        }
+        catch (TaskCanceledException)
+        {
+            _logger.LogWarning("[ListModels] {Provider}: request timed out or was cancelled", ProviderName);
+            return Array.Empty<ModelInfo>();
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "[ListModels] {Provider}: failed to parse models JSON response",
+                ProviderName);
+            return Array.Empty<ModelInfo>();
+        }
+    }
+
+    /// <summary>
+    /// Parses the OpenAI-compatible /models JSON response.
+    /// Format: {"object":"list","data":[{"id":"model-name","object":"model",...},...]}
+    /// </summary>
+    private static IReadOnlyList<ModelInfo> ParseModelsResponse(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        if (!root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array)
+            return Array.Empty<ModelInfo>();
+
+        var models = new List<ModelInfo>();
+        foreach (var item in data.EnumerateArray())
+        {
+            if (item.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.String)
+            {
+                var modelId = id.GetString()!;
+                models.Add(new ModelInfo(modelId, modelId, 0));
+            }
+        }
+
+        return models;
+    }
 
     /// <summary>
     /// Validates API key using the stored CustomEndpointUrl from the repository.
