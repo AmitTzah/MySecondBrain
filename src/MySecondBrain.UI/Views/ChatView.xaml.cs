@@ -1,8 +1,11 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using Microsoft.Extensions.DependencyInjection;
+using MySecondBrain.Core.Interfaces;
+using MySecondBrain.Core.Models;
 using MySecondBrain.UI.ViewModels;
 using UserControl = System.Windows.Controls.UserControl;
 
@@ -12,6 +15,7 @@ public partial class ChatView : UserControl
 {
     private ChatThreadViewModel? _viewModel;
     private bool _isAutoScrolling;
+    private IThemeProvider? _themeProvider;
 
     public ChatView()
     {
@@ -19,7 +23,16 @@ public partial class ChatView : UserControl
 
         // Resolve ChatThreadViewModel from DI and set as DataContext
         _viewModel = App.ServiceProvider.GetRequiredService<ChatThreadViewModel>();
+        _themeProvider = App.ServiceProvider.GetService<IThemeProvider>();
         DataContext = _viewModel;
+
+        // Subscribe to chat theme changes to swap message templates dynamically
+        if (_themeProvider is not null)
+        {
+            _themeProvider.ChatThemeChanged += OnChatThemeChanged;
+            // Set initial templates from saved theme
+            Unloaded += (_, _) => _themeProvider.ChatThemeChanged -= OnChatThemeChanged;
+        }
 
         // Initialize the ViewModel (load default persona, populate list)
         Loaded += async (_, _) =>
@@ -42,6 +55,58 @@ public partial class ChatView : UserControl
             Command = new RelayCommandAdapter(ShowPersonaPickerDialog)
         };
         InputBindings.Add(openPickerBinding);
+    }
+
+    /// <summary>
+    /// Called when the chat theme changes (Classic / Compact / Bubble).
+    /// Dynamically swaps the User and Assistant message templates in the
+    /// MessageDataTemplateSelector and refreshes the ListBox items.
+    /// </summary>
+    private void OnChatThemeChanged(object? sender, ChatTheme newTheme)
+    {
+        if (_themeProvider is null) return;
+
+        var selector = Resources["MessageTemplateSelector"] as MessageDataTemplateSelector;
+        if (selector is null) return;
+
+        if (newTheme == ChatTheme.Classic)
+        {
+            // Restore the inline rich templates (default)
+            selector.UserMessageTemplate = Resources["UserMessageTemplate"] as DataTemplate;
+            selector.AssistantMessageTemplate = Resources["AssistantMessageTemplate"] as DataTemplate;
+            selector.SystemMessageTemplate = Resources["SystemMessageTemplate"] as DataTemplate;
+        }
+        else
+        {
+            // Use role-specific theme templates from the global resource dictionary
+            var suffix = newTheme switch
+            {
+                ChatTheme.Compact => "Compact",
+                ChatTheme.Bubble => "Bubble",
+                _ => "Classic"
+            };
+
+            // Use fully-qualified Application to avoid ambiguity with System.Windows.Forms.Application
+            var app = System.Windows.Application.Current;
+            var userTpl = app.Resources[$"{suffix}UserTemplate"] as DataTemplate;
+            var asstTpl = app.Resources[$"{suffix}AssistantTemplate"] as DataTemplate;
+
+            if (userTpl is not null)
+            {
+                selector.UserMessageTemplate = userTpl;
+                selector.AssistantMessageTemplate = asstTpl;
+                selector.SystemMessageTemplate = asstTpl;
+            }
+        }
+
+        // Force the ListBox to re-evaluate its items
+        var listBox = MessageScrollViewer?.Content as System.Windows.Controls.ListBox;
+        if (listBox is not null)
+        {
+            var itemsSource = listBox.ItemsSource;
+            listBox.ItemsSource = null;
+            listBox.ItemsSource = itemsSource;
+        }
     }
 
     /// <summary>

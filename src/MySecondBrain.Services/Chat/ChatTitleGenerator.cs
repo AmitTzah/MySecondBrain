@@ -55,6 +55,10 @@ public class ChatTitleGenerator
                 config,
                 ct);
 
+            // Guard: ChatAsync may return null if the provider is not yet implemented
+            if (response is null)
+                return FallbackTitle(userMessage);
+
             var title = response.Content.Trim().Trim('"', '\'', '“', '”', '‛', '„');
 
             if (string.IsNullOrEmpty(title) || title.Length > 100)

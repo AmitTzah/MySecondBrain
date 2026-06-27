@@ -6,7 +6,7 @@ namespace MySecondBrain.Core.Models;
 /// <summary>
 /// Wraps a <see cref="ChatThread"/> with per-tab UI state for the tab control.
 /// Each tab has its own message collection, streaming state, textbox content,
-/// cursor/scroll position, and a completion alert indicator.
+/// cursor/scroll position, persona, model config, and a completion alert indicator.
 /// </summary>
 public partial class ChatTabItem : ObservableObject
 {
@@ -39,6 +39,21 @@ public partial class ChatTabItem : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _hasCompletionAlert;
+
+    /// <summary>
+    /// The persona assigned to this tab. Each tab maintains its own persona
+    /// so that switching tabs restores the correct assistant behavior.
+    /// </summary>
+    [ObservableProperty]
+    private Persona? _activePersona;
+
+    /// <summary>
+    /// The model configuration resolved from <see cref="ActivePersona"/>'s
+    /// <see cref="Persona.DefaultModelConfigId"/>. Stored per-tab so that
+    /// each tab uses the model associated with its persona.
+    /// </summary>
+    [ObservableProperty]
+    private ModelConfiguration? _activeModelConfig;
 
     /// <summary>Display title for the tab header.</summary>
     public string Title => Thread.Title ?? "New Chat";

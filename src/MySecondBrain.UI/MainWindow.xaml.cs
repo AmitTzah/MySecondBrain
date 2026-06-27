@@ -40,6 +40,53 @@ public partial class MainWindow : Window
             .GetAwaiter().GetResult();
         _minimizeToTray = minimizeSetting is null ||
             (bool.TryParse(minimizeSetting, out var val) && val);
+
+        // Initialize ChatThreadViewModel and create a default tab on first load
+        Loaded += OnMainWindowLoaded;
+    }
+
+    /// <summary>
+    /// Initializes the ChatThreadViewModel and creates a default chat tab
+    /// so the tab bar is never empty on startup.
+    /// </summary>
+    private async void OnMainWindowLoaded(object sender, RoutedEventArgs e)
+    {
+        // Unsubscribe after first load — only run once
+        Loaded -= OnMainWindowLoaded;
+
+        try
+        {
+            var chatVm = _viewModel.ChatThreadViewModel;
+            if (chatVm is null)
+            {
+                _logger.LogWarning("OnMainWindowLoaded: ChatThreadViewModel is null");
+                return;
+            }
+
+            _logger.LogInformation("OnMainWindowLoaded: initializing ChatThreadViewModel...");
+            await chatVm.InitializeAsync();
+
+            _logger.LogInformation("OnMainWindowLoaded: InitializeAsync complete. ActivePersona={Persona}, PersonaList.Count={PersonaCount}, ChatTabs.Count={TabCount}",
+                chatVm.ActivePersona?.DisplayName ?? "null",
+                chatVm.PersonaList.Count,
+                chatVm.ChatTabs.Count);
+
+            // Create a default tab if none exist
+            if (chatVm.ChatTabs.Count == 0 && chatVm.NewChatCommand.CanExecute(null))
+            {
+                _logger.LogInformation("OnMainWindowLoaded: creating default tab...");
+                await chatVm.NewChatCommand.ExecuteAsync(null);
+                _logger.LogInformation("OnMainWindowLoaded: default tab created. ChatTabs.Count={TabCount}",
+                    chatVm.ChatTabs.Count);
+            }
+
+            _logger.LogInformation("ChatThreadViewModel initialized with {TabCount} tab(s)",
+                chatVm.ChatTabs.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize ChatThreadViewModel on startup");
+        }
     }
 
     protected override void OnKeyDown(System.Windows.Input.KeyEventArgs e)

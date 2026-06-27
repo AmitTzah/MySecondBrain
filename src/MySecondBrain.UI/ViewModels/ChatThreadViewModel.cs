@@ -50,6 +50,14 @@ public partial class ChatThreadViewModel : ObservableObject
     /// </summary>
     private bool _isSettingActivePersona;
 
+    /// <summary>
+    /// Guards against redundant InitializeAsync calls. ChatView.Loaded fires
+    /// each time WPF creates a new ChatView instance (on every tab switch),
+    /// which would otherwise call SetActivePersonaAsync and overwrite the
+    /// per-tab persona restored by OnActiveTabChanged.
+    /// </summary>
+    private bool _isInitialized;
+
     // ── Tab management ────────────────────────────────────────────────
 
     /// <summary>Active CancellationTokenSource for the current SendMessageAsync.</summary>
@@ -129,6 +137,13 @@ public partial class ChatThreadViewModel : ObservableObject
 
     partial void OnActiveTabChanged(ChatTabItem? value)
     {
+        // When user clicks a tab from any screen, navigate to Chats
+        if (value is not null && System.Windows.Application.Current?.MainWindow?.DataContext is MainWindowViewModel mainVm
+            && mainVm.SelectedScreen != ScreenType.Chats)
+        {
+            mainVm.SelectedScreen = ScreenType.Chats;
+        }
+
         // Reset completion alert when switching to a tab
         if (value is not null)
             value.HasCompletionAlert = false;
@@ -152,6 +167,27 @@ public partial class ChatThreadViewModel : ObservableObject
             // Restore thinking/mute state
             ThinkingEnabled = value.Thread.ThinkingEnabled;
             IsMuted = value.Thread.IsMuted;
+        }
+
+        // Restore per-tab persona and model config to ViewModel display properties
+        // so the persona picker and header bar show the correct persona for this tab.
+        // Suppress OnActivePersonaChanged to avoid re-saving LastSelectedPersonaIdKey
+        // globally on every tab switch — this is a display restore, not a user selection.
+        // Guard is wrapped in try/finally so any exception from the property setter
+        // (e.g., from a PropertyChanged subscriber) does not permanently block future
+        // persona changes.
+        if (value is not null)
+        {
+            try
+            {
+                _isSettingActivePersona = true;
+                ActivePersona = value.ActivePersona;
+                ActiveModelConfig = value.ActiveModelConfig;
+            }
+            finally
+            {
+                _isSettingActivePersona = false;
+            }
         }
 
         // Unsubscribe from the previous tab to prevent leaks
@@ -348,6 +384,17 @@ public partial class ChatThreadViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
+        // ChatView.Loaded fires each time WPF creates a new ChatView instance
+        // (e.g., on every tab switch when the ContentPresenter recreates the
+        // DataTemplate).  Without this guard, the second+ invocation would read
+        // LastSelectedPersonaIdKey, call SetActivePersonaAsync, and overwrite
+        // the per-tab persona that OnActiveTabChanged just restored.
+        if (_isInitialized)
+        {
+            _logger.LogDebug("InitializeAsync skipped — already initialized");
+            return;
+        }
+
         try
         {
             await RefreshPersonaListAsync();
@@ -366,6 +413,8 @@ public partial class ChatThreadViewModel : ObservableObject
             {
                 await SetActivePersonaAsync(personaToActivate);
             }
+
+            _isInitialized = true;
         }
         catch (Exception ex)
         {
@@ -462,6 +511,14 @@ public partial class ChatThreadViewModel : ObservableObject
             if (Enum.TryParse<ChatMode>(persona.DefaultChatMode, out var personaMode))
                 ChatMode = personaMode;
 
+            // Sync the persona to the active tab so each tab remembers its own persona.
+            // When the user switches away and back, OnActiveTabChanged restores it.
+            if (ActiveTab is not null)
+            {
+                ActiveTab.ActivePersona = ActivePersona;
+                ActiveTab.ActiveModelConfig = ActiveModelConfig;
+            }
+
             await TrackRecentPersonaAsync(persona.Id);
             await _settingsRepo.SetAsync(LastSelectedPersonaIdKey, persona.Id);
 
@@ -517,10 +574,20 @@ public partial class ChatThreadViewModel : ObservableObject
         try
         {
             var persona = ActivePersona ?? PersonaList.FirstOrDefault();
-            if (persona is null) return;
+            if (persona is null)
+            {
+                _logger.LogWarning("NewChatAsync: no persona available (ActivePersona={ActivePersona}, PersonaList.Count={Count})",
+                    ActivePersona?.DisplayName ?? "null", PersonaList.Count);
+                return;
+            }
 
+            _logger.LogDebug("NewChatAsync: creating thread with persona '{Persona}'", persona.DisplayName);
             var thread = await _chatService.CreateThreadAsync(null, false, persona);
             var tab = new ChatTabItem(thread);
+            // Store the current persona and model config on the tab so each tab
+            // maintains its own persona state independently.
+            tab.ActivePersona = ActivePersona;
+            tab.ActiveModelConfig = ActiveModelConfig;
             ChatTabs.Add(tab);
             ActiveTab = tab;
 
@@ -660,8 +727,6 @@ public partial class ChatThreadViewModel : ObservableObject
             using var cts = new CancellationTokenSource();
             _activeCts = cts;
 
-            // Attach stream renderer to a temporary document for progressive updates
-            // The actual FlowDocument is created/updated by the renderer
             var message = await _chatService.SendMessageAsync(tab.Thread.Id, content, cts.Token);
 
             // Load messages for the active branch
@@ -1082,6 +1147,9 @@ public partial class ChatThreadViewModel : ObservableObject
                 };
 
                 var tab = new ChatTabItem(thread);
+                // Store the current persona (null in this branch) on the tab
+                tab.ActivePersona = ActivePersona;
+                tab.ActiveModelConfig = ActiveModelConfig;
                 ChatTabs.Add(tab);
                 ActiveTab = tab;
 
@@ -1110,6 +1178,9 @@ public partial class ChatThreadViewModel : ObservableObject
 
             var chatThread = await _chatService.CreateThreadAsync(fileVm.FileName, true, persona);
             var chatTab = new ChatTabItem(chatThread);
+            // Store the current persona and model config on the tab
+            chatTab.ActivePersona = ActivePersona;
+            chatTab.ActiveModelConfig = ActiveModelConfig;
             ChatTabs.Add(chatTab);
             ActiveTab = chatTab;
 
@@ -1453,6 +1524,9 @@ public partial class ChatThreadViewModel : ObservableObject
             var newMessages = await _chatService.GetActiveBranchMessagesAsync(newThread.Id);
             var tab = new ChatTabItem(newThread);
             tab.Messages = new ObservableCollection<Message>(newMessages);
+            // Preserve the source tab's persona on the duplicated tab
+            tab.ActivePersona = ActivePersona;
+            tab.ActiveModelConfig = ActiveModelConfig;
             ChatTabs.Add(tab);
             ActiveTab = tab;
             _logger.LogDebug("Duplicated chat to thread '{ThreadId}'", newThread.Id);

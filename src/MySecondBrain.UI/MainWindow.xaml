@@ -10,7 +10,7 @@
         Background="{DynamicResource AppBackground}"
         AutomationProperties.AutomationId="MainWindow">
     <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <conv:BoolToGridLengthConverter x:Key="BoolToGridLengthConverter"/>
         <conv:EnumMatchConverter x:Key="EnumMatchConverter"/>
 
@@ -164,6 +164,7 @@
                     <StackPanel Margin="8,4">
                         <!-- New Chat Button -->
                         <Button Content="+ New Chat"
+                                Command="{Binding ChatThreadViewModel.NewChatCommand}"
                                 Background="{DynamicResource AccentBrush}"
                                 Foreground="{DynamicResource AccentForeground}"
                                 BorderThickness="0"
@@ -209,6 +210,7 @@
                       AutomationProperties.AutomationId="SidebarSplitter"/>
 
         <!-- Column 2: Center Content Area -->
+        <!-- Row 0: Tab bar headers (always visible). Row 1: TabControl content (Chats) or screen content (other). -->
         <Grid Grid.Column="2"
               AutomationProperties.AutomationId="ContentArea">
             <Grid.RowDefinitions>
@@ -216,11 +218,12 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <!-- Tab Bar (data-bound to ChatThreadViewModel) -->
+            <!-- Tab bar — headers only (always visible, all screens) -->
             <Border Grid.Row="0" Background="{DynamicResource TabBarBackground}"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
                     Padding="4,2">
-                <TabControl ItemsSource="{Binding ChatThreadViewModel.ChatTabs}"
+                <TabControl x:Name="ChatTabControl"
+                            ItemsSource="{Binding ChatThreadViewModel.ChatTabs}"
                             SelectedItem="{Binding ChatThreadViewModel.ActiveTab, Mode=TwoWay}"
                             BorderThickness="0"
                             Background="Transparent"
@@ -233,13 +236,11 @@
                                            FontSize="12"
                                            VerticalAlignment="Center"
                                            AutomationProperties.AutomationId="ChatTabHeader"/>
-                                <!-- Completion alert green dot -->
                                 <Ellipse Width="8" Height="8"
                                          Fill="LimeGreen"
                                          Margin="4,0,0,0"
                                          VerticalAlignment="Center"
                                          Visibility="{Binding HasCompletionAlert, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                <!-- Close button -->
                                 <Button Content="×"
                                         Width="16" Height="16"
                                         FontSize="11"
@@ -255,41 +256,49 @@
                             </StackPanel>
                         </DataTemplate>
                     </TabControl.ItemTemplate>
-                    <!-- Content template: embed ChatView for each tab -->
                     <TabControl.ContentTemplate>
                         <DataTemplate>
                             <views:ChatView/>
                         </DataTemplate>
                     </TabControl.ContentTemplate>
+                    <!-- Headers-only template: no content row -->
                     <TabControl.Template>
                         <ControlTemplate TargetType="TabControl">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
-                                <!-- Tab headers -->
-                                <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Auto"
-                                              VerticalScrollBarVisibility="Disabled"
-                                              Background="Transparent">
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Disabled"
+                                          Background="Transparent">
+                                <StackPanel Orientation="Horizontal">
                                     <StackPanel Orientation="Horizontal" IsItemsHost="True"/>
-                                </ScrollViewer>
-                                <!-- Tab content -->
-                                <Border Grid.Row="1"
-                                        Background="{DynamicResource ContentBackground}">
-                                    <ContentPresenter ContentSource="SelectedContent"/>
-                                </Border>
-                            </Grid>
+                                    <!-- + New Tab button (like Chrome — right after last tab) -->
+                                    <Button Content="+"
+                                            Width="24" Height="24"
+                                            FontSize="14" FontWeight="Bold"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Foreground="{DynamicResource SubtleBrush}"
+                                            Padding="0"
+                                            VerticalAlignment="Center"
+                                            AutomationProperties.AutomationId="NewTabInBarBtn"
+                                            Command="{Binding ElementName=RootLayout, Path=DataContext.ChatThreadViewModel.NewChatCommand}"/>
+                                </StackPanel>
+                            </ScrollViewer>
                         </ControlTemplate>
                     </TabControl.Template>
                 </TabControl>
             </Border>
 
-            <!-- Screen Content -->
+            <!-- Row 1: Tab content (ChatView) — visible only on Chats screen -->
+            <ContentPresenter Grid.Row="1"
+                              Content="{Binding ElementName=ChatTabControl, Path=SelectedContent}"
+                              ContentTemplate="{Binding ElementName=ChatTabControl, Path=ContentTemplate}"
+                              Visibility="{Binding IsRightPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+            <!-- Row 1: Screen Content — visible on all screens except Chats -->
             <ContentControl Grid.Row="1"
                             Content="{Binding SelectedScreen}"
                             ContentTemplateSelector="{StaticResource ScreenSelector}"
-                            Background="{DynamicResource ContentBackground}"/>
+                            Background="{DynamicResource ContentBackground}"
+                            Visibility="{Binding IsRightPanelVisible, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Inverse}"/>
         </Grid>
 
         <!-- Column 3: Vertical GridSplitter -->

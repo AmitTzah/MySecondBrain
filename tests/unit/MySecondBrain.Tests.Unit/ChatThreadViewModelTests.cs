@@ -1528,4 +1528,302 @@ public class ChatThreadViewModelTests
         Assert.Null(Record.Exception(() => vm.ShowKeyboardShortcutsCommand.Execute(null)));
         Assert.Null(Record.Exception(() => vm.ShowAboutCommand.Execute(null)));
     }
+
+    // ================================================================
+    // Regression: Startup initialization creates first tab (Step 4 tab bar fix)
+    // ================================================================
+
+    [Fact]
+    public async Task StartupFlow_InitializeThenNewChat_CreatesTab()
+    {
+        // Arrange — simulate full startup: InitializeAsync then NewChatCommand
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant });
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+        _settingsRepoMock.Setup(r => r.GetAsync("LastSelectedPersonaId")).ReturnsAsync((string?)null);
+        _chatServiceMock.Setup(s => s.CreateThreadAsync(null, false, _generalAssistant))
+            .ReturnsAsync(new ChatThread { Id = "thread-startup-001", PersonaId = _generalAssistant.Id });
+
+        var vm = CreateViewModel();
+
+        // Act — this is the exact sequence MainWindow performs on Loaded
+        await vm.InitializeAsync();
+        if (vm.ChatTabs.Count == 0 && vm.ActivePersona is not null)
+            await vm.NewChatCommand.ExecuteAsync(null);
+
+        // Assert — tab bar must not be empty after startup
+        Assert.NotEmpty(vm.ChatTabs);
+        Assert.NotNull(vm.ActiveTab);
+        Assert.Equal("thread-startup-001", vm.ActiveTab!.Thread.Id);
+    }
+
+    [Fact]
+    public async Task StartupFlow_InitializeWithoutPersonas_LeavesEmptyTabs()
+    {
+        // Arrange — no personas exist (e.g., fresh database before onboarding)
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(() => null);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona>());
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+        _settingsRepoMock.Setup(r => r.GetAsync("LastSelectedPersonaId")).ReturnsAsync((string?)null);
+
+        var vm = CreateViewModel();
+
+        // Act — startup initialization
+        await vm.InitializeAsync();
+
+        // Assert — no tabs created (no persona available), but no crash either
+        Assert.Empty(vm.ChatTabs);
+        Assert.Null(vm.ActiveTab);
+        Assert.Null(vm.ActivePersona);
+    }
+
+    // ================================================================
+    // Tab isolation: each tab maintains its own persona
+    // ================================================================
+
+    [Fact]
+    public async Task NewChatAsync_StoresPersonaOnTab()
+    {
+        // Arrange
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper });
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+        _settingsRepoMock.Setup(r => r.GetAsync("LastSelectedPersonaId")).ReturnsAsync((string?)null);
+        _chatServiceMock.Setup(s => s.CreateThreadAsync(null, false, _generalAssistant))
+            .ReturnsAsync(new ChatThread { Id = "thread-001", PersonaId = _generalAssistant.Id });
+
+        var vm = CreateViewModel();
+        await vm.InitializeAsync();
+
+        // Act
+        await vm.NewChatCommand.ExecuteAsync(null);
+
+        // Assert — tab stores the persona separately from ViewModel
+        Assert.NotNull(vm.ActiveTab);
+        Assert.NotNull(vm.ActiveTab!.ActivePersona);
+        Assert.Equal("General Assistant", vm.ActiveTab.ActivePersona!.DisplayName);
+        // VM-level property should also match for the active tab
+        Assert.Same(vm.ActivePersona, vm.ActiveTab.ActivePersona);
+    }
+
+    [Fact]
+    public async Task Tabs_MaintainIndependentPersonas()
+    {
+        // Arrange
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper, _customPersona });
+        _modelConfigRepoMock.Setup(r => r.GetByIdAsync("config-001")).ReturnsAsync(_modelConfigA);
+        _modelConfigRepoMock.Setup(r => r.GetByIdAsync("config-002")).ReturnsAsync(_modelConfigB);
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+        _settingsRepoMock.Setup(r => r.GetAsync("LastSelectedPersonaId")).ReturnsAsync((string?)null);
+        _chatServiceMock.Setup(s => s.CreateThreadAsync(null, false, It.IsAny<Persona>()))
+            .ReturnsAsync((string? title, bool isTransient, Persona persona) =>
+                new ChatThread { Id = Guid.NewGuid().ToString("N"), PersonaId = persona.Id });
+
+        var vm = CreateViewModel();
+        await vm.InitializeAsync();
+
+        // Create two tabs with default persona (General Assistant)
+        await vm.NewChatCommand.ExecuteAsync(null);
+        var tab1 = vm.ActiveTab!;
+        Assert.Equal("General Assistant", tab1.ActivePersona!.DisplayName);
+
+        // Create another tab — also defaults to General Assistant
+        await vm.NewChatCommand.ExecuteAsync(null);
+        var tab2 = vm.ActiveTab!;
+        Assert.Equal("General Assistant", tab2.ActivePersona!.DisplayName);
+
+        // Act — switch to tab1 and change its persona to Code Helper
+        vm.ActiveTab = tab1;
+        _settingsRepoMock.Invocations.Clear();
+        await vm.SelectPersonaCommand.ExecuteAsync(_codeHelper);
+
+        // Assert — tab1's persona changed
+        Assert.Equal("Code Helper", tab1.ActivePersona!.DisplayName);
+
+        // Switch to tab2 — its persona should still be General Assistant
+        // The guard in OnActiveTabChanged must NOT save LastSelectedPersonaIdKey on tab switch
+        _settingsRepoMock.Invocations.Clear();
+        vm.ActiveTab = tab2;
+        _settingsRepoMock.Verify(r => r.SetAsync("LastSelectedPersonaId", It.IsAny<string>()), Times.Never);
+        Assert.Equal("General Assistant", tab2.ActivePersona!.DisplayName);
+        // VM display property should reflect tab2's persona
+        Assert.NotNull(vm.ActivePersona);
+        Assert.Equal("General Assistant", vm.ActivePersona!.DisplayName);
+
+        // Switch back to tab1 — VM display should restore Code Helper
+        vm.ActiveTab = tab1;
+        Assert.Equal("Code Helper", vm.ActivePersona!.DisplayName);
+    }
+
+    [Fact]
+    public void ChatTabItem_PersonaDefaultsToNull()
+    {
+        // Arrange
+        var thread = new ChatThread { Id = "t1" };
+
+        // Act
+        var tab = new ChatTabItem(thread);
+
+        // Assert
+        Assert.Null(tab.ActivePersona);
+        Assert.Null(tab.ActiveModelConfig);
+    }
+
+    [Fact]
+    public async Task SwitchingTabs_RestoresPerTabPersonaOnViewModel()
+    {
+        // Arrange
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper, _customPersona });
+        _modelConfigRepoMock.Setup(r => r.GetByIdAsync("config-001")).ReturnsAsync(_modelConfigA);
+        _modelConfigRepoMock.Setup(r => r.GetByIdAsync("config-002")).ReturnsAsync(_modelConfigB);
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+        _settingsRepoMock.Setup(r => r.GetAsync("LastSelectedPersonaId")).ReturnsAsync((string?)null);
+        _chatServiceMock.Setup(s => s.CreateThreadAsync(null, false, It.IsAny<Persona>()))
+            .ReturnsAsync((string? title, bool isTransient, Persona persona) =>
+                new ChatThread { Id = Guid.NewGuid().ToString("N"), PersonaId = persona.Id });
+
+        var vm = CreateViewModel();
+        await vm.InitializeAsync();
+
+        // Create tab1, set to Code Helper
+        await vm.NewChatCommand.ExecuteAsync(null);
+        var tab1 = vm.ActiveTab!;
+        await vm.SelectPersonaCommand.ExecuteAsync(_codeHelper);
+        Assert.Equal("Code Helper", tab1.ActivePersona!.DisplayName);
+
+        // Create tab2 — should use current active persona (Code Helper) for creation,
+        // then we'll change it to Custom Writer
+        await vm.NewChatCommand.ExecuteAsync(null);
+        var tab2 = vm.ActiveTab!;
+        // tab2 inherits Code Helper from current active persona
+        Assert.Equal("Code Helper", tab2.ActivePersona!.DisplayName);
+        // Change tab2 to Custom Writer
+        await vm.SelectPersonaCommand.ExecuteAsync(_customPersona);
+
+        // Act — switch back to tab1
+        _settingsRepoMock.Invocations.Clear();
+        vm.ActiveTab = tab1;
+
+        // Assert — VM display property shows tab1's persona (Code Helper)
+        Assert.Equal("Code Helper", vm.ActivePersona!.DisplayName);
+        Assert.Equal("Code Helper", tab1.ActivePersona!.DisplayName);
+        // tab2 unchanged
+        Assert.Equal("Custom Writer", tab2.ActivePersona!.DisplayName);
+        // Switching tabs must NOT save LastSelectedPersonaIdKey (guard in OnActiveTabChanged)
+        _settingsRepoMock.Verify(r => r.SetAsync("LastSelectedPersonaId", It.IsAny<string>()), Times.Never);
+
+        // Switch to tab2 — VM shows tab2's persona
+        _settingsRepoMock.Invocations.Clear();
+        vm.ActiveTab = tab2;
+        Assert.Equal("Custom Writer", vm.ActivePersona!.DisplayName);
+        _settingsRepoMock.Verify(r => r.SetAsync("LastSelectedPersonaId", It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task NewFileViewerTab_StoresPersonaOnTab()
+    {
+        // Arrange
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper });
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+        _settingsRepoMock.Setup(r => r.GetAsync("LastSelectedPersonaId")).ReturnsAsync((string?)null);
+        _chatServiceMock.Setup(s => s.CreateThreadAsync("test.txt", true, It.IsAny<Persona>()))
+            .ReturnsAsync((string? title, bool isTransient, Persona persona) =>
+                new ChatThread { Id = Guid.NewGuid().ToString("N"), PersonaId = persona.Id });
+
+        var vm = CreateViewModel();
+        await vm.InitializeAsync();
+
+        // Act
+        var fileVm = new FileViewerTabViewModel
+        {
+            FileName = "test.txt",
+            FileContent = "hello world",
+            FileType = FileViewerType.Text,
+        };
+        var tab = await vm.NewFileViewerTab(fileVm);
+
+        // Assert
+        Assert.NotNull(tab);
+        Assert.NotNull(tab!.ActivePersona);
+        Assert.Equal("General Assistant", tab.ActivePersona!.DisplayName);
+        // VM-level property should also match
+        Assert.Same(vm.ActivePersona, tab.ActivePersona);
+    }
+
+    [Fact]
+    public async Task NewFileViewerTab_WithoutPersona_StoresNullOnTab()
+    {
+        // Arrange — no personas available (e.g., fresh database before onboarding)
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(() => null);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona>());
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+        _settingsRepoMock.Setup(r => r.GetAsync("LastSelectedPersonaId")).ReturnsAsync((string?)null);
+
+        var vm = CreateViewModel();
+        await vm.InitializeAsync();
+
+        // Act — no persona set, but NewFileViewerTab still creates a tab
+        var fileVm = new FileViewerTabViewModel
+        {
+            FileName = "test.txt",
+            FileContent = "hello world",
+            FileType = FileViewerType.Text,
+        };
+        var tab = await vm.NewFileViewerTab(fileVm);
+
+        // Assert — tab exists but has null persona
+        Assert.NotNull(tab);
+        Assert.Null(tab!.ActivePersona);
+        Assert.Null(tab.ActiveModelConfig);
+        // VM should also have null persona
+        Assert.Null(vm.ActivePersona);
+    }
+
+    [Fact]
+    public async Task DuplicateChatAsync_PreservesPersonaOnDuplicatedTab()
+    {
+        // Arrange
+        _personaRepoMock.Setup(r => r.GetDefaultAsync()).ReturnsAsync(_generalAssistant);
+        _personaRepoMock.Setup(r => r.GetAllAsync()).ReturnsAsync(new List<Persona> { _generalAssistant, _codeHelper, _customPersona });
+        _modelConfigRepoMock.Setup(r => r.GetByIdAsync("config-002")).ReturnsAsync(_modelConfigB);
+        _settingsRepoMock.Setup(r => r.GetAsync<List<string>>("RecentPersonaIds")).ReturnsAsync(() => null);
+        _settingsRepoMock.Setup(r => r.GetAsync("LastSelectedPersonaId")).ReturnsAsync((string?)null);
+        _chatServiceMock.Setup(s => s.CreateThreadAsync(null, false, It.IsAny<Persona>()))
+            .ReturnsAsync((string? title, bool isTransient, Persona persona) =>
+                new ChatThread { Id = Guid.NewGuid().ToString("N"), PersonaId = persona.Id });
+
+        var vm = CreateViewModel();
+        await vm.InitializeAsync();
+
+        // Create a tab and set its persona to Custom Writer
+        await vm.NewChatCommand.ExecuteAsync(null);
+        var sourceTab = vm.ActiveTab!;
+        await vm.SelectPersonaCommand.ExecuteAsync(_customPersona);
+        Assert.Equal("Custom Writer", sourceTab.ActivePersona!.DisplayName);
+
+        // Add a message to the source tab so DuplicateChatAsync has content to duplicate
+        sourceTab.Messages.Add(new Message { Id = "msg-1", Role = "user", Content = "Hello", ThreadId = sourceTab.Thread.Id });
+        _chatServiceMock.Setup(s => s.SendMessageAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string threadId, string content, CancellationToken ct) =>
+                new Message { Id = Guid.NewGuid().ToString("N"), Role = "user", Content = content, ThreadId = threadId });
+
+        // Mock the duplicate thread's message reload
+        var duplicateThreadId = Guid.NewGuid().ToString("N");
+        _chatServiceMock.Setup(s => s.CreateThreadAsync(null, false, _customPersona))
+            .ReturnsAsync(new ChatThread { Id = duplicateThreadId, PersonaId = _customPersona.Id });
+        _chatServiceMock.Setup(s => s.GetActiveBranchMessagesAsync(duplicateThreadId))
+            .ReturnsAsync(new List<Message>());
+
+        // Act
+        await vm.DuplicateChatCommand.ExecuteAsync(null);
+
+        // Assert — duplicated tab inherits the source tab's persona
+        Assert.NotNull(vm.ActiveTab);
+        Assert.NotSame(sourceTab, vm.ActiveTab);
+        Assert.NotNull(vm.ActiveTab!.ActivePersona);
+        Assert.Equal("Custom Writer", vm.ActiveTab.ActivePersona!.DisplayName);
+    }
 }

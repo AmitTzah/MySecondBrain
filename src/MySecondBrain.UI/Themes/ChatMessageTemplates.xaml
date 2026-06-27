@@ -1,40 +1,210 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:converters="clr-namespace:MySecondBrain.UI.Converters">
 
-    <!-- Classic Message Template -->
+    <converters:MarkdownToFlowDocumentConverter x:Key="ThemeMarkdownConverter"/>
+    <converters:RelativeTimeConverter x:Key="ThemeRelativeTimeConverter"/>
+    <converters:FlowDirectionConverter x:Key="ThemeFlowDirectionConverter"/>
+
+    <!-- Helper converter: returns "You" for User role, else "Assistant" / persona name -->
+    <converters:BoolToVisibilityConverter x:Key="ThemeBoolToVisibility"/>
+
+    <!-- Template for User messages (shows "You" label, right-aligned) -->
+    <DataTemplate x:Key="ClassicUserTemplate">
+        <StackPanel Margin="0,0,0,20" FlowDirection="RightToLeft">
+            <TextBlock Text="You"
+                       FontSize="10" FontWeight="Bold"
+                       Foreground="{DynamicResource AccentBrush}"
+                       Margin="0,0,0,2"/>
+            <Border Padding="12,8" CornerRadius="8,8,2,8" BorderThickness="1"
+                    BorderBrush="{DynamicResource AccentBrush}"
+                    Background="{DynamicResource AccentBrush}">
+                <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource ThemeMarkdownConverter}}"
+                                         FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
+                                         VerticalScrollBarVisibility="Hidden"
+                                         HorizontalScrollBarVisibility="Disabled"
+                                         MaxHeight="400">
+                    <FlowDocumentScrollViewer.Style>
+                        <Style TargetType="FlowDocumentScrollViewer">
+                            <Setter Property="Background" Value="Transparent"/>
+                        </Style>
+                    </FlowDocumentScrollViewer.Style>
+                </FlowDocumentScrollViewer>
+            </Border>
+            <TextBlock FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                       Text="{Binding CreatedAt, Converter={StaticResource ThemeRelativeTimeConverter}}"
+                       Margin="0,2,0,0" HorizontalAlignment="Right"/>
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- Template for Assistant messages (shows persona name, left-aligned) -->
+    <DataTemplate x:Key="ClassicAssistantTemplate">
+        <StackPanel Margin="0,0,0,20">
+            <TextBlock FontSize="10" FontWeight="Bold"
+                       Foreground="{DynamicResource SubtleBrush}"
+                       Text="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.ActivePersona.DisplayName, FallbackValue='Assistant'}"
+                       Margin="0,0,0,2"/>
+            <Border Padding="12,8" CornerRadius="2,8,8,8" BorderThickness="1"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    Background="{DynamicResource ContentBackground}">
+                <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource ThemeMarkdownConverter}}"
+                                         FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
+                                         VerticalScrollBarVisibility="Hidden"
+                                         HorizontalScrollBarVisibility="Disabled"
+                                         MaxHeight="400">
+                    <FlowDocumentScrollViewer.Style>
+                        <Style TargetType="FlowDocumentScrollViewer">
+                            <Setter Property="Background" Value="Transparent"/>
+                        </Style>
+                    </FlowDocumentScrollViewer.Style>
+                </FlowDocumentScrollViewer>
+            </Border>
+            <TextBlock FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                       Text="{Binding CreatedAt, Converter={StaticResource ThemeRelativeTimeConverter}}"
+                       Margin="0,2,0,0"/>
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- Compact User Template -->
+    <DataTemplate x:Key="CompactUserTemplate">
+        <StackPanel Margin="0,0,0,8" FlowDirection="RightToLeft">
+            <StackPanel Orientation="Horizontal">
+                <Ellipse Width="8" Height="8" Margin="0,0,6,0"
+                         Fill="{DynamicResource AccentBrush}"/>
+                <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource ThemeMarkdownConverter}}"
+                                         FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
+                                         VerticalScrollBarVisibility="Hidden"
+                                         HorizontalScrollBarVisibility="Disabled"
+                                         MaxHeight="400">
+                    <FlowDocumentScrollViewer.Style>
+                        <Style TargetType="FlowDocumentScrollViewer">
+                            <Setter Property="Background" Value="Transparent"/>
+                        </Style>
+                    </FlowDocumentScrollViewer.Style>
+                </FlowDocumentScrollViewer>
+            </StackPanel>
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- Compact Assistant Template -->
+    <DataTemplate x:Key="CompactAssistantTemplate">
+        <StackPanel Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal">
+                <Ellipse Width="8" Height="8" Margin="0,0,6,0"
+                         Fill="{DynamicResource AccentBrush}"/>
+                <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource ThemeMarkdownConverter}}"
+                                         FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
+                                         VerticalScrollBarVisibility="Hidden"
+                                         HorizontalScrollBarVisibility="Disabled"
+                                         MaxHeight="400">
+                    <FlowDocumentScrollViewer.Style>
+                        <Style TargetType="FlowDocumentScrollViewer">
+                            <Setter Property="Background" Value="Transparent"/>
+                        </Style>
+                    </FlowDocumentScrollViewer.Style>
+                </FlowDocumentScrollViewer>
+            </StackPanel>
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- Bubble User Template -->
+    <DataTemplate x:Key="BubbleUserTemplate">
+        <Grid Margin="0,0,0,12">
+            <Border Padding="12,8" CornerRadius="12,12,2,12" BorderThickness="1"
+                    BorderBrush="{DynamicResource AccentBrush}"
+                    Background="{DynamicResource AccentBrush}" MaxWidth="400"
+                    HorizontalAlignment="Right" Opacity="0.9">
+                <StackPanel FlowDirection="RightToLeft">
+                    <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource ThemeMarkdownConverter}}"
+                                             FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
+                                             VerticalScrollBarVisibility="Hidden"
+                                             HorizontalScrollBarVisibility="Disabled"
+                                             MaxHeight="400">
+                        <FlowDocumentScrollViewer.Style>
+                            <Style TargetType="FlowDocumentScrollViewer">
+                                <Setter Property="Background" Value="Transparent"/>
+                            </Style>
+                        </FlowDocumentScrollViewer.Style>
+                    </FlowDocumentScrollViewer>
+                    <TextBlock Text="{Binding CreatedAt, Converter={StaticResource ThemeRelativeTimeConverter}}"
+                               FontSize="9"
+                               Foreground="{DynamicResource SubtleBrush}"
+                               HorizontalAlignment="Left" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </DataTemplate>
+
+    <!-- Bubble Assistant Template -->
+    <DataTemplate x:Key="BubbleAssistantTemplate">
+        <Grid Margin="0,0,0,12">
+            <Border Padding="12,8" CornerRadius="2,12,12,12" BorderThickness="1"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    Background="{DynamicResource ContentBackground}" MaxWidth="400"
+                    HorizontalAlignment="Left" Opacity="0.9">
+                <StackPanel>
+                    <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource ThemeMarkdownConverter}}"
+                                             FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
+                                             VerticalScrollBarVisibility="Hidden"
+                                             HorizontalScrollBarVisibility="Disabled"
+                                             MaxHeight="400">
+                        <FlowDocumentScrollViewer.Style>
+                            <Style TargetType="FlowDocumentScrollViewer">
+                                <Setter Property="Background" Value="Transparent"/>
+                            </Style>
+                        </FlowDocumentScrollViewer.Style>
+                    </FlowDocumentScrollViewer>
+                    <TextBlock Text="{Binding CreatedAt, Converter={StaticResource ThemeRelativeTimeConverter}}"
+                               FontSize="9"
+                               Foreground="{DynamicResource SubtleBrush}"
+                               HorizontalAlignment="Right" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </DataTemplate>
+
+    <!-- Classic Message Template (shared fallback) -->
     <DataTemplate x:Key="ClassicMessageTemplate">
         <StackPanel Margin="0,0,0,20">
             <TextBlock FontSize="10" FontWeight="Bold"
                        Foreground="{DynamicResource SubtleBrush}"
-                       Text="{Binding Role}" Margin="0,0,0,2"/>
-            <Border Padding="12,8" CornerRadius="6" BorderThickness="1"
-                    BorderBrush="{DynamicResource BorderBrush}"
-                    Background="{DynamicResource ContentBackground}">
-                <TextBlock Text="{Binding Content}" FontSize="{DynamicResource FontSize}"
-                           FontFamily="{DynamicResource FontFamily}"
-                           TextWrapping="Wrap"
-                           Foreground="{DynamicResource ContentForeground}"/>
-            </Border>
-            <TextBlock FontSize="10" Foreground="{DynamicResource SubtleBrush}"
-                       Text="{Binding CreatedAt}" Margin="0,2,0,0"/>
+                       Text="Message" Margin="0,0,0,2"/>
+            <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource ThemeMarkdownConverter}}"
+                                     FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
+                                     VerticalScrollBarVisibility="Hidden"
+                                     HorizontalScrollBarVisibility="Disabled"
+                                     MaxHeight="400">
+                <FlowDocumentScrollViewer.Style>
+                    <Style TargetType="FlowDocumentScrollViewer">
+                        <Setter Property="Background" Value="Transparent"/>
+                    </Style>
+                </FlowDocumentScrollViewer.Style>
+            </FlowDocumentScrollViewer>
         </StackPanel>
     </DataTemplate>
 
-    <!-- Compact Message Template -->
+    <!-- Compact Message Template (shared fallback) -->
     <DataTemplate x:Key="CompactMessageTemplate">
         <StackPanel Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal">
                 <Ellipse Width="8" Height="8" Margin="0,0,6,0"
                          Fill="{DynamicResource AccentBrush}"/>
-                <TextBlock Text="{Binding Content}" FontSize="{DynamicResource FontSize}"
-                           FontFamily="{DynamicResource FontFamily}"
-                           TextWrapping="Wrap"
-                           Foreground="{DynamicResource ContentForeground}"/>
+                <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource ThemeMarkdownConverter}}"
+                                         FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
+                                         VerticalScrollBarVisibility="Hidden"
+                                         HorizontalScrollBarVisibility="Disabled"
+                                         MaxHeight="400">
+                    <FlowDocumentScrollViewer.Style>
+                        <Style TargetType="FlowDocumentScrollViewer">
+                            <Setter Property="Background" Value="Transparent"/>
+                        </Style>
+                    </FlowDocumentScrollViewer.Style>
+                </FlowDocumentScrollViewer>
             </StackPanel>
         </StackPanel>
     </DataTemplate>
 
-    <!-- Bubble Message Template -->
+    <!-- Bubble Message Template (shared fallback) -->
     <DataTemplate x:Key="BubbleMessageTemplate">
         <Grid Margin="0,0,0,12">
             <Border Padding="12,8" CornerRadius="12" BorderThickness="1"
@@ -42,11 +212,19 @@
                     Background="{DynamicResource ContentBackground}" MaxWidth="400"
                     HorizontalAlignment="Left" Opacity="0.85">
                 <StackPanel>
-                    <TextBlock Text="{Binding Content}" FontSize="{DynamicResource FontSize}"
-                               FontFamily="{DynamicResource FontFamily}"
-                               TextWrapping="Wrap"
-                               Foreground="{DynamicResource ContentForeground}"/>
-                    <TextBlock Text="{Binding CreatedAt}" FontSize="9"
+                    <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource ThemeMarkdownConverter}}"
+                                             FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
+                                             VerticalScrollBarVisibility="Hidden"
+                                             HorizontalScrollBarVisibility="Disabled"
+                                             MaxHeight="400">
+                        <FlowDocumentScrollViewer.Style>
+                            <Style TargetType="FlowDocumentScrollViewer">
+                                <Setter Property="Background" Value="Transparent"/>
+                            </Style>
+                        </FlowDocumentScrollViewer.Style>
+                    </FlowDocumentScrollViewer>
+                    <TextBlock Text="{Binding CreatedAt, Converter={StaticResource ThemeRelativeTimeConverter}}"
+                               FontSize="9"
                                Foreground="{DynamicResource SubtleBrush}"
                                HorizontalAlignment="Right" Margin="0,4,0,0"/>
                 </StackPanel>

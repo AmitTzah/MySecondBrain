@@ -163,7 +163,7 @@ public static class DependencyInjectionConfig
 
         // === ViewModels (Transient) ===
         services.AddTransient<MainWindowViewModel>();
-        services.AddTransient<ChatThreadViewModel>();
+        services.AddSingleton<ChatThreadViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<WikiBrowserViewModel>();
         services.AddTransient<UsageDashboardViewModel>();

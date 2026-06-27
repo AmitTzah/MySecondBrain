@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
@@ -20,26 +21,47 @@ public class LLMProviderService : ILLMProviderService
         _logger = logger;
     }
 
-#pragma warning disable CS1998, CS8425
     public async IAsyncEnumerable<StreamChunk> ChatStreamAsync(
         ChatThread thread,
         string userMessage,
         Persona persona,
         ModelConfiguration modelConfig,
         IReadOnlyList<ToolDefinition>? tools,
-        CancellationToken ct)
-#pragma warning restore CS1998, CS8425
+        [EnumeratorCancellation] CancellationToken ct)
     {
-        yield break;
+        var provider = _providerFactory.GetProvider(modelConfig.ProviderType, modelConfig.EndpointUrl);
+        if (provider is null)
+        {
+            _logger.LogWarning("No provider found for type {ProviderType}", modelConfig.ProviderType);
+            yield break;
+        }
+
+        var messages = BuildMessages(persona, userMessage);
+        var request = new ChatRequest(messages, modelConfig, tools, persona.SystemPrompt);
+
+        await foreach (var chunk in provider.ChatStreamAsync(request, ct))
+            yield return chunk;
     }
 
-    public Task<ChatResponse> ChatAsync(
+    public async Task<ChatResponse> ChatAsync(
         ChatThread thread,
         string userMessage,
         Persona persona,
         ModelConfiguration modelConfig,
-        CancellationToken ct) =>
-        Task.FromResult<ChatResponse>(default!);
+        CancellationToken ct)
+    {
+        var provider = _providerFactory.GetProvider(modelConfig.ProviderType, modelConfig.EndpointUrl);
+        if (provider is null)
+        {
+            _logger.LogWarning("No provider found for type {ProviderType}", modelConfig.ProviderType);
+            return new ChatResponse(string.Empty, null, null, "error", new UsageInfo(0, 0, 0));
+        }
+
+        var messages = BuildMessages(persona, userMessage);
+        var request = new ChatRequest(messages, modelConfig, null, persona.SystemPrompt);
+
+        return await provider.ChatAsync(request, ct);
+    }
 
     public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(ModelConfiguration config, CancellationToken ct)
     {
@@ -80,4 +102,20 @@ public class LLMProviderService : ILLMProviderService
         string newMessage,
         ModelConfiguration config) =>
         new(false, 0, config.MaxOutputTokens, 0, ContextOverflowStrategy.HardStop);
+
+    /// <summary>
+    /// Builds a minimal chat message list from the persona's system prompt
+    /// and the user's current message.
+    /// </summary>
+    private static IReadOnlyList<ChatMessage> BuildMessages(Persona persona, string userMessage)
+    {
+        var msgs = new List<ChatMessage>(2);
+
+        if (!string.IsNullOrEmpty(persona.SystemPrompt))
+            msgs.Add(new ChatMessage("system", persona.SystemPrompt));
+
+        msgs.Add(new ChatMessage("user", userMessage));
+
+        return msgs;
+    }
 }

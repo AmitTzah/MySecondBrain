@@ -33,6 +33,23 @@ public partial class App : Application
 
     protected override async void OnStartup(StartupEventArgs e)
     {
+        // Global unhandled exception handlers to capture crash details before termination.
+        DispatcherUnhandledException += (_, args) =>
+        {
+            Log.Fatal(args.Exception, "FATAL: DispatcherUnhandledException — app will terminate");
+            args.Handled = false; // let the app crash — we just want the log
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            if (args.ExceptionObject is Exception ex)
+                Log.Fatal(ex, "FATAL: AppDomain.UnhandledException — app will terminate");
+        };
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            Log.Fatal(args.Exception, "FATAL: UnobservedTaskException");
+            args.SetObserved();
+        };
+
         var services = new ServiceCollection();
         DependencyInjectionConfig.ConfigureServices(services);
         _serviceProvider = services.BuildServiceProvider();

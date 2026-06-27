@@ -15,31 +15,36 @@
         <converters:TokenCountToColorConverter x:Key="TokenCountToColorConverter"/>
         <converters:MessageTokenDisplayConverter x:Key="MessageTokenDisplayConverter"/>
         <converters:BoolToFavoriteConverter x:Key="BoolToFavoriteConverter"/>
+        <converters:MarkdownToFlowDocumentConverter x:Key="MarkdownToFlowDocumentConverter"/>
 
         <!-- ─── User Message Template ─────────────────────────── -->
         <DataTemplate x:Key="UserMessageTemplate">
             <Border Margin="0,4,0,4" Padding="0">
-                <StackPanel FlowDirection="RightToLeft">
+                <StackPanel>
                     <!-- Selection checkbox (visible in selection mode) -->
                     <CheckBox Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.ToggleMessageSelectionCommand}"
                               CommandParameter="{Binding}"
-                              Visibility="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.IsSelectionMode, Converter={StaticResource BoolToVisibilityConverter}}"
+                              Visibility="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.IsSelectionMode, Converter={StaticResource BoolToVisibilityConverter}, FallbackValue=Collapsed}"
                               Margin="4,8,4,0"
                               VerticalAlignment="Top"
+                              HorizontalAlignment="Right"
                               AutomationProperties.AutomationId="MessageSelectionCheckBox"/>
-                    <!-- Role label -->
+
+                    <!-- Role label (slightly above the bubble, right-aligned) -->
                     <TextBlock Text="You"
                                FontSize="11" FontWeight="SemiBold"
                                Foreground="{DynamicResource AccentBrush}"
-                               Margin="0,0,12,2"/>
+                               HorizontalAlignment="Right"
+                               Margin="0,0,14,2"/>
 
-                    <!-- Message bubble -->
+                    <!-- Message bubble (right-aligned, sender side) -->
                     <Border Background="{DynamicResource AccentBrush}"
                             CornerRadius="8,8,2,8"
                             Padding="12,8"
-                            MaxWidth="75%"
+                            MaxWidth="600"
                             HorizontalAlignment="Right">
-                        <FlowDocumentScrollViewer FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
+                        <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource MarkdownToFlowDocumentConverter}}"
+                                                  FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
                                                   VerticalScrollBarVisibility="Hidden"
                                                   HorizontalScrollBarVisibility="Disabled"
                                                   MinHeight="20" MaxHeight="400">
@@ -48,9 +53,6 @@
                                     <Setter Property="Background" Value="Transparent"/>
                                 </Style>
                             </FlowDocumentScrollViewer.Style>
-                            <FlowDocument PagePadding="0"
-                                          FontSize="14"
-                                          Foreground="{DynamicResource AccentForeground}"/>
                         </FlowDocumentScrollViewer>
                     </Border>
 
@@ -88,11 +90,12 @@
                     <Border Background="{DynamicResource InputBackground}"
                             CornerRadius="2,8,8,8"
                             Padding="12,8"
-                            MaxWidth="75%"
+                            MaxWidth="600"
                             HorizontalAlignment="Left"
                             BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1">
-                        <FlowDocumentScrollViewer FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
+                        <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource MarkdownToFlowDocumentConverter}}"
+                                                  FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
                                                   VerticalScrollBarVisibility="Hidden"
                                                   HorizontalScrollBarVisibility="Disabled"
                                                   MinHeight="20" MaxHeight="400">
@@ -101,9 +104,6 @@
                                     <Setter Property="Background" Value="Transparent"/>
                                 </Style>
                             </FlowDocumentScrollViewer.Style>
-                            <FlowDocument PagePadding="0"
-                                          FontSize="14"
-                                          Foreground="{DynamicResource ContentForeground}"/>
                         </FlowDocumentScrollViewer>
                     </Border>
 
