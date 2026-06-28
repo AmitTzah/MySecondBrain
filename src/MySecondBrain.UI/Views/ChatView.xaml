@@ -45,6 +45,7 @@
                             MaxWidth="600"
                             HorizontalAlignment="Right">
                         <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                                     MarkdownStyleName="Sasabune"
                                                      FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
                                                      VerticalScrollBarVisibility="Hidden"
                                                      HorizontalScrollBarVisibility="Disabled"
@@ -102,6 +103,7 @@
                             BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1">
                         <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                                     MarkdownStyleName="Sasabune"
                                                      FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
                                                      VerticalScrollBarVisibility="Hidden"
                                                      HorizontalScrollBarVisibility="Disabled"
