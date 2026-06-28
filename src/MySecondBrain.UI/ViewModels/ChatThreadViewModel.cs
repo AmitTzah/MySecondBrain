@@ -855,7 +855,15 @@ public partial class ChatThreadViewModel : ObservableObject
         HasError = false;
         ErrorMessage = string.Empty;
 
-        // Clear any stale content from a previous cancelled/failed stream
+        // Clear any stale content from a previous cancelled/failed stream.
+        // _streamingMessage must be nulled too — after Stop/cancellation it
+        // still references the old assistant Message (which is no longer in
+        // any collection after the DB reload). If we don't null it,
+        // OnStreamChunkReceived sees _streamingMessage is non-null and skips
+        // creating a new assistant message for this session, causing the
+        // timer to find the User message as the last ListBox item and set
+        // assistant content on the wrong template.
+        _streamingMessage = null;
         _streamingContentBuilder.Clear();
         StreamingContent = string.Empty;
 

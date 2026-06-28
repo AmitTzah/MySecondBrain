@@ -17,15 +17,26 @@ namespace MySecondBrain.UI.Views;
 public partial class ChatView : UserControl
 {
     private ChatThreadViewModel? _viewModel;
-    private bool _isAutoScrolling;
     private IThemeProvider? _themeProvider;
     private static int s_instanceCounter;
     private readonly int _instanceId = Interlocked.Increment(ref s_instanceCounter);
 
+    /// <summary>
+    /// True when the user is at or very near the bottom of the scroll viewer.
+    /// When true and content grows during streaming, the view auto-scrolls to
+    /// follow new content. Set false when the user scrolls up (any amount);
+    /// set true when they scroll back to the bottom or click the scroll-to-bottom
+    /// button. This single flag replaces the old _isAutoScrolling / _userTookControl
+    /// pair, which created a priority race between the deferred Background scroll
+    /// and the Render-priority streaming timer.
+    /// </summary>
+    private bool _isPinnedToBottom = true;
+
     // ═══ Streaming rendering fix ════════════════════════════════════════
-    /// <summary>50ms DispatcherTimer that finds the last ListBox item's
+    /// <summary>Adaptive DispatcherTimer that finds the last ListBox item's
     /// <c>MarkdownScrollViewer</c> and sets its <c>Markdown</c> property directly
-    /// to the accumulated streaming content, bypassing the binding system.</summary>
+    /// to the accumulated streaming content, bypassing the binding system.
+    /// Interval adjusts per render: 80ms under 2K, 200ms 2K-10K, 400ms over 10K.</summary>
     private readonly System.Windows.Threading.DispatcherTimer _streamingTimer;
 
     /// <summary>Tracks the last rendered content to avoid redundant updates.</summary>
@@ -44,13 +55,15 @@ public partial class ChatView : UserControl
             _instanceId, DataContext?.GetType().Name, _themeProvider?.CurrentChatTheme);
 
         // ═══ Streaming timer setup (BEFORE Unloaded handler that references it) ═══
-        // 50ms DispatcherTimer at Render priority. Timer callback finds the
-        // last ListBox item's MarkdownScrollViewer and sets its Markdown
+        // 80ms (adaptive) DispatcherTimer at Render priority. Timer callback finds
+        // the last ListBox item's MarkdownScrollViewer and sets its Markdown
         // property directly to StreamingContent, bypassing the binding.
         // The streaming message was added to the ObservableCollection ONCE by
         // OnStreamChunkReceived — no RemoveAt/Insert during streaming.
+        // Adaptive debounce: initial 80ms; adjusted per render in OnStreamingTimerTick
+        // based on content length (80ms/<2K, 200ms/2K-10K, 400ms/>10K).
         _streamingTimer = new System.Windows.Threading.DispatcherTimer(
-            TimeSpan.FromMilliseconds(50),
+            TimeSpan.FromMilliseconds(80),
             System.Windows.Threading.DispatcherPriority.Render,
             OnStreamingTimerTick,
             System.Windows.Application.Current?.Dispatcher
@@ -135,6 +148,15 @@ public partial class ChatView : UserControl
     /// <c>MarkdownScrollViewer.Markdown</c> property directly to the streaming
     /// content, bypassing the WPF binding system. The message was added to the
     /// ObservableCollection ONCE by <c>OnStreamChunkReceived</c>.
+    ///
+    /// Implements three streaming optimizations:
+    /// 1. <b>Adaptive debounce</b> — adjusts timer interval based on content length
+    ///    (80ms under 2K, 200ms 2K-10K, 400ms over 10K).
+    /// 2. <b>Streaming truncation</b> — when auto-scrolling (user at bottom), only
+    ///    renders the last 4000 chars to reduce MdXaml layout cost; renders full
+    ///    content when user has scrolled up to read earlier parts.
+    /// 3. <b>Adaptive timer interval</b> — updates <c>_streamingTimer.Interval</c>
+    ///    after each render using the same length-based thresholds as #1.
     /// </summary>
     private void OnStreamingTimerTick(object? sender, EventArgs e)
     {
@@ -148,27 +170,112 @@ public partial class ChatView : UserControl
 
         _lastStreamedContent = content;
 
+        // ═══ Streaming truncation ════════════════════════════════════════
+        // When user is auto-scrolling (at bottom), only pass the last ~4000
+        // characters to reduce MdXaml layout cost, aligned to line boundaries
+        // so markdown syntax elements (fences, headers) are never split.
+        // When user has scrolled up, pass the full content so they can read
+        // earlier parts.
+        // _lastStreamedContent intentionally tracks the FULL content so any
+        // addition anywhere (not just within the tail) triggers a re-render.
+        string renderContent;
+        if (_viewModel.IsScrolledUp)
+            renderContent = content;          // user reading earlier parts — render full
+        else if (content.Length > 4000)
+        {
+            // Find a line boundary within 100 chars before the cut point
+            // so we never split markdown syntax elements mid-line.
+            var rawStart = content.Length - 4000;
+            var tailStart = rawStart;
+
+            // Walk back up to 100 chars to find the preceding newline
+            var searchFrom = Math.Max(0, rawStart - 100);
+            var lastNewline = content.LastIndexOf('\n', rawStart, rawStart - searchFrom);
+            if (lastNewline >= 0)
+                tailStart = lastNewline + 1; // start after the newline
+
+            // Avoid splitting a UTF-16 surrogate pair
+            if (char.IsLowSurrogate(content[tailStart]))
+                tailStart++;
+
+            renderContent = content.Substring(tailStart);
+        }
+        else
+            renderContent = content;
+
         // Find the ListBox inside the MessageScrollViewer
         var listBox = MessageScrollViewer?.Content as System.Windows.Controls.ListBox;
         if (listBox is null || listBox.Items.Count == 0) return;
 
-        // Find the last item's container and its MarkdownScrollViewer
+        // Find the last item's container and its MarkdownScrollViewer.
+        // ── ContainerFromItem race-condition guard ──
+        // After tab.Messages is replaced (Stop → load from DB → new
+        // ObservableCollection), the VirtualizingStackPanel's
+        // ItemContainerGenerator is reset. When the next streaming
+        // assistant message is added to the new collection, the
+        // container may not be generated yet (layout runs at the same
+        // Render priority as this timer). ContainerFromItem returns
+        // null in that case — force a layout update and retry once.
+        // Additionally, with Recycling mode, ContainerFromItem can
+        // return a recycled container that was previously prepared for
+        // a different item (e.g., the User message at the previous
+        // last position). Validate DataContext to guard against this.
         var lastItem = listBox.Items[^1];
         var lastContainer = listBox.ItemContainerGenerator.ContainerFromItem(lastItem) as FrameworkElement;
-        if (lastContainer is null) return;
 
-        var markdownViewer = FindVisualChild<MarkdownScrollViewer>(lastContainer);
-        if (markdownViewer is null)
+        // If the container isn't realized yet, force a layout pass and retry
+        if (lastContainer is null)
         {
-            Log.Debug("[StreamDiag] Timer: MarkdownScrollViewer not found in last container");
+            listBox.UpdateLayout();
+            lastContainer = listBox.ItemContainerGenerator.ContainerFromItem(lastItem) as FrameworkElement;
+        }
+
+        if (lastContainer is null)
+        {
+            Log.Debug("[StreamDiag] Timer: ContainerFromItem returned null for last item (Role={Role})",
+                (lastItem as MySecondBrain.Core.Models.Message)?.Role ?? "?");
             return;
         }
 
-        // Set the Markdown property directly — MarkdownScrollViewer renders it
-        // internally using MdXaml, no converter or binding involved
-        markdownViewer.Markdown = content;
+        // ── Recycled-container guard ──
+        // When the VirtualizingStackPanel recycles a container that was
+        // previously used for a different item, the DataContext may not
+        // yet reflect the new item. Skip this tick and wait for the
+        // layout pass to properly prepare the container.
+        if (!ReferenceEquals(lastContainer.DataContext, lastItem))
+        {
+            Log.Debug("[StreamDiag] Timer: Container DataContext mismatch — skipping tick. Expected={ExpectedRole}, Actual={ActualRole}",
+                (lastItem as MySecondBrain.Core.Models.Message)?.Role ?? "?",
+                (lastContainer.DataContext as MySecondBrain.Core.Models.Message)?.Role ?? "?");
+            return;
+        }
 
-        Log.Debug("[StreamDiag] Timer set MarkdownScrollViewer.Markdown. ContentLen={Len}", content.Length);
+        // Defer the entire FindVisualChild + Markdown set to Background priority.
+        // At Render priority (timer callback), a recycled container may still
+        // have the User template applied. The layout pass (Normal priority)
+        // applies the correct template, and Background runs after that.
+        // Re-finding the MarkdownScrollViewer at Background priority guarantees
+        // we get the correctly-templated visual element.
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            var mv = FindVisualChild<MarkdownScrollViewer>(lastContainer);
+            if (mv is null)
+                return;
+            mv.Markdown = renderContent;
+        }), System.Windows.Threading.DispatcherPriority.Background);
+
+        // ═══ Adaptive timer interval ════════════════════════════════════
+        // Adjust the timer interval based on content length. The more content
+        // already rendered, the slower we tick to avoid layout thrashing.
+        if (renderContent.Length < 2000)
+            _streamingTimer.Interval = TimeSpan.FromMilliseconds(80);
+        else if (renderContent.Length < 10000)
+            _streamingTimer.Interval = TimeSpan.FromMilliseconds(200);
+        else
+            _streamingTimer.Interval = TimeSpan.FromMilliseconds(400);
+
+        Log.Debug("[StreamDiag] Timer set MarkdownScrollViewer.Markdown. RenderContentLen={Len}, FullContentLen={FullLen}, Interval={Interval}ms",
+            renderContent.Length, content.Length, _streamingTimer.Interval.TotalMilliseconds);
     }
 
     /// <summary>
@@ -209,6 +316,36 @@ public partial class ChatView : UserControl
                     listBox.ItemsSource = null;
                     listBox.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty, binding);
                 }
+            }
+        }
+
+        // When streaming content arrives, reset the timer to fire immediately
+        // on the next render pass. This prevents the user seeing a recycled
+        // container template (from VirtualizingStackPanel) before the correct
+        // Markdown is rendered. After render, the adaptive interval takes over.
+        // Skip when content is being cleared (final chunk / Stop) — the
+        // subsequent collection replacement in SendWithStreamingAsync will
+        // handle rendering the persisted message; clearing the Markdown
+        // early would cause a visible flash.
+        if (e.PropertyName == nameof(ChatThreadViewModel.StreamingContent)
+            && _viewModel is not null)
+        {
+            if (!string.IsNullOrEmpty(_viewModel.StreamingContent))
+            {
+                // New streaming content arrived — fire timer immediately so the
+                // first chunk renders ASAP, reducing the window where a recycled
+                // container (from VirtualizingStackPanel) might show stale state.
+                _streamingTimer.Interval = TimeSpan.FromMilliseconds(1);
+            }
+            else
+            {
+                // Streaming content was cleared (Stop / final chunk / new send).
+                // Reset the last-rendered-content tracker so the next streaming
+                // session starts from a clean state. Without this, _lastStreamedContent
+                // retains the previous session's full text, and if the new session's
+                // first chunk coincidentally matches the tail of that old text, the
+                // timer's early-return guard would skip rendering entirely.
+                _lastStreamedContent = string.Empty;
             }
         }
     }
@@ -312,10 +449,18 @@ public partial class ChatView : UserControl
     /// <summary>
     /// Forwards mouse wheel events from any FlowDocumentScrollViewer child
     /// (which would otherwise capture them for internal scrolling) to the
-    /// outer MessageScrollViewer. The scroll is deferred via BeginInvoke at
-    /// Background priority so it executes after all pending data-binding and
-    /// layout updates — preventing RemoveAt/Insert layout passes in
-    /// OnStreamChunkReceived from overriding the user's scroll position.
+    /// outer MessageScrollViewer. Scrolls immediately — no BeginInvoke deferral.
+    ///
+    /// The previous implementation deferred the actual ScrollToVerticalOffset to
+    /// Background priority, creating a priority race with the Render-priority
+    /// streaming timer: the _userTookControl flag was set but the scroll hadn't
+    /// executed yet, so the next ScrollChanged (triggered by timer content growth)
+    /// saw the old scroll position (still at bottom) and cleared the flag,
+    /// causing snap-back on the next timer tick.
+    ///
+    /// OnStreamChunkReceived no longer performs RemoveAt/Insert during streaming
+    /// (it updates message Content in-place), so the original reason for deferral
+    /// no longer applies.
     /// </summary>
     private void OnMessagePreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
@@ -324,58 +469,104 @@ public partial class ChatView : UserControl
         e.Handled = true;
 
         if (MessageScrollViewer is null) return;
-
-        var delta = e.Delta;
         var sv = MessageScrollViewer;
 
-        // Defer to Background priority — runs after DataBind, Render, Loaded,
-        // and all Normal-priority operations (including Dispatcher.Invoke from
-        // OnStreamChunkReceived). This ensures ScrollableHeight is accurate
-        // and no pending RemoveAt/Insert will override the offset.
-        Dispatcher.BeginInvoke(new Action(() =>
+        // Scroll immediately — no BeginInvoke. Delta is typically ±120 per notch.
+        // Divide by 3 to get ~40px per tick for a natural scroll feel.
+        var newOffset = sv.VerticalOffset - (e.Delta / 3.0);
+        newOffset = Math.Max(0, Math.Min(newOffset, sv.ScrollableHeight));
+        sv.ScrollToVerticalOffset(newOffset);
+
+        // Check if the user scrolled away from the bottom. Use a tight 2px
+        // threshold so even a single tick up immediately unpins auto-scroll.
+        // The old 15px threshold was too loose and required multiple ticks.
+        var isAtBottom = Math.Abs(sv.ScrollableHeight - newOffset) < 2.0;
+        if (!isAtBottom)
         {
-            // Delta is typically ±120 per notch. Divide to get ~40px per tick.
-            var newOffset = sv.VerticalOffset - (delta / 3.0);
-            newOffset = Math.Max(0, Math.Min(newOffset, sv.ScrollableHeight));
-            sv.ScrollToVerticalOffset(newOffset);
-        }), System.Windows.Threading.DispatcherPriority.Background);
+            _isPinnedToBottom = false;
+            UpdateAutoScrollIndicator(showPaused: true);
+        }
+        // Note: re-pinning (isAtBottom → _isPinnedToBottom = true) happens in
+        // ScrollChanged when it detects a user-initiated scroll-down (e.VerticalChange > 0).
     }
 
     /// <summary>
     /// Handles ScrollChanged on the message ListBox/ScrollViewer.
-    /// When the user scrolls up during streaming, pauses auto-scroll
-    /// and shows a "Auto-scroll paused" indicator.
+    ///
+    /// Three responsibilities:
+    /// 1. <b>Auto-scroll</b>: When content grows (ExtentHeightChange > 0) during
+    ///    streaming AND the user is pinned to bottom, scroll to bottom.
+    /// 2. <b>Unpin detection</b>: When the user scrolls up (VerticalChange negative)
+    ///    and is no longer at bottom, unpin and show the "Auto-scroll paused" indicator.
+    /// 3. <b>Re-pin detection</b>: When the user manually scrolls to bottom
+    ///    (VerticalChange > 0 and isAtBottom), re-pin and hide the indicator.
+    ///
+    /// Uses e.VerticalChange to distinguish user-initiated scrolls from
+    /// content-growth-induced position changes, preventing the old bug where
+    /// content growth would clear the user-control flag.
     /// </summary>
     private void MessageScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
         if (sender is not ScrollViewer sv) return;
 
-        var isAtBottom = sv.VerticalOffset >= sv.ScrollableHeight - 15;
+        // Tight 2px threshold: a single mouse-wheel tick (~13px) reliably
+        // escapes this. The old 15px threshold required 2+ ticks and felt laggy.
+        var isAtBottom = Math.Abs(sv.ScrollableHeight - sv.VerticalOffset) < 2.0;
         var isStreaming = _viewModel?.ActiveTab?.IsStreaming ?? false;
 
-        // Auto-scroll when the user is at the bottom or generation is not happening
-        _isAutoScrolling = isAtBottom || !isStreaming;
+        // ── User manually scrolled to bottom → re-pin ──
+        // e.VerticalChange > 0 means the offset increased (scrolling down),
+        // caused by user input, not by content growth. Content growth changes
+        // ExtentHeight, not VerticalOffset (until we programmatically scroll).
+        if (isAtBottom && e.VerticalChange > 0)
+        {
+            _isPinnedToBottom = true;
+            UpdateAutoScrollIndicator(showPaused: false);
+        }
 
-        // Update ViewModel state for UI bindings
+        // ── User scrolled up → unpin immediately ──
+        // e.VerticalChange < 0: offset decreased, user scrolled up.
+        // We check !isAtBottom to avoid unpinning on tiny bounces near bottom.
+        if (!isAtBottom && e.VerticalChange < 0)
+        {
+            _isPinnedToBottom = false;
+            UpdateAutoScrollIndicator(showPaused: true);
+        }
+
+        // ── Auto-scroll: content grew from streaming, user is pinned ──
+        // Only triggered by ExtentHeightChange > 0 (content height increased),
+        // never by user scroll events. This prevents fighting the user.
+        if (_isPinnedToBottom && isStreaming && e.ExtentHeightChange > 0)
+        {
+            sv.ScrollToBottom();
+        }
+    }
+
+    /// <summary>
+    /// Updates the ViewModel scroll-state properties and the paused-indicator
+    /// visibility in a single helper to avoid duplication.
+    /// </summary>
+    private void UpdateAutoScrollIndicator(bool showPaused)
+    {
         if (_viewModel is not null)
         {
-            _viewModel.IsScrolledUp = !isAtBottom && isStreaming;
-            _viewModel.AutoScrollIndicatorText = _viewModel.IsScrolledUp
+            _viewModel.IsScrolledUp = showPaused;
+            _viewModel.AutoScrollIndicatorText = showPaused
                 ? "Auto-scroll paused"
                 : string.Empty;
         }
 
-        // Ensure the AuroScrollPausedIndicator visibility
         if (AutoScrollPausedIndicator is not null)
         {
-            AutoScrollPausedIndicator.Visibility = _viewModel?.IsScrolledUp == true
+            AutoScrollPausedIndicator.Visibility = showPaused
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }
     }
 
     /// <summary>
-    /// Smooth-scrolls the message ScrollViewer to the bottom.
+    /// Smooth-scrolls the message ScrollViewer to the bottom with a 200ms
+    /// ease-out animation. Re-pins auto-scroll and hides the paused indicator.
     /// Called by the ScrollToBottom floating button.
     /// </summary>
     private void ScrollToBottom_Click(object sender, RoutedEventArgs e)
@@ -384,6 +575,10 @@ public partial class ChatView : UserControl
 
         var sv = MessageScrollViewer;
         if (sv.ScrollableHeight <= 0) return;
+
+        // Re-pin and hide indicator
+        _isPinnedToBottom = true;
+        UpdateAutoScrollIndicator(showPaused: false);
 
         var startOffset = sv.VerticalOffset;
         var targetOffset = sv.ScrollableHeight;
@@ -401,13 +596,6 @@ public partial class ChatView : UserControl
         Storyboard.SetTarget(anim, sv);
         Storyboard.SetTargetProperty(anim, new PropertyPath("(ScrollViewer.VerticalOffset)"));
         storyboard.Children.Add(anim);
-
-        // Hide the indicator when user clicks scroll-to-bottom
-        if (_viewModel is not null)
-        {
-            _viewModel.IsScrolledUp = false;
-            _viewModel.AutoScrollIndicatorText = string.Empty;
-        }
 
         storyboard.Begin();
     }

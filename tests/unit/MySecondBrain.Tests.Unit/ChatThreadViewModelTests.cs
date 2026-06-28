@@ -2196,4 +2196,64 @@ public class ChatThreadViewModelTests
         var vm = CreateViewModel();
         Assert.True(vm.CopyRichCommand.CanExecute(null));
     }
+
+    // ================================================================
+    // Regression tests: Streaming state reset after Stop → Send
+    // ================================================================
+
+    /// <summary>
+    /// Regression test: when a new message is sent after a previous streaming
+    /// session (which left <c>_streamingMessage</c> non-null), the send command
+    /// must reset all streaming state — including nulling <c>_streamingMessage</c>.
+    /// Without this reset, the first streaming chunk of the new session would not
+    /// create a new assistant message, causing the timer to find the User message
+    /// as the last ListBox item and set assistant content on the wrong template
+    /// (the "assistant in user bubble" bug).
+    ///
+    /// Since <c>OnStreamChunkReceived</c> wraps its body in
+    /// <c>Dispatcher.Invoke</c> (which does not execute in unit tests without
+    /// a WPF Application), this test verifies the observable state reset that
+    /// happens in <c>SendMessageAsync</c> before any streaming chunks arrive.
+    /// </summary>
+    [Fact]
+    public async Task SendMessage_AfterPreviousStreaming_ResetsStreamingState()
+    {
+        // Arrange
+        var thread = new ChatThread { Id = "thread-1" };
+        var tab = new ChatTabItem(thread) { TextboxContent = "Hello" };
+        var vm = CreateViewModel();
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+
+        // Simulate a previous streaming session that left StreamingContent populated.
+        // In the real app, after Stop/cancellation, the ObservableCollection is
+        // replaced via DB reload in SendWithStreamingAsync. The key invariant is
+        // that _streamingMessage (internal private field) references an old message
+        // that's no longer in any collection. We simulate the observable symptom:
+        // StreamingContent has stale data, and the builder needs clearing.
+        var tcs = new TaskCompletionSource<Message>();
+        _chatServiceMock.Setup(s => s.SendMessageAsync("thread-1", "Hello", It.IsAny<CancellationToken>()))
+            .Returns(tcs.Task);
+        _chatServiceMock.Setup(s => s.GetActiveBranchMessagesAsync("thread-1"))
+            .ReturnsAsync(new List<Message>());
+
+        // Set stale streaming state (simulating post-Stop conditions)
+        vm.StreamingContent = "Stale content from previous session";
+
+        // Act — start sending
+        var sendTask = vm.SendMessageCommand.ExecuteAsync(null);
+        await Task.Delay(200);
+
+        // Assert — streaming state was cleared by SendMessageAsync
+        Assert.Equal(string.Empty, vm.StreamingContent);
+
+        // Assert — user message appears in the collection immediately
+        Assert.Single(tab.Messages);
+        Assert.Equal("User", tab.Messages[0].Role);
+        Assert.Equal("Hello", tab.Messages[0].Content);
+
+        // Cleanup
+        tcs.SetResult(new Message { Id = "msg-1", Role = "Assistant", Content = "Hi!", ThreadId = "thread-1" });
+        await sendTask;
+    }
 }
