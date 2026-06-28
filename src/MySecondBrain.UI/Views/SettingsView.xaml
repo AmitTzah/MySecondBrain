@@ -5,7 +5,7 @@
              xmlns:models="clr-namespace:MySecondBrain.Core.Models;assembly=MySecondBrain.Core"
              xmlns:converters="clr-namespace:MySecondBrain.UI.Converters"
              xmlns:viewsSettings="clr-namespace:MySecondBrain.UI.Views.Settings"
-             Background="{DynamicResource ContentBackground}"
+             Background="{DynamicResource ApplicationBackgroundBrush}"
              AutomationProperties.AutomationId="SettingsView">
     <UserControl.Resources>
         <ResourceDictionary>
@@ -22,7 +22,7 @@
 
             <Style x:Key="AccentButtonStyle" TargetType="Button">
                 <Setter Property="OverridesDefaultStyle" Value="True"/>
-                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
                 <Setter Property="Foreground" Value="White"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="FontSize" Value="11"/>
@@ -64,8 +64,8 @@
         </Grid.ColumnDefinitions>
 
         <!-- Column 0: Settings Category Sidebar -->
-        <Border Grid.Column="0" Background="{DynamicResource SidebarBackground}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="{DynamicResource ApplicationBackgroundBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -74,24 +74,24 @@
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Row="0" Text="Settings" FontSize="13" FontWeight="Bold"
-                           Foreground="{DynamicResource SidebarForeground}" Margin="12,10,12,6" Padding="0,0,0,6"/>
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="12,10,12,6" Padding="0,0,0,6"/>
 
                 <ListBox Grid.Row="1" ItemsSource="{Binding CategoryItems}"
                          SelectedValue="{Binding SelectedSettingsCategory}" SelectedValuePath="Category"
                          ItemTemplate="{StaticResource SidebarItemTemplate}"
                          Background="Transparent" BorderThickness="0"
-                         Foreground="{DynamicResource SidebarForeground}" FontSize="12"/>
+                         Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="12"/>
 
                 <TextBlock Grid.Row="2" Margin="12,8,12,12"
                            AutomationProperties.AutomationId="ReRunOnboardingLink">
-                    <Hyperlink Foreground="{DynamicResource AccentBrush}" FontSize="11" TextDecorations="Underline"
+                    <Hyperlink Foreground="{DynamicResource AccentFillColorDefaultBrush}" FontSize="11" TextDecorations="Underline"
                                 Command="{Binding ReRunOnboardingCommand}">🔄 Re-run Onboarding Wizard</Hyperlink>
                 </TextBlock>
             </Grid>
         </Border>
 
         <!-- Column 1: Content Area with UserControls -->
-        <Border Grid.Column="1" Background="{DynamicResource ContentBackground}">
+        <Border Grid.Column="1" Background="{DynamicResource ApplicationBackgroundBrush}">
             <Grid>
                 <viewsSettings:ProvidersSettingsControl>
                     <viewsSettings:ProvidersSettingsControl.Style>
@@ -323,19 +323,19 @@
                         KeyDown="OnRecordingKeyDown"
                         Focusable="True">
                     <Border HorizontalAlignment="Center" VerticalAlignment="Center"
-                            Background="{DynamicResource CardBackground}"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                             CornerRadius="8" Padding="30,20" MaxWidth="400">
                         <StackPanel>
                             <TextBlock Text="Recording Hotkey..." FontSize="14" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,8"/>
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,8"/>
                             <TextBlock Text="Press a modifier key (Ctrl, Alt, Shift, Win) + a key to set a hotkey. Press Escape to cancel."
-                                       FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                                       FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        TextWrapping="Wrap" Margin="0,0,0,12"/>
-                            <Border Background="{DynamicResource ContentBackground}" Padding="12,8"
-                                    CornerRadius="4" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <Border Background="{DynamicResource ApplicationBackgroundBrush}" Padding="12,8"
+                                    CornerRadius="4" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
                                 <TextBlock Text="{Binding RecordingHotkeyCombo}" FontSize="14" FontWeight="Bold"
-                                           Foreground="{DynamicResource AccentBrush}" TextAlignment="Center"/>
+                                           Foreground="{DynamicResource AccentFillColorDefaultBrush}" TextAlignment="Center"/>
                             </Border>
                         </StackPanel>
                     </Border>

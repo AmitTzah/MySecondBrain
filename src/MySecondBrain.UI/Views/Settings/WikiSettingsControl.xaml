@@ -5,7 +5,7 @@
         <ResourceDictionary>
             <Style x:Key="AccentButtonStyle" TargetType="Button">
                 <Setter Property="OverridesDefaultStyle" Value="True"/>
-                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
                 <Setter Property="Foreground" Value="White"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="FontSize" Value="11"/>
@@ -40,9 +40,9 @@
             <Style x:Key="SecondaryButtonStyle" TargetType="Button">
                 <Setter Property="OverridesDefaultStyle" Value="True"/>
                 <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Foreground" Value="{DynamicResource ContentForeground}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                 <Setter Property="FontSize" Value="11"/>
                 <Setter Property="Padding" Value="12,5"/>
                 <Setter Property="Template">
@@ -82,26 +82,26 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <TextBlock Grid.Row="0" Text="📝 Wiki" FontSize="16" FontWeight="Bold"
-                   Foreground="{DynamicResource ContentForeground}" Margin="16,16,16,4"/>
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,16,16,4"/>
         <TextBlock Grid.Row="1" Text="Manage your wiki directory, file indexing, and version control settings."
-                   FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                   FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                    TextWrapping="Wrap" Margin="16,0,16,12"/>
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="16,0,16,8">
             <StackPanel>
-                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
-                        Background="{DynamicResource CardBackground}" Margin="0,0,0,12"
+                <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}" Margin="0,0,0,12"
                         MaxWidth="600" HorizontalAlignment="Left">
                     <StackPanel Margin="14,12,14,12">
                         <TextBlock Text="Wiki Directory" FontSize="13" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4"/>
                         <TextBlock Text="Select the folder containing your .md wiki files."
-                                   FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                   FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    TextWrapping="Wrap" Margin="0,0,0,10"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <TextBlock Text="Path:" FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                            <TextBlock Text="Path:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        VerticalAlignment="Center" Margin="0,0,6,0"/>
                             <TextBlock Text="{Binding WikiDirectoryPath}" FontSize="11" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource ContentForeground}" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"
                                        TextWrapping="Wrap" MaxWidth="350"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
@@ -113,22 +113,22 @@
                                     ToolTip="Re-scan all .md files in the wiki directory"/>
                         </StackPanel>
                         <TextBlock Text="{Binding IndexingStatus}" FontSize="10"
-                                   Foreground="{DynamicResource SubtleBrush}" TextWrapping="Wrap"/>
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
-                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
-                        Background="{DynamicResource CardBackground}" MaxWidth="600" HorizontalAlignment="Left">
+                <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}" MaxWidth="600" HorizontalAlignment="Left">
                     <StackPanel Margin="14,12,14,12">
                         <TextBlock Text="Version Control (Git)" FontSize="13" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4"/>
                         <TextBlock Text="Track changes to your wiki files using Git version control."
-                                   FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                   FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    TextWrapping="Wrap" Margin="0,0,0,10"/>
                         <CheckBox IsChecked="{Binding GitVersionControlEnabled}" Content="Initialize git repository" FontSize="11"
-                                  Foreground="{DynamicResource ContentForeground}"
+                                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                   ToolTip="When enabled, a git repository will be initialized in the wiki directory for version tracking."/>
                         <TextBlock Text="{Binding GitStatusMessage}" FontSize="10" Margin="24,4,0,0"
-                                   Foreground="{DynamicResource SubtleBrush}" TextWrapping="Wrap"/>
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
             </StackPanel>

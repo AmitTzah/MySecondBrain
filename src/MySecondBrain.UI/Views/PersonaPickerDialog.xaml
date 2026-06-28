@@ -5,7 +5,7 @@
         Height="400" Width="400"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="{DynamicResource ContentBackground}"
+        Background="{DynamicResource ApplicationBackgroundBrush}"
         ResizeMode="NoResize"
         KeyDown="Window_KeyDown"
         AutomationProperties.AutomationId="PersonaPickerDialog">
@@ -18,14 +18,14 @@
 
         <!-- Search box -->
         <Border Grid.Row="0" Margin="0,0,0,8"
-                Background="{DynamicResource InputBackground}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                 CornerRadius="4" Padding="6,4">
             <TextBox x:Name="SearchBox"
                      Text="{Binding PersonaPickerSearchText, UpdateSourceTrigger=PropertyChanged}"
                      FontSize="13"
                      Background="Transparent"
-                     Foreground="{DynamicResource ContentForeground}"
+                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                      BorderThickness="0"
                      AutomationProperties.AutomationId="PersonaPickerSearchBox"/>
         </Border>
@@ -36,8 +36,8 @@
                  SelectedItem="{Binding ActivePersona, Mode=TwoWay}"
                  DisplayMemberPath="DisplayName"
                  FontSize="13"
-                 Background="{DynamicResource InputBackground}"
-                 BorderBrush="{DynamicResource BorderBrush}"
+                 Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                 BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                  BorderThickness="1"
                  AutomationProperties.AutomationId="PersonaPickerList"
                  MouseDoubleClick="PersonaList_MouseDoubleClick"/>
@@ -46,15 +46,15 @@
         <StackPanel Grid.Row="2" Orientation="Horizontal"
                     HorizontalAlignment="Right" Margin="0,8,0,0">
             <Button Content="Select" Padding="16,6" FontSize="12"
-                    Background="{DynamicResource AccentBrush}"
-                    Foreground="{DynamicResource AccentForeground}"
+                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                    Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                     BorderThickness="0" Margin="0,0,8,0"
                     Click="SelectButton_Click"
                     AutomationProperties.AutomationId="PersonaPickerSelectBtn"/>
             <Button Content="Cancel" Padding="16,6" FontSize="12"
                     Background="Transparent"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    Foreground="{DynamicResource ContentForeground}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                     Click="CancelButton_Click"
                     AutomationProperties.AutomationId="PersonaPickerCancelBtn"/>
         </StackPanel>

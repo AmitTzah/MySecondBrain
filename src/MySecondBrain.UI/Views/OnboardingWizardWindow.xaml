@@ -7,7 +7,7 @@
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanResize"
         WindowStyle="SingleBorderWindow"
-        Background="{DynamicResource ContentBackground}"
+        Background="{DynamicResource ApplicationBackgroundBrush}"
         AutomationProperties.AutomationId="OnboardingWizardWindow">
     <Grid>
         <views:OnboardingWizardView/>

@@ -6,9 +6,9 @@
             <Style x:Key="SecondaryButtonStyle" TargetType="Button">
                 <Setter Property="OverridesDefaultStyle" Value="True"/>
                 <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Foreground" Value="{DynamicResource ContentForeground}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                 <Setter Property="FontSize" Value="11"/>
                 <Setter Property="Padding" Value="12,5"/>
                 <Setter Property="Template">
@@ -48,55 +48,55 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <TextBlock Grid.Row="0" Text="🔧 Tools" FontSize="16" FontWeight="Bold"
-                   Foreground="{DynamicResource ContentForeground}" Margin="16,16,16,4"/>
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,16,16,4"/>
         <TextBlock Grid.Row="1" Text="Configure tool auto-approval defaults and speech-to-text settings."
-                   FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                   FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                    TextWrapping="Wrap" Margin="16,0,16,12"/>
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="16,0,16,8">
             <StackPanel>
-                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
-                        Background="{DynamicResource CardBackground}" Margin="0,0,0,12"
+                <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}" Margin="0,0,0,12"
                         MaxWidth="600" HorizontalAlignment="Left">
                     <StackPanel Margin="14,12,14,12">
                         <TextBlock Text="Tool Auto-Approval Defaults" FontSize="13" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4"/>
                         <TextBlock Text="Control whether tools require confirmation before executing. Changes affect newly created chat threads."
-                                   FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                   FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    TextWrapping="Wrap" Margin="0,0,0,10"/>
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Web Search" FontSize="11" Foreground="{DynamicResource SubtleBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="Web Search" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
                             <ComboBox Grid.Column="1" ItemsSource="{Binding ToolApprovalOptions}" SelectedItem="{Binding WebSearchAutoApproval}" FontSize="11" Width="150" HorizontalAlignment="Left"/>
                         </Grid>
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Terminal / Command" FontSize="11" Foreground="{DynamicResource SubtleBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="Terminal / Command" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
                             <ComboBox Grid.Column="1" ItemsSource="{Binding TerminalApprovalOptions}" SelectedItem="{Binding TerminalAutoApproval}" FontSize="11" Width="150" HorizontalAlignment="Left"/>
                         </Grid>
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="File Generate" FontSize="11" Foreground="{DynamicResource SubtleBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="File Generate" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
                             <ComboBox Grid.Column="1" ItemsSource="{Binding ToolApprovalOptions}" SelectedItem="{Binding FileGenerateAutoApproval}" FontSize="11" Width="150" HorizontalAlignment="Left"/>
                         </Grid>
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="File Edit" FontSize="11" Foreground="{DynamicResource SubtleBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="File Edit" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
                             <ComboBox Grid.Column="1" ItemsSource="{Binding ToolApprovalOptions}" SelectedItem="{Binding FileEditAutoApproval}" FontSize="11" Width="150" HorizontalAlignment="Left"/>
                         </Grid>
                     </StackPanel>
                 </Border>
-                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
-                        Background="{DynamicResource CardBackground}" MaxWidth="600" HorizontalAlignment="Left">
+                <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}" MaxWidth="600" HorizontalAlignment="Left">
                     <StackPanel Margin="14,12,14,12">
                         <TextBlock Text="Speech-to-Text (STT)" FontSize="13" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4"/>
                         <TextBlock Text="Configure the speech recognition provider used for voice input."
-                                   FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                   FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    TextWrapping="Wrap" Margin="0,0,0,10"/>
-                        <TextBlock Text="Provider" FontSize="11" Foreground="{DynamicResource SubtleBrush}" Margin="0,0,0,3"/>
+                        <TextBlock Text="Provider" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,3"/>
                         <ComboBox ItemsSource="{Binding SttProviderOptions}" SelectedItem="{Binding SttProvider}"
                                   FontSize="11" Width="200" HorizontalAlignment="Left" Margin="0,0,0,8"/>
-                        <TextBlock Text="Model" FontSize="11" Foreground="{DynamicResource SubtleBrush}" Margin="0,0,0,3"/>
+                        <TextBlock Text="Model" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,3"/>
                         <TextBox Text="{Binding SttModel, UpdateSourceTrigger=PropertyChanged}" FontSize="11" Width="200"
                                  HorizontalAlignment="Left" Margin="0,0,0,10"/>
                         <Button Content="🎤 Test Microphone" Padding="12,5" Command="{Binding TestMicrophoneCommand}"

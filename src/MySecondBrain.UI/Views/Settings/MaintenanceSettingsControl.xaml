@@ -5,7 +5,7 @@
         <ResourceDictionary>
             <Style x:Key="AccentButtonStyle" TargetType="Button">
                 <Setter Property="OverridesDefaultStyle" Value="True"/>
-                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
                 <Setter Property="Foreground" Value="White"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="FontSize" Value="11"/>
@@ -46,36 +46,36 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <TextBlock Grid.Row="0" Text="🛠️ Maintenance" FontSize="16" FontWeight="Bold"
-                   Foreground="{DynamicResource ContentForeground}" Margin="16,16,16,4"/>
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,16,16,4"/>
         <TextBlock Grid.Row="1" Text="Perform database maintenance tasks such as compaction to reclaim disk space."
-                   FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                   FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                    TextWrapping="Wrap" Margin="16,0,16,12"/>
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="16,0,16,8">
-            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
-                    Background="{DynamicResource CardBackground}" MaxWidth="500" HorizontalAlignment="Left">
+            <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}" MaxWidth="500" HorizontalAlignment="Left">
                 <StackPanel Margin="14,12,14,12">
                     <TextBlock Text="Database Maintenance" FontSize="13" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4"/>
                     <TextBlock Text="Compact the SQLite database to reclaim space freed by deleted records. The application remains usable during compaction."
-                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                               FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                TextWrapping="Wrap" Margin="0,0,0,10"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                        <TextBlock Text="Database Size:" FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                        <TextBlock Text="Database Size:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="{Binding DatabaseFileSize}" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ContentForeground}" VerticalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                        <TextBlock Text="Reclaimable:" FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                        <TextBlock Text="Reclaimable:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="{Binding ReclaimableSpace}" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ContentForeground}" VerticalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="Last Compaction:" FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                        <TextBlock Text="Last Compaction:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock Text="{Binding LastCompaction}" FontSize="11" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ContentForeground}" VerticalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Button Padding="12,5" Command="{Binding CompactDatabaseCommand}" Margin="0,0,8,0"
@@ -95,7 +95,7 @@
                             </Button.Style>
                         </Button>
                         <TextBlock Text="{Binding StatusMessage}" FontSize="10"
-                                   Foreground="{DynamicResource SubtleBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
                 </StackPanel>
             </Border>

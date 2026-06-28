@@ -8,7 +8,7 @@
         <ResourceDictionary>
             <Style x:Key="AccentButtonStyle" TargetType="Button">
                 <Setter Property="OverridesDefaultStyle" Value="True"/>
-                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
                 <Setter Property="Foreground" Value="White"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="FontSize" Value="11"/>
@@ -43,9 +43,9 @@
             <Style x:Key="SecondaryButtonStyle" TargetType="Button">
                 <Setter Property="OverridesDefaultStyle" Value="True"/>
                 <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
-                <Setter Property="Foreground" Value="{DynamicResource ContentForeground}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
                 <Setter Property="FontSize" Value="11"/>
                 <Setter Property="Padding" Value="10,4"/>
                 <Setter Property="Template">
@@ -62,7 +62,7 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
+                                    <Setter Property="Background" Value="{DynamicResource CardStrokeColorDefaultBrush}"/>
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
                                     <Setter Property="Opacity" Value="0.7"/>
@@ -85,13 +85,13 @@
 
         <!-- Row 0: Title -->
         <TextBlock Grid.Row="0" Text="ℹ️ System Info" FontSize="16" FontWeight="Bold"
-                   Foreground="{DynamicResource ContentForeground}" Margin="16,16,16,4"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,16,16,4"
                    AutomationProperties.AutomationId="SystemInfoTitle"/>
 
         <!-- Row 1: Description -->
         <TextBlock Grid.Row="1"
                    Text="View where your data is stored and how much space each location uses. Use the Open buttons to browse files in Windows Explorer."
-                   FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                   FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                    TextWrapping="Wrap" Margin="16,0,16,12"
                    AutomationProperties.AutomationId="SystemInfoDescription"/>
 
@@ -99,8 +99,8 @@
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="16,0,16,8"
                       AutomationProperties.AutomationId="SystemInfoScrollViewer">
             <StackPanel>
-                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
-                        Background="{DynamicResource CardBackground}" Margin="0,0,0,12"
+                <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}" Margin="0,0,0,12"
                         AutomationProperties.AutomationId="DataLocationsTable">
                     <StackPanel>
                         <!-- Header row -->
@@ -113,19 +113,19 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Location" FontSize="11" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource ContentForeground}" Margin="0,0,8,6"/>
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,8,6"/>
                             <TextBlock Grid.Column="1" Text="Purpose" FontSize="11" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource ContentForeground}" Margin="0,0,8,6"/>
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,8,6"/>
                             <TextBlock Grid.Column="2" Text="Size on Disk" FontSize="11" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource ContentForeground}" Margin="0,0,8,6"/>
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,8,6"/>
                             <TextBlock Grid.Column="3" Text="User Can Edit?" FontSize="11" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource ContentForeground}" Margin="0,0,8,6"/>
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,8,6"/>
                             <TextBlock Grid.Column="4" Text="Actions" FontSize="11" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,6"/>
+                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,6"/>
                         </Grid>
 
                         <!-- Separator -->
-                        <Rectangle Fill="{DynamicResource BorderBrush}" Height="1" Margin="14,0"/>
+                        <Rectangle Fill="{DynamicResource CardStrokeColorDefaultBrush}" Height="1" Margin="14,0"/>
 
                         <!-- Data rows -->
                         <ItemsControl ItemsSource="{Binding DataLocations}"
@@ -135,7 +135,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:DataLocationInfo">
                                 <Border BorderThickness="0,0,0,1"
-                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                                         Padding="0,6,0,6"
                                         AutomationProperties.AutomationId="{Binding AutomationKey}">
                                     <Grid>
@@ -150,7 +150,7 @@
                                         <!-- Location -->
                                         <TextBlock Grid.Column="0" Text="{Binding DisplayPath}"
                                                    FontSize="10" FontFamily="Consolas"
-                                                   Foreground="{DynamicResource ContentForeground}"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                                    TextWrapping="Wrap" Margin="0,0,8,0"
                                                    VerticalAlignment="Center"
                                                    ToolTip="{Binding ExpandedPath}"/>
@@ -158,14 +158,14 @@
                                         <!-- Purpose -->
                                         <TextBlock Grid.Column="1" Text="{Binding Purpose}"
                                                    FontSize="10"
-                                                   Foreground="{DynamicResource SubtleBrush}"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                    TextWrapping="Wrap" Margin="0,0,8,0"
                                                    VerticalAlignment="Center"/>
 
                                         <!-- Size on Disk -->
                                         <TextBlock Grid.Column="2" Text="{Binding SizeOnDisk}"
                                                    FontSize="10"
-                                                   Foreground="{DynamicResource ContentForeground}"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                                    VerticalAlignment="Center" Margin="0,0,8,0"/>
 
                                         <!-- User Can Edit? -->
@@ -175,7 +175,7 @@
                                             <TextBlock Text="{Binding EditabilityIcon}" FontSize="11"
                                                        Margin="0,0,4,0"/>
                                             <TextBlock Text="{Binding EditabilityLabel}" FontSize="10"
-                                                       Foreground="{DynamicResource SubtleBrush}"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                        TextWrapping="Wrap"/>
                                         </StackPanel>
 
@@ -195,34 +195,34 @@
                 </Border>
 
                 <!-- Legend -->
-                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
-                        Background="{DynamicResource CardBackground}" Margin="0,0,0,12"
+                <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}" Margin="0,0,0,12"
                         AutomationProperties.AutomationId="EditabilityLegend">
                     <StackPanel Margin="14,12,14,12">
                         <TextBlock Text="Legend" FontSize="12" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,8"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,8"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                             <TextBlock Text="❌" FontSize="11" Margin="0,0,6,0"/>
-                            <TextBlock FontSize="10" Foreground="{DynamicResource ContentForeground}"
+                            <TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                        TextWrapping="Wrap">
                                 <Run FontWeight="SemiBold">App-Managed</Run>
-                                <Run Foreground="{DynamicResource SubtleBrush}">— Do not modify manually. These files and folders are managed internally by the application.</Run>
+                                <Run Foreground="{DynamicResource TextFillColorSecondaryBrush}">— Do not modify manually. These files and folders are managed internally by the application.</Run>
                             </TextBlock>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                             <TextBlock Text="⚠️" FontSize="11" Margin="0,0,6,0"/>
-                            <TextBlock FontSize="10" Foreground="{DynamicResource ContentForeground}"
+                            <TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                        TextWrapping="Wrap">
                                 <Run FontWeight="SemiBold">Caution</Run>
-                                <Run Foreground="{DynamicResource SubtleBrush}">— Editable but changes may affect app behavior. Understand consequences before modifying.</Run>
+                                <Run Foreground="{DynamicResource TextFillColorSecondaryBrush}">— Editable but changes may affect app behavior. Understand consequences before modifying.</Run>
                             </TextBlock>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="✅" FontSize="11" Margin="0,0,6,0"/>
-                            <TextBlock FontSize="10" Foreground="{DynamicResource ContentForeground}"
+                            <TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                        TextWrapping="Wrap">
                                 <Run FontWeight="SemiBold">User-Editable</Run>
-                                <Run Foreground="{DynamicResource SubtleBrush}">— Your own files, safe to modify, add, or remove.</Run>
+                                <Run Foreground="{DynamicResource TextFillColorSecondaryBrush}">— Your own files, safe to modify, add, or remove.</Run>
                             </TextBlock>
                         </StackPanel>
                     </StackPanel>
@@ -239,7 +239,7 @@
 
         <!-- Row 3: Status message bar -->
         <TextBlock Grid.Row="3" Text="{Binding StatusMessage}" FontSize="10"
-                   Foreground="{DynamicResource SubtleBrush}" Margin="16,0,16,8"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="16,0,16,8"
                    AutomationProperties.AutomationId="SystemInfoStatusMessage"/>
     </Grid>
 </UserControl>

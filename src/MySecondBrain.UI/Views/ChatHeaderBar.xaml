@@ -3,14 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:MySecondBrain.UI.Controls"
              xmlns:models="clr-namespace:MySecondBrain.Core.Models;assembly=MySecondBrain.Core"
-             Background="{DynamicResource HeaderBackground}"
+             Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
              AutomationProperties.AutomationId="ChatHeaderBar">
 
     <UserControl.Resources>
         <Style x:Key="HeaderButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Padding" Value="6,2"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
@@ -19,13 +19,13 @@
 
         <Style x:Key="ThreeDotMenuStyle" TargetType="MenuItem">
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="{DynamicResource ContentForeground}"/>
-            <Setter Property="Background" Value="{DynamicResource ContentBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ApplicationBackgroundBrush}"/>
         </Style>
     </UserControl.Resources>
 
     <Grid>
-        <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+        <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1"
                 Padding="12,6">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -40,8 +40,6 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- 1. Persona name (clickable → system message popover) -->
@@ -49,7 +47,7 @@
                         x:Name="PersonaNameBtn"
                         Content="{Binding ActivePersona.DisplayName, FallbackValue='Select Persona'}"
                         FontSize="13" FontWeight="SemiBold"
-                        Foreground="{DynamicResource ContentForeground}"
+                        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                         Background="Transparent" BorderThickness="0"
                         Padding="4,2" Margin="0,0,8,0"
                         VerticalAlignment="Center"
@@ -65,9 +63,9 @@
                           FontSize="11" Width="90"
                           Margin="0,0,6,0"
                           VerticalAlignment="Center"
-                          Background="{DynamicResource InputBackground}"
-                          Foreground="{DynamicResource ContentForeground}"
-                          BorderBrush="{DynamicResource BorderBrush}"
+                          Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                          BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                           AutomationProperties.AutomationId="ChatThemeCombo">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
@@ -96,13 +94,13 @@
                            Text="{Binding CumulativeCost, StringFormat='${0:F2} total'}"
                            VerticalAlignment="Center"
                            FontSize="11"
-                           Foreground="{DynamicResource SubtleBrush}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            Margin="6,0,8,0"/>
 
                 <!-- 6. Source Banner (visible when chat has source context) -->
                 <Border Grid.Column="5"
                         x:Name="SourceBanner"
-                        Background="{DynamicResource InputBackground}"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                         CornerRadius="4"
                         Padding="6,2"
                         Margin="0,0,4,0"
@@ -112,14 +110,14 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock x:Name="SourceContextTextBlock"
                                    FontSize="11"
-                                   Foreground="{DynamicResource ContentForeground}"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    VerticalAlignment="Center"/>
                         <!-- 7. [Apply Latest] Button (grayed out) -->
                         <Button Content="[Apply Latest]"
                                 FontSize="11"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Foreground="{DynamicResource SubtleBrush}"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Padding="4,1" Margin="4,0,0,0"
                                 IsEnabled="False"
                                 ToolTip="Text action integration coming in a future update"
@@ -129,49 +127,8 @@
 
                 <!-- 8. Spacer (auto-fills via * column) -->
 
-                <!-- 9. Font size controls -->
-                <StackPanel Grid.Column="8" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="A⁻"
-                            Style="{StaticResource HeaderButtonStyle}"
-                            FontSize="13"
-                            ToolTip="Decrease font size"
-                            Command="{Binding DecreaseFontCommand}"
-                            AutomationProperties.AutomationId="DecreaseFontBtn"/>
-                    <TextBlock Text="{Binding DataContext.FontSizeDisplay, RelativeSource={RelativeSource AncestorType=Window}}"
-                               VerticalAlignment="Center"
-                               FontSize="11"
-                               Foreground="{DynamicResource SubtleBrush}"
-                               MinWidth="20"
-                               TextAlignment="Center"
-                               AutomationProperties.AutomationId="FontSizeDisplay"/>
-                    <Button Content="A⁺"
-                            Style="{StaticResource HeaderButtonStyle}"
-                            FontSize="13"
-                            ToolTip="Increase font size"
-                            Command="{Binding IncreaseFontCommand}"
-                            AutomationProperties.AutomationId="IncreaseFontBtn"/>
-                </StackPanel>
-
-                <!-- 10. Dark Mode Toggle -->
-                <Button Grid.Column="9"
-                        Content="{Binding DataContext.ThemeToggleIcon, RelativeSource={RelativeSource AncestorType=Window}}"
-                        Style="{StaticResource HeaderButtonStyle}"
-                        FontSize="14"
-                        ToolTip="Toggle dark/light mode"
-                        Command="{Binding ToggleThemeCommand}"
-                        AutomationProperties.AutomationId="ThemeToggleBtn"/>
-
-                <!-- 11. Pin Window Toggle -->
-                <Button Grid.Column="10"
-                        Content="📌"
-                        Style="{StaticResource HeaderButtonStyle}"
-                        FontSize="14"
-                        ToolTip="Pin window to stay on top"
-                        Command="{Binding TogglePinWindowCommand}"
-                        AutomationProperties.AutomationId="PinWindowBtn"/>
-
-                <!-- 12. Help Button (with dropdown) -->
-                <Button Grid.Column="11"
+                <!-- 9. Help Button (with dropdown) -->
+                <Button Grid.Column="8"
                         x:Name="HelpBtn"
                         Content="?"
                         Style="{StaticResource HeaderButtonStyle}"
@@ -195,8 +152,8 @@
                     </Button.ContextMenu>
                 </Button>
 
-                <!-- 13. Three-Dot Menu -->
-                <Button Grid.Column="12"
+                <!-- 10. Three-Dot Menu -->
+                <Button Grid.Column="9"
                         x:Name="ThreeDotBtn"
                         Content="⋯"
                         Style="{StaticResource HeaderButtonStyle}"
@@ -241,6 +198,15 @@
                         </ContextMenu>
                     </Button.ContextMenu>
                 </Button>
+
+                <!-- 11. Pin Window Toggle -->
+                <Button Grid.Column="10"
+                        Content="📌"
+                        Style="{StaticResource HeaderButtonStyle}"
+                        FontSize="14"
+                        ToolTip="Pin window to stay on top"
+                        Command="{Binding TogglePinWindowCommand}"
+                        AutomationProperties.AutomationId="PinWindowBtn"/>
             </Grid>
         </Border>
 
@@ -253,26 +219,25 @@
                AllowsTransparency="True"
                PopupAnimation="Fade"
                AutomationProperties.AutomationId="SystemMessagePopup">
-            <Border Background="{DynamicResource ContentBackground}"
-                    BorderBrush="{DynamicResource BorderBrush}"
+            <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1"
                     CornerRadius="6"
                     Width="420"
-                    Padding="12"
-                    Effect="{DynamicResource DropShadowEffect}">
+                    Padding="12">
                 <StackPanel>
                     <TextBlock Text="System Message"
                                FontSize="13" FontWeight="Bold"
-                               Foreground="{DynamicResource ContentForeground}"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                Margin="0,0,0,8"/>
                     <TextBox Text="{Binding EditingSystemMessage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              AcceptsReturn="True"
                              Height="150"
                              TextWrapping="Wrap"
                              FontSize="12"
-                             Foreground="{DynamicResource ContentForeground}"
-                             Background="{DynamicResource InputBackground}"
-                             BorderBrush="{DynamicResource BorderBrush}"
+                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                             Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                             BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                              BorderThickness="1"
                              Padding="6,4"
                              VerticalScrollBarVisibility="Auto"
@@ -283,9 +248,9 @@
                         <Button Content="Reset to Persona Default"
                                 FontSize="11"
                                 Background="Transparent"
-                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1"
-                                Foreground="{DynamicResource ContentForeground}"
+                                Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                 Padding="10,4"
                                 Command="{Binding ResetSystemMessageCommand}"
                                 AutomationProperties.AutomationId="ResetSystemMessageBtn"/>
@@ -293,8 +258,8 @@
                                 FontSize="11"
                                 Padding="10,4"
                                 Margin="8,0,0,0"
-                                Background="{DynamicResource AccentBrush}"
-                                Foreground="{DynamicResource AccentForeground}"
+                                Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                                 BorderThickness="0"
                                 Command="{Binding SaveSystemMessageCommand}"
                                 AutomationProperties.AutomationId="SaveSystemMessageBtn"/>
@@ -311,19 +276,18 @@
                AllowsTransparency="True"
                PopupAnimation="Fade"
                AutomationProperties.AutomationId="HelpOverlayPopup">
-            <Border Background="{DynamicResource ContentBackground}"
-                    BorderBrush="{DynamicResource BorderBrush}"
+            <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1"
                     CornerRadius="8"
                     Width="400"
-                    Padding="16"
-                    Effect="{DynamicResource DropShadowEffect}">
+                    Padding="16">
                 <StackPanel>
                     <TextBlock Text="Keyboard Shortcuts"
                                FontSize="16" FontWeight="Bold"
-                               Foreground="{DynamicResource ContentForeground}"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                Margin="0,0,0,12"/>
-                    <TextBlock FontSize="12" Foreground="{DynamicResource ContentForeground}">
+                    <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
                         <Run FontWeight="SemiBold">Ctrl+N</Run>
                         <Run> — New Chat</Run>
                         <LineBreak/>

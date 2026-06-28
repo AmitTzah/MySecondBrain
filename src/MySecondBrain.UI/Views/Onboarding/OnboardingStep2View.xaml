@@ -14,56 +14,56 @@
     </UserControl.Resources>
     <StackPanel VerticalAlignment="Center">
         <TextBlock Text="Set Up Your Personal Wiki" FontSize="18" FontWeight="SemiBold"
-                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4"/>
         <TextBlock Text="Your wiki is a folder of Markdown files on your computer. AI can read it, write to it, and help you build your second brain."
-                   FontSize="12" Foreground="{DynamicResource SubtleBrush}"
+                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                    TextWrapping="Wrap" Margin="0,0,0,20"/>
 
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16">
             <Button Content="Choose Existing Folder" FontSize="12" Padding="14,6"
                     Margin="0,0,8,0"
-                    Background="{DynamicResource AccentBrush}"
-                    Foreground="{DynamicResource AccentForeground}"
+                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                    Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                     BorderThickness="0"
                     Command="{Binding ChooseExistingWikiFolderCommand}"
                     AutomationProperties.AutomationId="WizardChooseWikiFolder"/>
             <Button Content="Create New Wiki Folder" FontSize="12" Padding="14,6"
                     Background="Transparent"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    Foreground="{DynamicResource ContentForeground}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                     Command="{Binding CreateNewWikiFolderCommand}"
                     AutomationProperties.AutomationId="WizardCreateWikiFolder"/>
         </StackPanel>
 
         <!-- Path display -->
-        <Border Background="{DynamicResource InputBackground}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+        <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                 CornerRadius="4" Padding="10,8" Margin="0,0,0,8">
             <StackPanel>
                 <TextBlock Text="{Binding WikiDirectoryPath}" FontSize="11"
                            FontFamily="Consolas"
-                           Foreground="{DynamicResource ContentForeground}"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                            Visibility="{Binding WikiDirectoryPath, Converter={StaticResource NullToVisibilityConverter}}"/>
                 <TextBlock Text="{Binding WikiFileCount}" FontSize="10"
-                           Foreground="{DynamicResource SubtleBrush}" Margin="0,4,0,0"/>
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0"/>
             </StackPanel>
         </Border>
 
         <!-- Status message -->
         <TextBlock Text="{Binding WikiStatusMessage}" FontSize="10"
-                   Foreground="{DynamicResource AccentBrush}"
+                   Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                    Margin="0,0,0,12"/>
 
         <!-- Git checkbox -->
         <CheckBox IsChecked="{Binding GitVersionControlEnabled}"
                   Content="Initialize git repository for version control"
                   FontSize="11"
-                  Foreground="{DynamicResource ContentForeground}"
+                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                   Margin="0,0,0,6"/>
         <CheckBox IsChecked="{Binding GitAutoCommitEnabled}"
                   Content="Auto-commit on file change"
                   FontSize="11"
-                  Foreground="{DynamicResource SubtleBrush}"
+                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                   Margin="24,0,0,0"/>
     </StackPanel>
 </UserControl>

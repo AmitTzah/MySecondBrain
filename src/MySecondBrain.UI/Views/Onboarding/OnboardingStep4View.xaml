@@ -7,15 +7,15 @@
              d:DesignHeight="450" d:DesignWidth="580"
              AutomationProperties.AutomationId="OnboardingStep4View">
     <StackPanel VerticalAlignment="Center">
-        <TextBlock Text="✓" FontSize="48" Foreground="{DynamicResource AccentBrush}"
+        <TextBlock Text="✓" FontSize="48" Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                    HorizontalAlignment="Center" Margin="0,0,0,8"/>
         <TextBlock Text="You're All Set!" FontSize="22" FontWeight="SemiBold"
-                   Foreground="{DynamicResource ContentForeground}"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                    HorizontalAlignment="Center" Margin="0,0,0,20"/>
 
         <!-- Summary Card -->
-        <Border Background="{DynamicResource InputBackground}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+        <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                 CornerRadius="6" Padding="16,12" Margin="0,0,0,20">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
@@ -23,7 +23,7 @@
                                Margin="0,0,4,0"/>
                     <TextBlock FontSize="12"
                                Text="{Binding ConfiguredKeyCount, StringFormat='{}{0} API key(s) added'}"
-                               Foreground="{DynamicResource ContentForeground}"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
@@ -31,7 +31,7 @@
                                Margin="0,0,4,0"/>
                     <TextBlock FontSize="12"
                                Text="{Binding ConfiguredPersonaName, StringFormat='Persona: {0}'}"
-                               Foreground="{DynamicResource ContentForeground}"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
@@ -39,7 +39,7 @@
                                Margin="0,0,4,0"/>
                     <TextBlock FontSize="12"
                                Text="{Binding ConfiguredWikiPath, StringFormat='Wiki: {0}'}"
-                               Foreground="{DynamicResource ContentForeground}"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
@@ -47,7 +47,7 @@
                                Margin="0,0,4,0"/>
                     <TextBlock FontSize="12"
                                Text="{Binding ConfiguredHotkeyCount, StringFormat='{}{0} hotkeys configured'}"
-                               Foreground="{DynamicResource ContentForeground}"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                VerticalAlignment="Center"/>
                 </StackPanel>
             </StackPanel>
@@ -57,13 +57,13 @@
         <StackPanel HorizontalAlignment="Center">
             <Button Content="Launch Studio" FontSize="14" FontWeight="SemiBold"
                     Padding="32,10"
-                    Background="{DynamicResource AccentBrush}"
-                    Foreground="{DynamicResource AccentForeground}"
+                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                    Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                     BorderThickness="0" Margin="0,0,0,8"
                     Command="{Binding LaunchStudioCommand}"
                     AutomationProperties.AutomationId="WizardLaunchStudio"/>
             <TextBlock Text="Import from ChatGPT or Claude" FontSize="11"
-                       Foreground="{DynamicResource AccentBrush}"
+                       Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                        Cursor="Hand" TextDecorations="Underline"
                        HorizontalAlignment="Center"
                        AutomationProperties.AutomationId="WizardImportChat">
@@ -73,7 +73,7 @@
                 </TextBlock.InputBindings>
             </TextBlock>
             <TextBlock Text="You can re-run this wizard anytime from Settings → Onboarding."
-                       FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                       FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        HorizontalAlignment="Center" Margin="0,8,0,0"/>
         </StackPanel>
     </StackPanel>

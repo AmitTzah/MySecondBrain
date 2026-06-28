@@ -208,7 +208,6 @@ public partial class HotkeyAssignmentDisplayItem : ObservableObject
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly ISettingsRepository _settingsRepo;
-    private readonly IThemeProvider _themeProvider;
     private readonly IApiKeyRepository _apiKeyRepo;
     private readonly IEncryptionService _encryptionService;
     private readonly ILLMProviderService _llmProviderService;
@@ -222,8 +221,6 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IBackupProvider _backupProvider;
     private readonly ITextActionRepository _textActionRepo;
     private readonly AppDbContext _db;
-
-    private bool _suppressFontPersistence;
 
     private static string LogsFolderPath =>
         Path.Combine(
@@ -251,7 +248,6 @@ public partial class SettingsViewModel : ObservableObject
 
     public SettingsViewModel(
         ISettingsRepository settingsRepo,
-        IThemeProvider themeProvider,
         IApiKeyRepository apiKeyRepo,
         IEncryptionService encryptionService,
         ILLMProviderService llmProviderService,
@@ -267,7 +263,6 @@ public partial class SettingsViewModel : ObservableObject
         AppDbContext db)
     {
         _settingsRepo = settingsRepo;
-        _themeProvider = themeProvider;
         _apiKeyRepo = apiKeyRepo;
         _encryptionService = encryptionService;
         _llmProviderService = llmProviderService;
@@ -533,31 +528,9 @@ public partial class SettingsViewModel : ObservableObject
 
     private async Task LoadNewSettingsAsync()
     {
-        var savedAppTheme = await _settingsRepo.GetAsync("AppTheme");
-        if (savedAppTheme is not null && Enum.TryParse<AppTheme>(savedAppTheme, out var parsedTheme))
-            AppTheme = parsedTheme;
-        else
-            AppTheme = _themeProvider.CurrentAppTheme;
-
         var savedChatTheme = await _settingsRepo.GetAsync("ChatTheme");
         if (savedChatTheme is not null && Enum.TryParse<ChatTheme>(savedChatTheme, out var parsedChatTheme))
             ChatTheme = parsedChatTheme;
-        else
-            ChatTheme = _themeProvider.CurrentChatTheme;
-
-        _suppressFontPersistence = true;
-        try
-        {
-            var savedFontFamily = await _settingsRepo.GetAsync("FontFamily");
-            if (savedFontFamily is not null) FontFamily = savedFontFamily;
-            var savedFontSize = await _settingsRepo.GetAsync("FontSize");
-            if (savedFontSize is not null && double.TryParse(savedFontSize, out var parsedSize))
-                FontSize = parsedSize;
-            var savedFontWeight = await _settingsRepo.GetAsync("FontWeight");
-            if (savedFontWeight is not null) FontWeight = savedFontWeight;
-        }
-        finally { _suppressFontPersistence = false; }
-        PersistFontSettings();
 
         var savedSound = await _settingsRepo.GetAsync("SoundOnCompletion");
         if (savedSound is not null) SoundOnCompletion = savedSound == "true" || savedSound == "True";

@@ -1,66 +1,66 @@
 <UserControl x:Class="MySecondBrain.UI.Views.UsageDashboardView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="{DynamicResource ContentBackground}"
+             Background="{DynamicResource ApplicationBackgroundBrush}"
              AutomationProperties.AutomationId="UsageDashboardView">
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   AutomationProperties.AutomationId="UsageDashboardView">
         <StackPanel Margin="24,20">
             <!-- Summary Cards Row -->
             <UniformGrid Columns="4" Height="100" Margin="0,0,0,20">
-                <Border Background="{DynamicResource PanelBackground}"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                         CornerRadius="6" Margin="4" Padding="16">
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="TOTAL TOKENS" FontSize="10" FontWeight="Bold"
-                                   Foreground="{DynamicResource SubtleBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <TextBlock Text="0" FontSize="22" FontWeight="Bold"
-                                   Foreground="{DynamicResource ContentForeground}"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
                         <TextBlock Text="This month" FontSize="11"
-                                   Foreground="{DynamicResource SubtleBrush}"/>
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
                 </Border>
 
-                <Border Background="{DynamicResource PanelBackground}"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                         CornerRadius="6" Margin="4" Padding="16">
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="TOTAL COST" FontSize="10" FontWeight="Bold"
-                                   Foreground="{DynamicResource SubtleBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <TextBlock Text="$0.00" FontSize="22" FontWeight="Bold"
-                                   Foreground="{DynamicResource ContentForeground}"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
                         <TextBlock Text="This month" FontSize="11"
-                                   Foreground="{DynamicResource SubtleBrush}"/>
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
                 </Border>
 
-                <Border Background="{DynamicResource PanelBackground}"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                         CornerRadius="6" Margin="4" Padding="16">
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="MOST USED MODEL" FontSize="10" FontWeight="Bold"
-                                   Foreground="{DynamicResource SubtleBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <TextBlock Text="—" FontSize="22" FontWeight="Bold"
-                                   Foreground="{DynamicResource ContentForeground}"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
                         <TextBlock Text="No data" FontSize="11"
-                                   Foreground="{DynamicResource SubtleBrush}"/>
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
                 </Border>
 
-                <Border Background="{DynamicResource PanelBackground}"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                         CornerRadius="6" Margin="4" Padding="16">
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="MOST USED PERSONA" FontSize="10" FontWeight="Bold"
-                                   Foreground="{DynamicResource SubtleBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Margin="0,0,0,4"/>
                         <TextBlock Text="—" FontSize="22" FontWeight="Bold"
-                                   Foreground="{DynamicResource ContentForeground}"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
                         <TextBlock Text="No data" FontSize="11"
-                                   Foreground="{DynamicResource SubtleBrush}"/>
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                     </StackPanel>
                 </Border>
             </UniformGrid>
@@ -68,90 +68,90 @@
             <!-- Filter Bar -->
             <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
                 <Button Content="Today" FontSize="12"
-                        Background="{DynamicResource PanelBackground}"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                        Foreground="{DynamicResource SubtleBrush}"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                         Padding="8,5" Margin="0,0,4,0"/>
                 <Button Content="This Week" FontSize="12"
-                        Background="{DynamicResource PanelBackground}"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                        Foreground="{DynamicResource SubtleBrush}"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                         Padding="8,5" Margin="0,0,4,0"/>
                 <Button Content="This Month" FontSize="12" FontWeight="SemiBold"
-                        Background="{DynamicResource AccentBrush}"
-                        BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1"
-                        Foreground="{DynamicResource AccentForeground}"
+                        Background="{DynamicResource AccentFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource AccentFillColorDefaultBrush}" BorderThickness="1"
+                        Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                         Padding="8,5" Margin="0,0,4,0"/>
                 <Button Content="Custom Range" FontSize="12"
-                        Background="{DynamicResource PanelBackground}"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                        Foreground="{DynamicResource SubtleBrush}"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                         Padding="8,5" Margin="0,0,4,0"/>
                 <Button Content="All Time" FontSize="12"
-                        Background="{DynamicResource PanelBackground}"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                        Foreground="{DynamicResource SubtleBrush}"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                         Padding="8,5"/>
             </StackPanel>
 
             <!-- Charts Grid (2x2) -->
             <UniformGrid Columns="2" Rows="2" Height="300" Margin="0,0,0,20">
-                <Border Background="{DynamicResource PanelBackground}"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                         CornerRadius="6" Margin="4" Padding="20">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <TextBlock Text="📈" FontSize="36" HorizontalAlignment="Center"
-                                   Foreground="{DynamicResource SubtleBrush}"/>
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                         <TextBlock Text="Token Usage Over Time" FontSize="12" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource SubtleBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    HorizontalAlignment="Center" Margin="0,8,0,4"/>
                         <TextBlock Text="Line chart: input + output tokens"
-                                   FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                   FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Border>
 
-                <Border Background="{DynamicResource PanelBackground}"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                         CornerRadius="6" Margin="4" Padding="20">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <TextBlock Text="📊" FontSize="36" HorizontalAlignment="Center"
-                                   Foreground="{DynamicResource SubtleBrush}"/>
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                         <TextBlock Text="Cost Over Time" FontSize="12" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource SubtleBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    HorizontalAlignment="Center" Margin="0,8,0,4"/>
                         <TextBlock Text="Bar chart: estimated cost per day"
-                                   FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                   FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Border>
 
-                <Border Background="{DynamicResource PanelBackground}"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                         CornerRadius="6" Margin="4" Padding="20">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <TextBlock Text="🥧" FontSize="36" HorizontalAlignment="Center"
-                                   Foreground="{DynamicResource SubtleBrush}"/>
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                         <TextBlock Text="By Provider" FontSize="12" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource SubtleBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    HorizontalAlignment="Center" Margin="0,8,0,4"/>
                         <TextBlock Text="Pie chart: token distribution by provider"
-                                   FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                   FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Border>
 
-                <Border Background="{DynamicResource PanelBackground}"
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                         CornerRadius="6" Margin="4" Padding="20">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <TextBlock Text="🥧" FontSize="36" HorizontalAlignment="Center"
-                                   Foreground="{DynamicResource SubtleBrush}"/>
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                         <TextBlock Text="By Model" FontSize="12" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource SubtleBrush}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    HorizontalAlignment="Center" Margin="0,8,0,4"/>
                         <TextBlock Text="Pie chart: token distribution by model"
-                                   FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                                   FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Border>
@@ -159,10 +159,10 @@
 
             <!-- Per-Chat Breakdown -->
             <TextBlock Text="Per-Chat Breakdown" FontSize="16" FontWeight="Bold"
-                       Foreground="{DynamicResource ContentForeground}"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                        Margin="0,0,0,8" Padding="0,0,0,8"/>
-            <Border Background="{DynamicResource PanelBackground}"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                     CornerRadius="6" Padding="12" Margin="0,0,0,20">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -183,95 +183,95 @@
 
                     <!-- Header -->
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="CHAT TITLE" FontSize="10"
-                               FontWeight="Bold" Foreground="{DynamicResource SubtleBrush}"
+                               FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="4,4"/>
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="DATE" FontSize="10"
-                               FontWeight="Bold" Foreground="{DynamicResource SubtleBrush}"
+                               FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="16,4" MinWidth="60"/>
                     <TextBlock Grid.Row="0" Grid.Column="2" Text="MODELS" FontSize="10"
-                               FontWeight="Bold" Foreground="{DynamicResource SubtleBrush}"
+                               FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="16,4" MinWidth="120"/>
                     <TextBlock Grid.Row="0" Grid.Column="3" Text="TOKENS" FontSize="10"
-                               FontWeight="Bold" Foreground="{DynamicResource SubtleBrush}"
+                               FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="16,4" MinWidth="70"/>
                     <TextBlock Grid.Row="0" Grid.Column="4" Text="COST" FontSize="10"
-                               FontWeight="Bold" Foreground="{DynamicResource SubtleBrush}"
+                               FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="16,4" MinWidth="60"/>
                     <TextBlock Grid.Row="0" Grid.Column="5" Text="PERSONA" FontSize="10"
-                               FontWeight="Bold" Foreground="{DynamicResource SubtleBrush}"
+                               FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="16,4" MinWidth="100"/>
 
-                    <Border Grid.Row="0" Grid.ColumnSpan="6" BorderBrush="{DynamicResource BorderBrush}"
+                    <Border Grid.Row="0" Grid.ColumnSpan="6" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                             BorderThickness="0,0,0,1" Margin="0,2,0,4"/>
 
                     <!-- Row 1 -->
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Python Async Patterns"
-                               FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                               FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                                Margin="4,3" TextDecorations="Underline"/>
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="Jun 15" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="1" Grid.Column="2" Text="GPT-4o, Claude 3.5" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="1" Grid.Column="3" Text="48,200" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="1" Grid.Column="4" Text="$0.32" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="1" Grid.Column="5" Text="Python Expert" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
 
                     <!-- Row 2 -->
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Website Redesign"
-                               FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                               FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                                Margin="4,3" TextDecorations="Underline"/>
                     <TextBlock Grid.Row="2" Grid.Column="1" Text="Jun 14" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Claude 3.5 Sonnet" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="2" Grid.Column="3" Text="32,100" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="2" Grid.Column="4" Text="$0.18" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="2" Grid.Column="5" Text="Writing Coach" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
 
                     <!-- Row 3 -->
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="Debugging Memory Leak"
-                               FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                               FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                                Margin="4,3" TextDecorations="Underline"/>
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="Jun 12" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="3" Grid.Column="2" Text="DeepSeek V3" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="3" Grid.Column="3" Text="18,500" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="3" Grid.Column="4" Text="$0.04" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="3" Grid.Column="5" Text="Code Helper" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
 
                     <!-- Row 4 -->
                     <TextBlock Grid.Row="4" Grid.Column="0" Text="Chapter 3 Outline"
-                               FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                               FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                                Margin="4,3" TextDecorations="Underline"/>
                     <TextBlock Grid.Row="4" Grid.Column="1" Text="Jun 10" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="4" Grid.Column="2" Text="Claude 3.5" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="4" Grid.Column="3" Text="25,800" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="4" Grid.Column="4" Text="$0.21" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="4" Grid.Column="5" Text="Writing Coach" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                 </Grid>
             </Border>
 
             <!-- AI Feedback Summary -->
             <TextBlock Text="AI Feedback Summary" FontSize="16" FontWeight="Bold"
-                       Foreground="{DynamicResource ContentForeground}"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                        Margin="0,0,0,8" Padding="0,0,0,8"/>
-            <Border Background="{DynamicResource PanelBackground}"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                     CornerRadius="6" Padding="12">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -290,59 +290,59 @@
 
                     <!-- Header -->
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="PERSONA" FontSize="10"
-                               FontWeight="Bold" Foreground="{DynamicResource SubtleBrush}"
+                               FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="4,4"/>
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="RATED" FontSize="10"
-                               FontWeight="Bold" Foreground="{DynamicResource SubtleBrush}"
+                               FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="16,4" MinWidth="50"/>
                     <TextBlock Grid.Row="0" Grid.Column="2" Text="👍" FontSize="10"
-                               FontWeight="Bold" Foreground="{DynamicResource SubtleBrush}"
+                               FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="16,4" MinWidth="40"/>
                     <TextBlock Grid.Row="0" Grid.Column="3" Text="👎" FontSize="10"
-                               FontWeight="Bold" Foreground="{DynamicResource SubtleBrush}"
+                               FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="16,4" MinWidth="40"/>
                     <TextBlock Grid.Row="0" Grid.Column="4" Text="APPROVAL" FontSize="10"
-                               FontWeight="Bold" Foreground="{DynamicResource SubtleBrush}"
+                               FontWeight="Bold" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="16,4" MinWidth="80"/>
 
-                    <Border Grid.Row="0" Grid.ColumnSpan="5" BorderBrush="{DynamicResource BorderBrush}"
+                    <Border Grid.Row="0" Grid.ColumnSpan="5" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                             BorderThickness="0,0,0,1" Margin="0,2,0,4"/>
 
                     <!-- Row 1 -->
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="🐍 Python Expert"
-                               FontSize="12" Foreground="{DynamicResource PanelForeground}" Margin="4,3"/>
+                               FontSize="12" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="4,3"/>
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="30" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="1" Grid.Column="2" Text="26" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="1" Grid.Column="3" Text="4" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="1" Grid.Column="4" Text="87%" FontSize="12" FontWeight="SemiBold"
-                               Foreground="{DynamicResource SuccessBrush}" Margin="16,3"/>
+                               Foreground="{DynamicResource SystemFillColorSuccessBrush}" Margin="16,3"/>
 
                     <!-- Row 2 -->
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="💻 Code Helper"
-                               FontSize="12" Foreground="{DynamicResource PanelForeground}" Margin="4,3"/>
+                               FontSize="12" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="4,3"/>
                     <TextBlock Grid.Row="2" Grid.Column="1" Text="22" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="2" Grid.Column="2" Text="19" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="2" Grid.Column="3" Text="3" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="2" Grid.Column="4" Text="86%" FontSize="12" FontWeight="SemiBold"
-                               Foreground="{DynamicResource SuccessBrush}" Margin="16,3"/>
+                               Foreground="{DynamicResource SystemFillColorSuccessBrush}" Margin="16,3"/>
 
                     <!-- Row 3 -->
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="✍️ Writing Coach"
-                               FontSize="12" Foreground="{DynamicResource PanelForeground}" Margin="4,3"/>
+                               FontSize="12" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="4,3"/>
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="18" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="3" Grid.Column="2" Text="14" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="3" Grid.Column="3" Text="4" FontSize="12"
-                               Foreground="{DynamicResource PanelForeground}" Margin="16,3"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,3"/>
                     <TextBlock Grid.Row="3" Grid.Column="4" Text="78%" FontSize="12" FontWeight="SemiBold"
-                               Foreground="{DynamicResource WarningBrush}" Margin="16,3"/>
+                               Foreground="{DynamicResource SystemFillColorCautionBrush}" Margin="16,3"/>
                 </Grid>
             </Border>
         </StackPanel>

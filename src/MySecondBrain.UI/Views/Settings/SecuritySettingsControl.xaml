@@ -5,7 +5,7 @@
         <ResourceDictionary>
             <Style x:Key="AccentButtonStyle" TargetType="Button">
                 <Setter Property="OverridesDefaultStyle" Value="True"/>
-                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
                 <Setter Property="Foreground" Value="White"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="FontSize" Value="11"/>
@@ -46,26 +46,26 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <TextBlock Grid.Row="0" Text="🔒 Security" FontSize="16" FontWeight="Bold"
-                   Foreground="{DynamicResource ContentForeground}" Margin="16,16,16,4"/>
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="16,16,16,4"/>
         <TextBlock Grid.Row="1" Text="View encryption status, manage locked chat passwords, and configure visibility settings."
-                   FontSize="11" Foreground="{DynamicResource SubtleBrush}"
+                   FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                    TextWrapping="Wrap" Margin="16,0,16,12"/>
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="16,0,16,8">
-            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="6"
-                    Background="{DynamicResource CardBackground}" MaxWidth="500" HorizontalAlignment="Left">
+            <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}" MaxWidth="500" HorizontalAlignment="Left">
                 <StackPanel Margin="14,12,14,12">
                     <TextBlock Text="Encryption" FontSize="13" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                         <TextBlock Text="✅" FontSize="14" Margin="0,0,6,0"/>
                         <TextBlock Text="{Binding EncryptionStatus}" FontSize="11"
-                                   Foreground="{DynamicResource ContentForeground}" VerticalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <TextBlock Text="Locked Chats" FontSize="13" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                         <TextBlock Text="{Binding LockedChatPasswordSet, StringFormat='{}🔐 Password set: {0}'}" FontSize="11"
-                                   Foreground="{DynamicResource ContentForeground}" VerticalAlignment="Center"/>
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <Button Content="🔑 Set Global Password" Padding="12,5"
@@ -74,7 +74,7 @@
                                 ToolTip="Set or change the global password for locked chats"/>
                     </StackPanel>
                     <CheckBox IsChecked="{Binding HideLockedChats}" Content="Hide locked chats from chat list" FontSize="11"
-                              Foreground="{DynamicResource ContentForeground}"
+                              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                               ToolTip="When enabled, locked chats are hidden from the main chat list and must be unlocked to appear."/>
                 </StackPanel>
             </Border>

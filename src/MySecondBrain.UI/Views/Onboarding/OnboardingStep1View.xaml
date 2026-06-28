@@ -10,9 +10,9 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel>
             <TextBlock Text="Choose Your Assistant" FontSize="18" FontWeight="SemiBold"
-                       Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4"/>
             <TextBlock Text="A Persona defines how the AI behaves. Pick one and customize it to your style."
-                       FontSize="12" Foreground="{DynamicResource SubtleBrush}"
+                       FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        TextWrapping="Wrap" Margin="0,0,0,16"/>
 
             <!-- 3 Starter Persona Cards -->
@@ -24,18 +24,18 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:StarterPersonaCard}">
-                        <Border Background="{DynamicResource ContentBackground}"
-                                BorderBrush="{DynamicResource BorderBrush}"
+                        <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1" CornerRadius="6"
                                 Padding="12,10" Margin="0,0,0,6"
                                 Cursor="Hand">
                             <Border.Style>
                                 <Style TargetType="Border">
-                                    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                            <Setter Property="Background" Value="{DynamicResource AccentBackground}"/>
+                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                                            <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -47,9 +47,9 @@
                             </Border.InputBindings>
                             <StackPanel>
                                 <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource ContentForeground}"/>
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
                                 <TextBlock Text="{Binding PromptPreview}" FontSize="10"
-                                           Foreground="{DynamicResource SubtleBrush}"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                            TextWrapping="Wrap" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
@@ -58,34 +58,34 @@
             </ItemsControl>
 
             <!-- Customization Panel (visible when persona selected or creating from scratch) -->
-            <Border Background="{DynamicResource InputBackground}"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                     CornerRadius="6" Padding="12" Margin="0,0,0,12">
                 <StackPanel>
                     <TextBlock Text="Customize Persona" FontSize="12" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,8"/>
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,8"/>
                     <TextBox Text="{Binding PersonaDisplayName, UpdateSourceTrigger=PropertyChanged}"
                              FontSize="12"
-                             Background="{DynamicResource ContentBackground}"
-                             Foreground="{DynamicResource ContentForeground}"
-                             BorderBrush="{DynamicResource BorderBrush}"
+                             Background="{DynamicResource ApplicationBackgroundBrush}"
+                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                             BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                              BorderThickness="1" Margin="0,0,0,6"/>
                     <TextBox Text="{Binding PersonaSystemPrompt, UpdateSourceTrigger=PropertyChanged}"
                              FontSize="11" AcceptsReturn="True" TextWrapping="Wrap"
                              MinHeight="60" MaxHeight="120"
-                             Background="{DynamicResource ContentBackground}"
-                             Foreground="{DynamicResource ContentForeground}"
-                             BorderBrush="{DynamicResource BorderBrush}"
+                             Background="{DynamicResource ApplicationBackgroundBrush}"
+                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                             BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                              BorderThickness="1" Margin="0,0,0,6"/>
                     <ComboBox ItemsSource="{Binding ChatModeOptions}"
                               SelectedItem="{Binding PersonaChatMode}"
                               FontSize="12" Margin="0,0,0,8"
-                              Background="{DynamicResource ContentBackground}"
-                              Foreground="{DynamicResource ContentForeground}"/>
+                              Background="{DynamicResource ApplicationBackgroundBrush}"
+                              Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
                     <Button Content="Save Persona" FontSize="12" FontWeight="SemiBold"
                             Padding="16,6" HorizontalAlignment="Left"
-                            Background="{DynamicResource AccentBrush}"
-                            Foreground="{DynamicResource AccentForeground}"
+                            Background="{DynamicResource AccentFillColorDefaultBrush}"
+                            Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                             BorderThickness="0"
                             Command="{Binding SavePersonaCommand}"
                             AutomationProperties.AutomationId="WizardSavePersona"/>
@@ -94,7 +94,7 @@
 
             <!-- Create from Scratch link -->
             <TextBlock Text="Create from Scratch" FontSize="11"
-                       Foreground="{DynamicResource AccentBrush}"
+                       Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                        Cursor="Hand" TextDecorations="Underline"
                        AutomationProperties.AutomationId="WizardCreatePersona">
                 <TextBlock.InputBindings>

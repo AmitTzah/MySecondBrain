@@ -4,7 +4,7 @@
              xmlns:vm="clr-namespace:MySecondBrain.UI.ViewModels"
              xmlns:models="clr-namespace:MySecondBrain.Core.Models;assembly=MySecondBrain.Core"
              xmlns:viewsOnboarding="clr-namespace:MySecondBrain.UI.Views.Onboarding"
-             Background="{DynamicResource ContentBackground}"
+             Background="{DynamicResource ApplicationBackgroundBrush}"
              AutomationProperties.AutomationId="OnboardingWizardView">
     <UserControl.Resources>
         <ResourceDictionary>
@@ -32,7 +32,7 @@
         <!-- ================================================================
              Row 0: Header
              ================================================================ -->
-        <Border Grid.Row="0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
+        <Border Grid.Row="0" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,0,0,1"
                 Padding="20,12">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -41,9 +41,9 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="🧠 MySecondBrain" FontSize="16" FontWeight="SemiBold"
-                           Foreground="{DynamicResource ContentForeground}" VerticalAlignment="Center"/>
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="2" Text="Onboarding" FontSize="12"
-                           Foreground="{DynamicResource SubtleBrush}" VerticalAlignment="Center"/>
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
@@ -64,11 +64,11 @@
                                Foreground="{Binding Step1Completed, Converter={StaticResource StepDotConverter}, ConverterParameter=fg}"/>
                 </Border>
                 <TextBlock Text="API Keys" FontSize="10" HorizontalAlignment="Center" Margin="0,4,0,0"
-                           Foreground="{DynamicResource SubtleBrush}"/>
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
             <!-- Connector line -->
-            <Border Width="32" Height="1" Background="{DynamicResource BorderBrush}" VerticalAlignment="Top" Margin="0,12,0,0"/>
+            <Border Width="32" Height="1" Background="{DynamicResource CardStrokeColorDefaultBrush}" VerticalAlignment="Top" Margin="0,12,0,0"/>
 
             <!-- Step 2 Dot -->
             <StackPanel Orientation="Vertical" Margin="0,0,24,0">
@@ -81,11 +81,11 @@
                                Foreground="{Binding Step2Completed, Converter={StaticResource StepDotConverter}, ConverterParameter=fg}"/>
                 </Border>
                 <TextBlock Text="Persona" FontSize="10" HorizontalAlignment="Center" Margin="0,4,0,0"
-                           Foreground="{DynamicResource SubtleBrush}"/>
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
             <!-- Connector line -->
-            <Border Width="32" Height="1" Background="{DynamicResource BorderBrush}" VerticalAlignment="Top" Margin="0,12,0,0"/>
+            <Border Width="32" Height="1" Background="{DynamicResource CardStrokeColorDefaultBrush}" VerticalAlignment="Top" Margin="0,12,0,0"/>
 
             <!-- Step 3 Dot -->
             <StackPanel Orientation="Vertical" Margin="0,0,24,0">
@@ -98,11 +98,11 @@
                                Foreground="{Binding Step3Completed, Converter={StaticResource StepDotConverter}, ConverterParameter=fg}"/>
                 </Border>
                 <TextBlock Text="Wiki" FontSize="10" HorizontalAlignment="Center" Margin="0,4,0,0"
-                           Foreground="{DynamicResource SubtleBrush}"/>
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
 
             <!-- Connector line -->
-            <Border Width="32" Height="1" Background="{DynamicResource BorderBrush}" VerticalAlignment="Top" Margin="0,12,0,0"/>
+            <Border Width="32" Height="1" Background="{DynamicResource CardStrokeColorDefaultBrush}" VerticalAlignment="Top" Margin="0,12,0,0"/>
 
             <!-- Step 4 Dot -->
             <StackPanel Orientation="Vertical">
@@ -115,15 +115,15 @@
                                Foreground="{Binding Step4Completed, Converter={StaticResource StepDotConverter}, ConverterParameter=fg}"/>
                 </Border>
                 <TextBlock Text="Hotkeys" FontSize="10" HorizontalAlignment="Center" Margin="0,4,0,0"
-                           Foreground="{DynamicResource SubtleBrush}"/>
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
             </StackPanel>
         </StackPanel>
 
         <!-- ================================================================
              Row 2: Content Card
              ================================================================ -->
-        <Border Grid.Row="2" Background="{DynamicResource PanelBackground}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+        <Border Grid.Row="2" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                 CornerRadius="8" MaxWidth="580"
                 HorizontalAlignment="Center" VerticalAlignment="Center"
                 MinHeight="340" Margin="20,0">
@@ -136,10 +136,10 @@
                             VerticalAlignment="Center">
                     <TextBlock Text="🧠" FontSize="48" HorizontalAlignment="Center" Margin="0,0,0,12"/>
                     <TextBlock Text="Welcome to MySecondBrain" FontSize="22" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ContentForeground}"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                HorizontalAlignment="Center" Margin="0,0,0,8"/>
                     <TextBlock Text="Your unified AI hub — any model, any provider, your own keys"
-                               FontSize="13" Foreground="{DynamicResource SubtleBrush}"
+                               FontSize="13" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
                                Margin="0,0,0,24"/>
                     <Grid Margin="0,0,0,28">
@@ -149,55 +149,55 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <!-- Feature Card 1 -->
-                        <Border Grid.Column="0" Background="{DynamicResource ContentBackground}"
-                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                        <Border Grid.Column="0" Background="{DynamicResource ApplicationBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                 CornerRadius="6" Padding="10" Margin="0,0,6,0">
                             <StackPanel>
                                 <TextBlock Text="🔄" FontSize="20" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Three-Tier AI" FontSize="11" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource ContentForeground}"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                            HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
                                            Margin="0,4,0,2"/>
                                 <TextBlock Text="Hotkey rewrites, Command Bar, and full Studio" FontSize="9"
-                                           Foreground="{DynamicResource SubtleBrush}"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                            TextWrapping="Wrap" TextAlignment="Center"/>
                             </StackPanel>
                         </Border>
                         <!-- Feature Card 2 -->
-                        <Border Grid.Column="1" Background="{DynamicResource ContentBackground}"
-                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                        <Border Grid.Column="1" Background="{DynamicResource ApplicationBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                 CornerRadius="6" Padding="10" Margin="3,0">
                             <StackPanel>
                                 <TextBlock Text="🔑" FontSize="20" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Bring Your Own Keys" FontSize="11" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource ContentForeground}"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                            HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
                                            Margin="0,4,0,2"/>
                                 <TextBlock Text="Use any AI provider. No platform lock-in." FontSize="9"
-                                           Foreground="{DynamicResource SubtleBrush}"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                            TextWrapping="Wrap" TextAlignment="Center"/>
                             </StackPanel>
                         </Border>
                         <!-- Feature Card 3 -->
-                        <Border Grid.Column="2" Background="{DynamicResource ContentBackground}"
-                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                        <Border Grid.Column="2" Background="{DynamicResource ApplicationBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                                 CornerRadius="6" Padding="10" Margin="6,0,0,0">
                             <StackPanel>
                                 <TextBlock Text="📝" FontSize="20" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Personal Wiki" FontSize="11" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource ContentForeground}"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                            HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
                                            Margin="0,4,0,2"/>
                                 <TextBlock Text="AI conversations into permanent .md notes" FontSize="9"
-                                           Foreground="{DynamicResource SubtleBrush}"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                            TextWrapping="Wrap" TextAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </Grid>
                     <Button Content="Get Started" FontSize="14" FontWeight="SemiBold"
                             Padding="32,10"
-                            Background="{DynamicResource AccentBrush}"
-                            Foreground="{DynamicResource AccentForeground}"
+                            Background="{DynamicResource AccentFillColorDefaultBrush}"
+                            Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                             BorderThickness="0" HorizontalAlignment="Center"
                             Command="{Binding GetStartedCommand}"
                             AutomationProperties.AutomationId="WizardGetStarted"/>
@@ -295,22 +295,22 @@
                     Visibility="{Binding IsWelcomeScreen, Converter={StaticResource InvertedVisibilityConverter}}"
                     Command="{Binding GoBackCommand}"
                     Background="Transparent"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    Foreground="{DynamicResource ContentForeground}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                     Padding="24,8" FontSize="12" Margin="0,0,8,0"
                     AutomationProperties.AutomationId="WizardBack"/>
             <Button Content="Skip"
                     Visibility="{Binding CanSkip, Converter={StaticResource BoolToVisibility}}"
                     Command="{Binding SkipCommand}"
                     Background="Transparent" BorderThickness="0"
-                    Foreground="{DynamicResource SubtleBrush}"
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                     Padding="24,8" FontSize="12" Margin="0,0,8,0"
                     AutomationProperties.AutomationId="WizardSkip"/>
             <Button Content="{Binding NextButtonText}"
                     Visibility="{Binding IsStepScreen, Converter={StaticResource BoolToVisibility}}"
                     Command="{Binding GoNextCommand}"
-                    Background="{DynamicResource AccentBrush}"
-                    Foreground="{DynamicResource AccentForeground}"
+                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                    Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                     BorderThickness="0"
                     Padding="24,8" FontSize="12" FontWeight="SemiBold"
                     AutomationProperties.AutomationId="WizardNext"/>
@@ -323,26 +323,26 @@
         <Border Background="#80000000"
                 Visibility="{Binding IsRecordingHotkey, Converter={StaticResource BoolToVisibility}}"
                 Panel.ZIndex="100">
-            <Border Background="{DynamicResource PanelBackground}"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                     CornerRadius="8" Padding="32,24"
                     Width="320" Height="160"
                     HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="Press new key combination..."
                                FontSize="14" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ContentForeground}"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                    <Border Background="{DynamicResource InputBackground}"
-                            BorderBrush="{DynamicResource AccentBrush}" BorderThickness="2"
+                    <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource AccentFillColorDefaultBrush}" BorderThickness="2"
                             CornerRadius="4" Padding="12,8"
                             x:Name="HotkeyComboDisplay">
                         <TextBlock Text="{Binding RecordingHotkeyCombo}" FontSize="16"
-                                   FontFamily="Consolas" Foreground="{DynamicResource AccentBrush}"
+                                   FontFamily="Consolas" Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                                    HorizontalAlignment="Center"/>
                     </Border>
                     <TextBlock Text="Press Escape to cancel"
-                               FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                               FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Center" Margin="0,8,0,0"/>
                 </StackPanel>
             </Border>

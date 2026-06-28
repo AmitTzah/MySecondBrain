@@ -7,7 +7,7 @@
              xmlns:models="clr-namespace:MySecondBrain.Core.Models;assembly=MySecondBrain.Core"
              xmlns:converters="clr-namespace:MySecondBrain.UI.Converters"
              xmlns:mdxam="clr-namespace:MdXaml.SyntaxHigh;assembly=MdXaml.SyntaxHigh"
-             Background="{DynamicResource ContentBackground}"
+             Background="{DynamicResource ApplicationBackgroundBrush}"
              AutomationProperties.AutomationId="ChatView">
 
     <UserControl.Resources>
@@ -34,12 +34,12 @@
                     <!-- Role label (slightly above the bubble, right-aligned) -->
                     <TextBlock Text="You"
                                FontSize="11" FontWeight="SemiBold"
-                               Foreground="{DynamicResource AccentBrush}"
+                               Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                                HorizontalAlignment="Right"
                                Margin="0,0,14,2"/>
 
                     <!-- Message bubble (right-aligned, sender side) -->
-                    <Border Background="{DynamicResource AccentBrush}"
+                    <Border Background="{DynamicResource AccentFillColorDefaultBrush}"
                             CornerRadius="8,8,2,8"
                             Padding="12,8"
                             MaxWidth="600"
@@ -60,7 +60,7 @@
 
                     <!-- Timestamp + action bar -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,2,12,0">
-                        <TextBlock FontSize="10" Foreground="{DynamicResource SubtleBrush}">
+                        <TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
                             <TextBlock.Text>
                                 <MultiBinding Converter="{StaticResource RelativeTimeConverter}">
                                     <Binding Path="CreatedAt"/>
@@ -72,7 +72,7 @@
                         <Button Content="{Binding IsFavorited, Converter={StaticResource BoolToFavoriteConverter}}"
                                 FontSize="12"
                                 Background="Transparent" BorderThickness="0"
-                                Foreground="{DynamicResource StarBrush}"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Padding="2,0" Margin="2,0,0,0"
                                 Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.ToggleFavoriteCommand}"
                                 CommandParameter="{Binding}"
@@ -91,16 +91,16 @@
                     <!-- Role label -->
                     <TextBlock Text="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.ActivePersona.DisplayName, FallbackValue='Assistant'}"
                                FontSize="11" FontWeight="SemiBold"
-                               Foreground="{DynamicResource ContentForeground}"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                Margin="12,0,0,2"/>
 
                     <!-- Message bubble -->
-                    <Border Background="{DynamicResource InputBackground}"
+                    <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                             CornerRadius="2,8,8,8"
                             Padding="12,8"
                             MaxWidth="600"
                             HorizontalAlignment="Left"
-                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1">
                         <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
                                                      MarkdownStyleName="Sasabune"
@@ -122,13 +122,13 @@
                         <Button Content="{Binding IsFavorited, Converter={StaticResource BoolToFavoriteConverter}}"
                                 FontSize="12"
                                 Background="Transparent" BorderThickness="0"
-                                Foreground="{DynamicResource StarBrush}"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Padding="2,0" Margin="0,0,4,0"
                                 Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.ToggleFavoriteCommand}"
                                 CommandParameter="{Binding}"
                                 ToolTip="Toggle favorite"
                                 AutomationProperties.AutomationId="FavoriteBtn"/>
-                        <TextBlock FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                        <TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    VerticalAlignment="Center">
                             <TextBlock.Text>
                                 <MultiBinding Converter="{StaticResource RelativeTimeConverter}">
@@ -139,28 +139,28 @@
                         </TextBlock>
                         <Button Content="📋 MD" FontSize="10"
                                 Background="Transparent" BorderThickness="0"
-                                Foreground="{DynamicResource SubtleBrush}"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Padding="4,1" Margin="4,0,0,0" MinWidth="46"
                                 Click="OnCopyMdClick"
                                 ToolTip="Copy Markdown"
                                 AutomationProperties.AutomationId="CopyMDBtn"/>
                         <Button Content="📄 Rich" FontSize="10"
                                 Background="Transparent" BorderThickness="0"
-                                Foreground="{DynamicResource SubtleBrush}"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Padding="4,1" Margin="2,0,0,0" MinWidth="52"
                                 Click="OnCopyRichClick"
                                 ToolTip="Copy formatted (HTML)"
                                 AutomationProperties.AutomationId="CopyRichBtn"/>
                         <Button Content="🔄 Regenerate" FontSize="10"
                                 Background="Transparent" BorderThickness="0"
-                                Foreground="{DynamicResource SubtleBrush}"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Padding="4,1" Margin="2,0,0,0"
                                 Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.RegenerateCommand}"
                                 ToolTip="Regenerate this response"
                                 AutomationProperties.AutomationId="RegenerateBtn"/>
                         <Button Content="▶ Continue" FontSize="10"
                                 Background="Transparent" BorderThickness="0"
-                                Foreground="{DynamicResource SubtleBrush}"
+                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                 Padding="4,1" Margin="2,0,0,0"
                                 Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.ContinueGenerationCommand}"
                                 ToolTip="Continue from this response"
@@ -169,7 +169,7 @@
 
                     <!-- Token usage / cost / generation time footer -->
                     <TextBlock Text="{Binding Converter={StaticResource MessageTokenDisplayConverter}}"
-                               FontSize="9" Foreground="{DynamicResource SubtleBrush}"
+                               FontSize="9" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="12,1,0,0"/>
                 </StackPanel>
             </Border>
@@ -177,35 +177,35 @@
 
         <!-- ═══ Bulk Actions Bar Template ═══════════════════════════ -->
         <DataTemplate x:Key="BulkActionsTemplate">
-            <Border Background="{DynamicResource AccentBrush}" Padding="8,6"
+            <Border Background="{DynamicResource AccentFillColorDefaultBrush}" Padding="8,6"
                     CornerRadius="4" Margin="8,4">
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.SelectedCount, StringFormat='{}{0} selected'}"
                                FontSize="12" FontWeight="SemiBold"
-                               Foreground="{DynamicResource AccentForeground}"
+                               Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,12,0"/>
                     <Button Content="Copy" FontSize="11"
                             Background="Transparent" BorderThickness="0"
-                            Foreground="{DynamicResource AccentForeground}"
+                            Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                             Padding="8,3" Margin="2,0"
                             Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.CopySelectedMessagesCommand}"
                             AutomationProperties.AutomationId="BulkCopyBtn"/>
                     <Button Content="Delete" FontSize="11"
                             Background="Transparent" BorderThickness="0"
-                            Foreground="{DynamicResource AccentForeground}"
+                            Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                             Padding="8,3" Margin="2,0"
                             Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.DeleteSelectedMessagesCommand}"
                             AutomationProperties.AutomationId="BulkDeleteBtn"/>
                     <Button Content="Quote" FontSize="11"
                             Background="Transparent" BorderThickness="0"
-                            Foreground="{DynamicResource AccentForeground}"
+                            Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                             Padding="8,3" Margin="2,0"
                             Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.QuoteSelectedMessagesCommand}"
                             AutomationProperties.AutomationId="BulkQuoteBtn"/>
                     <Button Content="Cancel" FontSize="11"
                             Background="Transparent" BorderThickness="0"
-                            Foreground="{DynamicResource AccentForeground}"
+                            Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                             Padding="8,3" Margin="2,0"
                             Command="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.ToggleSelectionModeCommand}"
                             AutomationProperties.AutomationId="BulkCancelBtn"/>
@@ -216,16 +216,16 @@
         <!-- ═══ System Message Template ═════════════════════════════ -->
         <DataTemplate x:Key="SystemMessageTemplate">
             <Border Margin="0,4,0,4" Padding="8,4"
-                    Background="{DynamicResource InputBackground}"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                     CornerRadius="4">
                 <StackPanel FlowDirection="LeftToRight">
                     <TextBlock Text="⚙️ System"
                                FontSize="11" FontWeight="SemiBold"
-                               Foreground="{DynamicResource SubtleBrush}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Margin="0,0,0,2"/>
                     <TextBox Text="{Binding Content}"
                              FontSize="12"
-                             Foreground="{DynamicResource SubtleBrush}"
+                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                              TextWrapping="Wrap"
                              IsReadOnly="True"
                              BorderThickness="0"
@@ -270,7 +270,7 @@
         </Border>
 
         <!-- Row 2: Conversation Area (VirtualizingStackPanel) -->
-        <Border Grid.Row="2" Background="{DynamicResource ContentBackground}">
+        <Border Grid.Row="2" Background="{DynamicResource ApplicationBackgroundBrush}">
             <Grid>
                 <!-- Empty state: shown when no tabs exist OR active tab has no messages -->
                 <!-- When all tabs are closed, ActiveTab is null — show "no chats" message -->
@@ -292,10 +292,10 @@
                         </Style>
                     </StackPanel.Style>
                     <TextBlock Text="No chats yet. Press Ctrl+N to start."
-                               FontSize="16" Foreground="{DynamicResource SubtleBrush}"
+                               FontSize="16" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                TextAlignment="Center"/>
                     <TextBlock Text="Start typing below."
-                               FontSize="14" Foreground="{DynamicResource SubtleBrush}"
+                               FontSize="14" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                TextAlignment="Center" Margin="0,8,0,0"/>
                 </StackPanel>
 
@@ -365,7 +365,7 @@
 
                 <!-- Auto-scroll paused indicator -->
                 <Border x:Name="AutoScrollPausedIndicator"
-                        Background="{DynamicResource AccentBrush}"
+                        Background="{DynamicResource AccentFillColorDefaultBrush}"
                         CornerRadius="4"
                         Padding="8,4"
                         Margin="0,0,20,10"
@@ -375,7 +375,7 @@
                         AutomationProperties.AutomationId="AutoScrollPaused">
                     <TextBlock Text="Auto-scroll paused"
                                FontSize="11"
-                               Foreground="{DynamicResource AccentForeground}"
+                               Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                                VerticalAlignment="Center"/>
                 </Border>
 
@@ -388,8 +388,8 @@
         </Border>
 
         <!-- Row 3: Input Area -->
-        <Border Grid.Row="3" Background="{DynamicResource InputBackground}"
-                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0"
+        <Border Grid.Row="3" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0"
                 Padding="8,4,8,6">
             <StackPanel>
                 <!-- Toolbar -->
@@ -399,29 +399,29 @@
                               DisplayMemberPath="DisplayName"
                               FontSize="10" Width="160"
                               Background="Transparent"
-                              BorderBrush="{DynamicResource BorderBrush}"
+                              BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                               BorderThickness="1"
-                              Foreground="{DynamicResource ContentForeground}"
+                              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                               Padding="4,2" Margin="2"
                               VerticalContentAlignment="Center"
                               AutomationProperties.AutomationId="PersonaSelector"/>
                     <!-- Chat Mode Selector -->
-                    <Border BorderBrush="{DynamicResource BorderBrush}"
+                    <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1" CornerRadius="4" Margin="2"
                             Padding="0">
                         <StackPanel Orientation="Horizontal">
                             <Button Content="{Binding ChatModeDisplay}"
                                     FontSize="10"
                                     Padding="6,3"
-                                    Background="{DynamicResource AccentBrush}"
-                                    Foreground="{DynamicResource AccentForeground}"
+                                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                    Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
                                     BorderThickness="0"
                                     Command="{Binding SwitchChatModeCommand}"
                                     ToolTip="{Binding ChatModeDisplay, StringFormat='Current: {0}'}"
                                     AutomationProperties.AutomationId="ChatModeBtn"/>
                             <TextBlock Text="{Binding ChatModeDisplay}"
                                        FontSize="9"
-                                       Foreground="{DynamicResource SubtleBrush}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                        VerticalAlignment="Center"
                                        Margin="4,0,4,0"/>
                         </StackPanel>
@@ -434,14 +434,14 @@
                                   AutomationProperties.AutomationId="ThinkingToggleBtn">
                         <ToggleButton.Style>
                             <Style TargetType="ToggleButton">
-                                <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsChecked" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource AccentForeground}"/>
+                                        <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -454,14 +454,14 @@
                                   AutomationProperties.AutomationId="MuteToggleBtn">
                         <ToggleButton.Style>
                             <Style TargetType="ToggleButton">
-                                <Setter Property="Background" Value="{DynamicResource InputBackground}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+                                <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsChecked" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource AccentForeground}"/>
+                                        <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -469,7 +469,7 @@
                     </ToggleButton>
 
                     <ToggleButton x:Name="ToolsDropdownBtn" Content="🔧 Tools ▼" FontSize="10"
-                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1"
                             Padding="6,3" Margin="2"
                             IsChecked="False"
@@ -477,11 +477,11 @@
                         <ToggleButton.Style>
                             <Style TargetType="ToggleButton">
                                 <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsChecked" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource AccentForeground}"/>
+                                        <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -491,8 +491,8 @@
                            StaysOpen="False"
                            PlacementTarget="{Binding ElementName=ToolsDropdownBtn}"
                            Placement="Bottom">
-                        <Border Background="{DynamicResource ContentBackground}"
-                                BorderBrush="{DynamicResource BorderBrush}"
+                        <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1"
                                 MinWidth="160"
                                 MaxHeight="300">
@@ -504,7 +504,7 @@
                                                       IsChecked="{Binding IsEnabled}"
                                                       Margin="6,3"
                                                       FontSize="11"
-                                                      Foreground="{DynamicResource ContentForeground}"
+                                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                                       AutomationProperties.AutomationId="{Binding Name, StringFormat='Tool_{0}'}"/>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
@@ -514,7 +514,7 @@
                     </Popup>
 
                     <ToggleButton x:Name="SkillsDropdownBtn" Content="📚 Skills ▼" FontSize="10"
-                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1"
                             Padding="6,3" Margin="2"
                             IsChecked="False"
@@ -522,11 +522,11 @@
                         <ToggleButton.Style>
                             <Style TargetType="ToggleButton">
                                 <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsChecked" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource AccentForeground}"/>
+                                        <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -536,8 +536,8 @@
                            StaysOpen="False"
                            PlacementTarget="{Binding ElementName=SkillsDropdownBtn}"
                            Placement="Bottom">
-                        <Border Background="{DynamicResource ContentBackground}"
-                                BorderBrush="{DynamicResource BorderBrush}"
+                        <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="1"
                                 MinWidth="160"
                                 MaxHeight="300">
@@ -545,9 +545,9 @@
                                 <StackPanel>
                                     <Button Content="All On/Off" FontSize="10"
                                             Background="Transparent"
-                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                                             BorderThickness="0,0,0,1"
-                                            Foreground="{DynamicResource AccentBrush}"
+                                            Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                                             Padding="6,4"
                                             Click="ToggleAllSkills_Click"
                                             AutomationProperties.AutomationId="SkillsAllToggleBtn"/>
@@ -558,7 +558,7 @@
                                                           IsChecked="{Binding IsEnabled}"
                                                           Margin="6,3"
                                                           FontSize="11"
-                                                          Foreground="{DynamicResource ContentForeground}"
+                                                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                                           AutomationProperties.AutomationId="{Binding Name, StringFormat='Skill_{0}'}"/>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -576,12 +576,12 @@
                             AutomationProperties.AutomationId="MemoryToggleBtn">
                         <ToggleButton.Style>
                             <Style TargetType="ToggleButton">
-                                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource SubtleBrush}"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsChecked" Value="True">
-                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
-                                        <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -589,43 +589,43 @@
                     </ToggleButton>
 
                     <Button Content="⚡ Auto-Approve" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
+                            Background="Transparent" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Padding="6,3" Margin="2"/>
                     <Button Content="⚖ Compare" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
+                            Background="Transparent" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Padding="6,3" Margin="2"/>
-                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,2"/>
+                    <Border Width="1" Background="{DynamicResource CardStrokeColorDefaultBrush}" Margin="4,2"/>
                     <Button Content="📋 Prompts" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
+                            Background="Transparent" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Padding="6,3" Margin="2"/>
                     <Button Content="⚡ Actions ▾" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
+                            Background="Transparent" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Padding="6,3" Margin="2"/>
-                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,2"/>
+                    <Border Width="1" Background="{DynamicResource CardStrokeColorDefaultBrush}" Margin="4,2"/>
                     <Button Content="🎤" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
+                            Background="Transparent" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Padding="6,3" Margin="2"/>
                     <Button Content="📷" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
+                            Background="Transparent" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Padding="6,3" Margin="2"/>
                     <Button Content="📎 Attach" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
+                            Background="Transparent" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Padding="6,3" Margin="2"/>
-                    <Border Width="1" Background="{DynamicResource BorderBrush}" Margin="4,2"/>
+                    <Border Width="1" Background="{DynamicResource CardStrokeColorDefaultBrush}" Margin="4,2"/>
                     <Button Content="📝 Write to Wiki" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
+                            Background="Transparent" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Padding="6,3" Margin="2"/>
                     <Button Content="🔄 Update Memory" FontSize="10"
-                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="1" Foreground="{DynamicResource SubtleBrush}"
+                            Background="Transparent" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Padding="6,3" Margin="2"/>
                 </WrapPanel>
 
@@ -635,12 +635,12 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <Border Grid.Column="0" Background="{DynamicResource ContentBackground}"
-                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    <Border Grid.Column="0" Background="{DynamicResource ApplicationBackgroundBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
                             Padding="8,6" Margin="0,0,8,0">
                         <TextBox Text="{Binding ActiveTab.TextboxContent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  FontSize="13"
-                                 Foreground="{DynamicResource ContentForeground}"
+                                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                  Background="Transparent"
                                  BorderThickness="0"
                                  AcceptsReturn="True"
@@ -659,7 +659,7 @@
                                                     <VisualBrush Stretch="None" AlignmentX="Left" AlignmentY="Center">
                                                         <VisualBrush.Visual>
                                                             <TextBlock Text="Type a message..."
-                                                                       Foreground="{DynamicResource SubtleBrush}"
+                                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                                        FontSize="13"/>
                                                         </VisualBrush.Visual>
                                                     </VisualBrush>
@@ -679,8 +679,8 @@
                             <Style TargetType="Button">
                                 <!-- Default: Send -->
                                 <Setter Property="Content" Value="Send"/>
-                                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
-                                <Setter Property="Foreground" Value="{DynamicResource AccentForeground}"/>
+                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}"/>
                                 <Setter Property="Command"
                                         Value="{Binding SendMessageCommand}"/>
                                 <Style.Triggers>
@@ -699,7 +699,7 @@
                 </Grid>
 
                 <!-- Token Count -->
-                <TextBlock FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+                <TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            Margin="4,2,0,0">
                     <TextBlock.Text>
                         <MultiBinding StringFormat="{}{0:N0} chars · ~{1:N0} tokens · context at {2:P0}">

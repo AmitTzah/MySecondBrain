@@ -9,9 +9,9 @@
              AutomationProperties.AutomationId="OnboardingStep3View">
     <StackPanel>
         <TextBlock Text="Review Your Hotkeys" FontSize="18" FontWeight="SemiBold"
-                   Foreground="{DynamicResource ContentForeground}" Margin="0,0,0,4"/>
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,4"/>
         <TextBlock Text="These global shortcuts work from any Windows application — no need to switch windows."
-                   FontSize="12" Foreground="{DynamicResource SubtleBrush}"
+                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                    TextWrapping="Wrap" Margin="0,0,0,16"/>
 
         <!-- Hotkey Table Header -->
@@ -22,16 +22,16 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="Action" FontSize="10" FontWeight="SemiBold"
-                       Foreground="{DynamicResource SubtleBrush}"/>
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
             <TextBlock Grid.Column="1" Text="Hotkey" FontSize="10" FontWeight="SemiBold"
-                       Foreground="{DynamicResource SubtleBrush}"/>
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
         </Grid>
 
         <!-- Hotkey Items -->
         <ItemsControl ItemsSource="{Binding HotkeyAssignments}" Margin="0,0,0,12">
             <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type vm:WizardHotkeyItem}">
-                    <Border BorderBrush="{DynamicResource BorderBrush}"
+                    <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                             BorderThickness="0,0,0,1" Padding="4,6">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -41,18 +41,18 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="{Binding ActionName}" FontSize="12"
-                                           Foreground="{DynamicResource ContentForeground}"/>
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
                             </StackPanel>
                             <TextBlock Grid.Column="1" Text="{Binding Hotkey}" FontSize="11"
                                        FontFamily="Consolas"
-                                       Foreground="{DynamicResource AccentBrush}"
+                                       Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                                        VerticalAlignment="Center"/>
                             <Button Grid.Column="2" Content="Change" FontSize="10"
                                     Padding="10,2"
                                     Background="Transparent"
-                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                                     BorderThickness="1"
-                                    Foreground="{DynamicResource AccentBrush}"
+                                    Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                                     Command="{Binding DataContext.ChangeWizardHotkeyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"/>
                         </Grid>
@@ -63,7 +63,7 @@
 
         <!-- Reset to Defaults -->
         <TextBlock Text="Reset to Defaults" FontSize="11"
-                   Foreground="{DynamicResource AccentBrush}"
+                   Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                    Cursor="Hand" TextDecorations="Underline"
                    HorizontalAlignment="Left"
                    AutomationProperties.AutomationId="WizardResetHotkeys">

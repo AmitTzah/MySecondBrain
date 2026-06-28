@@ -6,7 +6,6 @@ using System.Windows.Input;
 using System.Windows.Media.Animation;
 using MdXaml;
 using Microsoft.Extensions.DependencyInjection;
-using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 using MySecondBrain.UI.ViewModels;
 using Serilog;
@@ -17,7 +16,6 @@ namespace MySecondBrain.UI.Views;
 public partial class ChatView : UserControl
 {
     private ChatThreadViewModel? _viewModel;
-    private IThemeProvider? _themeProvider;
     private static int s_instanceCounter;
     private readonly int _instanceId = Interlocked.Increment(ref s_instanceCounter);
 
@@ -48,11 +46,7 @@ public partial class ChatView : UserControl
 
         // Resolve ChatThreadViewModel from DI and set as DataContext
         _viewModel = App.ServiceProvider.GetRequiredService<ChatThreadViewModel>();
-        _themeProvider = App.ServiceProvider.GetService<IThemeProvider>();
         DataContext = _viewModel;
-
-        Log.Debug("[ThemeDiag] ChatView #{InstanceId} constructed, DataContext={DC}, current global theme={Theme}",
-            _instanceId, DataContext?.GetType().Name, _themeProvider?.CurrentChatTheme);
 
         // ═══ Streaming timer setup (BEFORE Unloaded handler that references it) ═══
         // 80ms (adaptive) DispatcherTimer at Render priority. Timer callback finds
@@ -300,25 +294,6 @@ public partial class ChatView : UserControl
                 _viewModel.ActiveTab?.Messages?.Count ?? -1);
         }
 
-        // Refresh message list when font size changes so the converter re-runs
-        // with the new font size from IThemeProvider.
-        if (e.PropertyName == nameof(ChatThreadViewModel.FontSizeVersion) && _viewModel is not null)
-        {
-            Log.Debug("[FontDiag] ChatView #{InstanceId} font size changed to {FontSize}, refreshing messages",
-                _instanceId, _themeProvider?.FontSize);
-
-            var listBox = MessageScrollViewer?.Content as System.Windows.Controls.ListBox;
-            if (listBox is not null)
-            {
-                var bindingExpr = listBox.GetBindingExpression(System.Windows.Controls.ItemsControl.ItemsSourceProperty);
-                if (bindingExpr?.ParentBindingBase is { } binding)
-                {
-                    listBox.ItemsSource = null;
-                    listBox.SetBinding(System.Windows.Controls.ItemsControl.ItemsSourceProperty, binding);
-                }
-            }
-        }
-
         // When streaming content arrives, reset the timer to fire immediately
         // on the next render pass. This prevents the user seeing a recycled
         // container template (from VirtualizingStackPanel) before the correct
@@ -359,8 +334,6 @@ public partial class ChatView : UserControl
     {
         Log.Debug("[ThemeDiag] ChatView #{InstanceId} applying theme: {NewTheme}",
             _instanceId, newTheme);
-
-        if (_themeProvider is null) return;
 
         var selector = Resources["MessageTemplateSelector"] as MessageDataTemplateSelector;
         if (selector is null) return;

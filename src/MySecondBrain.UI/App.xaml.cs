@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Windows;
+using System.Windows.Media;
+using Wpf.Ui.Appearance;
 
 using CommunityToolkit.Mvvm.Messaging;
 
@@ -15,6 +17,7 @@ using MySecondBrain.UI.ViewModels;
 using MySecondBrain.UI.Views;
 
 using Serilog;
+using Wpf.Ui;
 // Resolves ambiguity with System.Windows.Forms.Application from UseWindowsForms=true
 using Application = System.Windows.Application;
 
@@ -23,7 +26,6 @@ namespace MySecondBrain.UI;
 public partial class App : Application
 {
     private IServiceProvider _serviceProvider = null!;
-    private static readonly FontWeightConverter s_fontWeightConverter = new();
 
     /// <summary>
     /// Provides access to the application's DI service provider from non-DI-aware code (e.g., UserControls in DataTemplates).
@@ -33,6 +35,9 @@ public partial class App : Application
 
     protected override async void OnStartup(StartupEventArgs e)
     {
+        // Apply WPF-UI light theme at startup
+        ApplicationThemeManager.Apply(ApplicationTheme.Light);
+
         // Global unhandled exception handlers to capture crash details before termination.
         DispatcherUnhandledException += (_, args) =>
         {
@@ -70,41 +75,7 @@ public partial class App : Application
 
         try
         {
-            // Restore saved theme and font settings
-            var themeProvider = _serviceProvider.GetRequiredService<IThemeProvider>();
             var settings = _serviceProvider.GetRequiredService<ISettingsRepository>();
-
-            var savedTheme = await settings.GetAsync("AppTheme");
-            if (savedTheme is not null && Enum.TryParse<AppTheme>(savedTheme, out var theme))
-                themeProvider.SetAppTheme(theme);
-
-            var savedFontFamily = await settings.GetAsync("FontFamily");
-            var savedFontSize = await settings.GetAsync("FontSize");
-            var savedFontWeight = await settings.GetAsync("FontWeight");
-
-            if (savedFontFamily is not null && savedFontSize is not null
-                && double.TryParse(savedFontSize, NumberStyles.Float, CultureInfo.InvariantCulture, out var fontSize))
-            {
-                var fontWeight = FontWeights.Normal;
-                if (savedFontWeight is not null)
-                {
-                    try
-                    {
-                        if (s_fontWeightConverter.ConvertFromString(savedFontWeight) is FontWeight fw)
-                            fontWeight = fw;
-                    }
-                    catch (Exception ex)
-                    {
-                        startupLogger.LogWarning(ex, "Failed to parse saved FontWeight '{Value}', falling back to Normal", savedFontWeight);
-                    }
-                }
-                themeProvider.SetFontSettings(savedFontFamily, fontSize, fontWeight);
-            }
-
-            // Restore saved chat theme
-            var savedChatTheme = await settings.GetAsync("ChatTheme");
-            if (savedChatTheme is not null && Enum.TryParse<ChatTheme>(savedChatTheme, out var chatTheme))
-                themeProvider.SetChatTheme(chatTheme);
 
             // Restore saved log level
             var savedLogLevel = await settings.GetAsync("LogLevel");
@@ -133,7 +104,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            startupLogger.LogError(ex, "Failed to restore theme/font settings, continuing with defaults");
+            startupLogger.LogError(ex, "Failed to restore settings, continuing with defaults");
         }
 
         // Log DPI awareness mode and per-monitor DPI info for diagnostics

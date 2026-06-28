@@ -8,11 +8,11 @@
         <converters:TokenCountToColorConverter x:Key="TokenCountToColorConverter"/>
     </UserControl.Resources>
     <Border x:Name="BackgroundBar" CornerRadius="3"
-            Background="{DynamicResource InputBackground}"
-            BorderBrush="{DynamicResource BorderBrush}"
+            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
             BorderThickness="1">
         <Border x:Name="FillBar" CornerRadius="3"
                 HorizontalAlignment="Left"
-                Background="{DynamicResource AccentBrush}"/>
+                Background="{DynamicResource AccentFillColorDefaultBrush}"/>
     </Border>
 </UserControl>

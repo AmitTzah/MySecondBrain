@@ -59,7 +59,6 @@ public abstract class SettingsViewModelTestBase
 
         _sut = new SettingsViewModel(
             _settingsRepoMock.Object,
-            _themeProviderMock.Object,
             _apiKeyRepoMock.Object,
             _encryptionServiceMock.Object,
             _llmProviderServiceMock.Object,
@@ -82,7 +81,6 @@ public abstract class SettingsViewModelTestBase
     {
         return new SettingsViewModel(
             _settingsRepoMock.Object,
-            _themeProviderMock.Object,
             _apiKeyRepoMock.Object,
             _encryptionServiceMock.Object,
             _llmProviderServiceMock.Object,

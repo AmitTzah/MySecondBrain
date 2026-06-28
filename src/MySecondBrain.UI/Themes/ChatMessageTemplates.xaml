@@ -14,11 +14,11 @@
         <StackPanel Margin="0,0,0,20" FlowDirection="RightToLeft">
             <TextBlock Text="You"
                        FontSize="10" FontWeight="Bold"
-                       Foreground="{DynamicResource AccentBrush}"
+                       Foreground="{DynamicResource AccentFillColorDefaultBrush}"
                        Margin="0,0,0,2"/>
             <Border Padding="12,8" CornerRadius="8,8,2,8" BorderThickness="1"
-                    BorderBrush="{DynamicResource AccentBrush}"
-                    Background="{DynamicResource AccentBrush}">
+                    BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                    Background="{DynamicResource AccentFillColorDefaultBrush}">
                 <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
                                          MarkdownStyleName="Sasabune"
                                          FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
@@ -26,7 +26,7 @@
                                          HorizontalScrollBarVisibility="Disabled"
                                          Background="Transparent"/>
             </Border>
-            <TextBlock FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+            <TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        Margin="0,2,0,0" HorizontalAlignment="Right">
                 <TextBlock.Text>
                     <MultiBinding Converter="{StaticResource ThemeRelativeTimeConverter}">
@@ -42,12 +42,12 @@
     <DataTemplate x:Key="ClassicAssistantTemplate">
         <StackPanel Margin="0,0,0,20">
             <TextBlock FontSize="10" FontWeight="Bold"
-                       Foreground="{DynamicResource SubtleBrush}"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        Text="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.ActivePersona.DisplayName, FallbackValue='Assistant'}"
                        Margin="0,0,0,2"/>
             <Border Padding="12,8" CornerRadius="2,8,8,8" BorderThickness="1"
-                    BorderBrush="{DynamicResource BorderBrush}"
-                    Background="{DynamicResource ContentBackground}">
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    Background="{DynamicResource ApplicationBackgroundBrush}">
                 <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
                                          MarkdownStyleName="Sasabune"
                                          FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
@@ -55,7 +55,7 @@
                                          HorizontalScrollBarVisibility="Disabled"
                                          Background="Transparent"/>
             </Border>
-            <TextBlock FontSize="10" Foreground="{DynamicResource SubtleBrush}"
+            <TextBlock FontSize="10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        Margin="0,2,0,0">
                 <TextBlock.Text>
                     <MultiBinding Converter="{StaticResource ThemeRelativeTimeConverter}">
@@ -72,7 +72,7 @@
         <StackPanel Margin="0,0,0,8" FlowDirection="RightToLeft">
             <StackPanel Orientation="Horizontal">
                 <Ellipse Width="8" Height="8" Margin="0,0,6,0"
-                         Fill="{DynamicResource AccentBrush}"/>
+                         Fill="{DynamicResource AccentFillColorDefaultBrush}"/>
                 <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
                                          MarkdownStyleName="Sasabune"
                                          FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
@@ -88,7 +88,7 @@
         <StackPanel Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal">
                 <Ellipse Width="8" Height="8" Margin="0,0,6,0"
-                         Fill="{DynamicResource AccentBrush}"/>
+                         Fill="{DynamicResource AccentFillColorDefaultBrush}"/>
                 <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
                                          MarkdownStyleName="Sasabune"
                                          FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
@@ -103,8 +103,8 @@
     <DataTemplate x:Key="BubbleUserTemplate">
         <Grid Margin="0,0,0,12">
             <Border Padding="12,8" CornerRadius="12,12,2,12" BorderThickness="1"
-                    BorderBrush="{DynamicResource AccentBrush}"
-                    Background="{DynamicResource AccentBrush}" MaxWidth="400"
+                    BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                    Background="{DynamicResource AccentFillColorDefaultBrush}" MaxWidth="400"
                     HorizontalAlignment="Right" Opacity="0.9">
                 <StackPanel FlowDirection="RightToLeft">
                     <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
@@ -114,7 +114,7 @@
                                              HorizontalScrollBarVisibility="Disabled"
                                              Background="Transparent"/>
                     <TextBlock FontSize="9"
-                               Foreground="{DynamicResource SubtleBrush}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Left" Margin="0,4,0,0">
                         <TextBlock.Text>
                             <MultiBinding Converter="{StaticResource ThemeRelativeTimeConverter}">
@@ -132,8 +132,8 @@
     <DataTemplate x:Key="BubbleAssistantTemplate">
         <Grid Margin="0,0,0,12">
             <Border Padding="12,8" CornerRadius="2,12,12,12" BorderThickness="1"
-                    BorderBrush="{DynamicResource BorderBrush}"
-                    Background="{DynamicResource ContentBackground}" MaxWidth="400"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    Background="{DynamicResource ApplicationBackgroundBrush}" MaxWidth="400"
                     HorizontalAlignment="Left" Opacity="0.9">
                 <StackPanel>
                     <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
@@ -143,7 +143,7 @@
                                              HorizontalScrollBarVisibility="Disabled"
                                              Background="Transparent"/>
                     <TextBlock FontSize="9"
-                               Foreground="{DynamicResource SubtleBrush}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Right" Margin="0,4,0,0">
                         <TextBlock.Text>
                             <MultiBinding Converter="{StaticResource ThemeRelativeTimeConverter}">
@@ -161,7 +161,7 @@
     <DataTemplate x:Key="ClassicMessageTemplate">
         <StackPanel Margin="0,0,0,20">
             <TextBlock FontSize="10" FontWeight="Bold"
-                       Foreground="{DynamicResource SubtleBrush}"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                        Text="Message" Margin="0,0,0,2"/>
             <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
                                      MarkdownStyleName="Sasabune"
@@ -177,7 +177,7 @@
         <StackPanel Margin="0,0,0,8">
             <StackPanel Orientation="Horizontal">
                 <Ellipse Width="8" Height="8" Margin="0,0,6,0"
-                         Fill="{DynamicResource AccentBrush}"/>
+                         Fill="{DynamicResource AccentFillColorDefaultBrush}"/>
                 <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
                                          MarkdownStyleName="Sasabune"
                                          FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
@@ -192,8 +192,8 @@
     <DataTemplate x:Key="BubbleMessageTemplate">
         <Grid Margin="0,0,0,12">
             <Border Padding="12,8" CornerRadius="12" BorderThickness="1"
-                    BorderBrush="{DynamicResource AccentBrush}"
-                    Background="{DynamicResource ContentBackground}" MaxWidth="400"
+                    BorderBrush="{DynamicResource AccentFillColorDefaultBrush}"
+                    Background="{DynamicResource ApplicationBackgroundBrush}" MaxWidth="400"
                     HorizontalAlignment="Left" Opacity="0.85">
                 <StackPanel>
                     <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
@@ -203,7 +203,7 @@
                                              HorizontalScrollBarVisibility="Disabled"
                                              Background="Transparent"/>
                     <TextBlock FontSize="9"
-                               Foreground="{DynamicResource SubtleBrush}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                HorizontalAlignment="Right" Margin="0,4,0,0">
                         <TextBlock.Text>
                             <MultiBinding Converter="{StaticResource ThemeRelativeTimeConverter}">

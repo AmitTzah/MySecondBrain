@@ -100,7 +100,6 @@ public static class DependencyInjectionConfig
         services.AddSingleton<ITextInjectionService, UiaTextInjectionService>();
         services.AddSingleton<ISpellCheckService, HunspellSpellCheckService>();
         services.AddSingleton<IWikiGitService, LibGit2SharpGitService>();
-        services.AddSingleton<IThemeProvider, WpfThemeProvider>();
 
         // === Transient Services ===
         services.AddTransient<IClipboardService, WpfClipboardService>();

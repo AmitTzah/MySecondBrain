@@ -289,11 +289,7 @@ public class SettingsViewModelGeneralSettingsTests : SettingsViewModelTestBase
 
         await _sut.InitializeCommand.ExecuteAsync(null);
 
-        Assert.Equal(AppTheme.Light, _sut.AppTheme);
         Assert.Equal(ChatTheme.Bubble, _sut.ChatTheme);
-        Assert.Equal("Consolas", _sut.FontFamily);
-        Assert.Equal(18.0, _sut.FontSize);
-        Assert.Equal("Bold", _sut.FontWeight);
         Assert.True(_sut.SoundOnCompletion);
         Assert.True(_sut.DisableStreaming);
         Assert.False(_sut.CrossTabCompletionAlert);

@@ -26,7 +26,6 @@ public partial class ChatThreadViewModel : ObservableObject
     private readonly ISettingsRepository _settingsRepo;
     private readonly ISkillService _skillService;
     private readonly IConfirmationService _confirmationService;
-    private readonly IThemeProvider _themeProvider;
     private readonly SystemPromptCoordinator _systemPromptCoordinator;
     private readonly LockedChatService _lockedChatService;
     private readonly ILogger<ChatThreadViewModel> _logger;
@@ -96,7 +95,6 @@ public partial class ChatThreadViewModel : ObservableObject
         ISettingsRepository settingsRepo,
         ISkillService skillService,
         IConfirmationService confirmationService,
-        IThemeProvider themeProvider,
         ILogger<ChatThreadViewModel> logger,
         MarkdownStreamRenderer streamRenderer,
         LockedChatService lockedChatService)
@@ -107,7 +105,6 @@ public partial class ChatThreadViewModel : ObservableObject
         _settingsRepo = settingsRepo;
         _skillService = skillService;
         _confirmationService = confirmationService;
-        _themeProvider = themeProvider;
         _streamRenderer = streamRenderer;
         _lockedChatService = lockedChatService;
         _systemPromptCoordinator = new SystemPromptCoordinator(skillService);
@@ -534,15 +531,6 @@ public partial class ChatThreadViewModel : ObservableObject
 
         try
         {
-            // Initialize the per-tab theme from the globally persisted preference.
-            // New tabs will inherit this value until the user changes it per-tab.
-            if (_themeProvider.CurrentChatTheme != CurrentChatVisualTheme)
-            {
-                _logger.LogDebug("[ThemeDiag] InitializeAsync: seeding CurrentChatVisualTheme from global={Global}",
-                    _themeProvider.CurrentChatTheme);
-                CurrentChatVisualTheme = _themeProvider.CurrentChatTheme;
-            }
-
             await RefreshPersonaListAsync();
 
             var savedPersonaId = await _settingsRepo.GetAsync(LastSelectedPersonaIdKey);
@@ -1961,77 +1949,6 @@ public partial class ChatThreadViewModel : ObservableObject
     // Global commands (delegate to IThemeProvider / ISettingsRepository)
     // ================================================================
 
-    /// <summary>
-    /// Monotonically increasing version number incremented on every font size change.
-    /// ChatView subscribes to PropertyChanged for this property and refreshes the
-    /// message ListBox so the converter re-runs with the new font size.
-    /// </summary>
-    [ObservableProperty]
-    private int _fontSizeVersion;
-
-    [RelayCommand]
-    private void IncreaseFont()
-    {
-        var current = _themeProvider.FontSize;
-        if (current >= 24) return;
-        _themeProvider.SetFontSettings(_themeProvider.FontFamily, current + 1, _themeProvider.FontWeight);
-        FontSizeVersion++;
-        NotifyFontSizeChanged();
-    }
-
-    [RelayCommand]
-    private void DecreaseFont()
-    {
-        var current = _themeProvider.FontSize;
-        if (current <= 10) return;
-        _themeProvider.SetFontSettings(_themeProvider.FontFamily, current - 1, _themeProvider.FontWeight);
-        FontSizeVersion++;
-        NotifyFontSizeChanged();
-    }
-
-    /// <summary>
-    /// Updates MainWindowViewModel.FontSizeDisplay so the font size label
-    /// in ChatHeaderBar (bound to Window DataContext) shows the current value.
-    /// Falls back silently if no MainWindow is available (e.g. in unit tests).
-    /// </summary>
-    private void NotifyFontSizeChanged()
-    {
-        if (System.Windows.Application.Current?.MainWindow?.DataContext is MainWindowViewModel mainVm)
-        {
-            mainVm.FontSizeDisplay = _themeProvider.FontSize.ToString("F0");
-        }
-        else
-        {
-            _logger.LogDebug("NotifyFontSizeChanged: MainWindow.DataContext is not MainWindowViewModel — FontSizeDisplay not updated");
-        }
-    }
-
-    [RelayCommand]
-    private void ToggleTheme()
-    {
-        var newTheme = _themeProvider.CurrentAppTheme == AppTheme.Light
-            ? AppTheme.Dark
-            : AppTheme.Light;
-        _themeProvider.SetAppTheme(newTheme);
-
-        // Update ThemeToggleIcon on MainWindowViewModel so the ChatHeaderBar button
-        // Content binding (Window ancestor) reflects the theme change.
-        if (System.Windows.Application.Current?.MainWindow?.DataContext is MainWindowViewModel mainVm)
-        {
-            mainVm.ThemeToggleIcon = newTheme == AppTheme.Dark ? "🌙" : "☀";
-        }
-    }
-
-    [RelayCommand]
-    private void TogglePinWindow()
-    {
-        var current = System.Windows.Application.Current?.MainWindow;
-        if (current is null) return;
-
-        var isPinned = !current.Topmost;
-        current.Topmost = isPinned;
-        _ = _settingsRepo.SetAsync("PinWindow", isPinned ? "true" : "false");
-    }
 
     // ================================================================
     // Auto-save drafts

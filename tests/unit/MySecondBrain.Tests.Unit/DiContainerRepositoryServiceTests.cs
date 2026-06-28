@@ -64,7 +64,6 @@ public class DiContainerRepositoryServiceTests : IDisposable
         Assert.NotNull(_provider.GetRequiredService<ITextInjectionService>());
         Assert.NotNull(_provider.GetRequiredService<ISpellCheckService>());
         Assert.NotNull(_provider.GetRequiredService<IWikiGitService>());
-        Assert.NotNull(_provider.GetRequiredService<IThemeProvider>());
         // Transient services
         Assert.NotNull(_provider.GetRequiredService<IClipboardService>());
         Assert.NotNull(_provider.GetRequiredService<IAudioService>());
