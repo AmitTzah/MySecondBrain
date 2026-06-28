@@ -2,7 +2,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
-using Markdig.Syntax;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 
@@ -16,20 +15,26 @@ public class ToolCallRenderer : IContentBlockRenderer
     public string RendererName => "ToolCall";
     public int Priority => 700;
 
-    public bool CanRender(MarkdownObject markdownNode) =>
+    // String comparison used because ToolCallBlock is a type from an assembly
+    // not directly referenced by this project. Pattern matching via `is ToolCallBlock`
+    // would require adding that assembly reference.
+    public bool CanRender(object? markdownNode) =>
         markdownNode is not null && markdownNode.GetType().Name == "ToolCallBlock";
 
     public Task RenderAsync(
-        MarkdownObject markdownNode,
+        object? markdownNode,
         FlowDocument targetDocument,
         RenderContext context,
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
-        var toolName = ExtractToolName(markdownNode);
-        var parameters = ExtractParameters(markdownNode);
-        var result = ExtractResult(markdownNode);
+        var fullText = markdownNode?.ToString() ?? string.Empty;
+        var colonIndex = fullText.IndexOf(':');
+        var toolName = colonIndex > 0 ? fullText[..colonIndex].Trim() : fullText;
+        var parameters = colonIndex > 0 && colonIndex < fullText.Length - 1
+            ? fullText[(colonIndex + 1)..].Trim()
+            : string.Empty;
 
         var blockContainer = new BlockUIContainer();
 
@@ -69,65 +74,10 @@ public class ToolCallRenderer : IContentBlockRenderer
             stackPanel.Children.Add(paramsBlock);
         }
 
-        if (!string.IsNullOrEmpty(result))
-        {
-            var resultExpander = new Expander
-            {
-                Header = "Result",
-                IsExpanded = false,
-                FontSize = 11,
-                Margin = new Thickness(0, 2, 0, 0)
-            };
-
-            var resultBlock = new TextBlock
-            {
-                Text = result,
-                TextWrapping = TextWrapping.Wrap,
-                FontSize = 11,
-                FontFamily = new System.Windows.Media.FontFamily("Consolas"),
-                Margin = new Thickness(4)
-            };
-
-            resultExpander.Content = resultBlock;
-            stackPanel.Children.Add(resultExpander);
-        }
-
         border.Child = stackPanel;
         blockContainer.Child = border;
         targetDocument.Blocks.Add(blockContainer);
 
         return Task.CompletedTask;
-    }
-
-    private static string ExtractToolName(MarkdownObject node)
-    {
-        var firstLiteral = node.Descendants<Markdig.Syntax.Inlines.LiteralInline>().FirstOrDefault();
-        var text = firstLiteral?.Content.ToString() ?? string.Empty;
-        var colonIndex = text.IndexOf(':');
-        return colonIndex > 0 ? text[..colonIndex].Trim() : text;
-    }
-
-    private static string ExtractParameters(MarkdownObject node)
-    {
-        var literals = node.Descendants<Markdig.Syntax.Inlines.LiteralInline>()
-            .Select(l => l.Content.ToString());
-        var fullText = string.Join("", literals);
-        var colonIndex = fullText.IndexOf(':');
-        if (colonIndex > 0 && colonIndex < fullText.Length - 1)
-        {
-            var afterColon = fullText[(colonIndex + 1)..].Trim();
-            return afterColon.Length > 200 ? afterColon[..200] + "..." : afterColon;
-        }
-        return string.Empty;
-    }
-
-    private static string ExtractResult(MarkdownObject node)
-    {
-        var paras = node.Descendants<ParagraphBlock>().Skip(1).ToList();
-        var resultTexts = paras
-            .Select(p => string.Join("", p.Inline?.Descendants<Markdig.Syntax.Inlines.LiteralInline>()
-                .Select(l => l.Content.ToString()) ?? []))
-            .Where(t => !string.IsNullOrEmpty(t));
-        return string.Join("\n", resultTexts);
     }
 }

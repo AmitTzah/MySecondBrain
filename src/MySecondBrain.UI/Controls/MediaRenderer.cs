@@ -2,8 +2,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
-using Markdig.Syntax;
-using Markdig.Syntax.Inlines;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 
@@ -11,35 +9,32 @@ namespace MySecondBrain.UI.Controls;
 
 /// <summary>
 /// Renders media/attachment references (audio, video, file attachments) in chat messages.
+/// Note: This renderer is currently bypassed during streaming — MdXaml handles
+/// full Markdown rendering directly. Kept as a custom extension point for
+/// non-standard content blocks.
 /// </summary>
 public class MediaRenderer : IContentBlockRenderer
 {
     public string RendererName => "Media";
     public int Priority => 500;
 
-    public bool CanRender(MarkdownObject markdownNode) =>
-        markdownNode is ParagraphBlock para && ContainsMediaLink(para);
+    public bool CanRender(object? markdownNode) =>
+        markdownNode is not null;
 
     public Task RenderAsync(
-        MarkdownObject markdownNode,
+        object? markdownNode,
         FlowDocument targetDocument,
         RenderContext context,
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
-        if (markdownNode is not ParagraphBlock para)
+        var url = markdownNode?.ToString() ?? string.Empty;
+        if (string.IsNullOrEmpty(url))
             return Task.CompletedTask;
 
-        var linkInline = para.Inline?.Descendants<LinkInline>()
-            .FirstOrDefault(l => !l.IsImage && IsMediaUrl(l.Url));
-
-        if (linkInline is null)
-            return Task.CompletedTask;
-
-        var url = linkInline.Url ?? string.Empty;
-        var displayText = linkInline.FirstChild?.ToString() ?? System.IO.Path.GetFileName(url);
         var extension = System.IO.Path.GetExtension(url)?.ToLowerInvariant() ?? string.Empty;
+        var displayText = System.IO.Path.GetFileName(url);
 
         var container = new BlockUIContainer();
 
@@ -81,13 +76,11 @@ public class MediaRenderer : IContentBlockRenderer
             FontSize = 12
         });
 
-        var typeLabel = string.IsNullOrEmpty(extension)
-            ? "File"
-            : extension.TrimStart('.').ToUpperInvariant() + " file";
-
         textPanel.Children.Add(new TextBlock
         {
-            Text = typeLabel,
+            Text = string.IsNullOrEmpty(extension)
+                ? "File"
+                : extension.TrimStart('.').ToUpperInvariant() + " file",
             FontSize = 10,
             Foreground = System.Windows.Media.Brushes.Gray
         });
@@ -98,23 +91,5 @@ public class MediaRenderer : IContentBlockRenderer
         targetDocument.Blocks.Add(container);
 
         return Task.CompletedTask;
-    }
-
-    private static bool ContainsMediaLink(ParagraphBlock para)
-    {
-        var links = para.Inline?.Descendants<LinkInline>();
-        return links?.Any(l => !l.IsImage && IsMediaUrl(l.Url)) == true;
-    }
-
-    private static bool IsMediaUrl(string? url)
-    {
-        if (string.IsNullOrEmpty(url))
-            return false;
-
-        var ext = System.IO.Path.GetExtension(url)?.ToLowerInvariant();
-        return ext is ".mp3" or ".wav" or ".ogg" or ".flac" or ".m4a"
-            or ".mp4" or ".avi" or ".mov" or ".mkv" or ".webm"
-            or ".pdf" or ".zip" or ".rar" or ".7z" or ".tar" or ".gz"
-            or ".csv" or ".xlsx" or ".xls" or ".doc" or ".docx";
     }
 }

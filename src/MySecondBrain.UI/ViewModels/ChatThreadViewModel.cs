@@ -6,7 +6,6 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using Markdig;
 using Microsoft.Extensions.Logging;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
@@ -965,15 +964,23 @@ public partial class ChatThreadViewModel : ObservableObject
     [RelayCommand]
     private void CopyMd(Message? message)
     {
+        System.Diagnostics.Debug.WriteLine("[DEBUG] CopyMd called with message: " + (message?.Id.ToString() ?? "null"));
+        System.Diagnostics.Debug.WriteLine("[DEBUG] CopyMd message.Content: " + (message?.Content?.Length > 0 ? message.Content[..Math.Min(50, message.Content.Length)] : "empty or null"));
+
         if (message is null || string.IsNullOrEmpty(message.Content))
+        {
+            System.Diagnostics.Debug.WriteLine("[DEBUG] CopyMd returning early - null or empty");
             return;
+        }
 
         try
         {
             System.Windows.Clipboard.SetText(message.Content);
+            System.Diagnostics.Debug.WriteLine("[DEBUG] CopyMd successfully set clipboard text, length: " + message.Content.Length);
         }
         catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine("[DEBUG] CopyMd FAILED: " + ex.Message);
             _logger.LogWarning(ex, "Failed to copy MD to clipboard");
         }
     }
@@ -981,26 +988,38 @@ public partial class ChatThreadViewModel : ObservableObject
     /// <summary>
     /// Copy rich HTML (and plain text) to clipboard so recipients
     /// like Word, Outlook, or rich text editors get formatted content.
-    /// Markdig conversion is run off the UI thread to avoid freezing for large messages.
+    /// Markdown-to-HTML conversion is run off the UI thread to avoid freezing for large messages.
     /// </summary>
     [RelayCommand]
     private async Task CopyRichAsync(Message? message)
     {
+        System.Diagnostics.Debug.WriteLine("[DEBUG] CopyRichAsync called with message: " + (message?.Id.ToString() ?? "null"));
+        System.Diagnostics.Debug.WriteLine("[DEBUG] CopyRichAsync message.Content: " + (message?.Content?.Length > 0 ? message.Content[..Math.Min(50, message.Content.Length)] : "empty or null"));
+
         if (message is null || string.IsNullOrEmpty(message.Content))
+        {
+            System.Diagnostics.Debug.WriteLine("[DEBUG] CopyRichAsync returning early - null or empty");
             return;
+        }
 
         try
         {
-            // Run Markdig conversion off the UI thread to avoid freezing for large messages
-            var html = await Task.Run(() => Markdown.ToHtml(message.Content));
+            // Run Markdown-to-HTML conversion off the UI thread to avoid freezing for large messages
+            var html = await Task.Run(() => MarkdownToHtmlConverter.ToHtml(message.Content)) ?? string.Empty;
+            System.Diagnostics.Debug.WriteLine("[DEBUG] CopyRichAsync HTML generated, length: " + html.Length);
+
+            var wrappedHtml = HtmlClipboardHelper.WrapHtml(html);
+            System.Diagnostics.Debug.WriteLine("[DEBUG] CopyRichAsync wrapped HTML, length: " + (wrappedHtml?.Length ?? 0));
 
             var dataObject = new System.Windows.DataObject();
-            dataObject.SetData(System.Windows.DataFormats.Html, HtmlClipboardHelper.WrapHtml(html));
+            dataObject.SetData(System.Windows.DataFormats.Html, wrappedHtml);
             dataObject.SetData(System.Windows.DataFormats.Text, message.Content);
             System.Windows.Clipboard.SetDataObject(dataObject);
+            System.Diagnostics.Debug.WriteLine("[DEBUG] CopyRichAsync successfully set clipboard data object");
         }
         catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine("[DEBUG] CopyRichAsync FAILED: " + ex.Message);
             _logger.LogWarning(ex, "Failed to copy rich content to clipboard");
         }
     }

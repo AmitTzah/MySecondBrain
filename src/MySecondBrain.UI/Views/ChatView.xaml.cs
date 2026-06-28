@@ -428,6 +428,42 @@ public partial class ChatView : UserControl
         }
         return null;
     }
+
+    private void OnCopyMdClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null) return;
+        var message = (sender as FrameworkElement)?.DataContext as MySecondBrain.Core.Models.Message;
+        _viewModel.CopyMdCommand.Execute(message);
+        ShowCopyFeedback(sender as System.Windows.Controls.Button, "📋 MD");
+    }
+
+    private void OnCopyRichClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null) return;
+        var message = (sender as FrameworkElement)?.DataContext as MySecondBrain.Core.Models.Message;
+        _viewModel.CopyRichCommand.Execute(message);
+        ShowCopyFeedback(sender as System.Windows.Controls.Button, "📄 Rich");
+    }
+
+    /// <summary>
+    /// Temporarily changes the button content to ✅ for 1.5 seconds as visual
+    /// confirmation that the copy operation succeeded, then restores the original text.
+    /// </summary>
+    private static void ShowCopyFeedback(System.Windows.Controls.Button? button, string originalContent)
+    {
+        if (button is null) return;
+        button.Content = "✅";
+        var timer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1.5)
+        };
+        timer.Tick += (_, _) =>
+        {
+            button.Content = originalContent;
+            timer.Stop();
+        };
+        timer.Start();
+    }
 }
 
 /// <summary>

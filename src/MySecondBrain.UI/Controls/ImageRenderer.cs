@@ -3,8 +3,6 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Markdig.Syntax;
-using Markdig.Syntax.Inlines;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 
@@ -12,34 +10,29 @@ namespace MySecondBrain.UI.Controls;
 
 /// <summary>
 /// Renders Markdown images as WPF Image controls with click-to-enlarge.
+/// Note: This renderer is currently bypassed during streaming — MdXaml handles
+/// full Markdown rendering directly. Kept as a custom extension point for
+/// non-standard content blocks.
 /// </summary>
 public class ImageRenderer : IContentBlockRenderer
 {
     public string RendererName => "Image";
     public int Priority => 400;
 
-    public bool CanRender(MarkdownObject markdownNode) =>
-        markdownNode is ParagraphBlock para && ContainsImage(para);
+    public bool CanRender(object? markdownNode) =>
+        markdownNode is not null;
 
     public Task RenderAsync(
-        MarkdownObject markdownNode,
+        object? markdownNode,
         FlowDocument targetDocument,
         RenderContext context,
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
-        if (markdownNode is not ParagraphBlock para)
+        var url = markdownNode?.ToString() ?? string.Empty;
+        if (string.IsNullOrEmpty(url))
             return Task.CompletedTask;
-
-        var linkInline = para.Inline?.Descendants<LinkInline>()
-            .FirstOrDefault(l => l.IsImage);
-
-        if (linkInline is null)
-            return Task.CompletedTask;
-
-        var url = linkInline.Url ?? string.Empty;
-        var altText = linkInline.FirstChild?.ToString() ?? "Image";
 
         var container = new BlockUIContainer();
 
@@ -48,7 +41,7 @@ public class ImageRenderer : IContentBlockRenderer
             MaxWidth = Math.Min(context.AvailableWidth * 0.8, 600),
             MaxHeight = 400,
             Margin = new Thickness(0, 8, 0, 8),
-            ToolTip = altText,
+            ToolTip = url,
             Cursor = System.Windows.Input.Cursors.Hand
         };
 
@@ -107,7 +100,4 @@ public class ImageRenderer : IContentBlockRenderer
 
         return Task.CompletedTask;
     }
-
-    private static bool ContainsImage(ParagraphBlock para) =>
-        para.Inline?.Descendants<LinkInline>().Any(l => l.IsImage) == true;
 }

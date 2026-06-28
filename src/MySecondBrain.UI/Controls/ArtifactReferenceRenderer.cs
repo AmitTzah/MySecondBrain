@@ -1,8 +1,6 @@
 using System.Windows;
 using System.IO;
 using System.Windows.Documents;
-using Markdig.Syntax;
-using Markdig.Syntax.Inlines;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 
@@ -11,9 +9,9 @@ namespace MySecondBrain.UI.Controls;
 /// <summary>
 /// Renders artifact file references in chat messages as clickable links that
 /// navigate the <see cref="ArtifactsWebView2Host"/> panel.
-/// Detects <c>present_files</c> tool call results in the Markdig AST and
-/// produces WPF <see cref="Hyperlink"/> elements that raise the
-/// <see cref="ArtifactNavigationRequested"/> event on click.
+/// Note: This renderer is currently bypassed during streaming — MdXaml handles
+/// full Markdown rendering directly. Kept as a custom extension point for
+/// non-standard content blocks.
 /// </summary>
 public class ArtifactReferenceRenderer : IContentBlockRenderer
 {
@@ -27,49 +25,33 @@ public class ArtifactReferenceRenderer : IContentBlockRenderer
     public string RendererName => "ArtifactReference";
     public int Priority => 300;
 
-    public bool CanRender(MarkdownObject markdownNode) =>
-        markdownNode is LinkInline link
-        && link.Url is not null
-        && IsArtifactReference(link);
+    public bool CanRender(object? markdownNode) =>
+        markdownNode is not null;
 
     public Task RenderAsync(
-        MarkdownObject markdownNode,
+        object? markdownNode,
         FlowDocument targetDocument,
         RenderContext context,
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
-        if (markdownNode is not LinkInline link || link.Url is null)
+        var url = markdownNode?.ToString() ?? string.Empty;
+        if (string.IsNullOrEmpty(url))
             return Task.CompletedTask;
 
-        var filePath = ResolveArtifactPath(link.Url, context);
+        var filePath = ResolveArtifactPath(url, context);
         if (filePath is null)
             return Task.CompletedTask;
 
-        var displayText = link.FirstChild?.ToString() ?? Path.GetFileName(link.Url);
+        var displayText = Path.GetFileName(url);
         RenderArtifactLink(displayText, filePath, targetDocument);
 
         return Task.CompletedTask;
     }
 
-    private static bool IsArtifactReference(LinkInline link)
-    {
-        var url = link.Url;
-        if (string.IsNullOrEmpty(url))
-            return false;
-
-        // Artifact references have a distinctive scheme or path prefix
-        return url.StartsWith("artifact://", StringComparison.OrdinalIgnoreCase)
-            || url.StartsWith("artifacts://", StringComparison.OrdinalIgnoreCase)
-            || url.StartsWith("./artifacts/", StringComparison.OrdinalIgnoreCase)
-            || url.StartsWith("/artifacts/", StringComparison.OrdinalIgnoreCase)
-            || url.StartsWith("artifacts/", StringComparison.OrdinalIgnoreCase);
-    }
-
     private static string? ResolveArtifactPath(string url, RenderContext context)
     {
-        // Strip URI scheme prefix to get the relative file path
         var relativePath = url;
 
         if (relativePath.StartsWith("artifact://", StringComparison.OrdinalIgnoreCase))
@@ -87,7 +69,6 @@ public class ArtifactReferenceRenderer : IContentBlockRenderer
         else if (relativePath.StartsWith("artifacts/", StringComparison.OrdinalIgnoreCase))
             relativePath = relativePath["artifacts/".Length..];
 
-        // Resolve against the chat's artifact directory from context
         var artifactDir = context.ArtifactDirectory;
         if (string.IsNullOrEmpty(artifactDir))
             return null;
@@ -102,7 +83,6 @@ public class ArtifactReferenceRenderer : IContentBlockRenderer
             Margin = new Thickness(0, 4, 0, 4)
         };
 
-        // Icon prefix
         paragraph.Inlines.Add(new Run("📄 ") { FontSize = 14 });
 
         var hyperlink = new Hyperlink(new Run(displayText))

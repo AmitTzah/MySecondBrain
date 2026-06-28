@@ -1,4 +1,3 @@
-using Markdig.Syntax;
 using MySecondBrain.Core.Interfaces;
 
 namespace MySecondBrain.UI.Controls;
@@ -19,6 +18,6 @@ public class ContentRendererRegistry : IContentRendererRegistry
 
     public IReadOnlyList<IContentBlockRenderer> GetRenderers() => _renderers;
 
-    public IContentBlockRenderer? Resolve(MarkdownObject markdownNode) =>
+    public IContentBlockRenderer? Resolve(object? markdownNode) =>
         _renderers.FirstOrDefault(r => r.CanRender(markdownNode));
 }

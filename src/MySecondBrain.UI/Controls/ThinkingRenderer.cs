@@ -2,7 +2,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
-using Markdig.Syntax;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
 
@@ -16,18 +15,21 @@ public class ThinkingRenderer : IContentBlockRenderer
     public string RendererName => "Thinking";
     public int Priority => 600;
 
-    public bool CanRender(MarkdownObject markdownNode) =>
+    // String comparison used because ThinkingBlock is a type from an assembly
+    // not directly referenced by this project. Pattern matching via `is ThinkingBlock`
+    // would require adding that assembly reference.
+    public bool CanRender(object? markdownNode) =>
         markdownNode is not null && markdownNode.GetType().Name == "ThinkingBlock";
 
     public Task RenderAsync(
-        MarkdownObject markdownNode,
+        object? markdownNode,
         FlowDocument targetDocument,
         RenderContext context,
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 
-        var content = ExtractThinkingContent(markdownNode);
+        var content = markdownNode?.ToString() ?? string.Empty;
 
         var blockContainer = new BlockUIContainer();
 
@@ -59,23 +61,5 @@ public class ThinkingRenderer : IContentBlockRenderer
         targetDocument.Blocks.Add(blockContainer);
 
         return Task.CompletedTask;
-    }
-
-    private static string ExtractThinkingContent(MarkdownObject node)
-    {
-        foreach (var child in node.Descendants<ParagraphBlock>())
-        {
-            if (child.Inline is not null)
-            {
-                var text = string.Join("", child.Inline.Descendants<Markdig.Syntax.Inlines.LiteralInline>()
-                    .Select(l => l.Content.ToString()));
-                if (!string.IsNullOrEmpty(text))
-                    return text;
-            }
-        }
-
-        var literals = node.Descendants<Markdig.Syntax.Inlines.LiteralInline>()
-            .Select(l => l.Content.ToString());
-        return string.Join("", literals);
     }
 }

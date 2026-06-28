@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <!-- Markdown -->
-    <PackageReference Include="Markdig" Version="*" />
     <PackageReference Include="MdXaml" Version="1.27.0" />
     
     <!-- LLM SDKs -->
