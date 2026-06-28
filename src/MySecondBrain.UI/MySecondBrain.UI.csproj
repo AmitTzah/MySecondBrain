@@ -16,8 +16,12 @@
   <ItemGroup>
     <PackageReference Include="AvalonEdit" Version="6.3.*" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
-    <PackageReference Include="MdXaml" Version="1.27.0" />
-    <PackageReference Include="MdXaml.Html" Version="1.27.0" />
+    <!-- MdXaml v2.0.0-pre with SyntaxHigh plugin for AvalonEdit syntax highlighting.
+         All MdXaml packages must stay at the same prerelease version. -->
+    <PackageReference Include="MdXaml" Version="2.0.0-pre202603081301" />
+    <PackageReference Include="MdXaml.Html" Version="2.0.0-pre202603081301" />
+    <PackageReference Include="MdXaml.Plugins" Version="2.0.0-pre202603081301" />
+    <PackageReference Include="MdXaml.SyntaxHigh" Version="2.0.0-pre202603081301" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.*" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.*" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.*" />

@@ -1,7 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:converters="clr-namespace:MySecondBrain.UI.Converters"
-                    xmlns:mdxam="clr-namespace:MdXaml;assembly=MdXaml">
+                    xmlns:mdxam="clr-namespace:MdXaml.SyntaxHigh;assembly=MdXaml.SyntaxHigh">
 
     <converters:RelativeTimeConverter x:Key="ThemeRelativeTimeConverter"/>
     <converters:FlowDirectionConverter x:Key="ThemeFlowDirectionConverter"/>
@@ -20,6 +20,7 @@
                     BorderBrush="{DynamicResource AccentBrush}"
                     Background="{DynamicResource AccentBrush}">
                 <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                         MarkdownStyleName="Sasabune"
                                          FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
                                          VerticalScrollBarVisibility="Hidden"
                                          HorizontalScrollBarVisibility="Disabled"
@@ -48,6 +49,7 @@
                     BorderBrush="{DynamicResource BorderBrush}"
                     Background="{DynamicResource ContentBackground}">
                 <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                         MarkdownStyleName="Sasabune"
                                          FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
                                          VerticalScrollBarVisibility="Hidden"
                                          HorizontalScrollBarVisibility="Disabled"
@@ -72,6 +74,7 @@
                 <Ellipse Width="8" Height="8" Margin="0,0,6,0"
                          Fill="{DynamicResource AccentBrush}"/>
                 <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                         MarkdownStyleName="Sasabune"
                                          FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
                                          VerticalScrollBarVisibility="Hidden"
                                          HorizontalScrollBarVisibility="Disabled"
@@ -87,6 +90,7 @@
                 <Ellipse Width="8" Height="8" Margin="0,0,6,0"
                          Fill="{DynamicResource AccentBrush}"/>
                 <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                         MarkdownStyleName="Sasabune"
                                          FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
                                          VerticalScrollBarVisibility="Hidden"
                                          HorizontalScrollBarVisibility="Disabled"
@@ -104,6 +108,7 @@
                     HorizontalAlignment="Right" Opacity="0.9">
                 <StackPanel FlowDirection="RightToLeft">
                     <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                             MarkdownStyleName="Sasabune"
                                              FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
                                              VerticalScrollBarVisibility="Hidden"
                                              HorizontalScrollBarVisibility="Disabled"
@@ -132,6 +137,7 @@
                     HorizontalAlignment="Left" Opacity="0.9">
                 <StackPanel>
                     <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                             MarkdownStyleName="Sasabune"
                                              FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
                                              VerticalScrollBarVisibility="Hidden"
                                              HorizontalScrollBarVisibility="Disabled"
@@ -158,6 +164,7 @@
                        Foreground="{DynamicResource SubtleBrush}"
                        Text="Message" Margin="0,0,0,2"/>
             <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                     MarkdownStyleName="Sasabune"
                                      FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
                                      VerticalScrollBarVisibility="Hidden"
                                      HorizontalScrollBarVisibility="Disabled"
@@ -172,6 +179,7 @@
                 <Ellipse Width="8" Height="8" Margin="0,0,6,0"
                          Fill="{DynamicResource AccentBrush}"/>
                 <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                         MarkdownStyleName="Sasabune"
                                          FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
                                          VerticalScrollBarVisibility="Hidden"
                                          HorizontalScrollBarVisibility="Disabled"
@@ -189,6 +197,7 @@
                     HorizontalAlignment="Left" Opacity="0.85">
                 <StackPanel>
                     <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                             MarkdownStyleName="Sasabune"
                                              FlowDirection="{Binding Content, Converter={StaticResource ThemeFlowDirectionConverter}}"
                                              VerticalScrollBarVisibility="Hidden"
                                              HorizontalScrollBarVisibility="Disabled"

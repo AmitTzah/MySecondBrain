@@ -6,7 +6,7 @@
              xmlns:controls="clr-namespace:MySecondBrain.UI.Controls"
              xmlns:models="clr-namespace:MySecondBrain.Core.Models;assembly=MySecondBrain.Core"
              xmlns:converters="clr-namespace:MySecondBrain.UI.Converters"
-             xmlns:mdxam="clr-namespace:MdXaml;assembly=MdXaml"
+             xmlns:mdxam="clr-namespace:MdXaml.SyntaxHigh;assembly=MdXaml.SyntaxHigh"
              Background="{DynamicResource ContentBackground}"
              AutomationProperties.AutomationId="ChatView">
 

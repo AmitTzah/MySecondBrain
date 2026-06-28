@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <!-- Markdown -->
-    <PackageReference Include="MdXaml" Version="1.27.0" />
+    <PackageReference Include="MdXaml" Version="2.0.0-pre202603081301" />
     
     <!-- LLM SDKs -->
     <PackageReference Include="OpenAI" Version="*" />
