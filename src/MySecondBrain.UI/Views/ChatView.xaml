@@ -34,18 +34,19 @@
                     <!-- Role label (slightly above the bubble, right-aligned) -->
                     <TextBlock Text="You"
                                FontSize="11" FontWeight="SemiBold"
-                               Foreground="{DynamicResource AccentFillColorDefaultBrush}"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                HorizontalAlignment="Right"
                                Margin="0,0,14,2"/>
 
-                    <!-- Message bubble (right-aligned, sender side) -->
-                    <Border Background="{DynamicResource AccentFillColorDefaultBrush}"
-                            CornerRadius="8,8,2,8"
-                            Padding="12,8"
-                            MaxWidth="600"
+                    <!-- Message bubble (right-aligned, soft blue-grey, wraps to text) -->
+                    <Border Background="#E8EEF4"
+                            CornerRadius="12"
+                            Padding="16,12"
+                            MaxWidth="1000"
                             HorizontalAlignment="Right">
                         <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
                                                      MarkdownStyleName="Sasabune"
+                                                     Foreground="#1A202C"
                                                      FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
                                                      VerticalScrollBarVisibility="Hidden"
                                                      HorizontalScrollBarVisibility="Disabled"
@@ -91,33 +92,26 @@
                     <!-- Role label -->
                     <TextBlock Text="{Binding Source={RelativeSource AncestorType=UserControl}, Path=DataContext.ActivePersona.DisplayName, FallbackValue='Assistant'}"
                                FontSize="11" FontWeight="SemiBold"
-                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                               Margin="12,0,0,2"/>
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Margin="24,12,0,2"/>
 
-                    <!-- Message bubble -->
-                    <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                            CornerRadius="2,8,8,8"
-                            Padding="12,8"
-                            MaxWidth="600"
-                            HorizontalAlignment="Left"
-                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1">
-                        <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
-                                                     MarkdownStyleName="Sasabune"
-                                                     FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
-                                                     VerticalScrollBarVisibility="Hidden"
-                                                     HorizontalScrollBarVisibility="Disabled"
-                                                     MinHeight="20">
-                            <mdxam:MarkdownScrollViewer.Style>
-                                <Style TargetType="mdxam:MarkdownScrollViewer">
-                                    <Setter Property="Background" Value="Transparent"/>
-                                </Style>
-                            </mdxam:MarkdownScrollViewer.Style>
-                        </mdxam:MarkdownScrollViewer>
-                    </Border>
+                    <!-- Plain left-aligned text (no bubble) -->
+                    <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                                 MarkdownStyleName="Sasabune"
+                                                 FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
+                                                 VerticalScrollBarVisibility="Hidden"
+                                                 HorizontalScrollBarVisibility="Disabled"
+                                                 MinHeight="20"
+                                                 Margin="24,4,24,8">
+                        <mdxam:MarkdownScrollViewer.Style>
+                            <Style TargetType="mdxam:MarkdownScrollViewer">
+                                <Setter Property="Background" Value="Transparent"/>
+                            </Style>
+                        </mdxam:MarkdownScrollViewer.Style>
+                    </mdxam:MarkdownScrollViewer>
 
                     <!-- Action buttons (Copy MD, Copy Rich, Regenerate, Continue, Favorite) — always visible -->
-                    <StackPanel Orientation="Horizontal" Margin="12,2,0,0">
+                    <StackPanel Orientation="Horizontal" Margin="24,0,0,12">
                         <!-- Favorite star -->
                         <Button Content="{Binding IsFavorited, Converter={StaticResource BoolToFavoriteConverter}}"
                                 FontSize="12"
@@ -301,6 +295,7 @@
 
                 <!-- Virtualizing message list -->
                 <ScrollViewer x:Name="MessageScrollViewer"
+                              HorizontalAlignment="Stretch"
                               HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto"
                               ScrollChanged="MessageScrollViewer_ScrollChanged"
@@ -311,6 +306,7 @@
                              VirtualizingStackPanel.VirtualizationMode="Recycling"
                              BorderThickness="0"
                              Background="Transparent"
+                             Padding="24,10"
                              AutomationProperties.AutomationId="MessageList">
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate>
