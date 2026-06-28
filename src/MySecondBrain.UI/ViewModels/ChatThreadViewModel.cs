@@ -338,6 +338,51 @@ public partial class ChatThreadViewModel : ObservableObject
     private long _timeRefreshToken;
 
     // ================================================================
+    // Font size properties
+    // ================================================================
+
+    /// <summary>
+    /// Current chat font size. Adjusted by A⁻/A⁺ buttons in the header bar.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FontSizeDisplay))]
+    private double _chatFontSize = 14.0;
+
+    /// <summary>
+    /// Monotonically-increasing version that increments on each font size change.
+    /// Acts as a binding trigger: when bound alongside ChatFontSize in a
+    /// MultiBinding, the binding re-evaluates on every increment regardless of
+    /// whether ChatFontSize itself changed. Analogous to TimeRefreshToken.
+    /// </summary>
+    [ObservableProperty]
+    private int _fontSizeVersion;
+
+    /// <summary>
+    /// Formatted display string for the current font size (e.g., "14").
+    /// </summary>
+    public string FontSizeDisplay => $"{(int)ChatFontSize}";
+
+    [RelayCommand]
+    private void IncreaseFont()
+    {
+        if (ChatFontSize < 24)
+        {
+            ChatFontSize++;
+            FontSizeVersion++;
+        }
+    }
+
+    [RelayCommand]
+    private void DecreaseFont()
+    {
+        if (ChatFontSize > 10)
+        {
+            ChatFontSize--;
+            FontSizeVersion++;
+        }
+    }
+
+    // ================================================================
     // Error state properties
     // ================================================================
 

@@ -46,6 +46,7 @@
                             HorizontalAlignment="Right">
                         <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
                                                      MarkdownStyleName="Sasabune"
+                                                     FontSize="{Binding DataContext.ChatFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                      Foreground="#1A202C"
                                                      FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
                                                      VerticalScrollBarVisibility="Hidden"
@@ -98,6 +99,7 @@
                     <!-- Plain left-aligned text (no bubble) -->
                     <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
                                                  MarkdownStyleName="Sasabune"
+                                                 FontSize="{Binding DataContext.ChatFontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                  FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
                                                  VerticalScrollBarVisibility="Hidden"
                                                  HorizontalScrollBarVisibility="Disabled"

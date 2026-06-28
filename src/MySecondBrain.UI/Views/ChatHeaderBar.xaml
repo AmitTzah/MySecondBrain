@@ -35,8 +35,8 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
@@ -112,7 +112,7 @@
                                    FontSize="11"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    VerticalAlignment="Center"/>
-                        <!-- 7. [Apply Latest] Button (grayed out) -->
+                        <!-- [Apply Latest] Button (grayed out) -->
                         <Button Content="[Apply Latest]"
                                 FontSize="11"
                                 Background="Transparent"
@@ -125,7 +125,34 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 8. Spacer (auto-fills via * column) -->
+                <!-- 7. Spacer (auto-fills via * column) -->
+
+                <!-- 8. Font size controls -->
+                <StackPanel Grid.Column="7"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Margin="0,0,6,0">
+                    <Button Content="A⁻"
+                            FontSize="11"
+                            Padding="4,2"
+                            Style="{StaticResource HeaderButtonStyle}"
+                            Command="{Binding DecreaseFontCommand}"
+                            ToolTip="Decrease font size"
+                            AutomationProperties.AutomationId="DecreaseFontBtn"/>
+                    <TextBlock Text="{Binding FontSizeDisplay}"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               MinWidth="20"
+                               TextAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                    <Button Content="A⁺"
+                            FontSize="11"
+                            Padding="4,2"
+                            Style="{StaticResource HeaderButtonStyle}"
+                            Command="{Binding IncreaseFontCommand}"
+                            ToolTip="Increase font size"
+                            AutomationProperties.AutomationId="IncreaseFontBtn"/>
+                </StackPanel>
 
                 <!-- 9. Help Button (with dropdown) -->
                 <Button Grid.Column="8"
@@ -198,6 +225,8 @@
                         </ContextMenu>
                     </Button.ContextMenu>
                 </Button>
+
+                <!-- 10. Three-Dot Menu -->
 
                 <!-- 11. Pin Window Toggle -->
                 <Button Grid.Column="10"
