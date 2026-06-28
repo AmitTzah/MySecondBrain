@@ -27,6 +27,7 @@ public class LLMProviderService : ILLMProviderService
         Persona persona,
         ModelConfiguration modelConfig,
         IReadOnlyList<ToolDefinition>? tools,
+        IReadOnlyList<ChatMessage>? history,
         [EnumeratorCancellation] CancellationToken ct)
     {
         var provider = _providerFactory.GetProvider(modelConfig.ProviderType, modelConfig.EndpointUrl);
@@ -41,12 +42,12 @@ public class LLMProviderService : ILLMProviderService
             provider.ProviderName, modelConfig.ProviderType, modelConfig.EndpointUrl ?? "(default)",
             modelConfig.ModelIdentifier);
 
-        var messages = BuildMessages(persona, userMessage);
+        var messages = BuildMessages(persona, userMessage, history);
         var request = new ChatRequest(messages, modelConfig, tools, persona.SystemPrompt);
 
         _logger.LogInformation(
-            "ChatStreamAsync: built request for {Provider}, messages={MsgCount}, sysPrompt={SysLen}chars",
-            provider.ProviderName, messages.Count, persona.SystemPrompt?.Length ?? 0);
+            "ChatStreamAsync: built request for {Provider}, messages={MsgCount}, sysPrompt={SysLen}chars, history={HistCount}",
+            provider.ProviderName, messages.Count, persona.SystemPrompt?.Length ?? 0, history?.Count ?? 0);
 
         await foreach (var chunk in provider.ChatStreamAsync(request, ct))
             yield return chunk;
@@ -57,6 +58,7 @@ public class LLMProviderService : ILLMProviderService
         string userMessage,
         Persona persona,
         ModelConfiguration modelConfig,
+        IReadOnlyList<ChatMessage>? history,
         CancellationToken ct)
     {
         var provider = _providerFactory.GetProvider(modelConfig.ProviderType, modelConfig.EndpointUrl);
@@ -66,7 +68,7 @@ public class LLMProviderService : ILLMProviderService
             return new ChatResponse(string.Empty, null, null, "error", new UsageInfo(0, 0, 0));
         }
 
-        var messages = BuildMessages(persona, userMessage);
+        var messages = BuildMessages(persona, userMessage, history);
         var request = new ChatRequest(messages, modelConfig, null, persona.SystemPrompt);
 
         return await provider.ChatAsync(request, ct);
@@ -122,15 +124,23 @@ public class LLMProviderService : ILLMProviderService
         new(false, 0, config.MaxOutputTokens, 0, ContextOverflowStrategy.HardStop);
 
     /// <summary>
-    /// Builds a minimal chat message list from the persona's system prompt
-    /// and the user's current message.
+    /// Builds the full chat message list: system prompt (if any), conversation history,
+    /// and the user's current message. History messages are interleaved in their original
+    /// user/assistant order between the system prompt and the current message.
     /// </summary>
-    private static IReadOnlyList<ChatMessage> BuildMessages(Persona persona, string userMessage)
+    private static IReadOnlyList<ChatMessage> BuildMessages(
+        Persona persona,
+        string userMessage,
+        IReadOnlyList<ChatMessage>? history)
     {
-        var msgs = new List<ChatMessage>(2);
+        var capacity = (string.IsNullOrEmpty(persona.SystemPrompt) ? 0 : 1) + (history?.Count ?? 0) + 1;
+        var msgs = new List<ChatMessage>(capacity);
 
         if (!string.IsNullOrEmpty(persona.SystemPrompt))
             msgs.Add(new ChatMessage("system", persona.SystemPrompt));
+
+        if (history is not null)
+            msgs.AddRange(history);
 
         msgs.Add(new ChatMessage("user", userMessage));
 

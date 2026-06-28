@@ -3,38 +3,32 @@ using System.Windows.Documents;
 
 using Microsoft.Extensions.Logging;
 
-using Markdig;
-using Markdig.Syntax;
+using MdXaml;
 
-using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
-using MySecondBrain.Core.Utilities;
 
 namespace MySecondBrain.Services.Chat;
 
 /// <summary>
 /// Receives streaming Markdown tokens from an IAsyncEnumerable and progressively
-/// renders them into a WPF FlowDocument by re-parsing the accumulated buffer on
-/// each token. Handles partial/incomplete Markdown gracefully (e.g., an unclosed
-/// code fence mid-stream) without crashing — parse failures are silently swallowed
-/// and retried on the next token.
+/// renders them into a WPF FlowDocument by re-parsing the accumulated buffer using
+/// MdXaml's <see cref="Markdown.Transform"/> on each token.
+/// Handles partial/incomplete Markdown gracefully (e.g., an unclosed code fence
+/// mid-stream) without crashing — transform failures are silently swallowed and
+/// retried on the next token.
 /// </summary>
 public class MarkdownStreamRenderer
 {
-    private readonly IContentRendererRegistry _registry;
     private readonly ILogger<MarkdownStreamRenderer> _logger;
-    private readonly MarkdownPipeline _pipeline;
+    private readonly Markdown _mdEngine = new();
     private readonly StringBuilder _buffer = new();
     private FlowDocument? _targetDocument;
     private RenderContext? _context;
 
     public MarkdownStreamRenderer(
-        IContentRendererRegistry registry,
         ILogger<MarkdownStreamRenderer> logger)
     {
-        _registry = registry;
         _logger = logger;
-        _pipeline = MarkdownHelper.Pipeline;
     }
 
     /// <summary>
@@ -81,12 +75,13 @@ public class MarkdownStreamRenderer
 
     /// <summary>
     /// Re-parse the entire accumulated buffer and rebuild the FlowDocument
-    /// from scratch. This is intentionally simple — for long streaming sessions
-    /// the re-parse overhead is negligible compared to the LLM response time.
+    /// from scratch using MdXaml. This is intentionally simple — for long
+    /// streaming sessions the re-parse overhead is negligible compared to
+    /// the LLM response time.
     ///
     /// Partial/incomplete Markdown (e.g., an unclosed code fence mid-stream)
-    /// will NOT crash the renderer. Parse failures are swallowed and retried
-    /// on the next token.
+    /// will NOT crash the renderer. Transform failures are swallowed and
+    /// retried on the next token.
     /// </summary>
     private void IncrementalRender()
     {
@@ -97,27 +92,28 @@ public class MarkdownStreamRenderer
 
         try
         {
-            var document = Markdown.Parse(markdown, _pipeline);
+            // MdXaml parses the full markdown and produces a complete FlowDocument.
+            // We copy blocks from the fresh document into the target to avoid
+            // needing to reassign the Document property (which would unbind it).
+            var newDoc = _mdEngine.Transform(markdown);
 
-            // Clear existing blocks and rebuild
             _targetDocument.Blocks.Clear();
 
-            foreach (var block in document)
+            // Copy blocks from the new document to the target
+            var blocksToCopy = newDoc.Blocks.ToList();
+            foreach (var block in blocksToCopy)
             {
-                var renderer = _registry.Resolve(block);
-                if (renderer is not null && _context is not null)
-                {
-                    renderer.RenderAsync(block, _targetDocument, _context, CancellationToken.None)
-                        .GetAwaiter()
-                        .GetResult();
-                }
+                newDoc.Blocks.Remove(block);
+                _targetDocument.Blocks.Add(block);
             }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
-            // Partial/incomplete Markdown can cause parse failures (e.g., unclosed code fence).
-            // Swallow and retry on next token — the buffer will eventually become valid.
-            _logger.LogDebug(ex, "Incremental parse failed, will retry on next token. Buffer length: {Length}", markdown.Length);
+            // Partial/incomplete Markdown can cause transform failures (e.g.,
+            // unclosed code fence). Swallow and retry on next token.
+            _logger.LogDebug(ex,
+                "Incremental MdXaml transform failed, will retry on next token. Buffer length: {Length}",
+                markdown.Length);
         }
     }
 }

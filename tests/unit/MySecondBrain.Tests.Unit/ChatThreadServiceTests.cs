@@ -170,6 +170,7 @@ public class ChatThreadServiceTests : IDisposable
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
                 It.IsAny<IReadOnlyList<ToolDefinition>>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .Returns(streamChunks);
 
@@ -222,6 +223,7 @@ public class ChatThreadServiceTests : IDisposable
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
                 It.IsAny<IReadOnlyList<ToolDefinition>>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .Returns(() => CancellingStream("Partial response...", cts));
 
@@ -258,6 +260,7 @@ public class ChatThreadServiceTests : IDisposable
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
                 It.IsAny<IReadOnlyList<ToolDefinition>>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .Returns(streamChunks);
 
@@ -267,6 +270,7 @@ public class ChatThreadServiceTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("LLM unavailable"));
 
@@ -345,6 +349,7 @@ public class ChatThreadServiceTests : IDisposable
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
                 It.IsAny<IReadOnlyList<ToolDefinition>>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .Returns(streamChunks);
 
@@ -410,6 +415,7 @@ public class ChatThreadServiceTests : IDisposable
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
                 It.IsAny<IReadOnlyList<ToolDefinition>>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .Returns(streamChunks);
 
@@ -547,6 +553,92 @@ public class ChatThreadServiceTests : IDisposable
         Assert.Equal("m1", results[0].MessageId);
         Assert.Contains("meaning", results[0].Snippet);
         Assert.Equal("User", results[0].Role);
+    }
+
+    // ================================================================
+    // SendMessageAsync — History
+    // ================================================================
+
+    [Fact]
+    public async Task SendMessageAsync_PassesConversationHistoryToLLM()
+    {
+        // Arrange
+        var service = CreateService();
+        var threadId = "thread-001";
+        var thread = new ChatThread { Id = threadId, PersonaId = _defaultPersona.Id };
+
+        // Prior conversation: user asked a question, assistant replied
+        var priorUserMsg = new CoreModels.Message
+        {
+            Id = "prior-user",
+            ThreadId = threadId,
+            Role = "User",
+            Content = "What is the capital of France?",
+            BranchId = "branch-001",
+            IsActiveBranch = true,
+            ParentMessageId = null,
+        };
+        var priorAssistantMsg = new CoreModels.Message
+        {
+            Id = "prior-assistant",
+            ThreadId = threadId,
+            Role = "Assistant",
+            Content = "The capital of France is Paris.",
+            BranchId = "branch-001",
+            IsActiveBranch = true,
+            ParentMessageId = "prior-user",
+        };
+
+        _threadRepoMock.Setup(r => r.GetByIdAsync(threadId)).ReturnsAsync(thread);
+        _personaRepoMock.Setup(r => r.GetByIdAsync(_defaultPersona.Id)).ReturnsAsync(_defaultPersona);
+        _modelConfigRepoMock.Setup(r => r.GetByIdAsync(_defaultModelConfig.Id)).ReturnsAsync(_defaultModelConfig);
+        _messageRepoMock.Setup(r => r.CreateAsync(It.IsAny<CoreModels.Message>())).ReturnsAsync((CoreModels.Message m) => m);
+        _messageRepoMock.Setup(r => r.UpdateAsync(It.IsAny<CoreModels.Message>())).Returns(Task.CompletedTask);
+        _messageRepoMock.Setup(r => r.GetActiveBranchAsync(threadId)).ReturnsAsync(new List<CoreModels.Message> { priorUserMsg, priorAssistantMsg });
+        _threadRepoMock.Setup(r => r.UpdateAsync(It.IsAny<ChatThread>())).Returns(Task.CompletedTask);
+        _usageRepoMock.Setup(r => r.RecordUsageAsync(It.IsAny<UsageRecord>())).Returns(Task.CompletedTask);
+
+        // Capture the history argument passed to ChatStreamAsync
+        IReadOnlyList<ChatMessage>? capturedHistory = null;
+        var streamChunks = GetStreamChunks("Paris has been the capital since the 3rd century.", "stop");
+        _llmServiceMock
+            .Setup(s => s.ChatStreamAsync(
+                It.IsAny<ChatThread>(),
+                It.IsAny<string>(),
+                It.IsAny<Persona>(),
+                It.IsAny<ModelConfiguration>(),
+                It.IsAny<IReadOnlyList<ToolDefinition>>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback((ChatThread t, string msg, Persona p, ModelConfiguration c, IReadOnlyList<ToolDefinition>? tools, IReadOnlyList<ChatMessage>? history, CancellationToken ct) =>
+            {
+                capturedHistory = history;
+            })
+            .Returns(streamChunks);
+
+        // Title generator throws so we don't need to mock extra calls
+        _llmServiceMock
+            .Setup(s => s.ChatAsync(
+                It.IsAny<ChatThread>(),
+                It.IsAny<string>(),
+                It.IsAny<Persona>(),
+                It.IsAny<ModelConfiguration>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("LLM unavailable"));
+
+        // Act
+        await service.SendMessageAsync(threadId, "Tell me more about Paris.", CancellationToken.None);
+
+        // Assert — history contains the prior user and assistant messages
+        Assert.NotNull(capturedHistory);
+        Assert.Equal(2, capturedHistory.Count);
+
+        Assert.Equal("user", capturedHistory[0].Role);
+        Assert.Equal("What is the capital of France?", capturedHistory[0].Content);
+
+        Assert.Equal("assistant", capturedHistory[1].Role);
+        Assert.Equal("The capital of France is Paris.", capturedHistory[1].Content);
     }
 
     // ================================================================

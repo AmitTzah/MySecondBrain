@@ -24,7 +24,7 @@ public class ChatThreadViewModelTests
     private readonly Mock<IConfirmationService> _confirmationServiceMock = new();
     private readonly Mock<IThemeProvider> _themeProviderMock = new();
     private readonly Mock<ILogger<ChatThreadViewModel>> _loggerMock = new();
-    private readonly Mock<MarkdownStreamRenderer> _streamRendererMock = new(Mock.Of<IContentRendererRegistry>(), Mock.Of<ILogger<MarkdownStreamRenderer>>());
+    private readonly Mock<MarkdownStreamRenderer> _streamRendererMock = new(Mock.Of<ILogger<MarkdownStreamRenderer>>());
     private readonly Mock<LockedChatService> _lockedChatServiceMock = new(
         Mock.Of<IChatEncryptionService>(),
         Mock.Of<IChatThreadRepository>(),
@@ -2109,5 +2109,91 @@ public class ChatThreadViewModelTests
         Assert.NotSame(sourceTab, vm.ActiveTab);
         Assert.NotNull(vm.ActiveTab!.ActivePersona);
         Assert.Equal("Custom Writer", vm.ActiveTab.ActivePersona!.DisplayName);
+    }
+
+    // ================================================================
+    // Regression tests: Bugfix verification
+    // ================================================================
+
+    [Fact]
+    public async Task RegenerateAsync_WithAssistantRole_CallsService()
+    {
+        var vm = CreateViewModel();
+        var thread = new ChatThread { Id = "thread-1", PersonaId = _customPersona.Id };
+        var tab = new ChatTabItem(thread);
+        tab.Messages.Add(new Message { Id = "msg-user", Role = "User", Content = "hello", ThreadId = "thread-1" });
+        tab.Messages.Add(new Message { Id = "msg-assistant", Role = "Assistant", Content = "response", ThreadId = "thread-1" });
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+        _chatServiceMock.Setup(s => s.RegenerateAsync("msg-assistant", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Message { Id = "msg-new", Role = "Assistant", Content = "new", ThreadId = "thread-1" });
+        _chatServiceMock.Setup(s => s.GetActiveBranchMessagesAsync("thread-1"))
+            .ReturnsAsync(new List<Message> { new() { Id = "msg-assistant", Role = "Assistant" } });
+        await vm.RegenerateCommand.ExecuteAsync(null);
+        _chatServiceMock.Verify(s => s.RegenerateAsync("msg-assistant", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegenerateAsync_WithLowercaseRole_CallsService()
+    {
+        var vm = CreateViewModel();
+        var thread = new ChatThread { Id = "thread-1", PersonaId = _customPersona.Id };
+        var tab = new ChatTabItem(thread);
+        tab.Messages.Add(new Message { Id = "msg-user", Role = "User", Content = "hello", ThreadId = "thread-1" });
+        tab.Messages.Add(new Message { Id = "msg-assistant", Role = "assistant", Content = "resp", ThreadId = "thread-1" });
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+        _chatServiceMock.Setup(s => s.RegenerateAsync("msg-assistant", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Message { Id = "msg-new", Role = "Assistant", Content = "new", ThreadId = "thread-1" });
+        _chatServiceMock.Setup(s => s.GetActiveBranchMessagesAsync("thread-1"))
+            .ReturnsAsync(new List<Message> { new() { Id = "msg-assistant", Role = "assistant" } });
+        await vm.RegenerateCommand.ExecuteAsync(null);
+        _chatServiceMock.Verify(s => s.RegenerateAsync("msg-assistant", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RegenerateAsync_WithUserRole_SkipsCall()
+    {
+        var vm = CreateViewModel();
+        var thread = new ChatThread { Id = "thread-1", PersonaId = _customPersona.Id };
+        var tab = new ChatTabItem(thread);
+        tab.Messages.Add(new Message { Id = "msg-user", Role = "User", Content = "hello", ThreadId = "thread-1" });
+        vm.ChatTabs.Add(tab);
+        vm.ActiveTab = tab;
+        await vm.RegenerateCommand.ExecuteAsync(null);
+        _chatServiceMock.Verify(s => s.RegenerateAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public void IsScrolledUp_DefaultIsFalse()
+    {
+        var vm = CreateViewModel();
+        Assert.False(vm.IsScrolledUp);
+    }
+
+    [Fact]
+    public void IsScrolledUp_SetToTrue_RaisesPropertyChanged()
+    {
+        var vm = CreateViewModel();
+        var raised = false;
+        vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(ChatThreadViewModel.IsScrolledUp)) raised = true; };
+        vm.IsScrolledUp = true;
+        Assert.True(vm.IsScrolledUp);
+        Assert.True(raised);
+    }
+
+    [Fact]
+    public void CopyRichCommand_CanExecute_WithMessage()
+    {
+        var vm = CreateViewModel();
+        var msg = new Message { Id = "msg-1", Role = "Assistant", Content = "**bold**" };
+        Assert.True(vm.CopyRichCommand.CanExecute(msg));
+    }
+
+    [Fact]
+    public void CopyRichCommand_CanExecute_WithNull()
+    {
+        var vm = CreateViewModel();
+        Assert.True(vm.CopyRichCommand.CanExecute(null));
     }
 }

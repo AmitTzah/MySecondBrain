@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
+using MdXaml;
 using Microsoft.Extensions.DependencyInjection;
 using MySecondBrain.Core.Interfaces;
 using MySecondBrain.Core.Models;
@@ -21,6 +22,15 @@ public partial class ChatView : UserControl
     private static int s_instanceCounter;
     private readonly int _instanceId = Interlocked.Increment(ref s_instanceCounter);
 
+    // ═══ Streaming rendering fix ════════════════════════════════════════
+    /// <summary>50ms DispatcherTimer that finds the last ListBox item's
+    /// <c>MarkdownScrollViewer</c> and sets its <c>Markdown</c> property directly
+    /// to the accumulated streaming content, bypassing the binding system.</summary>
+    private readonly System.Windows.Threading.DispatcherTimer _streamingTimer;
+
+    /// <summary>Tracks the last rendered content to avoid redundant updates.</summary>
+    private string _lastStreamedContent = string.Empty;
+
     public ChatView()
     {
         InitializeComponent();
@@ -32,6 +42,19 @@ public partial class ChatView : UserControl
 
         Log.Debug("[ThemeDiag] ChatView #{InstanceId} constructed, DataContext={DC}, current global theme={Theme}",
             _instanceId, DataContext?.GetType().Name, _themeProvider?.CurrentChatTheme);
+
+        // ═══ Streaming timer setup (BEFORE Unloaded handler that references it) ═══
+        // 50ms DispatcherTimer at Render priority. Timer callback finds the
+        // last ListBox item's MarkdownScrollViewer and sets its Markdown
+        // property directly to StreamingContent, bypassing the binding.
+        // The streaming message was added to the ObservableCollection ONCE by
+        // OnStreamChunkReceived — no RemoveAt/Insert during streaming.
+        _streamingTimer = new System.Windows.Threading.DispatcherTimer(
+            TimeSpan.FromMilliseconds(50),
+            System.Windows.Threading.DispatcherPriority.Render,
+            OnStreamingTimerTick,
+            System.Windows.Application.Current?.Dispatcher
+                ?? System.Windows.Threading.Dispatcher.CurrentDispatcher);
 
         // Per-tab theme handling: subscribe to ViewModel property changes
         // instead of the global IThemeProvider.ChatThemeChanged event.
@@ -47,6 +70,9 @@ public partial class ChatView : UserControl
                     _instanceId);
                 if (_viewModel is not null)
                     _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+
+                // Stop streaming timer on unload
+                _streamingTimer.Stop();
             };
 
             // Theme is applied via PropertyChanged when InitializeAsync seeds
@@ -82,6 +108,10 @@ public partial class ChatView : UserControl
                     _instanceId,
                     lb?.ItemsSource != null,
                     lb?.Items.Count ?? -1);
+
+                // Start the streaming rendering timer (runs continuously — cheap when idle)
+                if (!_streamingTimer.IsEnabled)
+                    _streamingTimer.Start();
             }
             catch (Exception ex)
             {
@@ -89,7 +119,7 @@ public partial class ChatView : UserControl
             }
         };
 
-        // Register Ctrl+N to create a new chat (always — persona picker is a separate action)
+        // Wire the ScrollToBottomButton to the MessageScrollViewer\r\n        if (ScrollToBottomBtn is not null)\r\n            ScrollToBottomBtn.TargetScrollViewer = MessageScrollViewer;\r\n\r\n        // Register Ctrl+N to create a new chat (always — persona picker is a separate action)
         var newChatBinding = new KeyBinding
         {
             Key = Key.N,
@@ -97,6 +127,48 @@ public partial class ChatView : UserControl
             Command = new RelayCommandAdapter(() => _viewModel?.NewChatCommand.Execute(null))
         };
         InputBindings.Add(newChatBinding);
+
+    }
+
+    /// <summary>
+    /// Timer callback: finds the last item in the ListBox and sets its
+    /// <c>MarkdownScrollViewer.Markdown</c> property directly to the streaming
+    /// content, bypassing the WPF binding system. The message was added to the
+    /// ObservableCollection ONCE by <c>OnStreamChunkReceived</c>.
+    /// </summary>
+    private void OnStreamingTimerTick(object? sender, EventArgs e)
+    {
+        if (_viewModel is null) return;
+
+        var content = _viewModel.StreamingContent;
+
+        // Skip if nothing changed or streaming stopped with empty content
+        if (string.IsNullOrEmpty(content) || content == _lastStreamedContent)
+            return;
+
+        _lastStreamedContent = content;
+
+        // Find the ListBox inside the MessageScrollViewer
+        var listBox = MessageScrollViewer?.Content as System.Windows.Controls.ListBox;
+        if (listBox is null || listBox.Items.Count == 0) return;
+
+        // Find the last item's container and its MarkdownScrollViewer
+        var lastItem = listBox.Items[^1];
+        var lastContainer = listBox.ItemContainerGenerator.ContainerFromItem(lastItem) as FrameworkElement;
+        if (lastContainer is null) return;
+
+        var markdownViewer = FindVisualChild<MarkdownScrollViewer>(lastContainer);
+        if (markdownViewer is null)
+        {
+            Log.Debug("[StreamDiag] Timer: MarkdownScrollViewer not found in last container");
+            return;
+        }
+
+        // Set the Markdown property directly — MarkdownScrollViewer renders it
+        // internally using MdXaml, no converter or binding involved
+        markdownViewer.Markdown = content;
+
+        Log.Debug("[StreamDiag] Timer set MarkdownScrollViewer.Markdown. ContentLen={Len}", content.Length);
     }
 
     /// <summary>
@@ -338,6 +410,23 @@ public partial class ChatView : UserControl
         }
 
         storyboard.Begin();
+    }
+
+    /// <summary>
+    /// Recursively searches the visual tree for a child of type <typeparamref name="T"/>.
+    /// </summary>
+    private static T? FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+            if (child is T typed)
+                return typed;
+            var descendant = FindVisualChild<T>(child);
+            if (descendant is not null)
+                return descendant;
+        }
+        return null;
     }
 }
 

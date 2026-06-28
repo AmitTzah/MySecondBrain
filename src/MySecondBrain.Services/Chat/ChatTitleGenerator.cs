@@ -47,12 +47,13 @@ public class ChatTitleGenerator
         {
             var prompt = $"Generate a concise 3-7 word title for this conversation.\n\nUser: {userMessage}\n\nAssistant: {assistantResponse}\n\nTitle:";
 
-            // Use a lightweight non-streaming call for title generation
+            // Use a lightweight non-streaming call for title generation (no history needed)
             var response = await _llmService.ChatAsync(
                 new ChatThread { PersonaId = persona.Id, ModelConfigId = config.Id },
                 prompt,
                 persona,
                 config,
+                null,
                 ct);
 
             // Guard: ChatAsync may return null if the provider is not yet implemented

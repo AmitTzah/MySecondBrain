@@ -10,6 +10,7 @@ public interface ILLMProviderService
         Persona persona,
         ModelConfiguration modelConfig,
         IReadOnlyList<ToolDefinition>? tools,
+        IReadOnlyList<ChatMessage>? history,
         CancellationToken ct);
 
     Task<ChatResponse> ChatAsync(
@@ -17,6 +18,7 @@ public interface ILLMProviderService
         string userMessage,
         Persona persona,
         ModelConfiguration modelConfig,
+        IReadOnlyList<ChatMessage>? history,
         CancellationToken ct);
 
     Task<IReadOnlyList<ModelInfo>> ListModelsAsync(ModelConfiguration config, CancellationToken ct);

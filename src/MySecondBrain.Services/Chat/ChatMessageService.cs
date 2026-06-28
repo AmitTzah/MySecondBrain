@@ -48,10 +48,10 @@ public class ChatMessageService
 
     /// <summary>
     /// Full message send lifecycle:
-    /// 1. Create and persist the user Message entity
-    /// 2. Build conversation context (active branch messages)
+    /// 1. Query conversation history (active branch)
+    /// 2. Create and persist the user Message entity
     /// 3. Resolve Persona + ModelConfiguration
-    /// 4. Call LLM streaming API
+    /// 4. Call LLM streaming API with full conversation history
     /// 5. Accumulate response from stream chunks (preserve partial on cancellation)
     /// 6. Persist assistant Message entity with token counts, cost, timing
     /// 7. Trigger auto-title on first message pair
@@ -59,7 +59,13 @@ public class ChatMessageService
     /// </summary>
     public async Task<Message> SendMessageAsync(string threadId, string content, CancellationToken ct)
     {
-        // ── 1. Create user message ────────────────────────────────
+        // ── 1. Query history BEFORE creating user message ─────────
+        var historyMessages = await _messageRepo.GetActiveBranchAsync(threadId);
+        var history = historyMessages
+            .Select(MapToChatMessage)
+            .ToList();
+
+        // ── 2. Create user message ────────────────────────────────
         var branchId = Guid.NewGuid().ToString("N");
 
         var userMsg = new Message
@@ -76,7 +82,7 @@ public class ChatMessageService
         };
         await _messageRepo.CreateAsync(userMsg);
 
-        // ── 2. Resolve persona & model config ─────────────────────
+        // ── 3. Resolve persona & model config ─────────────────────
         var thread = await _threadRepo.GetByIdAsync(threadId)
             ?? throw new InvalidOperationException($"Thread '{threadId}' not found.");
 
@@ -84,7 +90,7 @@ public class ChatMessageService
         var modelConfig = await _lifecycle.ResolveModelConfigRequiredAsync(thread, persona);
         var tools = Array.Empty<ToolDefinition>();
 
-        // ── 3. Call LLM (streaming) ──────────────────────────────
+        // ── 4. Call LLM (streaming) ──────────────────────────────
         var assistantMsg = new Message
         {
             Id = Guid.NewGuid().ToString("N"),
@@ -101,8 +107,8 @@ public class ChatMessageService
         await _messageRepo.CreateAsync(assistantMsg);
 
         _logger.LogInformation(
-            "SendMessageAsync: calling LLM streaming — thread={ThreadId}, persona={Persona}, config={Config}, model={Model}",
-            threadId, persona.DisplayName, modelConfig.DisplayName, modelConfig.ModelIdentifier);
+            "SendMessageAsync: calling LLM streaming — thread={ThreadId}, persona={Persona}, config={Config}, model={Model}, history={HistCount}",
+            threadId, persona.DisplayName, modelConfig.DisplayName, modelConfig.ModelIdentifier, history.Count);
 
         var responseBuilder = new StringBuilder();
         var stopwatch = Stopwatch.StartNew();
@@ -112,7 +118,7 @@ public class ChatMessageService
         try
         {
             (chunkCount, promptTokens, completionTokens) = await ConsumeStreamAsync(
-                _llmService.ChatStreamAsync(thread, content, persona, modelConfig, tools, ct),
+                _llmService.ChatStreamAsync(thread, content, persona, modelConfig, tools, history, ct),
                 responseBuilder, ct);
             stopwatch.Stop();
             _logger.LogInformation(
@@ -218,6 +224,13 @@ public class ChatMessageService
         var thread = await _threadRepo.GetByIdAsync(threadId)
             ?? throw new InvalidOperationException($"Thread '{threadId}' not found.");
 
+        // Build history: all active branch messages up to (but not including) the assistant message being regenerated
+        var allBranchMessages = await _messageRepo.GetActiveBranchAsync(threadId);
+        var history = allBranchMessages
+            .TakeWhile(m => m.Id != messageId)
+            .Select(MapToChatMessage)
+            .ToList();
+
         existing.IsActiveBranch = false;
         await _messageRepo.UpdateAsync(existing);
 
@@ -250,7 +263,7 @@ public class ChatMessageService
         try
         {
             (_, promptTokens, completionTokens) = await ConsumeStreamAsync(
-                _llmService.ChatStreamAsync(thread, userContent, persona, modelConfig, tools, ct),
+                _llmService.ChatStreamAsync(thread, userContent, persona, modelConfig, tools, history, ct),
                 responseBuilder, ct);
             stopwatch.Stop();
         }
@@ -286,10 +299,16 @@ public class ChatMessageService
         var thread = await _threadRepo.GetByIdAsync(threadId)
             ?? throw new InvalidOperationException($"Thread '{threadId}' not found.");
 
-        var history = await _messageRepo.GetActiveBranchAsync(threadId);
-        var lastMsg = history.LastOrDefault();
+        var historyMessages = await _messageRepo.GetActiveBranchAsync(threadId);
+        var lastMsg = historyMessages.LastOrDefault();
         if (lastMsg is null || lastMsg.Role != "Assistant")
             throw new InvalidOperationException("No assistant message to continue from.");
+
+        // Convert history to ChatMessage list (excluding the last assistant message which is being continued)
+        var history = historyMessages
+            .TakeWhile(m => m.Id != lastMsg.Id)
+            .Select(MapToChatMessage)
+            .ToList();
 
         var persona = await _lifecycle.ResolvePersonaAsync(thread);
         var modelConfig = await _lifecycle.ResolveModelConfigRequiredAsync(thread, persona);
@@ -306,7 +325,7 @@ public class ChatMessageService
         try
         {
             (_, promptTokens, completionTokens) = await ConsumeStreamAsync(
-                _llmService.ChatStreamAsync(thread, continuationPrompt, persona, modelConfig, tools, ct),
+                _llmService.ChatStreamAsync(thread, continuationPrompt, persona, modelConfig, tools, history, ct),
                 responseBuilder, ct);
             stopwatch.Stop();
         }
@@ -340,6 +359,19 @@ public class ChatMessageService
     // ═══════════════════════════════════════════════════════════════
     //  Private Helpers
     // ═══════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Maps a <see cref="Message"/> entity to a <see cref="ChatMessage"/> DTO,
+    /// converting the PascalCase role from the database to the lowercase role
+    /// expected by LLM providers (e.g., "User" → "user", "Assistant" → "assistant").
+    /// </summary>
+    private static ChatMessage MapToChatMessage(Message msg) =>
+        new(msg.Role switch
+        {
+            "User" => "user",
+            "Assistant" => "assistant",
+            _ => msg.Role.ToLowerInvariant()
+        }, msg.Content);
 
     private static decimal? CalculateEstimatedCost(
         int promptTokens,

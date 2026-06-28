@@ -293,8 +293,9 @@ public class ChatWorkflowIntegrationTests : IDisposable
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
                 It.IsAny<IReadOnlyList<ToolDefinition>>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
-            .Returns((ChatThread t, string msg, Persona p, ModelConfiguration c, IReadOnlyList<ToolDefinition>? tools, CancellationToken ct) =>
+            .Returns((ChatThread t, string msg, Persona p, ModelConfiguration c, IReadOnlyList<ToolDefinition>? tools, IReadOnlyList<ChatMessage>? history, CancellationToken ct) =>
                 GetStreamForTest(msg, ct));
 
         var lifecycle = new ChatThreadLifecycleService(

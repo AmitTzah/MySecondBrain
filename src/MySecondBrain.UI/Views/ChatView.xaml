@@ -5,6 +5,7 @@
              xmlns:controls="clr-namespace:MySecondBrain.UI.Controls"
              xmlns:models="clr-namespace:MySecondBrain.Core.Models;assembly=MySecondBrain.Core"
              xmlns:converters="clr-namespace:MySecondBrain.UI.Converters"
+             xmlns:mdxam="clr-namespace:MdXaml;assembly=MdXaml"
              Background="{DynamicResource ContentBackground}"
              AutomationProperties.AutomationId="ChatView">
 
@@ -17,7 +18,7 @@
         <converters:BoolToFavoriteConverter x:Key="BoolToFavoriteConverter"/>
         <converters:MarkdownToFlowDocumentConverter x:Key="MarkdownToFlowDocumentConverter"/>
 
-        <!-- ─── User Message Template ─────────────────────────── -->
+        <!-- ═══ User Message Template ═══════════════════════════════ -->
         <DataTemplate x:Key="UserMessageTemplate">
             <Border Margin="0,4,0,4" Padding="0">
                 <StackPanel>
@@ -43,17 +44,17 @@
                             Padding="12,8"
                             MaxWidth="600"
                             HorizontalAlignment="Right">
-                        <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource MarkdownToFlowDocumentConverter}}"
-                                                   FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
-                                                   VerticalScrollBarVisibility="Hidden"
-                                                   HorizontalScrollBarVisibility="Disabled"
-                                                   MinHeight="20">
-                            <FlowDocumentScrollViewer.Style>
-                                <Style TargetType="FlowDocumentScrollViewer">
+                        <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                                     FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
+                                                     VerticalScrollBarVisibility="Hidden"
+                                                     HorizontalScrollBarVisibility="Disabled"
+                                                     MinHeight="20">
+                            <mdxam:MarkdownScrollViewer.Style>
+                                <Style TargetType="mdxam:MarkdownScrollViewer">
                                     <Setter Property="Background" Value="Transparent"/>
                                 </Style>
-                            </FlowDocumentScrollViewer.Style>
-                        </FlowDocumentScrollViewer>
+                            </mdxam:MarkdownScrollViewer.Style>
+                        </mdxam:MarkdownScrollViewer>
                     </Border>
 
                     <!-- Timestamp + action bar -->
@@ -81,7 +82,7 @@
             </Border>
         </DataTemplate>
 
-        <!-- ─── Assistant Message Template ────────────────────── -->
+        <!-- ═══ Assistant Message Template ══════════════════════════ -->
         <DataTemplate x:Key="AssistantMessageTemplate">
             <Border Margin="0,4,0,4" Padding="0"
                     AutomationProperties.AutomationId="AssistantMessage">
@@ -100,21 +101,45 @@
                             HorizontalAlignment="Left"
                             BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1">
-                        <FlowDocumentScrollViewer Document="{Binding Content, Converter={StaticResource MarkdownToFlowDocumentConverter}}"
-                                                   FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
-                                                   VerticalScrollBarVisibility="Hidden"
-                                                   HorizontalScrollBarVisibility="Disabled"
-                                                   MinHeight="20">
-                            <FlowDocumentScrollViewer.Style>
-                                <Style TargetType="FlowDocumentScrollViewer">
+                        <mdxam:MarkdownScrollViewer Markdown="{Binding Content}"
+                                                     FlowDirection="{Binding Content, Converter={StaticResource FlowDirectionConverter}}"
+                                                     VerticalScrollBarVisibility="Hidden"
+                                                     HorizontalScrollBarVisibility="Disabled"
+                                                     MinHeight="20">
+                            <mdxam:MarkdownScrollViewer.Style>
+                                <Style TargetType="mdxam:MarkdownScrollViewer">
                                     <Setter Property="Background" Value="Transparent"/>
                                 </Style>
-                            </FlowDocumentScrollViewer.Style>
-                        </FlowDocumentScrollViewer>
+                            </mdxam:MarkdownScrollViewer.Style>
+                        </mdxam:MarkdownScrollViewer>
                     </Border>
 
-                    <!-- Action buttons (Copy MD, Copy Rich, Regenerate, Continue, Favorite) -->
-                    <StackPanel Orientation="Horizontal" Margin="12,2,0,0">
+                    <!-- Action buttons (Copy MD, Copy Rich, Regenerate, Continue, Favorite) — hover to reveal -->
+                    <StackPanel Orientation="Horizontal" Margin="12,2,0,0" Opacity="0.0">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                        <DataTrigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                     From="0.0" To="1.0" Duration="0:0:0.15"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.EnterActions>
+                                        <DataTrigger.ExitActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                     From="1.0" To="0.0" Duration="0:0:0.3"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.ExitActions>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
                         <!-- Favorite star -->
                         <Button Content="{Binding IsFavorited, Converter={StaticResource BoolToFavoriteConverter}}"
                                 FontSize="12"
@@ -174,8 +199,7 @@
             </Border>
         </DataTemplate>
 
-        <!-- Selection mode checkbox converter -->
-        <!-- ─── Bulk Actions Bar Template ─────────────────────── -->
+        <!-- ═══ Bulk Actions Bar Template ═══════════════════════════ -->
         <DataTemplate x:Key="BulkActionsTemplate">
             <Border Background="{DynamicResource AccentBrush}" Padding="8,6"
                     CornerRadius="4" Margin="8,4">
@@ -213,7 +237,7 @@
             </Border>
         </DataTemplate>
 
-        <!-- ─── System Message Template ───────────────────────── -->
+        <!-- ═══ System Message Template ═════════════════════════════ -->
         <DataTemplate x:Key="SystemMessageTemplate">
             <Border Margin="0,4,0,4" Padding="8,4"
                     Background="{DynamicResource InputBackground}"
@@ -236,7 +260,7 @@
             </Border>
         </DataTemplate>
 
-        <!-- ─── MessageTemplateSelector ───────────────────────── -->
+        <!-- ═══ MessageTemplateSelector ═════════════════════════════ -->
         <local:MessageDataTemplateSelector x:Key="MessageTemplateSelector"
                                            UserMessageTemplate="{StaticResource UserMessageTemplate}"
                                            AssistantMessageTemplate="{StaticResource AssistantMessageTemplate}"
@@ -301,7 +325,6 @@
 
                 <!-- Virtualizing message list -->
                 <ScrollViewer x:Name="MessageScrollViewer"
-                              Grid.Row="1"
                               HorizontalScrollBarVisibility="Disabled"
                               VerticalScrollBarVisibility="Auto"
                               ScrollChanged="MessageScrollViewer_ScrollChanged"
@@ -364,7 +387,7 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Auto-scroll paused indicator + Scroll-to-bottom button -->
+                <!-- Auto-scroll paused indicator -->
                 <Border x:Name="AutoScrollPausedIndicator"
                         Background="{DynamicResource AccentBrush}"
                         CornerRadius="4"
@@ -374,22 +397,17 @@
                         VerticalAlignment="Bottom"
                         Visibility="Collapsed"
                         AutomationProperties.AutomationId="AutoScrollPaused">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Auto-scroll paused"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource AccentForeground}"
-                                   VerticalAlignment="Center"/>
-                        <Button Content="\u2193 Scroll to bottom"
-                                FontSize="11"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Foreground="{DynamicResource AccentForeground}"
-                                Padding="8,2"
-                                Margin="4,0,0,0"
-                                Click="ScrollToBottom_Click"
-                                AutomationProperties.AutomationId="ScrollToBottomBtn"/>
-                    </StackPanel>
+                    <TextBlock Text="Auto-scroll paused"
+                               FontSize="11"
+                               Foreground="{DynamicResource AccentForeground}"
+                               VerticalAlignment="Center"/>
                 </Border>
+
+                <!-- Floating scroll-to-bottom button (visible when scrolled up during streaming) -->
+                <controls:ScrollToBottomButton x:Name="ScrollToBottomBtn"
+                                               TargetScrollViewer="{Binding ElementName=MessageScrollViewer}"
+                                               Visibility="{Binding IsScrolledUp, Converter={StaticResource BoolToVisibilityConverter}}"
+                                               AutomationProperties.AutomationId="ScrollToBottomBtn"/>
             </Grid>
         </Border>
 

@@ -43,6 +43,7 @@ public class ChatTitleGeneratorTests
                 It.IsAny<string>(),
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ChatResponse(
                 "The Meaning of Life",
@@ -73,6 +74,7 @@ public class ChatTitleGeneratorTests
                 It.IsAny<string>(),
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ChatResponse(
                 "\"Hello World\"",
@@ -107,6 +109,7 @@ public class ChatTitleGeneratorTests
                 It.IsAny<string>(),
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("API unavailable"));
 
@@ -136,6 +139,7 @@ public class ChatTitleGeneratorTests
                 It.IsAny<string>(),
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ChatResponse(
                 "",
@@ -170,6 +174,7 @@ public class ChatTitleGeneratorTests
                 It.IsAny<string>(),
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("No LLM"));
 
@@ -195,6 +200,7 @@ public class ChatTitleGeneratorTests
                 It.IsAny<string>(),
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("No LLM"));
 
@@ -221,6 +227,7 @@ public class ChatTitleGeneratorTests
                 It.IsAny<string>(),
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ChatResponse(
                 longTitle,
@@ -251,6 +258,7 @@ public class ChatTitleGeneratorTests
                 It.IsAny<string>(),
                 It.IsAny<Persona>(),
                 It.IsAny<ModelConfiguration>(),
+                It.IsAny<IReadOnlyList<ChatMessage>?>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("No LLM"));
 

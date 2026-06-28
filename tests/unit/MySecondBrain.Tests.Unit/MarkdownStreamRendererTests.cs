@@ -8,12 +8,11 @@ namespace MySecondBrain.Tests.Unit;
 
 public class MarkdownStreamRendererTests
 {
-    private readonly Mock<IContentRendererRegistry> _registryMock = new();
     private readonly Mock<ILogger<MarkdownStreamRenderer>> _loggerMock = new();
 
     private MarkdownStreamRenderer CreateRenderer()
     {
-        return new MarkdownStreamRenderer(_registryMock.Object, _loggerMock.Object);
+        return new MarkdownStreamRenderer(_loggerMock.Object);
     }
 
     // ================================================================

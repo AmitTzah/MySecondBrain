@@ -73,7 +73,15 @@ public partial class ChatThreadViewModel : ObservableObject
     /// <summary>Tracks the tab subscribed to PropertyChanged for cleanup on switch.</summary>
     private ChatTabItem? _subscribedTab;
 
-    /// <summary>Tracks the placeholder message being progressively streamed.</summary>
+    /// <summary>Accumulates streaming content deltas in a StringBuilder to avoid
+    /// ObservableCollection RemoveAt/Insert on every chunk, which causes full
+    /// template re-application and FlowDocument re-parsing.</summary>
+    private readonly StringBuilder _streamingContentBuilder = new();
+
+    /// <summary>Placeholder message added to the ListBox once at stream start.
+    /// Its Content property is updated in-place (no collection manipulation),
+    /// and the 50ms timer in ChatView.xaml.cs bypasses the binding to directly
+    /// set the MarkdownScrollViewer.Markdown property.</summary>
     private Message? _streamingMessage;
 
     /// <summary>Guards against re-entrant streaming subscription.</summary>
@@ -240,9 +248,17 @@ public partial class ChatThreadViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Handles progressive stream chunks. Updates the active tab's last
-    /// assistant message content incrementally so the user sees text
-    /// appearing in real-time.
+    /// Handles progressive stream chunks. On the first content chunk, creates a
+    /// placeholder message and adds it to the ObservableCollection ONCE. On
+    /// subsequent chunks, appends to the StringBuilder and updates the message's
+    /// Content in-place — no RemoveAt/Insert, no collection churn.
+    ///
+    /// A 50ms timer in ChatView.xaml.cs finds the last ListBox item's
+    /// <c>MarkdownScrollViewer</c> and sets its <c>Markdown</c> property
+    /// directly to <see cref="StreamingContent"/>, bypassing the binding.
+    ///
+    /// On the final chunk, the message is already in the collection and will be
+    /// replaced by the DB reload in <see cref="SendWithStreamingAsync"/>.
     /// </summary>
     private void OnStreamChunkReceived(StreamChunk chunk)
     {
@@ -254,9 +270,9 @@ public partial class ChatThreadViewModel : ObservableObject
             var tab = ActiveTab;
             if (tab?.Thread is null) return;
 
-            // First chunk with content — create or update placeholder message
             if (chunk.ContentDelta is not null)
             {
+                // First content chunk — create placeholder and add ONCE
                 if (_streamingMessage is null)
                 {
                     _streamingMessage = new Message
@@ -267,25 +283,24 @@ public partial class ChatThreadViewModel : ObservableObject
                         Content = chunk.ContentDelta,
                         CreatedAt = DateTimeOffset.UtcNow,
                     };
+                    _streamingContentBuilder.Append(chunk.ContentDelta);
                     tab.Messages.Add(_streamingMessage);
                 }
                 else
                 {
-                    // Append delta and replace item in collection to trigger UI refresh
-                    _streamingMessage.Content += chunk.ContentDelta;
-                    var idx = tab.Messages.IndexOf(_streamingMessage);
-                    if (idx >= 0)
-                    {
-                        tab.Messages.RemoveAt(idx);
-                        tab.Messages.Insert(idx, _streamingMessage);
-                        StreamingContent = _streamingMessage.Content;
-                    }
+                    _streamingContentBuilder.Append(chunk.ContentDelta);
+                    _streamingMessage.Content = _streamingContentBuilder.ToString();
                 }
+
+                StreamingContent = _streamingContentBuilder.ToString();
+
+                _logger.LogDebug("[StreamDiag] Chunk received. DeltaLen={DeltaLen}, TotalLen={TotalLen}, IsFinal={IsFinal}",
+                    chunk.ContentDelta.Length, StreamingContent.Length, chunk.IsFinal);
             }
 
-            // Final chunk — clear placeholder tracking
             if (chunk.IsFinal)
             {
+                _streamingContentBuilder.Clear();
                 _streamingMessage = null;
                 StreamingContent = string.Empty;
             }
@@ -841,6 +856,10 @@ public partial class ChatThreadViewModel : ObservableObject
         HasError = false;
         ErrorMessage = string.Empty;
 
+        // Clear any stale content from a previous cancelled/failed stream
+        _streamingContentBuilder.Clear();
+        StreamingContent = string.Empty;
+
         tab.IsStreaming = true;
 
         var retryContent = content; // capture for retry
@@ -1050,9 +1069,14 @@ public partial class ChatThreadViewModel : ObservableObject
         if (ActiveTab.IsStreaming) return;
 
         var lastMsg = ActiveTab.Messages[^1];
-        if (lastMsg.Role != "assistant") return;
+        if (!string.Equals(lastMsg.Role, "Assistant", StringComparison.OrdinalIgnoreCase)) return;
 
         var tab = ActiveTab;
+
+        // Clear any stale content from a previous cancelled/failed stream
+        _streamingContentBuilder.Clear();
+        StreamingContent = string.Empty;
+
         tab.IsStreaming = true;
 
         try
@@ -1103,6 +1127,11 @@ public partial class ChatThreadViewModel : ObservableObject
         if (ActiveTab.IsStreaming) return;
 
         var tab = ActiveTab;
+
+        // Clear any stale content from a previous cancelled/failed stream
+        _streamingContentBuilder.Clear();
+        StreamingContent = string.Empty;
+
         tab.IsStreaming = true;
 
         try
@@ -2059,6 +2088,10 @@ public partial class ChatThreadViewModel : ObservableObject
         StopDraftTimer();
         _activeCts?.Cancel();
         _activeCts?.Dispose();
+
+        // Clear streaming state so stale content doesn't persist after cleanup
+        _streamingContentBuilder.Clear();
+        StreamingContent = string.Empty;
 
         if (_isStreamingSubscribed)
         {
