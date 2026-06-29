@@ -1,0 +1,210 @@
+<best_practices>
+  <general_principles>
+    <principle priority="critical">
+      <name>Evidence Before Action</name>
+      <description>
+        Always analyze existing evidence (test output, stack traces, spawner-provided context,
+        code under test) before adding any instrumentation. Do not add [DEBUG] logs as a first
+        resort — they are for when code analysis alone is insufficient.
+      </description>
+      <rationale>
+        Test failures often provide enough information in their assertion diffs and stack traces
+        to identify the root cause. Adding instrumentation first wastes time and clutters the code.
+      </rationale>
+    </principle>
+
+    <principle priority="critical">
+      <name>No Guessing Twice Without Evidence</name>
+      <description>
+        If a fix attempt based on code analysis alone (no instrumentation) fails verification,
+        the next attempt MUST include diagnostic instrumentation. Do not make a second guess
+        without gathering runtime evidence.
+
+        Exception: if instrumentation output is genuinely unavailable in the environment
+        (no console access, no log file capability), proceed with static analysis and
+        process-of-elimination. State this clearly in the completion report.
+      </description>
+      <rationale>
+        A failed fix proves that code analysis alone was insufficient. A second guess without
+        new evidence is unlikely to succeed and wastes cycles.
+      </rationale>
+      <example>
+        <bad>First fix fails → "I think it might be X instead" → second fix also fails</bad>
+        <good>First fix fails → add [DEBUG] logs → collect evidence → identify actual root cause → fix</good>
+      </example>
+    </principle>
+
+    <principle priority="critical">
+      <name>Leave Things Greener</name>
+      <description>
+        Fix ALL test failures encountered, not just the one you were spawned for.
+        If running existing tests reveals pre-existing failures, fix those too.
+
+        Exception: a pre-existing failure may be too large in scope (requires changes to 5+ files,
+        database schema changes, API contract changes, or architectural restructuring).
+        In this case: document the failure, its root cause if identified, and why it's out of scope.
+        Continue — documented out-of-scope failures do not block completion.
+
+        Every exit gate is "all fixable tests green."
+      </description>
+      <rationale>
+        Debug is spawned to get things to a clean state. Ignoring pre-existing failures
+        leaves the project in a worse state than necessary. But some failures require
+        architectural changes beyond Debug's fix mandate.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Minimal, Targeted Fixes</name>
+      <description>
+        Prefer the smallest change that fixes the bug. Avoid broad refactors,
+        restructuring, or "improving things while you're there." Stay focused
+        on the root cause.
+      </description>
+      <rationale>
+        Targeted fixes are easier to review, less likely to introduce regressions,
+        and keep the spawner's context intact.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Every Fix Gets a Regression Test</name>
+      <description>
+        Every bug fix must include a regression test that reproduces the original failure.
+        In multi-issue mode, regression tests are batched after all fixes are verified
+        and a combined test run confirms no cross-fix interactions.
+      </description>
+      <rationale>
+        Regression tests prevent the same bug from recurring and serve as documentation
+        of the fix.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Never Modify E2E Tests</name>
+      <description>
+        E2E tests validate real user behavior against the application. If an E2E test fails,
+        the source code is broken — not the test. Fix the code, not the E2E test.
+
+        This rule applies ONLY to E2E tests. For unit and integration tests that depended
+        on buggy behavior: updating test expectations to match correct behavior IS appropriate.
+        The test was wrong, not the fix — but only when the test is not E2E.
+      </description>
+      <rationale>
+        Modifying E2E tests to match broken behavior defeats their purpose as regression
+        safeguards and can mask real user-facing bugs. Unit and integration tests serve a
+        different purpose — they validate implementation correctness, and when the correct
+        behavior changes (due to a bug fix), the test should be updated.
+      </rationale>
+    </principle>
+
+    <principle priority="high">
+      <name>Hands-Off Means Autonomous</name>
+      <description>
+        When hands_off_mode is true: never ask the user a question, never request reproduction
+        steps, never ask for log output. All investigation, reproduction, and verification
+        must be done autonomously using test runs, code analysis, and command execution.
+
+        Hands-off mode requires an automated test to verify against. If no test reproduces
+        the issue (e.g., a smoke test failure without a corresponding automated test),
+        hands-off verification is not possible — report this limitation.
+      </description>
+      <rationale>
+        Hands-off mode exists for automated pipelines where no human is available to interact.
+        Asking questions in this mode causes the pipeline to stall indefinitely.
+      </rationale>
+    </principle>
+  </general_principles>
+
+  <code_conventions>
+    <convention category="debug_instrumentation">
+      <rule>Prefix all diagnostic output with [DEBUG] for easy identification and removal</rule>
+      <rule>Include relevant variable values and state in debug output</rule>
+      <rule>Keep instrumentation minimal — instrument only the code paths relevant to the investigation</rule>
+      <rule>Remove ALL instrumentation before completion — never leave [DEBUG] statements in production code</rule>
+      <rule>After 3 rounds of increasingly targeted instrumentation without identifying root cause: escalate (autonomous) or present findings to user (interactive). Do not loop indefinitely.</rule>
+      <template>
+        // [DEBUG] Function entered with params: x={value}, y={value}
+        // [DEBUG] Intermediate state: z={value}
+        // [DEBUG] Branch taken: {condition} = {result}
+      </template>
+    </convention>
+
+    <convention category="regression_tests">
+      <rule>Regression tests must pass with the fix applied. By code inspection, they must target the specific scenario and code path of the original failure — they would fail if the bug were re-introduced.</rule>
+      <rule>Place in the appropriate test directory (unit for isolated logic, integration for cross-component)</rule>
+      <rule>Name tests descriptively: should_[expected_behavior]_when_[condition]</rule>
+      <rule>For E2E-level bugs: write a unit or integration regression test that captures the root cause at a lower level</rule>
+    </convention>
+
+    <convention category="test_execution">
+      <rule>Run unit + integration tests after every fix (step 5)</rule>
+      <rule>Run E2E tests only at the final gate (step 8), not at step 5 — they are slow and running twice is wasteful</rule>
+      <rule>Always run the full suite (including regression tests) before completion (step 8)</rule>
+      <rule>Use the project's standard test command — do not filter or skip tests</rule>
+      <rule>Documented out-of-scope pre-existing failures are excluded from the all-green requirement</rule>
+    </convention>
+  </code_conventions>
+
+  <common_pitfalls>
+    <pitfall>
+      <description>Adding instrumentation before analyzing existing evidence</description>
+      <why_problematic>Wastes time instrumenting code when the test output already contains the answer</why_problematic>
+      <correct_approach>Always review test output, stack traces, and spawner-provided diagnostic output first</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Modifying E2E tests to make them pass</description>
+      <why_problematic>Masks real user-facing bugs and defeats the purpose of E2E regression testing</why_problematic>
+      <correct_approach>Fix the source code — the E2E test is the authority on correct behavior. If the E2E test itself is buggy, document it and report it — do not modify the E2E test.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Applying "never modify tests" to unit/integration tests that depended on buggy behavior</description>
+      <why_problematic>Forces keeping wrong test expectations, making future maintenance harder</why_problematic>
+      <correct_approach>The "never modify tests" rule is for E2E tests only. Unit/integration tests that depended on buggy behavior SHOULD be updated to match the correct behavior.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Asking questions in hands-off mode</description>
+      <why_problematic>Causes automated pipelines to stall indefinitely with no human to respond</why_problematic>
+      <correct_approach>All investigation must be autonomous — use test runs, code analysis, and command execution</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Ignoring pre-existing test failures</description>
+      <why_problematic>Leaves the project in a degraded state; the spawner expected a clean result</why_problematic>
+      <correct_approach>Fix ALL fixable test failures encountered. Document out-of-scope failures with root cause and justification.</correct_approach>
+    </pitfall>
+
+    <pitfall>
+      <description>Broad refactors during bug fixing</description>
+      <why_problematic>Introduces unrelated changes that are hard to review and may cause new bugs</why_problematic>
+      <correct_approach>Stay focused on the root cause; make only the changes needed to fix the bug</correct_approach>
+    </pitfall>
+  </common_pitfalls>
+
+  <quality_checklist>
+    <category name="before_fixing">
+      <item>Reviewed all existing evidence (test output, stack traces, spawner context)</item>
+      <item>Read the relevant source code and test files</item>
+      <item>Identified the root cause with confidence (or determined instrumentation is needed)</item>
+      <item>In hands-off mode: confirmed autonomous reproduction is possible</item>
+    </category>
+    <category name="after_fixing">
+      <item>All unit tests pass</item>
+      <item>All integration tests pass</item>
+      <item>E2E tests pass (if fixing an E2E failure — run at final gate only)</item>
+      <item>No [DEBUG] statements remain in code</item>
+      <item>Regression test written and passing</item>
+      <item>Fix is minimal and targeted</item>
+      <item>Documented out-of-scope failures are reported</item>
+    </category>
+    <category name="before_completion">
+      <item>All fixable tests green (unit + integration + regression + E2E if applicable)</item>
+      <item>Root cause documented in completion report</item>
+      <item>In interactive mode: user confirmed the fix works</item>
+      <item>For multi-issue: combined test run confirmed no cross-fix interactions</item>
+    </category>
+  </quality_checklist>
+</best_practices>

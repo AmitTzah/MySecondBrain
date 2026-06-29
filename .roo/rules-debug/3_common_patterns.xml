@@ -1,0 +1,161 @@
+<common_patterns>
+  <overview>
+    Reusable patterns for diagnostic-first debugging across different scenarios.
+  </overview>
+
+  <pattern name="diagnostic_instrumentation_autonomous">
+    <description>Adding [DEBUG] instrumentation and collecting output autonomously (hands-off mode)</description>
+    <context>Evidence is inconclusive and hands_off_mode is true. Cannot ask user for help.</context>
+    <steps>
+      <step>Add targeted [DEBUG] statements to the code paths identified as potentially problematic</step>
+      <step>Re-run the failing tests (or the relevant command) to execute the instrumented code</step>
+      <step>Collect the output from the test run</step>
+      <step>Analyze: do the debug logs reveal the root cause?</step>
+      <step>If still unclear: add more instrumentation to narrower code paths, re-run, repeat</step>
+    </steps>
+    <limit>
+      After 3 rounds of increasingly targeted instrumentation without identifying root cause:
+      document what was instrumented and what remains unknown. Escalate to spawner.
+      Do not loop indefinitely.
+    </limit>
+    <cleanup>
+      <step>Remove ALL [DEBUG] statements after identifying root cause</step>
+    </cleanup>
+  </pattern>
+
+  <pattern name="diagnostic_instrumentation_interactive">
+    <description>Adding [DEBUG] instrumentation with user-assisted reproduction (interactive mode)</description>
+    <context>Evidence is inconclusive and hands_off_mode is false. Can ask user for help.</context>
+    <steps>
+      <step>Add targeted [DEBUG] statements to the code paths identified as potentially problematic</step>
+      <step>Tell the user:
+        - Exact steps to reproduce the issue
+        - Where the debug output will appear (use environment-appropriate guidance):
+          - Browser apps: DevTools Console (F12)
+          - Backend servers / CLI tools: the terminal running the process
+          - Mobile apps: Logcat (Android) or Xcode console (iOS)
+          - Desktop apps: debug console or launching terminal
+        - Ask them to copy the output back to you
+      </step>
+      <step>Wait for user to provide output. Do not prompt again unprompted if the user doesn't respond.</step>
+      <step>Analyze: do the debug logs reveal the root cause?</step>
+      <step>If still unclear: add more targeted instrumentation, ask user to reproduce again</step>
+    </steps>
+    <limit>
+      After 3 rounds of increasingly targeted instrumentation without identifying root cause:
+      present findings to user with options: "Investigate from a different angle",
+      "Provide more context", "I'll investigate manually."
+      Do not loop indefinitely.
+    </limit>
+    <cleanup>
+      <step>Remove ALL [DEBUG] statements after identifying root cause</step>
+    </cleanup>
+  </pattern>
+
+  <pattern name="single_issue_fix_flow">
+    <description>Complete flow for fixing a single issue from analysis to completion</description>
+    <flow>
+      <step>Analyze evidence → root cause clear?</step>
+      <step>If not: instrument → collect output → identify root cause (3-round limit)</step>
+      <step>Mandatory instrumentation on retry if previous no-instrumentation fix failed (with unavailable-output escape)</step>
+      <step>Apply minimal fix (E2E tests never modified; unit/integration tests updated if they depended on buggy behavior)</step>
+      <step>Run unit + integration tests (E2E only at final gate) → fix ALL fixable failures</step>
+      <step>Verify: tests green (hands-off) or user confirms (interactive)</step>
+      <step>If verification fails: re-enter at step 1 (instrumentation mandatory if skipped before → go to step 2; if already instrumented → refine → go to step 4)</step>
+      <step>Write regression test</step>
+      <step>Run full test suite → distinguish regression-test-bug from fix-bug → all green → done</step>
+    </flow>
+  </pattern>
+
+  <pattern name="multi_issue_triage_and_fix">
+    <description>Complete flow for fixing multiple issues from triage to batch completion</description>
+    <flow>
+      <step>Triage: analyze all issues → order by dependencies, risk, impact</step>
+      <step>Present order to user (interactive) or proceed (hands-off)</step>
+      <step>For each issue: follow single-issue flow (steps 1-6 only, skip regression test)</step>
+      <step>If any issue hits circuit breaker: preserve verified fixes, write regression tests for them, report partial success</step>
+      <step>Combined test run: all fixes together → catch cross-fix interactions → fix if needed</step>
+      <step>Final verification: user confirms all (interactive) or combined suite green (hands-off)</step>
+      <step>Batch: write all regression tests</step>
+      <step>Run full test suite → all fixable tests green → done</step>
+    </flow>
+  </pattern>
+
+  <pattern name="test_failure_investigation">
+    <description>Investigating a test failure using the test output as primary evidence</description>
+    <context>Debug was spawned because a test (unit, integration, or E2E) is failing.</context>
+    <approach>
+      <step>Read the failing test code to understand what it asserts</step>
+      <step>Read the assertion error — what value was expected vs. what was received?</step>
+      <step>Read the code under test — trace the logic path that produces the wrong value</step>
+      <step>Use the stack trace to identify the exact line where the failure originates</step>
+      <step>If the test output clearly shows the discrepancy: fix the source code</step>
+      <step>If the test output is ambiguous: add [DEBUG] instrumentation to trace the execution path</step>
+    </approach>
+    <e2e_special_handling>
+      <rule>For E2E test failures: read the e2e-authoring-guide.md if available (from spawner context) to understand test conventions</rule>
+      <rule>E2E failures may have longer execution chains — start instrumentation at the boundary between components</rule>
+      <rule>Write a unit/integration regression test for the root cause, not an E2E test</rule>
+      <rule>Run E2E suite only at the final gate (step 8), not at step 5 — avoid double runs</rule>
+    </e2e_special_handling>
+  </pattern>
+
+  <pattern name="smoke_test_failure_investigation">
+    <description>Investigating a smoke test failure reported by a user</description>
+    <context>Debug was spawned because a human-verified smoke test failed. User described what went wrong.</context>
+    <approach>
+      <step>Read the user's description of the failure carefully</step>
+      <step>Read the relevant source code based on the feature context (provided in spawn prompt)</step>
+      <step>Try to reproduce the issue by analyzing the code paths</step>
+      <step>If root cause is not obvious from code: add [DEBUG] instrumentation and guide the user to reproduce</step>
+      <step>After fix: ask user to verify with exact reproduction steps</step>
+      <step>After user confirms: write regression test</step>
+    </approach>
+    <hands_off_note>
+      Hands-off mode with smoke tests is NOT supported — smoke tests require human verification.
+      If spawned in hands-off mode without an automated test that reproduces the issue:
+      report that autonomous verification is impossible. The spawner should either provide
+      an automated reproduction test or use interactive mode.
+    </hands_off_note>
+  </pattern>
+
+  <pattern name="circuit_breaker">
+    <description>When to stop trying and escalate</description>
+    <trigger>Same test(s) keep failing after 3 genuinely different fix approaches</trigger>
+    <counter_scope>
+      Each test tracks its own failure counter. Step 5 and step 8 share the same counter
+      for the same test — a failure at step 5 counts toward the same test's 3-attempt limit.
+    </counter_scope>
+    <genuinely_different_criteria>
+      <description>What distinguishes a genuinely different approach from a variation:</description>
+      <different>
+        <example>Fix the data layer vs. fix the business logic vs. fix the presentation layer</example>
+        <example>Change the algorithm vs. add input validation vs. fix the data source</example>
+        <example>Fix a race condition with a lock vs. restructure to avoid shared state vs. use atomic operations</example>
+      </different>
+      <not_different>
+        <example>Adjusting a timeout from 100ms to 200ms to 300ms</example>
+        <example>Changing a constant value incrementally until tests pass</example>
+        <example>Adding increasingly broad try/catch blocks</example>
+      </not_different>
+    </genuinely_different_criteria>
+    <response>
+      <action>Stop. Do not loop further.</action>
+      <action>Report: what root cause was suspected, all 3 approaches tried, why each failed, current state</action>
+      <action>In hands-off mode: report via completion summary (spawner handles escalation)</action>
+      <action>In interactive mode: present findings to user and ask how to proceed</action>
+    </response>
+  </pattern>
+
+  <pattern name="multi_issue_partial_circuit_breaker">
+    <description>Handling circuit breaker in multi-issue mode without losing verified fixes</description>
+    <trigger>During multi-issue fix loop (step 2), one issue hits its circuit breaker</trigger>
+    <response>
+      <step>Preserve all previously-verified fixes — do NOT revert them</step>
+      <step>Write regression tests for all verified fixes immediately</step>
+      <step>Run the full test suite for the verified fixes to confirm they're green</step>
+      <step>Report partial success: "[N] issues fixed with regression tests. [1] issue unresolved: [description]. Circuit breaker triggered: [summary]."</step>
+      <step>Do NOT lose verified work. Do NOT continue trying the unresolved issue.</step>
+    </response>
+  </pattern>
+</common_patterns>

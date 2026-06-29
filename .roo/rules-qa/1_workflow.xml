@@ -59,6 +59,8 @@
           <item>Error handling gaps: missing error boundaries, unhandled HTTP error statuses, retry logic absent</item>
           <item>State management: stale closures, missing dependency arrays, derived state that can desync</item>
           <item>Technical debt: TODO comments, magic numbers, hardcoded values that should be configurable</item>
+          <item>Oversized functions: functions exceeding 50 lines (excluding comments/blank lines) — harder to test, understand, and maintain. Extract logical sub-steps into well-named helpers</item>
+          <item>Oversized files: files exceeding 300 lines (excluding comments/blank lines) that mix multiple distinct concerns — harder to navigate and maintain. Flag for consideration of splitting</item>
           <item>Compatibility: browser/Node version assumptions, deprecated API usage, polyfill gaps</item>
         </checklist>
       </lens>

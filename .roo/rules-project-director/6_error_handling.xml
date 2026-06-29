@@ -126,8 +126,15 @@
             <action>Proceed to Phase 4, Step 2 (Run Existing E2E Suite).</action>
           </branch>
           <branch condition="Tests still fail">
-            <action>Present the failure details to the user with options: "Retry the fix", "Skip the test run (not recommended)", "I'll fix manually".</action>
-            <action>If user skips: note in current-state.md under "⚠️ Known Issues".</action>
+            <action>Spawn a Debug subtask (debug mode) to investigate the regression. Debug mode is the correct choice because persistent test failures require systematic root cause analysis. Include: the failing test output, what the Code subtask attempted, the feature context, and hands_off_mode from state.json.</action>
+            <action>Wait for Debug to complete. Re-run the test suite.</action>
+            <sub_branch condition="Tests now pass">
+              <action>Proceed to Phase 4, Step 2 (Run Existing E2E Suite).</action>
+            </sub_branch>
+            <sub_branch condition="Tests still fail after Debug">
+              <action>Present the failure details to the user with options: "Retry the fix", "Skip the test run (not recommended)", "I'll fix manually".</action>
+              <action>If user skips: note in current-state.md under "⚠️ Known Issues".</action>
+            </sub_branch>
           </branch>
         </decision_tree>
       </recovery>
@@ -149,7 +156,7 @@
         <step>Determine: is it the NEW test that fails, or an EXISTING test?</step>
         <decision_tree>
           <branch condition="New E2E test fails">Re-spawn E2E generation subtask to fix the test. Do NOT modify application code.</branch>
-          <branch condition="Existing E2E test fails">Spawn code subtask: true regression — fix application code. Do NOT modify the E2E test.</branch>
+          <branch condition="Existing E2E test fails">Spawn a Debug subtask (debug mode): true regression requiring systematic root cause analysis — fix application code. Do NOT modify the E2E test. Include: the failing E2E output, feature context, and hands_off_mode from state.json. Debug is the correct choice here (mirrors FD's approach for E2E regression failures).</branch>
           <branch condition="Both fail">Fix application code first, then re-spawn E2E generation subtask if needed.</branch>
         </decision_tree>
         <step>Wait for fix, re-run suite.</step>

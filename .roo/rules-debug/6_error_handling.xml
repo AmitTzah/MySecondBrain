@@ -1,0 +1,123 @@
+<error_handling>
+  <overview>
+    Error scenarios and recovery strategies for Debug mode.
+  </overview>
+
+  <scenario name="unable_to_reproduce_autonomously">
+    <description>In hands-off mode, cannot reproduce the failure autonomously (e.g., need a specific environment or state that can't be recreated)</description>
+    <trigger>All autonomous reproduction attempts fail — running tests doesn't trigger the bug, and command execution can't replicate the conditions.</trigger>
+    <recovery>
+      <step>Document what was attempted: which commands were run, what was observed, why reproduction failed</step>
+      <step>Document what is needed: the specific conditions or environment required to reproduce</step>
+      <step>Report via completion summary: "Cannot reproduce autonomously. Reproduction requires: [conditions]. What was attempted: [list]. The investigation is incomplete — spawner may need to provide a different environment or invoke Debug in interactive mode."</step>
+      <step>Do NOT ask the user for help — hands-off mode forbids it. Escalate to spawner.</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="test_suite_has_pre_existing_failures">
+    <description>Running existing tests reveals failures that were present before Debug was spawned</description>
+    <trigger>Unit or integration tests fail, and the failures are unrelated to Debug's fix</trigger>
+    <recovery>
+      <step>Investigate each pre-existing failure using the same diagnostic-first approach</step>
+      <step>Fix each failure that is within scope. Debug leaves things greener.</step>
+      <step>If a pre-existing failure is too large in scope:
+        - Too large means: requires changes to 5+ files, database schema changes, API contract changes, or architectural restructuring.
+        - Document: the failing test, its root cause (if identified), why it's out of scope, and what kind of change is needed.
+        - Mark as "documented out-of-scope failure."
+        - Continue with the remaining workflow.
+        - Documented out-of-scope failures are excluded from the all-green requirement at step 8.
+        - If in doubt whether something is too large: fix it.
+      </step>
+      <step>Continue with the remaining workflow after addressing or documenting all failures</step>
+    </recovery>
+    <guardrail>
+      <rule>Do not ignore pre-existing failures silently — either fix them or document them</rule>
+      <rule>Do not get stuck indefinitely on a pre-existing failure that requires architectural changes</rule>
+    </guardrail>
+  </scenario>
+
+  <scenario name="circuit_breaker_same_test_failing">
+    <description>The same test keeps failing after 3 genuinely different fix approaches</description>
+    <trigger>
+      After 3 cycles of: diagnose → apply a genuinely different fix → run tests → same test still fails.
+      Each test tracks its own counter. Step 5 and step 8 share the same counter for the same test.
+      Genuinely different means targeting different root cause hypotheses (e.g., data layer vs. business logic vs. presentation).
+      NOT genuinely different: incremental timeout changes, constant value tweaks, increasingly broad try/catch.
+    </trigger>
+    <recovery>
+      <step>Stop immediately. Do NOT attempt a 4th fix.</step>
+      <step>Document: the suspected root cause, all 3 approaches tried, why each failed, the current test output</step>
+      <step>In hands-off mode: report via completion summary. Spawner handles escalation.</step>
+      <step>In interactive mode: present findings to user. "The test [name] still fails after 3 different approaches. Here's what was tried: [summary]. How would you like to proceed?" Options: "Investigate further with fresh perspective", "Skip this test for now", "I'll investigate manually"</step>
+    </recovery>
+    <prevention>
+      <item>Ensure each fix attempt is genuinely different — not variations of the same approach</item>
+      <item>Use mandatory instrumentation on retry (no guessing twice without evidence)</item>
+      <item>Consider whether the test itself might be wrong — but do NOT modify E2E tests</item>
+    </prevention>
+  </scenario>
+
+  <scenario name="multi_issue_partial_circuit_breaker">
+    <description>During multi-issue fixing, one issue hits the circuit breaker while others are already verified</description>
+    <trigger>In the multi-issue per-issue loop, issue N hits the 3-attempt circuit breaker. Issues 1 through N-1 are already verified.</trigger>
+    <recovery>
+      <step>Preserve all previously-verified fixes — do NOT revert them</step>
+      <step>Write regression tests for all verified fixes immediately</step>
+      <step>Run the full test suite for the verified fixes to confirm they're green</step>
+      <step>Report partial success: "[N-1] issues fixed with regression tests. [1] issue unresolved: [description]. Circuit breaker triggered after 3 approaches: [summary]."</step>
+      <step>Do NOT lose verified work. Do NOT continue trying the unresolved issue.</step>
+      <step>Do NOT proceed to batch regression tests for the unresolved issue.</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="fix_introduces_regression">
+    <description>After applying a fix, running existing tests reveals NEW failures (tests that passed before now fail)</description>
+    <trigger>Tests that previously passed now fail after applying the fix</trigger>
+    <recovery>
+      <step>Analyze the new failures — which tests broke and why?</step>
+      <step>Determine the correct response based on test type:
+        - E2E test broken: the fix is wrong. The E2E test is the authority on user-visible behavior. Refine the fix. Do NOT modify the E2E test.
+        - Unit/integration test that genuinely tests correct behavior: the fix introduced a bug. Refine the fix.
+        - Unit/integration test that depended on the buggy behavior: the test expectations were wrong, not the fix. Update the test expectations to match the correct behavior. This is ONLY acceptable for non-E2E tests.
+      </step>
+      <step>Apply the refined fix or updated test</step>
+      <step>Re-run all tests</step>
+      <step>If the same regression persists after 3 attempts: escalate (circuit breaker)</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="instrumentation_output_unavailable">
+    <description>In interactive mode, user cannot provide the requested diagnostic output (wrong location, tool unavailable, etc.)</description>
+    <trigger>User responds that they can't access the debug output</trigger>
+    <recovery>
+      <step>Verify the output location guidance: "The [DEBUG] output should appear in [location]. Are you able to see it there?"</step>
+      <step>If user confirms the location is correct but no output appears: the instrumented code path isn't being executed. Add instrumentation to earlier entry points and ask user to reproduce again.</step>
+      <step>If the output location is wrong for the user's environment: provide alternative locations or output methods (e.g., write to a log file instead of console)</step>
+      <step>If the user's environment genuinely cannot provide diagnostic output (no console, no log capability, environment restrictions): try alternative investigation methods — static analysis, adding more assertions to tests, process of elimination.</step>
+      <step>If this scenario occurs during a mandatory-instrumentation retry (step 3): follow step 3's escape clause — state clearly that instrumentation was mandated but impossible, and investigation proceeded via alternative methods.</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="multi_issue_later_fix_breaks_earlier">
+    <description>In multi-issue mode, fixing issue N+1 causes a previously-verified issue N to regress</description>
+    <trigger>After fixing issue N+1 and running the combined test suite (step 2b), the previously-passing tests for issue N fail</trigger>
+    <recovery>
+      <step>Investigate: did the fix for N+1 genuinely break N, or was N's fix incomplete?</step>
+      <step>Re-fix issue N with the new code state in mind</step>
+      <step>Re-run the combined test suite (step 2b)</step>
+      <step>Continue with the remaining issues</step>
+      <step>If fixes keep interfering with each other: the issues may be more deeply related than initially assessed. Re-triage: should they be fixed together as a single, more complex fix?</step>
+    </recovery>
+  </scenario>
+
+  <scenario name="e2e_fix_requires_modifying_e2e_test">
+    <description>An E2E test is failing because the test itself has a bug (wrong selector, outdated expectation, timing issue)</description>
+    <trigger>The E2E test failure is clearly in the test code, not the application code</trigger>
+    <recovery>
+      <step>Document the specific issue in the E2E test: what's wrong, why it's wrong, what the correct expectation should be</step>
+      <step>Do NOT modify the E2E test directly — E2E tests are the authority</step>
+      <step>Do NOT fix the application code to match a buggy E2E test — that would introduce bugs into the application</step>
+      <step>Report via completion summary: "The E2E test [name] appears to have a bug in the test itself: [description]. This requires the test author to fix — Debug does not modify E2E tests. The application code behavior is correct."</step>
+    </recovery>
+  </scenario>
+</error_handling>

@@ -1,0 +1,447 @@
+<complete_examples>
+  <overview>
+    Complete examples of Debug mode across all major scenarios.
+  </overview>
+
+  <example name="single_test_failure_hands_off">
+    <scenario>
+      Debug is spawned to investigate a unit test that keeps failing after multiple auto-fix attempts.
+      The test asserts that a discount calculation returns 20% off for premium users,
+      but it's returning 10%. hands_off_mode is true.
+    </scenario>
+
+    <spawn_prompt>
+      Failing test: DiscountService.test.ts — "applies 20% discount for premium users"
+      Expected: 80 (20% off 100), Received: 90 (10% off 100)
+      What was tried: (1) Checked DiscountService.getDiscountRate — looked correct.
+      (2) Checked UserService.isPremium — returns correct boolean.
+      (3) Checked for caching issues — no cache involved.
+      hands_off_mode: true
+    </spawn_prompt>
+
+    <workflow>
+      <step number="1">
+        <description>Analyze existing evidence</description>
+        <approach>
+          Read DiscountService.getDiscountRate. The method has a switch on user tier:
+          "premium" → 0.20, "gold" → 0.15, "standard" → 0.10.
+          Read UserService.isPremium. It calls user.tier === "premium".
+          Read the user data source. The database stores tier as "Premium" (capital P).
+          The comparison is case-sensitive — user.tier is "Premium" but the check is for "premium".
+          Root cause is clear from code analysis alone.
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Apply fix</description>
+        <approach>
+          Fix the case sensitivity: change isPremium to compare user.tier.toLowerCase() === "premium".
+          (Or fix the data source — but the simplest fix with least blast radius is the comparison.)
+        </approach>
+      </step>
+
+      <step number="3">
+        <description>Run existing tests</description>
+        <approach>
+          Run unit + integration tests. All pass. (Not an E2E fix — skip E2E.)
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Verify (autonomous)</description>
+        <approach>
+          Tests passing = verified. hands_off_mode is true — no user interaction.
+        </approach>
+      </step>
+
+      <step number="5">
+        <description>Write regression test</description>
+        <approach>
+          Write a unit test: "should apply correct discount for case-insensitive tier matching".
+          Test with "premium", "Premium", "PREMIUM" — all should get 20%.
+        </approach>
+      </step>
+
+      <step number="6">
+        <description>Run all tests</description>
+        <approach>
+          Run unit + integration + new regression test. All pass. Report success.
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      Root cause: case-sensitive string comparison in UserService.isPremium ("Premium" !== "premium").
+      Fix: case-insensitive comparison. Regression test: tests all case variants.
+      All tests green. No instrumentation needed — root cause was clear from code analysis.
+    </completion>
+  </example>
+
+  <example name="single_test_failure_requires_instrumentation">
+    <scenario>
+      Debug is spawned for a test failure where code analysis alone is inconclusive.
+      The test sometimes passes and sometimes fails — a race condition.
+    </scenario>
+
+    <spawn_prompt>
+      Failing test (flaky): OrderProcessor.test.ts — "processes orders in correct sequence"
+      Sometimes passes (about 60% of the time), sometimes fails with wrong order.
+      What was tried: (1) Checked array.sort — looks correct.
+      (2) Added artificial delays — didn't change pass rate.
+      hands_off_mode: true
+    </spawn_prompt>
+
+    <workflow>
+      <step number="1">
+        <description>Analyze — evidence is inconclusive</description>
+        <approach>
+          Read OrderProcessor.processOrders. It uses Promise.all to process orders in parallel
+          and pushes results to an array. Promise.all preserves order of the input array,
+          but the processing function uses an external queue that may reorder items.
+          Suspect: race condition in the async queue. But without runtime evidence, can't be sure.
+          Evidence is inconclusive → must instrument.
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Add instrumentation (autonomous)</description>
+        <approach>
+          Add [DEBUG] logs to trace: order ID, enqueue time, dequeue time, processing start, completion.
+          Re-run the test 10 times autonomously. In the failing runs: order #3 is dequeued before order #2.
+          Root cause: the queue implementation uses a Map with numeric keys but iterates in insertion order,
+          and a concurrent dequeue during insertion can skip entries.
+        </approach>
+      </step>
+
+      <step number="3">
+        <description>Apply fix</description>
+        <approach>
+          Replace Map-based queue with an array-based queue (shift/push) with a mutex lock
+          to prevent concurrent modifications.
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Run existing tests, verify, regression test, final suite</description>
+        <approach>
+          Run tests — all pass (including 20 re-runs of the flaky test).
+          Write regression test: runs the order processing 100 times and asserts correct sequence every time.
+          Run full suite — all green. Remove all [DEBUG] statements. Report success.
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      Root cause: race condition in Map-based async queue allowing skipped entries during concurrent dequeue.
+      Fix: array-based queue with mutex. Regression test: 100-iteration sequencing stress test.
+      Instrumentation was essential — code analysis alone couldn't confirm the race condition.
+    </completion>
+  </example>
+
+  <example name="smoke_test_failure_interactive">
+    <scenario>
+      Debug is spawned to investigate a failed smoke test. The user reports:
+      "The dashboard widgets don't stack vertically when I resize to 400px — they overflow horizontally."
+      hands_off_mode is false.
+    </scenario>
+
+    <spawn_prompt>
+      Smoke test failure: Dashboard responsive layout — widgets should stack vertically at 400px width.
+      User reports: widgets overflow horizontally instead of stacking.
+      Plan context provided (dashboard feature, CSS grid layout).
+      hands_off_mode: false
+      smoke_test_classification: HUMAN/SHT REQUIRED
+    </spawn_prompt>
+
+    <workflow>
+      <step number="1">
+        <description>Analyze code</description>
+        <approach>
+          Read Dashboard.css. The grid uses: grid-template-columns: 1fr 300px.
+          At 400px viewport, the 300px sidebar + 1fr content doesn't leave room.
+          Suspect: missing minmax(0, 1fr) on the content column — without it, 1fr can't shrink below
+          its content's minimum size. But this is a visual layout issue — need to confirm with the user.
+          Root cause is plausible from code but not certain → instrument to confirm.
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Add instrumentation (user-assisted)</description>
+        <approach>
+          Add [DEBUG] logs to the Dashboard component that log:
+          - Computed grid column widths at render
+          - Viewport width
+          - Content column min-width
+          Tell user: "I've added diagnostic logs. Open DevTools Console (F12), resize to 400px,
+          and copy the [DEBUG] output back to me."
+        </approach>
+      </step>
+
+      <step number="3">
+        <description>User provides logs</description>
+        <approach>
+          User copies: "[DEBUG] Viewport: 400px, Grid columns: [100px, 300px], Content min-width: 350px"
+          Confirmed: the content column has a 350px min-width from its child content, preventing the
+          grid from shrinking it below 350px. The sidebar is 300px. Total needed: 650px > 400px viewport.
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Apply fix</description>
+        <approach>
+          Change grid-template-columns to: minmax(0, 1fr) 300px.
+          Add a media query: at max-width 600px, switch to single column: grid-template-columns: 1fr.
+        </approach>
+      </step>
+
+      <step number="5">
+        <description>Run existing tests</description>
+        <approach>
+          Run unit + integration tests. All pass.
+        </approach>
+      </step>
+
+      <step number="6">
+        <description>Verify with user</description>
+        <approach>
+          ask_followup_question: "Fix applied — grid now uses minmax(0, 1fr) with a single-column
+          breakpoint at 600px. Resize to 400px — do widgets stack vertically now?"
+          User confirms: "Yes, it works perfectly."
+        </approach>
+      </step>
+
+      <step number="7">
+        <description>Write regression test + run all tests</description>
+        <approach>
+          Write an integration test that renders the dashboard at 400px viewport width and asserts
+          the computed grid is single-column. Run all tests — green. Remove [DEBUG] statements. Report success.
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      Root cause: CSS grid missing minmax(0, 1fr) preventing content column from shrinking below child min-width.
+      Fix: minmax(0, 1fr) + responsive breakpoint. Regression test: viewport-width-based layout assertion.
+      User confirmed fix works. All tests green.
+    </completion>
+  </example>
+
+  <example name="multi_issue_interactive">
+    <scenario>
+      User invokes Debug directly with 3 bugs found during manual testing of a todo app.
+      hands_off_mode is false (default).
+    </scenario>
+
+    <user_request>
+      I found 3 bugs:
+      1. Adding a todo with an empty title creates a blank todo item
+      2. Completed todos show the wrong timestamp (shows creation time instead of completion time)
+      3. Deleting the last todo in a list crashes the app
+    </user_request>
+
+    <workflow>
+      <step number="1">
+        <description>Triage</description>
+        <approach>
+          Analyze all 3 bugs. Bug #3 (crash) is most critical. Bug #1 (validation) is simplest.
+          Bug #2 (timestamp) has no dependency on either. Order: #1 (simplest first, build momentum)
+          → #3 (needs #1's validation to test edge case) → #2 (independent).
+          Present to user: "I'll fix in this order: empty title validation → delete-last crash → timestamp. OK?"
+          User confirms.
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Fix bug #1: empty title validation</description>
+        <approach>
+          Read TodoInput.tsx. The addTodo function doesn't validate title length.
+          Fix: add validation — if title.trim() is empty, show error "Title cannot be empty."
+          Run unit + integration tests → all pass. Verify with user → confirmed.
+        </approach>
+      </step>
+
+      <step number="3">
+        <description>Fix bug #3: delete-last crash</description>
+        <approach>
+          Read TodoList.tsx. The deleteTodo function accesses list[list.length - 1] after splice —
+          when the list becomes empty, this is undefined and a downstream .id access throws.
+          Fix: add early return if list becomes empty after deletion.
+          Run unit + integration tests → all pass. Verify with user → confirmed.
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Fix bug #2: wrong timestamp</description>
+        <approach>
+          Read TodoItem.tsx. The completedAt is set to todo.createdAt instead of new Date().
+          Fix: set completedAt to new Date().toISOString() when toggling to completed.
+          Run unit + integration tests → all pass. Verify with user → confirmed.
+        </approach>
+      </step>
+
+      <step number="5">
+        <description>Final verification</description>
+        <approach>
+          "All 3 bugs fixed. Please verify everything works: add a todo (try empty title),
+          complete it (check timestamp), delete all todos (check no crash). Everything good?"
+          User confirms all good.
+        </approach>
+      </step>
+
+      <step number="6">
+        <description>Batch regression tests</description>
+        <approach>
+          Write 3 regression tests:
+          1. should_show_error_when_adding_empty_todo
+          2. should_not_crash_when_deleting_last_todo
+          3. should_set_completedAt_to_current_time_when_toggling_done
+          Run all regression tests → pass. Run full suite → all green.
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      3 bugs fixed: empty title validation, delete-last crash guard, completion timestamp fix.
+      3 regression tests written. All tests green. User confirmed everything works.
+    </completion>
+  </example>
+
+  <example name="e2e_regression_hands_off">
+    <scenario>
+      Debug is spawned to investigate a failing E2E test.
+      The E2E test: "user can complete checkout flow" — fails at the payment step
+      with a 500 error from the payment API. hands_off_mode is true.
+    </scenario>
+
+    <spawn_prompt>
+      Failing E2E: checkout-flow.spec.ts — "completes checkout with valid payment"
+      Fails at step: "fills payment form and clicks Pay Now" — server returns 500.
+      Stack trace shows PaymentService.processPayment throws.
+      e2e-authoring-guide.md available (path provided by spawner).
+      hands_off_mode: true
+      "Never ask questions. Fix until E2E passes."
+    </spawn_prompt>
+
+    <workflow>
+      <step number="1">
+        <description>Analyze evidence</description>
+        <approach>
+          Read PaymentService.processPayment. It calls externalPaymentClient.charge().
+          The error handling catches exceptions but re-throws as generic 500.
+          Read externalPaymentClient — it expects amount in cents (integer) but receives dollars (float).
+          When the amount is 29.99 (dollars), it sends 29.99 to the API which expects 2999 (cents).
+          Root cause is clear from code analysis: unit mismatch.
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Apply fix</description>
+        <approach>
+          Fix PaymentService.processPayment to convert dollars to cents: Math.round(amount * 100).
+          Do NOT modify the E2E test.
+        </approach>
+      </step>
+
+      <step number="3">
+        <description>Run existing tests (fast gate)</description>
+        <approach>
+          Run unit + integration tests. All pass.
+        </approach>
+      </step>
+
+      <step number="4">
+        <description>Verify (autonomous — tests = verification)</description>
+        <approach>
+          hands_off_mode is true — no user interaction.
+        </approach>
+      </step>
+
+      <step number="5">
+        <description>Write regression test</description>
+        <approach>
+          Write a unit test: "should convert dollar amounts to cents before calling payment client".
+          Test with various amounts: 29.99 → 2999, 10.00 → 1000, 0.99 → 99.
+        </approach>
+      </step>
+
+      <step number="6">
+        <description>Run all tests including E2E</description>
+        <approach>
+          Run unit + integration + regression test + full E2E suite.
+          All pass including the checkout E2E. Report success.
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      Root cause: PaymentService sent dollar amounts to a cents-based payment API.
+      Fix: dollar-to-cents conversion. Regression test: unit test verifying conversion.
+      E2E suite green. E2E test NOT modified — source code was the problem.
+    </completion>
+  </example>
+
+  <example name="retry_with_mandatory_instrumentation">
+    <scenario>
+      Debug skips instrumentation on first pass (root cause seemed clear from code).
+      Fix is applied and verified with user — but user says it's still broken.
+      Second pass MUST include instrumentation.
+    </scenario>
+
+    <workflow>
+      <step number="1">
+        <description>First pass: code analysis → fix → fails</description>
+        <approach>
+          User reports: "Search returns no results for partial matches."
+          Code analysis: SearchService.query uses exact string matching (===) instead of includes().
+          Fix: change === to .includes(). Run tests → pass. Ask user to verify.
+          User: "Still broken — I search for 'pro' and 'product' doesn't show up."
+        </approach>
+      </step>
+
+      <step number="2">
+        <description>Second pass: MANDATORY instrumentation</description>
+        <approach>
+          Previous fix was based on code analysis alone and failed. Must instrument now.
+          Add [DEBUG] logs to SearchService:
+          - Log the raw query string received
+          - Log the search index being queried
+          - Log each item tested and whether it matched
+          Tell user: "I've added diagnostic logs. Search for 'pro' again and copy the DevTools Console output."
+          User provides: "[DEBUG] Query: 'pro', Index: 'title_index', Items tested: ['Product A' → no match, ...]"
+          The index is the TITLE index, but the user expects full-text search.
+          Real root cause: the search query is being routed to the wrong index (title_index instead of full_text_index).
+        </approach>
+      </step>
+
+      <step number="3">
+        <description>Apply correct fix</description>
+        <approach>
+          Fix the index routing: SearchService.query should use full_text_index for partial matches,
+          not title_index. The .includes() change was correct but insufficient — the query wasn't
+          reaching the right data.
+          Run tests → pass. Verify with user → "Perfect, works now!"
+          Write regression test that verifies partial match routing to correct index.
+          Run full suite → green. Remove [DEBUG] statements. Report success.
+        </approach>
+      </step>
+    </workflow>
+
+    <completion>
+      First fix (.includes()) was correct code but insufficient — the real bug was index routing.
+      Mandatory instrumentation on retry revealed the query was hitting the wrong search index.
+      Lesson: a failed code-analysis-only fix means the analysis missed something — instrumentation
+      closes that gap.
+    </completion>
+  </example>
+
+  <key_takeaways>
+    <takeaway>Diagnostic-first means analyze evidence FIRST — don't instrument what test output already reveals</takeaway>
+    <takeaway>Mandatory instrumentation on retry prevents the "guess → fail → guess again" loop</takeaway>
+    <takeaway>Fix ALL test failures — pre-existing or introduced — leave the project greener</takeaway>
+    <takeaway>Regression tests after user verification (interactive) or as verification (hands-off)</takeaway>
+    <takeaway>Multi-issue: triage, fix one-by-one, verify all, batch regression tests</takeaway>
+    <takeaway>E2E tests are never modified — fix the source code, not the test</takeaway>
+    <takeaway>Hands-off mode: all investigation autonomous, no user questions ever</takeaway>
+    <takeaway>Pipeline-agnostic: work the same whether spawned or invoked directly</takeaway>
+  </key_takeaways>
+</complete_examples>

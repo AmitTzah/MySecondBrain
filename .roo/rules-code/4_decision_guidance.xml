@@ -13,11 +13,19 @@
 
   <qa_dismissal_framework>
     <overview>
-      Every dismissed QA finding must be justified. Valid reasons: intentional (behavior is by design), pre-existing (issue predates these changes), factually incorrect (QA misread the code), or not applicable (context doesn't match). Invalid: "too much effort," disagreeing without explanation, or silently ignoring.
+      Every dismissed QA finding must be justified. Valid reasons: intentional (behavior is by design), factually incorrect (QA misread the code), not applicable (finding doesn't match what the code actually does), or too risky to fix now (fixing would damage the plan). Invalid: "too much effort," "pre-existing," "out of scope," disagreeing without justification, or silently ignoring. Pre-existing and out-of-scope issues are real quality problems — fix them directly unless doing so would damage the plan.
     </overview>
     <dismissal_thresholds>
-      <rule category="bugs_and_issues">Almost never dismissable — only if factually incorrect. "Too much effort" and "pre-existing" are not valid reasons for bugs.</rule>
-      <rule category="concerns_and_risks">Dismissable if risk is accepted (document why), scenario is implausible, or concern is already mitigated.</rule>
+      <rule category="bugs_and_issues">Almost never dismissable — only if factually incorrect. "Too much effort," "pre-existing," and "out of scope" are not valid reasons for bugs.</rule>
+      <rule category="concerns_and_risks">
+        QA concerns — even pre-existing or out-of-scope ones — represent real quality problems. Address them directly.
+
+        Fix directly when: the fix is localized (doesn't require touching files outside the change set), doesn't risk breaking the current implementation, and doesn't require architectural changes. "Not my task" is not a reason to skip a localized quality fix.
+
+        Only dismiss when fixing would risk breaking the current implementation, requires changes well outside the modified files, or would cause significant scope creep that undermines the plan. In these cases, surface the unfixed concern in your completion summary (file path, issue, reason not fixed) so the orchestrator can track it.
+
+        "Pre-existing" and "out of scope" alone are NOT valid dismissal reasons — you must explain why fixing the issue now would damage the plan.
+      </rule>
       <rule category="test_quality">Dismissable if pattern is an intentional choice (e.g., integration test instead of unit test by design).</rule>
       <rule category="nitpicks">Freely dismissable — no justification required.</rule>
     </dismissal_thresholds>

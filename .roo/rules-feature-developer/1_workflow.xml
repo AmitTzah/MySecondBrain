@@ -69,6 +69,9 @@
   "skipped_smoke_tests": [
     { "step": number, "name": "string", "classification": "string", "description": "string", "status": "skipped" | "verified" | "failed" }
   ],
+  "smoke_test_viability": [
+    { "step": number, "qa_verdict": "pass" | "fail" | "uncertain", "qa_simulation": "string", "qa_findings": ["string"], "fix_applied": boolean, "fix_result": "string | null" }
+  ],
   "e2e_regression_status": "string | null",
   "current_phase": number,
   "plan_status": "string",
@@ -84,14 +87,15 @@
       <field name="git_automation_enabled">Whether the orchestrator should run git commands.</field>
       <field name="hands_off_mode">When true: all user interaction gates are skipped. Model smoke tests are self-verified. HUMAN/SHT smoke tests are skipped and collected for one-at-a-time verification at feature end (Phase 5 Step 1, after E2E regression gate). Architect/Critic already auto-complete (this is the default now). Received in the spawn prompt, or asked of the user if not provided. Defaults to false if never configured.</field>
       <field name="smoke_test_automation">Configuration for automated GUI smoke testing via synthetic-human-tester. Smoke testing is only for GUI environments (web, desktop, native) — CLI is self-verified by Code mode. Received in the prompt, or asked of the user if not provided. Contains: enabled (boolean), environments (per-environment config with base_url/app_id/executable_path/window_title + mcp_available/mcp_name/verified populated by MCP verification in Phase 0 Step 4), and missing_prerequisites (list of unavailable MCP names). Passed to implementation in Phase 3 as part of the prompt. Defaults to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] } if never configured.</field>
-      <field name="skipped_smoke_tests">Accumulator for HUMAN/SHT smoke tests that were skipped during hands-off mode. Each entry records: step number, step name, classification, the verbatim Live Smoke Test description, and a status field ("skipped" | "verified" | "failed"). Populated during Phase 4 from Code subtask completion summaries with initial status "skipped". In Phase 5 Step 1 (smoke test verification, after E2E regression gate passes), tests are presented to the user one at a time: each verified test transitions from "skipped" to "verified" in state.json (committed immediately if git automation is enabled). Failed tests transition to "failed" and trigger a Debug mode subtask for root cause analysis. Empty array by default.</field>
+      <field name="skipped_smoke_tests">Accumulator for HUMAN/SHT smoke tests that were skipped during hands-off mode. Each entry records: step number, step name, classification, the verbatim Live Smoke Test description, and a status field ("skipped" | "verified" | "failed"). Populated during Phase 4 from Code subtask completion summaries with initial status "skipped". In Phase 5 Step 1 (smoke test verification, after E2E regression gate and viability gate pass), tests are presented to the user one at a time: each verified test transitions from "skipped" to "verified" in state.json (committed immediately if git automation is enabled). Failed tests transition to "failed" and trigger a Debug mode subtask for root cause analysis. Empty array by default.</field>
+      <field name="smoke_test_viability">Pre-flight QA analysis of each skipped smoke test, populated during Phase 5 Step 1 Part A (Viability Gate). Each entry corresponds to a skipped_smoke_tests entry (matched by step number). qa_verdict: "pass" (QA traced code paths — no issues found), "fail" (QA found bugs/stubs that would cause failure), "uncertain" (QA couldn't determine from code alone). qa_simulation: QA's narrative of what would happen if the user followed the smoke test steps — tracing through code paths, identifying what the user would see. qa_findings: specific bugs, stubs, or missing implementations QA identified. fix_applied: whether FD spawned Code/Debug to fix findings (ONE fix pass only, no re-verification loop). fix_result: outcome of the fix pass ("fixed", "partial", "failed", or null if no fix was attempted). Initialized as empty array. Populated only in hands-off mode with non-empty skipped_smoke_tests.</field>
       <field name="current_phase">The current major checkpoint: 1 (planning), 3 (execution), 5 (complete). Phases 0, 2, and 4 are transient and not tracked as resume checkpoints.</field>
       <field name="plan_status">One of: "draft", "validated", "archived".</field>
       <field name="total_steps">Number of execution steps in the plan. Populated after Architect finishes in Phase 1. When pivot_in_progress is true, total_steps is set to 0 to signal that the Architect is re-drafting — this is NOT the same as "never drafted"; the resume routing checks pivot_in_progress to distinguish.</field>
       <field name="current_step">The 1-based index of the step currently being executed. 0 means no steps executed yet.</field>
       <field name="pivot_in_progress">Set to true when a major drift or roadblock triggers an Architect re-plan (Phase 4 Step 3). Set back to false after the Architect finishes re-drafting and total_steps is updated. Initialized to false. This flag disambiguates "Architect never drafted" (total_steps=0, pivot_in_progress=false) from "Architect is re-drafting after pivot" (total_steps=0, pivot_in_progress=true). WARNING: total_steps=0 is ambiguous — it means both "Architect never drafted" (pivot_in_progress=false) and "Architect is re-drafting" (pivot_in_progress=true). The pivot_in_progress boolean is the ONLY disambiguator. If state.json is reconstructed, ensure pivot_in_progress is recovered correctly.</field>
       <field name="e2e_regression_status">Records the outcome of the Phase 5 Step 0 E2E regression gate for the caller to verify. One of: null (gate not yet run — default), "passed" (all existing E2E tests passed), "skipped" (no existing E2E tests to run), "failed" (should never persist — E2E failures are resolved before this field is set). Set in Phase 5 Step 0 after E2E regression successfully completes. Persisted in state.json so the caller (e.g., Project Director) can verify E2E regression was performed without relying on ephemeral completion summary text.</field>
-      <field name="phase_5_substep">Tracks progress within Phase 5 for safe resume: null (not started — default, initialized in Phase 1 Step 1. Also used when Phase 5 is entered with no skipped smoke tests to verify), "smoke_tests_verified" (Step 1 done — all skipped smoke tests have been verified by the user, or there were none to begin with), "knowledge_updated" (Step 2 done — Architect completed knowledge base update), "state_finalized" (Step 3 done — state.json finalized to current_phase=5, plan_status="archived"). Set to null after Step 4 archiving completes (state.json is moved to archive/ at that point, so the field is moot). This enables precise resume within Phase 5: if phase_5_substep is null and skipped_smoke_tests has entries with status "skipped", resume at Step 1. If phase_5_substep is "smoke_tests_verified" or null with no pending skipped tests, resume at Step 2.</field>
+      <field name="phase_5_substep">Tracks progress within Phase 5 for safe resume: null (not started — default, initialized in Phase 1 Step 1. Also used when Phase 5 is entered with no skipped smoke tests to verify and no viability gate to run), "smoke_tests_viability_checked" (Step 1 Part A done — viability gate completed for all smoke tests; proceed to Step 1 Part B), "smoke_tests_verified" (Step 1 Part B done — all skipped smoke tests have been verified by the user, or there were none to begin with), "knowledge_updated" (Step 2 done — Architect completed knowledge base update), "state_finalized" (Step 3 done — state.json finalized to current_phase=5, plan_status="archived"). Set to null after Step 4 archiving completes (state.json is moved to archive/ at that point, so the field is moot). This enables precise resume within Phase 5: if phase_5_substep is null and smoke_test_viability is empty but skipped_smoke_tests has entries with status "skipped", resume at Step 1 Part A (viability gate was interrupted or never run). If phase_5_substep is "smoke_tests_viability_checked", resume at Step 1 Part B. If phase_5_substep is "smoke_tests_verified" or null with no pending skipped tests, resume at Step 2.</field>
     </field_meanings>
   </state_json_schema>
 
@@ -507,7 +511,13 @@
           <route condition="current_phase=5 AND plan_status='archived'">
             <action>Use phase_5_substep from state.json to determine exact resume point:</action>
             <subroute condition="phase_5_substep is null">
-              <action>Phase 5 was entered. The E2E regression gate (Step 0) runs unconditionally first — it is idempotent and safe to re-run. After E2E passes, check skipped_smoke_tests in state.json: if any entry has status "skipped", smoke test verification was interrupted — route to Phase 5 Step 1 to resume per-test verification. If no entries have status "skipped" (all are "verified", "failed", or array is empty): route to Phase 5 Step 2 (knowledge update).</action>
+              <action>Phase 5 was entered. The E2E regression gate (Step 0) runs unconditionally first — it is idempotent and safe to re-run. After E2E passes, determine next step:
+                1. If hands_off_mode is true AND skipped_smoke_tests has entries with status "skipped" AND smoke_test_viability is empty or missing entries for any skipped test: route to Phase 5 Step 1 Part A (viability gate was interrupted or never run).
+                2. If hands_off_mode is true AND skipped_smoke_tests has entries with status "skipped" AND smoke_test_viability has entries for ALL skipped tests: viability gate completed. Route to Phase 5 Step 1 to resume per-test verification.
+                3. If hands_off_mode is false OR skipped_smoke_tests has no entries with status "skipped": route to Phase 5 Step 2 (knowledge update).</action>
+            </subroute>
+            <subroute condition="phase_5_substep='smoke_tests_viability_checked'">
+              <action>Viability gate completed; smoke test verification was interrupted (Step 1 never started or was interrupted). Filter skipped_smoke_tests to entries with status "skipped". If any remain: route to Phase 5 Step 1 to resume per-test verification. If none remain (all "verified" or "failed"): proceed to Phase 5 Step 2 (knowledge update).</action>
             </subroute>
             <subroute condition="phase_5_substep='smoke_tests_verified'">
               <action>Smoke test verification completed. Proceed to Phase 5 Step 2 (knowledge update).</action>
@@ -559,6 +569,7 @@
             Otherwise, read from agent-workspace/testing-environments.json if it exists.
             If none of the above, default to { enabled: false, environments: { web: null, native: null, desktop: null }, missing_prerequisites: [] }),
             skipped_smoke_tests=[],
+            smoke_test_viability=[],
             e2e_regression_status=null,
             current_phase=1, plan_status="draft", total_steps=0, current_step=0, pivot_in_progress=false, phase_5_substep=null.
           </action>
@@ -823,7 +834,7 @@
             <checks>
               <check name="line_count">
                 <rule>Does the file exceed 300 lines (excluding blank lines and comments)?</rule>
-                <rationale>300 lines is the healthy ceiling established by Code mode's self-refactor. Files beyond this are harder to navigate and review.</rationale>
+                <rationale>300 lines is the warning threshold — files beyond this deserve attention. At 300-500 lines with a single coherent concern, the file is large but may be a natural unit. At 500+ lines, even single-concern files become hard to navigate and must be split regardless of cohesion.</rationale>
               </check>
               <check name="concern_count">
                 <rule>Does the file contain 3+ distinct concerns? Look for: multiple unrelated class/interface definitions, mixed layers (data access + business logic + UI), or sections that could stand alone as separate modules.</rule>
@@ -841,12 +852,24 @@
 
           <step number="3">
             <title>Classify</title>
+            <description>
+              Two-tier system: 300 lines = warning threshold (Code mode flags via FILE_SIZE_WARNING, QA may note as concern). 500 lines = hard cap (must refactor regardless of cohesion). Between 300-500, only refactor if the file ALSO has mixed concerns — a single-concern file at 350 lines is a natural unit, not a problem.
+            </description>
             <decision_tree>
               <branch condition="ALL touched files are under 300 lines, have coherent concerns, and grew by less than 100 lines">
                 <action>No structural issues. Skip to Step 3 (Re-evaluate the Plan).</action>
               </branch>
-              <branch condition="One or more files triggered the line_count or concern_count checks">
-                <action>Flag these files for structural refactoring. Proceed to Step 4 (Design Split).</action>
+              <branch condition="One or more files exceed 500 lines (excluding blanks/comments)">
+                <action>Hard cap exceeded — these files MUST be split regardless of concern count. Flag for structural refactoring. Proceed to Step 4 (Design Split).</action>
+              </branch>
+              <branch condition="One or more files exceed 300 lines AND have 3+ distinct concerns (triggered both line_count AND concern_count)">
+                <action>Large AND unfocused — these files need splitting. Flag for structural refactoring. Proceed to Step 4 (Design Split).</action>
+              </branch>
+              <branch condition="Files exceed 300 lines but have fewer than 3 concerns (triggered line_count only)">
+                <action>Large but coherent — flag as a warning. Note in the completion summary: "File [name] exceeds 300 lines ([N] lines) but has a single coherent concern. Monitor for growth." No refactoring triggered. Proceed to Step 3 (Re-evaluate the Plan).</action>
+              </branch>
+              <branch condition="Files only triggered the concern_count check (under 300 lines but mixed concerns)">
+                <action>Small but unfocused — flag as a warning. Note in the completion summary. The file is under the line threshold so it's not urgent, but future growth could push it into refactoring territory. Proceed to Step 3 (Re-evaluate the Plan).</action>
               </branch>
               <branch condition="Files only triggered the growth_rate check (under 300 lines but grew fast)">
                 <action>Note as a warning. Proceed to Step 3 (Re-evaluate the Plan) but mention in the completion summary that these files are approaching the threshold. No immediate action required.</action>
@@ -881,7 +904,7 @@
             4. Update Section 4 (Final Expected Project Structure) to reflect the new file layout.
             5. Update reference.md: insert the new step's H3 heading and renumber all subsequent H3 headings to match.
             6. Preserve ALL completed [x] steps exactly as-is. Only modify pending [ ] steps.
-            7. Do NOT change any step's Goal, Actions, or tests beyond renumbering — only the refactoring step is new.
+            7. Update remaining pending steps' file path references: if the split renamed files or moved code to new paths, scan all remaining pending [ ] steps' Actions for references to the old paths. Update them to the correct new paths. Do NOT change Goals or tests — only fix broken file path references. If a step said "Modify src/Services/MegaService.cs" and that file was split into src/Services/Auth/AuthService.cs and src/Services/Auth/TokenService.cs, update the Actions to reference the correct new file(s).
 
             Preserve completed [x] steps 1–[current_step]. Only rewrite pending [ ] steps starting from step [current_step+1]. Do NOT tell me templates are empty — they are not."</action>
             <action>Wait for Architect to complete.</action>
@@ -931,6 +954,170 @@
             <rule>Track how many times THIS feature has triggered a structural refactoring replan (count the number of "Structural Refactoring" steps in plan.md Section 5). If the count reaches 2: stop. Do NOT trigger another replan. Note in the completion summary: "⚠️ Structural refactoring limit reached (2 replans). Further splits deferred to PD Phase 4."</rule>
           </replan_counter>
         </loop_guard>
+      </step>
+
+      <step number="2c" priority="high">
+        <title>Unfixed QA Concerns — Handle Issues Code Mode Couldn't Fix</title>
+        <description>
+          After every step, scan the Code subtask's completion summary for the
+          <!--UNFIXED_QA_CONCERNS--> structured marker. Code mode surfaces quality issues
+          that QA found but couldn't fix because doing so would have damaged the plan.
+          The FD takes ownership of these now — deciding whether a simple Code fix suffices
+          or an Architect replan is needed.
+        </description>
+
+        <trigger>After Step 2b (Structural Health Check), before Step 3 (Re-evaluate the Plan). Runs on EVERY completed step.</trigger>
+
+        <detection>
+          <step number="1">
+            <title>Scan for UNFIXED_QA_CONCERNS</title>
+            <action>Read the Code subtask's completion summary. Look for the structured marker "<!--UNFIXED_QA_CONCERNS-->".</action>
+            <decision_tree>
+              <branch condition="Marker is absent or says 'None — all QA findings addressed'">
+                <action>No unfixed concerns. Skip to Step 3 (Re-evaluate the Plan).</action>
+              </branch>
+              <branch condition="Marker has entries">
+                <action>Extract each entry: file path, issue description, and reason not fixed. Proceed to Step 2 (Classify).</action>
+              </branch>
+            </decision_tree>
+          </step>
+
+          <step number="2">
+            <title>Classify Each Concern</title>
+            <description>
+              For each UNFIXED_QA_CONCERNS entry, determine whether it needs a simple
+              Code fix or an Architect replan. Use the reason Code gave for not fixing
+              as a starting point — but make your own independent judgment.
+            </description>
+            <classification>
+              <category name="already_handled">
+                <rule>If the concern is about an oversized file that Step 2b already flagged for structural refactoring (>500 lines, or >300 lines with 3+ concerns): skip. The Architect replan from Step 2b will handle it. Note in your completion: "UNFIXED_QA_CONCERNS: [N] oversized file concern(s) already addressed by structural health check."</rule>
+              </category>
+              <category name="acceptable_as_is">
+                <description>The file is large (>300 lines) but coherent (<3 distinct concerns) and under the 500-line hard cap. Splitting it would create artificial module boundaries that reduce clarity.</description>
+                <rule>If the concern is about an oversized file (300-500 lines) that Step 2b classified as "large but coherent — warning only": accept the file as-is. Note in your completion: "UNFIXED_QA_CONCERNS: [file] — [N] lines, single coherent concern. Acceptable as-is per structural health check." Do NOT spawn Code or Architect. The file is fine.</rule>
+              </category>
+              <category name="localized_fix">
+                <description>A localized fix that Code mode can handle without architectural changes.</description>
+                <signals>
+                  <signal>The fix is in files that were already modified in this step</signal>
+                  <signal>The fix is self-contained: add a null guard, add an Include(), add error handling, fix a data mapping</signal>
+                  <signal>The fix doesn't introduce new dependencies or cross-cutting concerns</signal>
+                  <signal>The fix doesn't require touching files outside the current change set</signal>
+                </signals>
+                <action>Launch a Code subtask directly to fix this concern. See the "Direct Code Fix" workflow below. Do NOT spawn an Architect — this is a simple fix, not a planning change.</action>
+              </category>
+              <category name="architectural_fix">
+                <description>A complex fix that requires planning: new dependencies, cross-cutting changes, file splitting, or architectural decisions.</description>
+                <signals>
+                  <signal>The fix requires touching files far outside the current change set</signal>
+                  <signal>The fix introduces new patterns, dependencies, or abstractions</signal>
+                  <signal>The fix requires restructuring code across multiple files</signal>
+                  <signal>The fix changes the architecture in a way that affects remaining steps</signal>
+                </signals>
+                <action>Spawn an Architect to replan — insert a new step that addresses the concern. See the "Architect Replan" workflow below. This mirrors the structural refactoring replan from Step 2b.</action>
+              </category>
+            </classification>
+          </step>
+        </detection>
+
+        <direct_code_fix>
+          <step number="3a">
+            <title>Launch Code Subtask for Localized Fix</title>
+            <trigger>One or more concerns classified as localized_fix.</trigger>
+            <action>
+              Prepare a self-contained Code subtask prompt. Include:
+              - The specific concern(s) from the UNFIXED_QA_CONCERNS entry (file path, issue, suggested fix from QA)
+              - The relevant file paths from the completed step
+              - Instruction: "Fix this pre-existing quality issue. The fix should be localized — do NOT change architecture or touch files outside [list]. QA already reviewed the surrounding code and identified this as the only unfixed concern."
+              - The standard Clean Code Refactor instruction (≤50 line functions, ≤300 line files)
+            </action>
+            <action>Spawn Code mode via new_task.</action>
+            <action>When Code completes: run the structural health check (Step 2b) on the newly touched files — the fix may have pushed a file over 300 lines.</action>
+            <action priority="high">Scan the Code subtask's completion summary for <!--UNFIXED_QA_CONCERNS-->. If present with entries (not "None"): the fix may have introduced or exposed new unfixable concerns. Classify the new entries using the same classification from Step 2 (localized_fix vs architectural_fix vs already_handled). This forms a re-scan loop — track the iteration count.</action>
+            <iteration_limit priority="critical">
+              <rule>Maximum 2 localized_fix Code subtasks total per FD Phase 4 execution (the original fix + 1 re-fix). If after the 2nd Code subtask, UNFIXED_QA_CONCERNS still has new entries: stop. Do NOT spawn another Code subtask. Document in the completion summary: "⚠️ Localized QA concern fixes deferred after 2 iterations — [N] concern(s) remain: [summaries]." The remaining concerns will be caught by PD Phase 4.</rule>
+              <rule>If the re-scan finds concerns that are clearly different from the ones just fixed (new issues, not recurrences): these count toward the same iteration limit. Do not reset the counter — the limit is on total localized_fix Code subtasks, not per-concern.</rule>
+            </iteration_limit>
+            <action>Update plan.md Section 5: append a brief note to the just-completed step's entry documenting that unfixed QA concern(s) were resolved. Format: "(QA concern fixed: [brief description])". Do NOT create a new step — the fix was executed within the current step's scope.</action>
+          </step>
+        </direct_code_fix>
+
+        <architect_replan>
+          <step number="3b">
+            <title>Spawn Architect to Replan — Insert Concern Resolution Step</title>
+            <trigger>One or more concerns classified as architectural_fix.</trigger>
+            <description>
+              Do NOT fix these yourself. Spawn an Architect subtask to replan the feature:
+              the Architect inserts a new step that addresses the unfixed QA concerns, then
+              adjusts all subsequent pending steps. The new step executes through the normal
+              Phase 3 loop like any other step.
+            </description>
+            <action>Spawn Architect via new_task using the standard_architect_prompt from common patterns, but with this replan instruction injected: "This is a QA concern resolution replan. Step [current_step] just completed. QA reviewed the code and found the following quality issues that Code mode could not fix because they would have damaged the plan: [paste UNFIXED_QA_CONCERNS entries verbatim].
+
+            These are real quality problems — not cosmetic issues. They must be addressed.
+
+            Your job:
+            1. Read plan.md and reference.md — understand the current feature state.
+            2. Insert a NEW step immediately after the just-completed step [current_step] — name it 'Step [current_step+1]: QA Concern Resolution — [brief summary of concerns]'. This step must:
+               - Goal: Address unfixed quality issues identified by QA review.
+               - Actions: For each concern, specify what to change and where. Be concrete — reference the exact file paths and issues from the QA findings.
+               - Unit Tests to Write: Write tests that verify each fix. If the concern is about missing error handling: write a test that triggers the error path. If about a null reference: write a test with null input.
+               - Integration Tests to Write: Only if the fix touches infrastructure (DB, filesystem, network).
+               - Live Smoke Test: 'Run full test suite — verify zero failures. [Any specific verification relevant to the fixes].'
+               - Smoke Test Classification: Model (self-verifiable via terminal).
+               - Suggested Commit Message: 'fix: address QA concerns — [brief summary]'
+            3. Renumber ALL subsequent pending [ ] steps — shift them forward by 1 (e.g., old Step 5 → new Step 6).
+            4. Update Section 4 (Final Expected Project Structure) if new files are created.
+            5. Update reference.md: insert the new step's H3 heading and renumber all subsequent H3 headings to match.
+            6. Preserve ALL completed [x] steps exactly as-is. Only modify pending [ ] steps.
+            7. Update remaining pending steps' file path references if the concern resolution creates, renames, or moves files. Scan all remaining pending [ ] steps' Actions for references to old paths and update them. Do NOT change Goals or tests — only fix broken file path references.
+
+            Preserve completed [x] steps 1–[current_step]. Only rewrite pending [ ] steps starting from step [current_step+1]. Do NOT tell me templates are empty — they are not."</action>
+            <action>Wait for Architect to complete.</action>
+          </step>
+
+          <step number="4b">
+            <title>Process Replan and Resume Execution</title>
+            <trigger>Architect completed the replan.</trigger>
+            <action>Read plan.md. Verify: (a) the new QA concern resolution step exists at position current_step+1, (b) all subsequent pending steps are renumbered correctly, (c) completed [x] steps are untouched, (d) the new step's Actions concretely address each UNFIXED_QA_CONCERNS entry.</action>
+            <action>Read reference.md. Verify the new step has an H3 heading and subsequent headings are renumbered.</action>
+            <action>Re-count total steps in plan.md Section 5 (every "### [ ] Step" OR "### [x] Step"). Update state.json: total_steps=[new count].</action>
+            <decision_tree>
+              <branch condition="Architect's replan looks correct">
+                <action>Proceed to Step 3 (Re-evaluate the Plan) — but skip the Re-evaluate logic. The Architect already replanned. Go directly to Step 4 (Finalize Step Completion) for the just-completed step [current_step], then loop back to Phase 3. The next step in the Phase 3 loop will be the new QA concern resolution step.</action>
+              </branch>
+              <branch condition="Architect's replan has issues (missing step, vague Actions, numbering errors)">
+                <action priority="critical">Do NOT ask the user. Auto-spawn another Architect to fix the replan. This is a mechanical correction.</action>
+                <action>Spawn Architect via new_task with: "Your previous replan had issues: [list specific problems]. Fix them. Preserve completed [x] steps. Only modify pending [ ] steps."</action>
+                <retry_limit priority="critical">
+                  <rule>If the Architect's replan still has issues after 2 retries (3 total attempts including the original): stop. Do NOT spawn Architect again. Skip the QA concern resolution — proceed to Step 3 (Re-evaluate the Plan) normally. Document in the completion summary: "⚠️ QA concern resolution deferred — Architect replan failed after 3 attempts: [concern summaries]." The unfixed concerns will be caught again by PD Phase 4.</rule>
+                </retry_limit>
+              </branch>
+            </decision_tree>
+          </step>
+        </architect_replan>
+
+        <loop_guard priority="critical">
+          <description>
+            QA concern resolution steps that don't fully resolve the concern could trigger
+            another resolution step, creating a loop. Prevent this.
+          </description>
+          <detection>
+            <rule>Before running the UNFIXED_QA_CONCERNS scan, read the just-completed step's name from plan.md Section 5. If the step name contains "QA Concern Resolution": skip the entire Step 2c for this iteration. The resolution step's results stand as-is — if concerns remain, PD Phase 4 will catch them.</rule>
+          </detection>
+          <replan_counter>
+            <rule>Track how many times THIS feature has triggered a QA concern resolution replan (count the number of "QA Concern Resolution" steps in plan.md Section 5). If the count reaches 2: stop. Do NOT trigger another replan. Note in the completion summary: "⚠️ QA concern resolution limit reached (2 replans). Further concerns deferred to PD Phase 4."</rule>
+          </replan_counter>
+        </loop_guard>
+
+        <hands_off_mode_behavior priority="high">
+          <description>
+            When hands_off_mode is true: the entire unfixed QA concerns workflow runs automatically.
+            Code subtasks (localized fix) and Architect replans execute without asking the user.
+            The user is never prompted — concerns are resolved silently.
+          </description>
+        </hands_off_mode_behavior>
       </step>
 
       <step number="3">
@@ -1029,7 +1216,7 @@
         <action>Check if tests/e2e/ directory exists and contains any test files. If the directory
           is empty or doesn't exist (first feature, or no E2E tests generated yet): note
           "No existing E2E tests — regression gate skipped (nothing to regress)." Set
-          e2e_regression_status="skipped" in state.json. Proceed to Step 1 (Smoke Test Verification).</action>
+          e2e_regression_status="skipped" in state.json. Proceed to Step 1 (Smoke Test Handling).</action>
 
         <action>Determine the E2E run command. Read planning/e2e-authoring-guide.md (passed in
           your spawn prompt via planning/ paths) for the framework and run command. If the guide
@@ -1044,7 +1231,7 @@
           <branch condition="ALL existing E2E tests PASS">
             <action>Announce: "✅ E2E Regression: All [N] existing tests pass. No regressions."</action>
             <action>Set e2e_regression_status="passed" in state.json.</action>
-            <action>Proceed to Step 1 (Smoke Test Verification).</action>
+            <action>Proceed to Step 1 (Smoke Test Handling).</action>
           </branch>
 
           <branch condition="EXISTING E2E tests FAIL">
@@ -1085,7 +1272,7 @@
               <branch condition="All E2E tests now pass">
                 <action>Announce: "✅ E2E Regression: Debug resolved failures. All [N] tests pass."</action>
                 <action>Set e2e_regression_status="passed" in state.json.</action>
-                <action>Proceed to Step 1 (Smoke Test Verification).</action>
+                <action>Proceed to Step 1 (Smoke Test Handling).</action>
               </branch>
               <branch condition="E2E tests still fail">
                 <action priority="critical">Re-spawn Debug mode with the new failure output AND
@@ -1108,24 +1295,190 @@
         </decision_tree>
       </step>
 
+      <!-- ============================================================ -->
+      <!-- STEP 1: SMOKE TEST HANDLING — hands-off mode only              -->
+      │  Part A: Viability Gate (QA traces code, ONE fix pass per test)  │
+      │  Part B: Per-Test User Verification (with viability context)     │
+      │  SKIPPED when hands_off_mode=false OR skipped_smoke_tests empty  │
+      <!-- ============================================================ -->
       <step number="1" priority="critical">
-        <title>Verify Skipped Smoke Tests One-at-a-Time (Hands-Off Mode)</title>
+        <title>Smoke Test Handling — Viability Gate + User Verification (Hands-Off Mode Only)</title>
         <trigger>Only when hands_off_mode is true in state.json AND skipped_smoke_tests array is non-empty.</trigger>
         <description>
           When hands-off mode is active, HUMAN/SHT smoke tests were skipped during execution and collected.
-          Now, at feature end, they must be verified one at a time with the user. Each verification is tracked
-          in state.json with a status field ("skipped" → "verified" or "failed"). After each verification,
-          state.json is committed (if git automation enabled) so progress is never lost on interruption.
-          Failed tests are investigated by Debug mode (not Code) for systematic root cause analysis.
+          This step handles them in two parts:
+
+          Part A (Viability Gate): Before bothering the user, QA Reviewer traces each smoke test's code
+          paths to find bugs, stubs, and missing implementations that would cause failure. One QA pass +
+          one Code/Debug fix pass per smoke test. No re-verification loop. Catches obvious failures so
+          the user only sees tests with a real chance of passing.
+
+          Part B (User Verification): Each smoke test is presented to the user one-at-a-time with
+          viability context (QA found/fixed issues, QA verified, QA uncertain). Status tracked in
+          state.json. Failed tests trigger Debug mode for root cause analysis.
         </description>
 
         <prerequisites>
-          <item>Read hands_off_mode from state.json. If false: skip this step entirely, proceed to Step 2 (Knowledge Base Update).</item>
-          <item>Read skipped_smoke_tests from state.json. If the array is empty: skip this step, proceed to Step 2 (Knowledge Base Update).</item>
-          <item priority="critical">If phase_5_substep is "knowledge_updated" or "state_finalized": we are past smoke test verification (Step 2 or Step 3 already completed). Skip this step entirely. Route to Phase 5 Step 2 (if "knowledge_updated") or Phase 5 Step 3 (if "state_finalized") as appropriate. Do NOT re-enter the verification loop and do NOT overwrite phase_5_substep.</item>
-          <item>If phase_5_substep is "smoke_tests_verified": all tests were already verified (resume after crash where Step 1 completed but knowledge update not yet started). Skip this step, proceed to Step 2 (Knowledge Base Update).</item>
-          <item>Filter skipped_smoke_tests to entries where status is "skipped" (not yet verified). IMPORTANT: if any entry is missing the "status" field entirely (old-format entry from before per-test tracking was introduced), treat it as status="skipped" — default to requiring verification. If no entries match: all tests have been resolved. If phase_5_substep is null: set phase_5_substep="smoke_tests_verified" in state.json, commit if git enabled. Proceed to Step 2 (Knowledge Base Update).</item>
+          <item>Read hands_off_mode from state.json. If false: skip this entire step, proceed to Step 2 (Knowledge Base Update).</item>
+          <item>Read skipped_smoke_tests from state.json. If the array is empty: skip this entire step, proceed to Step 2 (Knowledge Base Update).</item>
+          <item priority="critical">If phase_5_substep is "knowledge_updated" or "state_finalized": we are past smoke test handling (Step 2 or Step 3 already completed). Skip this entire step. Route to Phase 5 Step 2 (if "knowledge_updated") or Phase 5 Step 3 (if "state_finalized") as appropriate. Do NOT re-enter and do NOT overwrite phase_5_substep.</item>
+          <item>If phase_5_substep is "smoke_tests_verified": all tests were already verified (resume after crash where Part B completed but Step 2 not yet started). Skip this entire step, proceed to Step 2 (Knowledge Base Update).</item>
         </prerequisites>
+
+        <!-- ============================================================ -->
+        <!-- PART A: VIABILITY GATE                                        -->
+        <!-- ============================================================ -->
+        <part name="A" title="Viability Gate — QA Pre-Flight Check">
+          <prerequisites>
+            <item>If phase_5_substep is "smoke_tests_viability_checked": viability gate already completed. Skip Part A, proceed to Part B.</item>
+            <item>Read smoke_test_viability from state.json. If entries already exist for all skipped smoke tests (matched by step number): viability gate was completed but phase_5_substep wasn't set. Set phase_5_substep="smoke_tests_viability_checked" and skip Part A, proceed to Part B.</item>
+          </prerequisites>
+
+        <viability_loop>
+          <description>
+            Process each skipped smoke test ONE AT A TIME. For each test: spawn QA to trace code
+            paths → if QA finds issues, spawn ONE Code/Debug fix pass → record result → move to
+            next test. After each test, update state.json immediately for crash-safe resume.
+          </description>
+
+          <loop_body>
+            <action number="1">
+              <title>Select Next Unchecked Test</title>
+              <action>Find the first entry in skipped_smoke_tests that does NOT have a corresponding entry in smoke_test_viability (matched by step number).</action>
+              <action priority="critical">Crash recovery: if a smoke_test_viability entry EXISTS for this step BUT has qa_verdict="fail" AND fix_applied=false: the fix pass was interrupted by a crash. The QA analysis was done but the fix never ran. Skip Actions 2-4 (QA already completed) and jump directly to Action 5 (ONE Fix Pass) to apply the fix using the already-stored qa_findings.</action>
+              <action>If no entries remain without a smoke_test_viability match: all tests have been processed (or are in crash-recovery above). Set phase_5_substep="smoke_tests_viability_checked" in state.json, commit if git enabled, proceed to Part B.</action>
+            </action>
+
+            <action number="2">
+              <title>Identify Relevant Source Files</title>
+              <description>
+                QA needs to know which source files to trace through. Compile file paths from:
+              </description>
+              <action>Read plan.md Section 5 — locate the step by number. Extract the Actions list. Note which files/directories the Actions reference.</action>
+              <action>Read plan.md Section 3 (Architecture and Extensibility) — note the design patterns, interfaces, and abstractions the Architect specified. These are the contracts QA must verify are actually implemented.</action>
+              <action>Read plan.md Section 4 (Final Expected Project Structure) — cross-reference with the step's Actions to identify all source files that should have been created or modified.</action>
+              <action priority="medium">If git_automation_enabled is true: run `git diff --name-only HEAD~1` (or equivalent) to get the actual files modified. Cross-reference with the plan's expected files — discrepancies are red flags for QA.</action>
+              <action>Compile the final file list: every source file the smoke test's code path would touch. Pass ALL of them to QA.</action>
+            </action>
+
+            <action number="3">
+              <title>Spawn QA Reviewer for Code-Level Smoke Test Simulation</title>
+              <action priority="critical">Spawn a QA Reviewer (qa mode) subtask via new_task. Construct the prompt using the smoke_test_viability_qa_prompt from common patterns (see 3_common_patterns.xml). The prompt must include:
+                - The verbatim smoke test description from skipped_smoke_tests (step number, name, description).
+                - The compiled list of relevant source file paths (from action 2 above).
+                - The plan.md Section 3 (Architecture and Extensibility) — QA must verify the architectural contracts are honored.
+              </action>
+              <action>Wait for QA to complete.</action>
+            </action>
+
+            <action number="4">
+              <title>Process QA Verdict — Extract from Native QA Report Format</title>
+              <description>
+                QA returns its standard 4-section report with a SIMULATION preamble. Extract the viability
+                verdict from the report content using the deterministic rules below. This works whether QA
+                follows the exact format or falls back to its native structure.
+              </description>
+
+              <action>Read QA's completion summary in full.</action>
+
+              <action priority="high">Extract qa_simulation: Look for a section starting with "SIMULATION:" or "## SIMULATION" near the top of the report. Extract the full narrative text. If no SIMULATION section is found: use the Summary section as a fallback, prefixed with "[No simulation narrative — using QA summary:] ".</action>
+
+              <action priority="high">Determine qa_verdict using this decision tree (check in order):
+                1. If Bugs & Issues section has ANY entries (not "No bugs or issues found", not empty): qa_verdict = "fail". Collect all Bugs & Issues entries as qa_findings.
+                2. If no Bugs but Concerns & Risks has entries that would affect the smoke test (not general architecture concerns, not "No concerns identified"): qa_verdict = "uncertain". Collect the relevant Concerns as qa_findings.
+                3. If both Bugs & Issues and Concerns & Risks are clean/empty/negative: qa_verdict = "pass". qa_findings = [].
+                4. FALLBACK: If the report structure is unrecognizable (no standard sections found): search the entire completion summary for keywords. If "bug", "error", "fail", "missing", "stub", "undefined", "null", "crash", "broken" appear in negative context: qa_verdict = "fail". If "uncertain", "unclear", "cannot determine", "depends": qa_verdict = "uncertain". If "pass", "correct", "works", "no issues": qa_verdict = "pass". Otherwise: qa_verdict = "uncertain".
+              </action>
+
+              <action>Create a smoke_test_viability entry: { "step": [step number], "qa_verdict": "[verdict]", "qa_simulation": "[extracted narrative]", "qa_findings": [...], "fix_applied": false, "fix_result": null }. Append to state.json. Commit if git enabled.</action>
+
+              <decision_tree>
+                <branch condition="qa_verdict is 'pass'">
+                  <action>QA found no issues — the smoke test should work. Mark fix_applied=false, fix_result=null (no fix needed). Loop back to action 1 (select next unchecked test).</action>
+                </branch>
+
+                <branch condition="qa_verdict is 'uncertain'">
+                  <action>QA couldn't determine from code alone — this is expected for GUI-heavy tests (animations, layout, visual-only behavior). Mark fix_applied=false, fix_result=null. Note in completion: "⚠️ Smoke test Step [N] viability UNCERTAIN — QA couldn't verify from code. Will present to user with warning." Loop back to action 1.</action>
+                </branch>
+
+                <branch condition="qa_verdict is 'fail'">
+                  <action priority="critical">QA found bugs/stubs that would cause the smoke test to fail. Proceed to action 5 (ONE fix pass).</action>
+                </branch>
+              </decision_tree>
+            </action>
+
+            <action number="5" priority="critical">
+              <title>ONE Fix Pass — Spawn Code or Debug to Fix ALL QA Findings</title>
+              <description>
+                ONE Code or Debug subtask attempts to fix ALL findings QA reported. No re-verification.
+                If the fix is incomplete or introduces new issues, the user catches them in Part B
+                (actual smoke test verification). The purpose of this gate is catching OBVIOUS failures,
+                not guaranteeing perfection.
+              </description>
+
+              <decision_tree>
+                <branch condition="QA findings are primarily logic bugs, null refs, wrong types, missing error handling — implementation issues in existing code">
+                  <action>Spawn a CODE mode subtask. Construct the prompt with:
+                    - The smoke test description (what the user should experience).
+                    - ALL QA findings verbatim (every bug, stub, missing implementation).
+                    - The relevant source file paths.
+                    - The plan.md Sections 1-4 and 6 for full feature context.
+                    - Instruction: "Fix ALL of these findings. The smoke test must work end-to-end. Focus on the specific bugs and stubs QA identified — do NOT refactor unrelated code or change architecture. Run the full unit and integration test suite after fixing. Do NOT interact with the user — fix and report."
+                    - Instruction 1 (don't read state.json), Instruction 4 (git commit), Instruction 5 (git tools).
+                  </action>
+                  <action>Wait for Code to complete.</action>
+                </branch>
+
+                <branch condition="QA findings indicate systemic issues: multiple interdependent bugs, architectural problems, or stubs spanning many files">
+                  <action>Spawn a DEBUG mode subtask (not Code). Debug is the correct choice — the findings span multiple systems and require systematic root cause analysis. Construct the prompt with:
+                    - The smoke test description.
+                    - ALL QA findings verbatim.
+                    - The relevant source file paths.
+                    - The plan.md Sections 1-4 and 6.
+                    - The reference.md file path.
+                    - Inject: "hands_off_mode: true" — Debug must NOT ask the user questions.
+                    - Instruction: "Investigate root cause of these QA findings. Fix ALL issues so the smoke test works end-to-end. Use diagnostic-first debugging: add instrumentation, trace execution, pinpoint root causes, apply fixes, write regression tests, run full test suite. Do NOT interact with the user. Fix and report."
+                    - Instruction 1 (don't read state.json), Instruction 4 (git commit), Instruction 5 (git tools).
+                  </action>
+                  <action>Wait for Debug to complete.</action>
+                </branch>
+              </decision_tree>
+            </action>
+
+            <action number="6">
+              <title>Record Fix Result and Move On</title>
+              <description>
+                After the single fix pass completes, record the outcome. Do NOT re-spawn QA to verify —
+                the user verifies in Part B.
+              </description>
+              <action>Read the Code/Debug subtask's completion summary. Assess the outcome:
+                - If the subtask reports all findings fixed and tests pass: fix_result="fixed".
+                - If the subtask fixed some but not all: fix_result="partial".
+                - If the subtask failed to fix anything: fix_result="failed".
+              </action>
+              <action>Update the smoke_test_viability entry in state.json: set fix_applied=true, fix_result="[outcome]". Commit if git enabled.</action>
+              <action>Loop back to action 1 (select next unchecked test).</action>
+            </action>
+          </loop_body>
+        </viability_loop>
+
+        <completion_gate>
+          <description>
+            All skipped smoke tests have been processed through the viability gate.
+          </description>
+          <action>Set phase_5_substep="smoke_tests_viability_checked" in state.json.</action>
+          <action>If git_automation_enabled: commit state.json with message "docs: smoke test viability gate complete — [N] tests analyzed, [M] fixes applied".</action>
+          <action>Proceed to Part B (Per-Test User Verification).</action>
+        </completion_gate>
+      </part>
+
+        <!-- ============================================================ -->
+        <!-- PART B: PER-TEST USER VERIFICATION                             -->
+        <!-- ============================================================ -->
+        <part name="B" title="Per-Test User Verification">
+          <prerequisites>
+            <item>Filter skipped_smoke_tests to entries where status is "skipped" (not yet verified). IMPORTANT: if any entry is missing the "status" field entirely (old-format entry from before per-test tracking was introduced), treat it as status="skipped" — default to requiring verification. If no entries match: all tests have been resolved. Set phase_5_substep="smoke_tests_verified" in state.json, commit if git enabled. Proceed to Step 2 (Knowledge Base Update).</item>
+          </prerequisites>
 
         <verification_loop>
           <description>
@@ -1143,6 +1496,7 @@
 
             <action number="2">
               <title>Present Single Test to User</title>
+              <action>Before presenting, check smoke_test_viability in state.json for an entry matching this step number. If found, read qa_verdict, fix_applied, and fix_result to include viability context in the message.</action>
               <action>Use ask_followup_question with this format:</action>
               <message_format>
                 "Hands-off mode was active. GUI smoke tests were skipped during development.
@@ -1150,6 +1504,14 @@
 
                 **Step [step]: [name]** (HUMAN/SHT REQUIRED)
                 → [description]
+
+                [If viability entry exists with qa_verdict="pass": "✅ Pre-flight check: QA traced code paths — no issues found."]
+                [If viability entry exists with qa_verdict="fail" and fix_result="fixed": "🔧 Pre-flight check: QA found [N] issue(s) — automatically fixed. Please verify the fix works."]
+                [If viability entry exists with qa_verdict="fail" and fix_result="partial": "⚠️ Pre-flight check: QA found [N] issue(s) — partial fix applied. Some issues may remain."]
+                [If viability entry exists with qa_verdict="fail" and fix_result="failed": "⚠️ Pre-flight check: QA found [N] issue(s) — auto-fix was unsuccessful. The test will likely fail."]
+                [If viability entry exists with qa_verdict="fail" and fix_result is null/missing: "⚠️ Pre-flight check: QA found [N] issue(s) — fix was interrupted or not attempted. The test will likely fail."]
+                [If viability entry exists with qa_verdict="uncertain": "⚠️ Pre-flight check: QA couldn't verify this test from code alone. Uncertain if it will pass."]
+                [If no viability entry exists: no viability context — backward compatible.]
 
                 Progress: [verified_count] of [total_count] verified so far.
 
@@ -1221,6 +1583,8 @@
                   <action>Loop back to action 1 (select next unverified test). The verification loop naturally cycles back to skipped entries — they still have status "skipped" and will be selected again by action 1 once all other entries are resolved.</action>
                   <skip_loop_guard priority="high">
                     Track the total number of times the user has selected "Skip for now" during this verification session (across all tests, not per-test). This is a mental counter — no state.json field needed. After the user has skipped 3 times total: remove the "⏭️ Skip for now" option from the ask_followup_question. Only present "✅ Verified — this test passed" and "❌ Failed — I'll describe the issue". This prevents infinite skip loops while allowing a few legitimate deferrals.
+
+                    Note: The counter resets on crash/resume — this is an accepted limitation. The worst case is the user gets 3 more skip options after resume, which is harmless UX.
                   </skip_loop_guard>
                 </branch>
               </decision_tree>
@@ -1239,7 +1603,7 @@
           <action>Proceed to Step 2 (Update Knowledge Base).</action>
         </completion_gate>
 
-        <note>If hands_off_mode is false: this step is skipped — smoke tests were verified inline during execution.</note>
+      </part>
       </step>
 
       <step number="2">

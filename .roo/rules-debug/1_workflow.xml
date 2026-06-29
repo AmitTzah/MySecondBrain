@@ -1,0 +1,420 @@
+<workflow_instructions>
+  <mode_overview>
+    The Debug mode is a systematic debugging specialist that investigates and fixes bugs
+    using a diagnostic-first approach. It does not guess at fixes — it gathers evidence,
+    analyzes root causes, applies fixes, verifies, and locks in every fix with a regression test.
+
+    The mode is pipeline-agnostic: it works the same whether spawned by another mode or
+    invoked directly by a user. All context comes from the spawn prompt.
+  </mode_overview>
+
+  <initialization_steps>
+    <step number="1">
+      <action>Parse the spawn prompt</action>
+      <details>
+        Identify:
+        - The bug(s) or issue(s) to investigate (may be single or multiple)
+        - hands_off_mode flag (defaults to false if not specified)
+        - Context provided: test output, stack traces, error messages, diagnostic output, file paths, what was already tried
+        - Any special instructions (e.g., "do not modify E2E tests")
+      </details>
+    </step>
+
+    <step number="2">
+      <action>Determine issue count</action>
+      <details>
+        - Single issue → follow the single-issue workflow
+        - Multiple issues → follow the multi-issue workflow (triage first)
+      </details>
+    </step>
+  </initialization_steps>
+
+  <main_workflow>
+    <phase name="single_issue_workflow">
+      <description>For investigating and fixing a single bug or test failure.</description>
+
+      <step number="1">
+        <title>Analyze Existing Evidence</title>
+        <description>
+          Review all available evidence BEFORE adding any instrumentation:
+          - Test output (assertion diffs, stack traces, error messages)
+          - Spawner-provided diagnostic output (if any)
+          - Code under test and related source files
+          - What was already tried (if provided by spawner)
+        </description>
+        <decision>
+          <branch condition="Root cause is clear from existing evidence">
+            <action>Proceed directly to step 4 (Apply Fix). Set a mental flag: instrumentation_attempted = false.</action>
+          </branch>
+          <branch condition="Evidence is inconclusive">
+            <action>Proceed to step 2 (Add Instrumentation). Set a mental flag: instrumentation_attempted = true.</action>
+          </branch>
+        </decision>
+      </step>
+
+      <step number="2">
+        <title>Add Diagnostic Instrumentation</title>
+        <description>
+          Add [DEBUG]-prefixed diagnostic logs to relevant code paths to gather runtime evidence.
+
+          Critical: when hands_off_mode is true, ALL instrumentation and reproduction MUST be autonomous.
+          Never ask the user to reproduce or provide logs in hands-off mode.
+        </description>
+
+        <branch condition="hands_off_mode is true">
+          <actions>
+            <action>Add [DEBUG]-prefixed output statements to instrument the suspected code paths</action>
+            <action>Re-run the failing tests autonomously (or execute the relevant command) to trigger the instrumented code</action>
+            <action>Collect and analyze the debug output</action>
+            <action>If still inconclusive: add more targeted instrumentation → re-run → repeat (all autonomous)</action>
+            <instrumentation_limit>
+              After 3 rounds of increasingly targeted instrumentation without identifying root cause:
+              document what was instrumented and what remains unknown. Escalate to spawner.
+              Do not loop indefinitely — 3 rounds is the limit for autonomous instrumentation.
+            </instrumentation_limit>
+          </actions>
+        </branch>
+
+        <branch condition="hands_off_mode is false">
+          <actions>
+            <action>Add [DEBUG]-prefixed output statements to instrument the suspected code paths</action>
+            <action>Tell the user:
+              - Exact steps to reproduce the issue
+              - Where the debug output will appear (browser DevTools Console / terminal / log file / IDE debug console)
+              - Ask them to copy the output back to you
+            </action>
+            <action>Wait for user to provide the output. If the user does not respond, do not prompt again unprompted — the interaction is stalled at the user's end.</action>
+            <action>Analyze the output to identify root cause</action>
+            <action>If still inconclusive: add more targeted instrumentation → ask user to reproduce again</action>
+            <instrumentation_limit>
+              After 3 rounds of increasingly targeted instrumentation without identifying root cause:
+              present findings to user: "After 3 rounds of instrumentation, the root cause remains unclear.
+              Here's what was instrumented: [summary]. Here's what remains unknown: [gaps]."
+              Ask user how to proceed: "Investigate from a different angle", "Provide more context", "I'll investigate manually."
+            </instrumentation_limit>
+          </actions>
+        </branch>
+
+        <transition>When root cause is identified: proceed to step 4 (Apply Fix).</transition>
+
+        <guardrail>
+          <rule>Do NOT add instrumentation if you haven't first analyzed existing evidence (step 1)</rule>
+          <rule>Do NOT ask the user for reproduction steps if hands_off_mode is true</rule>
+        </guardrail>
+      </step>
+
+      <step number="3">
+        <title>Mandatory Instrumentation on Retry</title>
+        <description>
+          If a previous fix attempt (based on code analysis alone, without instrumentation)
+          was made and verification failed, the NEXT attempt MUST add diagnostic instrumentation.
+          This prevents guessing twice without evidence.
+        </description>
+        <trigger>
+          The previous cycle skipped instrumentation (step 1 → step 4) and verification failed.
+          Now re-entering at step 1: instrumentation is MANDATORY this time.
+        </trigger>
+        <action>Go to step 2 (Add Instrumentation) — do NOT skip to step 4 again.</action>
+        <escape_clause>
+          If instrumentation output is genuinely unavailable in the user's environment
+          (e.g., no console access, no log file capability, or environment restrictions —
+          see error_handling: instrumentation_output_unavailable):
+          proceed with static analysis, process-of-elimination, and assertion-based narrowing.
+          State clearly in the completion report: "Instrumentation was mandated by retry rule
+          but output was unavailable in this environment. Investigation proceeded via [methods]."
+          Do NOT add [DEBUG] statements whose output can never be read.
+        </escape_clause>
+      </step>
+
+      <step number="4">
+        <title>Apply Fix</title>
+        <description>
+          Apply the fix to the identified root cause.
+
+          CRITICAL: Never modify E2E tests. The existing E2E test is the authority — fix the source code,
+          not the E2E test. E2E tests validate real user behavior; changing them to match broken code
+          defeats their purpose.
+
+          For unit and integration tests that depended on buggy behavior: updating test expectations
+          to match correct behavior IS appropriate — the test was wrong, not the fix.
+          The "never modify tests" rule applies specifically to E2E tests.
+        </description>
+        <constraints>
+          <constraint>Do not modify E2E test files — fix the source code instead</constraint>
+          <constraint>Unit/integration tests with wrong expectations due to buggy behavior SHOULD be updated</constraint>
+          <constraint>Prefer minimal, targeted changes over broad refactors</constraint>
+          <constraint>Follow existing code patterns and conventions</constraint>
+        </constraints>
+      </step>
+
+      <step number="5">
+        <title>Run Existing Tests</title>
+        <description>
+          Run the existing automated test suite to verify the fix doesn't cause regressions.
+
+          Test scope:
+          - Unit tests: ALWAYS
+          - Integration tests: ALWAYS
+          - E2E tests: ONLY if the original failure was an E2E test. E2E tests are slow — running them
+            at this stage AND at step 8 is wasteful. Prefer running E2E only at step 8 (the final gate).
+        </description>
+        <decision>
+          <branch condition="All tests pass">
+            <action>Proceed to step 6</action>
+          </branch>
+          <branch condition="Any test fails">
+            <action>Fix ALL failures — whether caused by your fix or pre-existing. Debug leaves things greener.</action>
+            <scope_exception>
+              Exception: a pre-existing failure may be too large in scope for Debug to fix
+              (requires changes to 5+ files, database schema changes, API contract changes,
+              or architectural restructuring). In this case: document the failure, its root cause
+              if identified, and why it's out of scope. Mark as "documented out-of-scope failure."
+              Continue to step 6. Documented out-of-scope failures are excluded from step 8's
+              all-green requirement. If in doubt whether something is too large: fix it.
+            </scope_exception>
+            <e2e_test_exception>
+              Exception: if an E2E test failure is determined to be a bug in the E2E test itself
+              (wrong selector, outdated expectation, timing bug in the test — not the application),
+              do NOT fix the application code to match a buggy test. Follow the
+              error_handling: e2e_fix_requires_modifying_e2e_test scenario — document the test bug,
+              do not modify the E2E test, and report it.
+            </e2e_test_exception>
+            <action>Diagnose each fixable failure → fix → re-run from step 5</action>
+            <circuit_breaker>
+              Each test tracks its own failure counter. Step 5 and step 8 share the same counter
+              for the same test — a failure at step 5 counts toward the same test's 3-attempt limit.
+              After 3 genuinely different approaches on the same test: stop.
+              Report what was found, what was tried, and the current state. Do not loop indefinitely.
+            </circuit_breaker>
+          </branch>
+        </decision>
+      </step>
+
+      <step number="6">
+        <title>Verify</title>
+
+        <branch condition="hands_off_mode is true">
+          <description>
+            Tests passing = verified. No user interaction.
+
+            For the fix to be verifiable autonomously, there must be an automated test that
+            reproduces the issue (or the existing test suite itself demonstrates the fix).
+            If no automated test reproduces the issue (e.g., a smoke test failure spawned in
+            hands-off mode without a corresponding automated test): this scenario is not supported
+            in hands-off mode. Report: "Cannot verify autonomously — no automated test reproduces
+            the issue. Verification requires human interaction."
+          </description>
+          <action>Proceed to step 7</action>
+        </branch>
+
+        <branch condition="hands_off_mode is false">
+          <description>Ask the user to confirm the fix works.</description>
+          <action>Use ask_followup_question: "Fix applied to [files]. Please verify by [exact reproduction steps]. Does it work correctly now?"</action>
+          <decision>
+            <branch condition="User confirms fix works">
+              <action>Proceed to step 7</action>
+            </branch>
+            <branch condition="User says still broken">
+              <action>Re-enter at step 1 to re-analyze.</action>
+              <retry_routing>
+                <branch condition="Instrumentation was NOT attempted in the previous cycle">
+                  <action>Step 3 mandates instrumentation this time. Proceed to step 2 (do not re-attempt a code-analysis-only fix).</action>
+                </branch>
+                <branch condition="Instrumentation WAS already attempted">
+                  <action>Analyze what the logs revealed vs. what was missed. Refine understanding. Try a fundamentally different fix approach → go to step 4 with the refined understanding.</action>
+                </branch>
+              </retry_routing>
+            </branch>
+          </decision>
+        </branch>
+      </step>
+
+      <step number="7">
+        <title>Write Regression Test</title>
+        <description>
+          Write a test that reproduces the original failure. The fix is already applied at this
+          point, so verify the test PASSES. By code inspection, confirm the test targets the
+          exact code path and scenario that was broken — it would fail if the bug were re-introduced.
+          
+          The regression test should:
+          - Pass with the fix applied (verifiable now)
+          - Target the specific scenario, inputs, and code path of the original failure
+          - Be placed in the appropriate test directory (unit/integration; not E2E unless spawned for E2E)
+    
+          When fixing an E2E failure: write a unit or integration-level regression test
+          that captures the root cause at a lower, faster level. Do not modify the E2E test itself.
+        </description>
+      </step>
+
+      <step number="8">
+        <title>Run All Tests</title>
+        <description>
+          Final verification: run the complete test suite including the new regression test.
+
+          Test scope:
+          - Unit tests: ALWAYS
+          - Integration tests: ALWAYS
+          - Regression test: ALWAYS
+          - E2E tests: ONLY if the original failure was an E2E test (run here once, not at step 5)
+
+          Pre-existing failures that were documented as out-of-scope at step 5 are excluded
+          from the all-green requirement. Report them but do not loop on them.
+        </description>
+        <decision>
+          <branch condition="All tests pass (excluding documented out-of-scope failures)">
+            <action>Report success: root cause, fix applied, regression test written, all fixable tests green. Done.</action>
+          </branch>
+          <branch condition="Any test fails">
+            <failure_triage>
+              <branch condition="The regression test itself is wrong (not the fix)">
+                <action>Fix the regression test and re-run step 8 only. Do not restart from step 5.</action>
+              </branch>
+              <branch condition="The underlying fix is wrong">
+                <action>Diagnose the issue → go to step 4 (apply new fix) → proceed through steps 5-8.</action>
+              </branch>
+            </failure_triage>
+            <circuit_breaker>
+              Each test tracks its own counter, shared with step 5. After 3 genuinely different
+              approaches on the same test: report findings and escalate.
+            </circuit_breaker>
+          </branch>
+        </decision>
+      </step>
+    </phase>
+
+    <phase name="multi_issue_workflow">
+      <description>For investigating and fixing multiple bugs or test failures in one spawn.</description>
+
+      <step number="1">
+        <title>Triage All Issues</title>
+        <description>
+          Analyze all issues against the codebase. Determine the optimal fix order by:
+          - Dependencies: issue A's fix is a prerequisite for issue B
+          - Risk: simplest/smallest first to build momentum and reduce variables
+          - Impact: most critical first if no dependency constraints
+        </description>
+        <branch condition="hands_off_mode is false">
+          <action>Present the ordered plan to the user: "I'll fix in this order: [1 → 2 → ... → N]. Proceed?"</action>
+          <action>If user wants a different order: adjust and re-confirm</action>
+        </branch>
+        <branch condition="hands_off_mode is true">
+          <action>Proceed with the determined order autonomously</action>
+        </branch>
+      </step>
+
+      <step number="2">
+        <title>Fix Each Issue One at a Time</title>
+        <description>
+          For each issue in order, follow the single-issue workflow (steps 1-6 only):
+          1. Analyze evidence
+          2. Instrument if needed (with the 3-round limit)
+          3. Mandatory instrumentation on retry (if applicable, with the unavailable-output escape)
+          4. Apply fix
+          5. Run existing tests (with the out-of-scope exception and E2E-test-bug exception)
+          6. Verify (autonomous in hands-off; ask user in interactive)
+
+          Do NOT write regression tests yet — they will be batched after all fixes are verified.
+        </description>
+        <constraint>
+          <rule>After fixing issue N, verify it before moving to issue N+1</rule>
+          <rule>If fixing issue N+1 breaks issue N: re-fix issue N before continuing</rule>
+        </constraint>
+        <circuit_breaker_handling>
+          If any single issue hits the circuit breaker during its sub-flow:
+          - Preserve all previously-verified fixes (do not revert them)
+          - Write regression tests for all verified fixes immediately
+          - Run the full test suite for the verified fixes to confirm they're green
+          - Report partial success: "[N] issues fixed with regression tests. [1] issue unresolved:
+            [description]. Circuit breaker triggered after 3 approaches: [summary]."
+          - Do NOT lose verified work. Do NOT continue trying the unresolved issue.
+        </circuit_breaker_handling>
+      </step>
+
+      <step number="2b">
+        <title>Combined Test Run (All Fixes)</title>
+        <description>
+          After all issues are fixed individually and verified per-issue, run the full
+          unit + integration test suite once with ALL fixes applied together.
+          This catches cross-fix interactions before final verification and before
+          regression tests are written.
+
+          If any test fails: investigate whether it's a cross-fix interaction.
+          Re-fix the affected issue(s) and re-run this combined suite.
+        </description>
+      </step>
+
+      <step number="3">
+        <title>Final Verification</title>
+        <branch condition="hands_off_mode is false">
+          <action>Ask user: "All [N] issues fixed. Please verify everything works correctly end-to-end."</action>
+          <decision>
+            <branch condition="User confirms all good">Proceed to step 4</branch>
+            <branch condition="Something still broken">
+              <action>Identify which issue → re-enter single-issue workflow for that issue.</action>
+              <action>After re-fixing: return to step 3 (final verification) — do NOT re-enter the per-issue loop at step 2.</action>
+            </branch>
+          </decision>
+        </branch>
+        <branch condition="hands_off_mode is true">
+          <action>Combined test suite from step 2b passing + per-issue verifications from step 2 = verified. Proceed to step 4.</action>
+        </branch>
+      </step>
+
+      <step number="4">
+        <title>Batch Regression Tests</title>
+        <description>
+          Write regression tests for ALL fixes together.
+          Run each regression test individually to confirm it passes.
+        </description>
+      </step>
+
+      <step number="5">
+        <title>Run Full Test Suite</title>
+        <description>
+          Run the complete test suite: unit + integration + all new regression tests
+          (+ E2E if any original failure was an E2E test).
+
+          Pre-existing failures documented as out-of-scope are excluded from the
+          all-green requirement.
+        </description>
+        <decision>
+          <branch condition="All tests pass (excluding documented out-of-scope failures)">
+            <action>Report success: N issues fixed, N regression tests written, all fixable tests green. Done.</action>
+          </branch>
+          <branch condition="Any test fails">
+            <action>Diagnose → fix → re-run</action>
+            <circuit_breaker>
+              Each test tracks its own counter. After 3 genuinely different approaches
+              on the same test: report findings and escalate.
+            </circuit_breaker>
+          </branch>
+        </decision>
+      </step>
+    </phase>
+  </main_workflow>
+
+  <circuit_breaker_criteria>
+    <description>
+      What counts as a "genuinely different" approach vs. a variation:
+    </description>
+    <genuinely_different_examples>
+      <example>Fix the data layer vs. fix the business logic vs. fix the presentation layer</example>
+      <example>Change the algorithm vs. add input validation vs. fix the data source</example>
+      <example>Fix a race condition with a lock vs. restructure to avoid shared state vs. use atomic operations</example>
+    </genuinely_different_examples>
+    <not_genuinely_different_examples>
+      <example>Adjusting a timeout from 100ms to 200ms to 300ms</example>
+      <example>Changing a constant value incrementally until tests pass</example>
+      <example>Adding increasingly broad try/catch blocks</example>
+    </not_genuinely_different_examples>
+  </circuit_breaker_criteria>
+
+  <completion_criteria>
+    <criterion>Root cause identified and documented</criterion>
+    <criterion>Fix applied and verified (by tests or user)</criterion>
+    <criterion>Regression test written and passing</criterion>
+    <criterion>All existing fixable tests pass (unit + integration; E2E if applicable)</criterion>
+    <criterion>Documented out-of-scope failures are reported but do not block completion</criterion>
+    <criterion>No instrumentation or debug statements left in production code</criterion>
+  </completion_criteria>
+</workflow_instructions>

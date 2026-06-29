@@ -560,6 +560,68 @@ If any MCP git tool fails, returns an error, or is unavailable at runtime: fall 
     </prompt>
   </knowledge_base_generation_prompt>
 
+  <smoke_test_viability_qa_prompt>
+    <name>Smoke Test Viability QA Prompt — Code-Level Trace</name>
+    <description>
+      Use this prompt when spawning a QA Reviewer (qa mode) subtask during Phase 5 Step 1
+      Part A (Viability Gate). This gate ONLY runs when hands-off mode is enabled AND
+      there are skipped HUMAN/SHT smoke tests to verify — it is the first half of Step 1
+      (Smoke Test Handling), before Part B (Per-Test User Verification). QA traces through
+      the code as if executing one smoke test's steps and reports what WOULD happen —
+      identifying bugs, stubs, and missing implementations. Uses QA's native 4-section
+      report format with a SIMULATION preamble added at the top. One QA spawn + one
+      Code/Debug fix pass per smoke test. No re-verification loop.
+    </description>
+    <usage>
+      <p>
+        Spawn via new_task in qa mode. Include: the smoke test description, relevant source
+        file paths, and the plan's Section 3 (Architecture and Extensibility). QA returns its
+        standard 4-section report with a SIMULATION preamble. FD extracts the verdict from the
+        report content.
+      </p>
+    </usage>
+    <template>
+      "This is a special QA task — you are tracing through code to predict whether a smoke test would pass or fail. You still follow your standard QA workflow (read files, review through your four lenses, produce your standard report). The key difference: instead of reviewing a code change, you are reviewing whether a specific user action flow would work end-to-end.
+
+**Smoke Test to Simulate:**
+Step [step number]: [step name]
+Description: [verbatim smoke test description]
+
+**Architecture Contracts (from plan.md Section 3):**
+[Plan Section 3 content — the interfaces, abstractions, and design patterns the Architect specified. Verify these are actually implemented in the files you review.]
+
+**Source Files to Trace Through:**
+[List of relevant source file paths]
+
+**Your Task:**
+
+1. Read EVERY source file listed above. Trace the code path the smoke test would trigger: user action → event handler → service/business logic → data layer → response/rendering → what the user sees.
+
+2. At each boundary in the trace, ask:
+   - Does this function/method actually exist (not stubbed/placeholder)?
+   - Does it return the correct type/shape of data for the next step in the chain?
+   - Are null/empty/error cases handled along this path?
+   - Would the UI render correctly given the data flowing back?
+   - Are there race conditions or async issues in this flow?
+
+3. This is NOT speculation — you are tracing through real code. Base every finding on what you actually read. If a function returns `undefined`, that's a concrete bug, not speculation. If an event handler calls a service that doesn't exist, that's a concrete finding. If you genuinely cannot determine what would happen (e.g., the outcome depends on runtime state you can't see, or the code path goes through generated/minified code): note that as a Concern.
+
+4. Produce your standard QA report in your completion summary. ADD a 'SIMULATION' section at the very top (before Summary):
+
+**SIMULATION:**
+A plain-English walkthrough tracing through the actual code as if the user followed the smoke test steps. Example: 'User clicks Save → ProfilePage.handleSave() fires (line 23, profile-page.tsx) → calls UserService.updateProfile() (line 47, user-service.ts) → sends PATCH /api/users/:id. The API handler exists (line 12, users-router.ts) but UserService.updateProfile() returns `undefined` instead of the updated user object. The UI at line 30 tries `response.name` on undefined → would throw TypeError. The user would see: no success feedback, potential blank screen if error boundary catches it, or console error if uncaught.'
+
+Then continue with your standard sections: Summary, Bugs & Issues, Concerns & Risks, Test Quality, Nitpicks.
+
+**Important for this task:**
+- Focus findings on the SMOKE TEST SCENARIO — only report issues that would cause THIS specific smoke test to fail or behave incorrectly. Skip general code quality issues unrelated to the smoke test path.
+- If the smoke test touches UI rendering: include UI-specific findings (missing components, wrong data shapes passed to templates, missing event handlers) in Bugs & Issues or Concerns & Risks — NOT just in Nitpicks.
+- If a dependency (imported function, API endpoint, component) is referenced in the smoke test path but you cannot find it in the listed files: that's a Bug (MISSING dependency).
+- If the entire code path exists and looks correct: report 'No bugs or issues found' in Bugs & Issues and 'No concerns or risks identified' in Concerns & Risks.
+- Use attempt_completion when your report is complete. Do not ask questions."
+    </template>
+  </smoke_test_viability_qa_prompt>
+
   <critic_subtask_prompt>
     <name>Critic Subtask Prompt for Plan Review</name>
     <description>

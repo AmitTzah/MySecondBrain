@@ -238,12 +238,36 @@
             - **Accept**: The finding is valid and should be fixed
             - **Dismiss**: The finding is incorrect, irrelevant, or already intentional
 
+            Pre-existing and out-of-scope issues are NOT automatically dismissable. QA found a
+            real quality problem — fix it directly unless doing so would damage the plan. A
+            localized fix (same files, no architectural changes, no risk to the current
+            implementation) must be applied. "Not my task" and "out of scope" are not valid
+            reasons to skip a real quality fix.
+
             You MUST justify every dismissal. A dismissal without justification is not allowed.
             Valid dismissal reasons include:
             - "Intentional: this behavior is required by [specific requirement]"
-            - "Not applicable: the finding assumes [X] but the actual behavior is [Y]"
-            - "Pre-existing: this issue exists in the code before these changes and is out of scope"
+            - "Not applicable: the finding is factually incorrect about the code — QA's analysis
+              doesn't match what the code actually does"
             - "Incorrect: the QA's analysis is factually wrong because [specific reason]"
+            - "Too risky to fix now: fixing this issue would require [specific changes] that
+              risk breaking the current implementation or would cause significant scope creep"
+
+            Size-related QA findings have specific handling:
+            - **Oversized functions (>50 lines)**: Fix by extracting helpers. This is a
+              localized change — you can and must do it. The self_refactor phase already
+              requires this; QA finding it means self_refactor missed it. Do not dismiss.
+            - **Oversized files (>300 lines)**: You cannot split files — that's the
+              orchestrator's decision per the cumulative_growth_flag. Dismiss with "Too
+              risky to fix now — file splitting requires orchestrator approval." Surface
+              via BOTH the UNFIXED_QA_CONCERNS marker (so the orchestrator sees the QA
+              concern) AND the FILE_SIZE_WARNING marker (which you already run after
+              self_refactoring). If FILE_SIZE_WARNING already covers this file, note it
+              in the UNFIXED_QA_CONCERNS entry: "Also flagged in FILE_SIZE_WARNING."
+
+            "Pre-existing" and "out of scope" alone are NOT valid dismissal reasons. If you
+            dismiss an issue because fixing it would damage the plan, you MUST surface it in
+            your completion summary (see surfacing_unfixed_qa_concerns below).
           </action>
         </step>
         <step number="4">
@@ -251,7 +275,7 @@
           <action>
             Address every accepted finding:
             - Bugs & Issues: Must all be fixed. No exceptions.
-            - Concerns & Risks: Fix or document why the risk is accepted.
+            - Concerns & Risks: Fix directly — including pre-existing issues. Only skip if fixing would damage the plan (see dismissal reasons in step 3); in that case, surface via step 6.
             - Test Quality: Fix test issues.
             - Nitpicks: Optional — fix only if they take minimal effort.
           </action>
@@ -262,6 +286,26 @@
             After all fixes are applied, run the full unfiltered automated test suite one final time
             (same as automated_testing_1: never use --filter, run unit AND integration together).
             All tests must pass before presenting to the user.
+          </action>
+        </step>
+        <step number="6">
+          <title>Surface unfixed pre-existing concerns</title>
+          <action>
+            If you dismissed any QA finding because fixing it would damage the plan (the
+            "Too risky to fix now" dismissal reason), you MUST include those findings in your
+            completion summary using this structured marker format so the orchestrator can
+            track them:
+
+            "<!--UNFIXED_QA_CONCERNS-->
+            - [file/path.ext]: [issue description] — Not fixed because: [specific reason fixing now would damage the plan]
+            - [file/path.ext]: [issue description] — Not fixed because: [specific reason]"
+
+            If all QA findings were either accepted (fixed) or dismissed for non-risk reasons
+            (intentional, not applicable, factually incorrect), include:
+            "<!--UNFIXED_QA_CONCERNS--> None — all QA findings addressed."
+
+            This marker enables the orchestrator to detect and track known quality issues
+            that couldn't be addressed inline. Do NOT include findings that were fixed.
           </action>
         </step>
       </steps>
@@ -590,7 +634,8 @@
           <action>Summarize what was accomplished</action>
           <detail>
             Include: what was implemented/changed, which files were modified, self-verification results, and automated test results.
-            Do NOT include QA findings, dismissal counts, or review statistics. QA is an internal tool — the user sees the finished result, not the quality process.
+            Do NOT include fixed QA findings, dismissal counts, or review statistics. QA is an internal tool — the user sees the finished result, not the quality process.
+            Exception: include unfixed pre-existing QA concerns via the <!--UNFIXED_QA_CONCERNS--> structured marker (see qa_review phase step 6).
           </detail>
         </step>
         <step>
